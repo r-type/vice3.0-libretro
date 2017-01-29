@@ -87,12 +87,19 @@ static void cmdline_free_startup_images(void)
     }
     startup_tape_image = NULL;
 }
-
+#ifdef __LIBRETRO__
+void retro_cmdline_free_startup_images(void)
+{
+    cmdline_free_startup_images();
+}
+#endif
 static int cmdline_help(const char *param, void *extra_param)
 {
     cmdline_show_help(NULL);
+#ifndef __LIBRETRO__
+//FIXME
     exit(0);
-
+#endif
     return 0;   /* OSF1 cc complains */
 }
 
@@ -105,8 +112,10 @@ static int cmdline_features(const char *param, void *extra_param)
         printf("%-25s %4s %s\n", list->symbol, list->isdefined ? "yes " : "no  ", list->descr);
         ++list;
     }
-
+#ifndef __LIBRETRO__
+//FIXME
     exit(0);
+#endif
     return 0;   /* OSF1 cc complains */
 }
 
@@ -318,9 +327,10 @@ int initcmdline_init(void)
             return -1;
         }
     }
-
+#ifndef __LIBRETRO__
+//FIXME libco
     atexit(cmdline_free_startup_images);
-
+#endif
     return 0;
 }
 

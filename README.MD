@@ -6,16 +6,20 @@ minimal Libretro arch port (with libco and minimal GUI)
 
 Use it at you own risk !
 
-Supported platforms : Linux Android emscripten
+Supported platforms : Linux Win64 Android emscripten
 
 EMUTYPE is limited to : x64 (default) for now
 
 LIBDIR set to /mnt/srdcard/data for Android
-and (retro_system_dir)/data for linux
+and (retro_system_dir)/data for linux/Win
  
 Linux:
 
 CC=gcc make -f Makefile.libretro   -j10
+
+Win64 (crossbuild):
+
+make -f Makefile.libretro platform=wincross64 -j4
 
 Android Build:
 

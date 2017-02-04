@@ -48,7 +48,7 @@
 /* Modes for fopen().  */
 #define MODE_READ              "rb"
 #define MODE_READ_TEXT         "rb"
-#define MODE_READ_WRITE        "r+"
+#define MODE_READ_WRITE        "rb+"
 #define MODE_WRITE             "wb"
 #define MODE_WRITE_TEXT        "wb"
 #define MODE_APPEND            "a"

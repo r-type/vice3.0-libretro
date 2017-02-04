@@ -270,10 +270,11 @@ if(pauseg==0){
       mbt[i]=0;kbd_handle_keyup(RETROK_ESCAPE)); 
    }
 */
+   if(slowdown>0)return;
 
    if(MOUSE_EMULATED==1){
 
-	  if(slowdown>0)return 1;
+	 // if(slowdown>0)return 1;
 
       if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))mouse_x += PAS;
       if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))mouse_x -= PAS;
@@ -284,7 +285,7 @@ if(pauseg==0){
 
       PAS=SAVPAS;
 
-	  slowdown=1;
+	 // slowdown=1;
    }
    else {
 
@@ -294,6 +295,7 @@ if(pauseg==0){
       mouse_r    = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
    }
 
+   slowdown=1;
    static int mmbL=0,mmbR=0;
 
    if(mmbL==0 && mouse_l){

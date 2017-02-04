@@ -34,6 +34,73 @@ const char File_fileid[] = "Hatari file.c : " __DATE__ " " __TIME__;
 
 #if defined(WIN32)
 #define ftello ftell
+
+int scandir(const char *dirp, struct dirent ***namelist,
+      int (*filter)(const struct dirent *),
+      int (*compar)(const struct dirent **, const struct dirent **))
+{
+   DIR *dp = opendir (dirp);
+   struct dirent *current;
+   struct dirent **names = NULL;
+   size_t names_size = 0, pos;
+   int save;
+
+   (void)save;
+
+   if (dp == NULL)
+      return -1;
+
+   save  = errno;
+   errno = 0;
+   pos   = 0;
+
+   while ((current = readdir (dp)) != NULL)
+      if (filter == NULL || (*filter) (current))
+      {
+         struct dirent *vnew;
+         size_t dsize;
+
+         if (pos == names_size)
+         {
+            struct dirent **new;
+            if (names_size == 0)
+               names_size = 10;
+            else
+               names_size *= 2;
+            new = (struct dirent **) realloc (names, names_size * sizeof (struct dirent *));
+            if (new == NULL)
+               break;
+            names = new;
+         }
+
+         dsize = &current->d_name[strlen(current->d_name)+1] - (char *) current;
+         vnew = (struct dirent *) malloc (dsize);
+         if (vnew == NULL)
+            break;
+
+         names[pos++] = (struct dirent *) memcpy (vnew, current, dsize);
+      }
+
+   if (errno != 0)
+   {
+      save = errno;
+      closedir (dp);
+      while (pos > 0)
+         free (names[--pos]);
+      free (names);
+
+      return -1;
+   }
+
+   closedir (dp);
+
+
+   /* Sort the list if we have a comparison function to sort with.  */
+   if (compar != NULL)
+      qsort (names, pos, sizeof (struct dirent *), compar);
+   *namelist = names;
+   return pos;
+}
 #endif
 
 /*-----------------------------------------------------------------------*/

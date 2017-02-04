@@ -303,7 +303,11 @@ void retro_init(void)
    if(retro_system_directory==NULL)sprintf(RETRO_DIR, "%s\0",".");
    else sprintf(RETRO_DIR, "%s\0", retro_system_directory);
 
+#if defined(__WIN32__) 
+   sprintf(retro_system_data_directory, "%s\\data\0",RETRO_DIR);
+#else
    sprintf(retro_system_data_directory, "%s/data\0",RETRO_DIR);
+#endif
 
    LOGI("Retro SYSTEM_DIRECTORY %s\n",retro_system_directory);
    LOGI("Retro SAVE_DIRECTORY %s\n",retro_save_directory);

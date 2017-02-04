@@ -23,6 +23,89 @@
  *  02111-1307  USA.
  *
  */
+#ifdef __WIN32__
+
+#include "vice.h"
+
+#include <stdlib.h>
+
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
+#endif
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+//#include "intl.h"
+#include "log.h"
+#include "monitor.h"
+//#include "res.h"
+#include "signals.h"
+#include "translate.h"
+#include "uiapi.h"
+
+static const char *translated_text = "An unexpected error occurred. Received signal %d (%s).";
+
+static void get_translated_text(void)
+{
+
+}
+
+static RETSIGTYPE break64(int sig)
+{
+    const char * signalname = "";
+
+    get_translated_text();
+
+    /* provide a default text in case we could not translated the text. */
+
+#ifdef SYS_SIGLIST_DECLARED
+    signalname = sys_siglist[sig]
+#endif
+
+    ui_error(translated_text, sig, signalname);
+
+    exit(-1);
+}
+
+/*
+    used once at init time to setup all signal handlers
+*/
+void signals_init(int do_core_dumps)
+{
+    signal(SIGINT, break64);
+    signal(SIGTERM, break64);
+
+    if (!do_core_dumps) {
+
+        get_translated_text();
+
+        signal(SIGSEGV, break64);
+        signal(SIGILL, break64);
+        signal(SIGFPE, break64);
+    }
+}
+
+/*
+    these two are used for socket send/recv. in this case we might
+    get SIGPIPE if the connection is unexpectedly closed.
+*/
+/*
+    FIXME: confirm wether SIGPIPE must be handled or not. if the emulator quits
+           or crashes when the connection is closed, you might have to install
+           a signal handler which calls monitor_abort().
+
+           see arch/unix/signals.c and bug #3201796
+*/
+void signals_pipe_set(void)
+{
+}
+
+void signals_pipe_unset(void)
+{
+}
+
+#else
 
 #include "vice.h"
 
@@ -112,3 +195,5 @@ void signals_pipe_unset(void)
 {
     signal(SIGPIPE, old_pipe_handler);
 }
+
+#endif

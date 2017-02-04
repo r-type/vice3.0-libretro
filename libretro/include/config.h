@@ -550,8 +550,9 @@
 #undef HAVE_SND_PCM_AVAIL
 
 /* Define to 1 if you have the `snprintf' function. */
+#ifndef __WIN32__
 #undef HAVE_SNPRINTF
-
+#endif
 /* Define to 1 if you have the `socket' function. */
 #undef HAVE_SOCKET
 
@@ -711,8 +712,9 @@
 //#undef HAVE_VFORK_H
 #define HAVE_U_SHORT 1
 /* Define to 1 if you have the `vsnprintf' function. */
+#ifndef __WIN32__
 #undef HAVE_VSNPRINTF
-
+#endif
 /* Enable VTE support */
 #undef HAVE_VTE
 

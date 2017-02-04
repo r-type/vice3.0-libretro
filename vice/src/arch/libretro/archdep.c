@@ -34,10 +34,14 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifndef __WIN32__
 #include <pwd.h>
+#endif
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifndef __WIN32__
 #include <sys/wait.h>
+#endif
 #include <unistd.h>
 
 #ifdef HAVE_VFORK_H
@@ -117,7 +121,7 @@ int archdep_init(int *argc, char **argv)
 #endif
 #endif
 
-#ifndef LIBRETROHACK
+#if defined(__WIN32__)
 //FIXME
 	archdep_pref_path = archdep_boot_path();
 #endif
@@ -140,8 +144,11 @@ char *archdep_program_name(void)
 
     if (program_name == NULL) {
         char *p;
-
+#if defined(__WIN32__) 
+  p = strrchr(argv0, '\\');
+#else
         p = strrchr(argv0, '/');
+#endif
         if (p == NULL)
             program_name = lib_stralloc(argv0);
         else
@@ -178,6 +185,8 @@ const char *archdep_home_path(void)
 {
 #if defined(__ANDROID__) || defined(ANDROID)
     return "/mnt/sdcard";
+#elif defined(__WIN32__) 
+return retro_system_data_directory;
 #else
     char *home;
 
@@ -248,6 +257,11 @@ char *archdep_default_sysfile_pathlist(const char *emu_id)
                                    boot_path, "/PRINTER",
                                    NULL);
         lib_free(default_path_temp);
+#elif defined(__WIN32__) 
+  
+       default_path = util_concat( home_path, "\\", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
+                                   home_path, "\\DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
+                                   home_path, "\\PRINTER", NULL);
 
 #else 
         default_path = util_concat(LIBDIR, "/", emu_id,
@@ -318,7 +332,11 @@ char *archdep_default_save_resource_file_name(void)
     }
 
     if (access(viceuserdir, F_OK)) {
+#if defined(__WIN32__)
+        mkdir(viceuserdir);
+#else
         mkdir(viceuserdir, 0700);
+#endif
     }
 
     fname = util_concat(viceuserdir, "/vicerc", NULL);
@@ -367,9 +385,13 @@ int archdep_default_logger(const char *level_string, const char *txt) {
 
 int archdep_path_is_relative(const char *path)
 {
+#ifdef __WIN32__
+  return !((isalpha(path[0]) && path[1] == ':') || path[0] == '/' || path[0] == '\\');
+#else
     if (path == NULL)
         return 0;
     return *path != '/';
+#endif
 }
 
 int archdep_spawn(const char *name, char **argv,
@@ -558,7 +580,11 @@ int archdep_file_set_gzip(const char *name)
 
 int archdep_mkdir(const char *pathname, int mode)
 {
-    return mkdir(pathname, (mode_t)mode);
+#if defined(__WIN32__)
+       return mkdir(pathname);
+#else
+     return mkdir(pathname, (mode_t)mode);
+#endif
 }
 
 int archdep_stat(const char *file_name, unsigned int *len, unsigned int *isdir)
@@ -631,7 +657,11 @@ void kbd_arch_init()
 
 char *archdep_get_runtime_os(void)
 {
-    return "*nix";
+#ifndef __WIN32__
+     return "*nix";
+#else
+    return "win*";
+#endif
 }
 
 char *archdep_get_runtime_cpu(void)

@@ -192,11 +192,11 @@ static void update_variables(void)
 		         resources_set_int( "RetroJoy", 1);
 		      if (strcmp(var.value, "disabled") == 0)
 		         resources_set_int( "RetroJoy", 0);
-		}
+		}/*
 		else {
 			if (strcmp(var.value, "enabled") == 0)RETROJOY=1;
 			if (strcmp(var.value, "disabled") == 0)RETROJOY=0;
-		}
+		}*/
 
    }
 

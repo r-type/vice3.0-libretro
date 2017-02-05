@@ -28,6 +28,9 @@
 #define VICE_MAIN_H
 
 extern int main_program(int argc, char **argv);
+#ifndef __LIBRETRO__
 extern void main_exit(void);
-
+#else
+extern void vice_main_exit(void);
+#endif
 #endif

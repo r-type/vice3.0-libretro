@@ -148,7 +148,11 @@ void gui_poll_events(void)
 void enter_gui(void)
 {
   //save_bkg();
+#ifndef NO_LIBCO
     Dialog_DoProperty();
+#else
+//FIXME: TODO use nuklear gui 
+#endif
 	pauseg=0;
 }
 

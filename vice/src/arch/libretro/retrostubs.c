@@ -28,13 +28,21 @@ bool num_locked = false;
 
 void quick_load()
 {
+#ifndef NO_LIBCO
 	DlgFloppy_Main();
+#else
+//FIXME: TODO use nuklear gui 
+#endif
 	pauseg=0;
 }
 
 void quick_option()
 {
+#ifndef NO_LIBCO
 	Dialog_OptionDlg();
+#else
+//FIXME: TODO use nuklear gui 
+#endif
 	pauseg=0;
 }
 

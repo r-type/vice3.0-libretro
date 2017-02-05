@@ -62,6 +62,7 @@ extern int retrow,retroh;
 extern struct video_canvas_s *RCANVAS;
 
 extern int vice_statusbar;
+extern int cpustop;
 
 #include <time.h>
 
@@ -131,6 +132,8 @@ void vsyncarch_presync(void)
 
 #ifndef NO_LIBCO
 	co_switch(mainThread);
+#else
+	cpustop=0;
 #endif
 
 }

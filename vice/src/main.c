@@ -156,6 +156,20 @@ int main_program(int argc, char **argv)
         archdep_startup_log_error("atexit failed.\n");
         return -1;
     }
+#else
+/*
+#ifndef NO_LIBCO
+    if (atexit(main_exit) < 0) {
+        archdep_startup_log_error("atexit failed.\n");
+        return -1;
+    }
+#else
+    if (atexit(vice_main_exit) < 0) {
+         archdep_startup_log_error("atexit failed.\n");
+         return -1;
+     }
+#endif
+*/
 #endif
     maincpu_early_init();
     machine_setup_context();
@@ -292,15 +306,22 @@ int main_program(int argc, char **argv)
     initcmdline_check_attach();
 
     init_done = 1;
-#ifdef __LIBRETRO__
-#ifndef NO_LIBCO
-	resources_save("./vicerc0");
-	co_switch(mainThread);
-#endif
-#endif
+
     /* Let's go...  */
     log_message(LOG_DEFAULT, "Main CPU: starting at ($FFFC).");
+
+#ifdef __LIBRETRO__
+#ifndef NO_LIBCO
+    resources_save("./vicerc0"); 
+    co_switch(mainThread);
     maincpu_mainloop();
+#else
+     resources_save("./vicerc0");
+     maincpu_mainloop_retro();
+#endif
+#else
+    maincpu_mainloop();
+#endif
 
     log_error(LOG_DEFAULT, "perkele!");
 

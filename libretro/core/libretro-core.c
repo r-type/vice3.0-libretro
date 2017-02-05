@@ -35,6 +35,7 @@ extern void texture_uninit(void);
 extern void Emu_init();
 extern void Emu_uninit();
 extern void input_gui(void);
+extern void vice_main_exit();
 
 const char *retro_save_directory;
 const char *retro_system_directory;
@@ -249,7 +250,8 @@ void Emu_init(){
 
 void Emu_uninit(){
 #ifdef NO_LIBCO
-	//quit_vice_emu();
+	vice_main_exit();
+	LOGI("quit vice!\n");
 #endif
    texture_uninit();
 }
@@ -441,6 +443,11 @@ void retro_run_gui(void)
 }
 #endif
 
+#ifdef NO_LIBCO
+extern void maincpu_mainloop_retro(void);
+int cpustop=1;
+#endif
+
 void retro_run(void)
 { 
    static int mfirst=1;
@@ -461,7 +468,11 @@ void retro_run(void)
       return;
 #endif
    }
-
+#ifdef NO_LIBCO 
+while(cpustop==1)
+maincpu_mainloop_retro();
+cpustop=1;
+#endif
    video_cb(Retro_Screen,retrow,retroh,retrow<<PIXEL_BYTES);
 
 #ifndef NO_LIBCO   

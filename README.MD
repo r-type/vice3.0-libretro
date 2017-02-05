@@ -15,7 +15,7 @@ and (retro_system_dir)/data for linux/Win
  
 Linux:
 
-CC=gcc make -f Makefile.libretro   -j10
+CC=gcc make -f Makefile.libretro -j10
 
 Win64 (crossbuild):
 
@@ -23,7 +23,11 @@ make -f Makefile.libretro platform=wincross64 -j4
 
 Android Build:
 
-make -f Makefile.libretro platform=android 
+export path to your standalone toolchain like
+
+export PATH=$PATH:/opt/standtc/bin
+
+make -f Makefile.libretro platform=android -j4
 
 Source base: 
 https://sourceforge.net/p/vice-emu/code/32520/tree/tags/v3.0/

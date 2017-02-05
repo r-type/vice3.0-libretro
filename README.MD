@@ -2,7 +2,7 @@ Vice 3.0 LIBRETRO WIP
 
 Very WIP port of VICE 3.0 for libretro .
 
-minimal Libretro arch port (with libco and minimal GUI)
+minimal Libretro arch port (with libco and minimal GUI or nolibco without gui for now)
 
 Use it at you own risk !
 
@@ -12,6 +12,8 @@ EMUTYPE is limited to : x64 (default) for now
 
 LIBDIR set to /mnt/srdcard/data for Android
 and (retro_system_dir)/data for linux/Win
+
+add NOLIBCO=1 to build without libco
  
 Linux:
 

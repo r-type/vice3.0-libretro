@@ -108,16 +108,45 @@ else ifeq ($(platform), qnx)
 	CXX = QCC -Vgcc_ntoarmv7le_cpp
 	AR = QCC -Vgcc_ntoarmv7le
    PLATFORM_DEFINES := -D__BLACKBERRY_QNX__ -fexceptions -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
-else ifeq ($(platform), android)
-   TARGET := $(TARGET_NAME)_libretro.so
-   COMMONFLAGS += -fpermissive 
+# ANDROID STANDALONE TOOLCHAIN
+else ifeq ($(platform), androidstc)
+   TARGET := $(TARGET_NAME)_libretro_android.so
    LDFLAGS += -lstdc++ -llog -lz -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
-  CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DLSB_FIRST -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
+   CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DLSB_FIRST -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
    CFLAGS += -O2 -pipe -fstack-protector 
 
    CC = arm-linux-androideabi-gcc
    CXX = arm-linux-androideabi-g++
    
+   fpic = -fPIC
+# ANDROID
+else ifeq ($(platform), android)
+
+ifeq ($(ANDROID_NDK_ARM),)
+$(error ANDROID_NDK_ARM not set correctly.)
+endif
+ifeq ($(ANDROID_NDK_ROOT),)
+$(error ANDROID_NDK_ROOT not set correctly.)
+endif
+
+   TARGET := $(TARGET_NAME)_libretro_android.so
+
+   #CFLAGS += -fPIC -fpic -ffunction-sections -funwind-tables
+
+   CC = $(ANDROID_NDK_ARM)/bin/arm-linux-androideabi-gcc 
+   CXX = $(ANDROID_NDK_ARM)/bin/arm-linux-androideabi-g++
+
+   CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DLSB_FIRST -DALIGN_DWORD 
+
+   COMMONFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mthumb -DANDROID -DALIGN_INTS -DALIGN_SHORTS 
+   COMMONFLAGS += -I$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm/usr/include -I$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include
+   COMMONFLAGS += -I$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/include
+
+   LDFLAGS += -llog -lz -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
+   LDFLAGS += $(fpic) $(SHARED) -L$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/thumb
+   LDFLAGS += -L$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm/usr/lib  --sysroot=$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm -march=armv7-a -mthumb -shared
+   LDFLAGS += -lc -ldl -lm -landroid -llog -lsupc++ $(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/thumb/libgnustl_static.a -lgcc
+
    fpic = -fPIC
 
 # PSP

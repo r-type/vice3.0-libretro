@@ -13,6 +13,10 @@ EMUTYPE is limited to : x64 (default) for now
 LIBDIR set to /mnt/srdcard/data for Android
 and (retro_system_dir)/data for linux/Win
 
+Setup core :
+
+Copy the data folder to LIBDIR .
+
 add NOLIBCO=1 to build without libco
  
 Linux:

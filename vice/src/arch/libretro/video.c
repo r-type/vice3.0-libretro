@@ -22,7 +22,6 @@
 
 struct video_canvas_s *RCANVAS;
 
-int vice_statusbar=0;
 int machine_ui_done = 0;
 static int drive_led_on = 0, tape_led_on = 0;
 

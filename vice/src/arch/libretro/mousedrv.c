@@ -63,6 +63,17 @@ void mousedrv_init(void)
 
 /* ------------------------------------------------------------------------- */
 
+void mouse_button_left(int pressed)
+{
+    //mouse_funcs.mbl(pressed);
+}
+
+
+void mouse_button_right(int pressed)
+{
+   // mouse_funcs.mbr(pressed);
+}
+
 void mouse_button(int bnumber, int state)
 {
 
@@ -101,16 +112,6 @@ void mouse_button(int bnumber, int state)
 */
 }
 
-void mouse_button_left(int pressed)
-{
-    //mouse_funcs.mbl(pressed);
-}
-
-
-void mouse_button_right(int pressed)
-{
-   // mouse_funcs.mbr(pressed);
-}
 
 int mousedrv_get_x(void)
 {

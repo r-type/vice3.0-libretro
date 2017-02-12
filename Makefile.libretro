@@ -1,6 +1,5 @@
 DEBUG=0
 GIT_VERSION := $(shell git describe --abbrev=4 --dirty --always --tags)
-NOLIBCO ?= 0
 
 UNAME=$(shell uname -a)
 
@@ -33,7 +32,6 @@ else ifneq ($(findstring Darwin,$(shell uname -a)),)
 else ifneq ($(findstring MINGW,$(shell uname -a)),)
    system_platform = win
 endif
-
 
 ifeq ($(platform), unix)
    TARGET := $(TARGET_NAME)_libretro.so
@@ -208,6 +206,8 @@ SOURCES_CXX :=
 OBJECTS     :=
  
 include Makefile.common
+
+COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
 
 OBJECTS  += $(SOURCES_CC:.cc=.o) $(SOURCES_C:.c=.o) 
 CXXFLAGS += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS) -fpermissive

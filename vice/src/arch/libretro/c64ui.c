@@ -54,7 +54,7 @@ ui_jam_action_t ui_jam_dialog(const char *format, ...)
   vsnprintf(message, sizeof(message) - 1, format, ap);
   va_end (ap);
 
-  printf(message);
+  printf("%s",message);
   machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 
   return UI_JAM_NONE;
@@ -67,7 +67,7 @@ void write_snapshot(WORD unused_addr, void *filename)
 
 int get_drive_type(int drive,int val)
 {
-	return	resources_get_int_sprintf("Drive%iType",drive);
+	return	resources_get_int_sprintf("Drive%iType",&drive);
 }
 
 void set_drive_type(int drive,int val)

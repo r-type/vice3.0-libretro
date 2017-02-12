@@ -36,6 +36,8 @@ extern signed long kbd_arch_keyname_to_keynum(char *keyname);
 extern const char *kbd_arch_keynum_to_keyname(signed long keynum);
 extern void kbd_initialize_numpad_joykeys(int *joykeys);
 
+extern int kbd_arch_get_host_mapping(void);
+
 extern int kbd_handle_keydown(int kcode);
 extern int kbd_handle_keyup(int kcode);
 

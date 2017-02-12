@@ -2,7 +2,7 @@ Vice 3.0 LIBRETRO WIP
 
 Very WIP port of VICE 3.0 for libretro .
 
-minimal Libretro arch port (with libco and minimal GUI or nolibco without gui for now)
+minimal Libretro arch port (minimal nuklear GUI)
 
 Use it at you own risk !
 
@@ -16,8 +16,6 @@ and (retro_system_dir)/data for linux/Win
 Setup core :
 
 Copy the data folder to LIBDIR .
-
-add NOLIBCO=1 to build without libco
  
 Linux:
 

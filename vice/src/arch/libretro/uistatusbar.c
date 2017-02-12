@@ -352,24 +352,40 @@ void uistatusbar_close(void)
 #include "keyboard.h"
 extern unsigned int cur_port;
 
+
+#include "RSDL_wrapper.h"
+#include "libretro-core.h"
+
+#ifdef M16B
+extern void Retro_Draw_string(RSDL_Surface *surface, signed short int x, signed short int y, const  char *string,unsigned short maxstrlen,unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
+#else
+extern void Retro_Draw_string(RSDL_Surface *surface, signed short int x, signed short int y, const  char *string,unsigned short maxstrlen,unsigned short xscale, unsigned short yscale, unsigned  fg, unsigned  bg);
+#endif
+
+RSDL_Surface fake;
+
 void uistatusbar_draw(void)
 {
     int i;
     BYTE c, color_f, color_b;
     unsigned int line;
 
-    color_f = 0xffffffff;
+    color_f = 0xff;
     color_b = 0;
-    pitch =4;
-/*
-    line = MIN(sdl_active_canvas->viewport->last_line, sdl_active_canvas->geometry->last_displayed_line);
+    pitch =PITCH;
 
-    draw_offset = (line - menufont->h + 1) * pitch
-                  + sdl_active_canvas->geometry->extra_offscreen_border_left
-                  + sdl_active_canvas->viewport->first_x;
-*/
+    char tmpstr[512];
 
-Draw_text((char *)Retro_Screen, 200,0,color_f, color_b,1,1,8*6,"joy%d:%d",cur_port,joystick_value[cur_port]);
+    fake.pixels=&bmp[0];
+    fake.h=retroh;
+    fake.w=retrow;
+    fake.clip_rect.h=retroh;
+    fake.clip_rect.w=retrow;
+    fake.clip_rect.x=0;
+    fake.clip_rect.y=0;
+
+    sprintf(tmpstr,"joy%d:%d",cur_port,joystick_value[cur_port]);
+    Retro_Draw_string(&fake, 200, 0, tmpstr,8,1,1, color_f, color_b);
 
     for (i = 0; i < MAX_STATUSBAR_LEN; ++i) {
         c = statusbar_text[i];
@@ -379,11 +395,13 @@ Draw_text((char *)Retro_Screen, 200,0,color_f, color_b,1,1,8*6,"joy%d:%d",cur_po
         }
 
         if (c & 0x80) {
-			Draw_text((char *)Retro_Screen, i*8,0,color_f, color_b,1,1,2,"%c",c&0x7f);
-          //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
+		sprintf(tmpstr,"%c",c&0x7f);
+		Retro_Draw_string(&fake, i*8, 0, tmpstr,2,1,1, color_f, color_b);
+	        //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
         } else {
-         //  uistatusbar_putchar(c, i, 0, color_f, color_b);
-			Draw_text((char *)Retro_Screen, i*8,0,color_f, color_b,1,1,2,"%c",c);
+         	//  uistatusbar_putchar(c, i, 0, color_f, color_b);
+		sprintf(tmpstr,"%c",c);
+		Retro_Draw_string(&fake, i*8, 0, tmpstr,2,1,1, color_f, color_b);
 
         }
     }

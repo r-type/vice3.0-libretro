@@ -32,6 +32,8 @@
 #include "uistatusbar.h"
 #include "vsyncapi.h"
 #include "videoarch.h"
+#include "video.h"
+#include "resources.h"
 
 #include "libretro-core.h"
 
@@ -57,12 +59,10 @@
 #define YS 16
 #endif
 
-extern int retrow,retroh;
+extern void retro_poll_event(int joyon);
+extern void app_vkb_handle();
 
 extern struct video_canvas_s *RCANVAS;
-
-extern int vice_statusbar;
-extern int cpustop;
 
 #include <time.h>
 
@@ -109,32 +109,24 @@ void vsyncarch_presync(void)
 	int v;
 	resources_get_int("RetroJoy",&v);
 
-    kbdbuf_flush();
+        kbdbuf_flush();
 	
 	retro_poll_event(v);
 
-	video_canvas_render(RCANVAS,(BYTE *)Retro_Screen,
+	video_canvas_render(RCANVAS,(BYTE *)bmp/*Retro_Screen*/,
 						retrow,retroh,//384, 272,
                         XS,YS,//xs, ys,
                         0,0,//xi, yi,
                         retrow*4,32);//384*4, 32);
 
-	retro_virtualkb();
+	//app_vkb_handle();
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE && vice_statusbar==1) {
 		
         uistatusbar_draw();
     }
 
-	if(pauseg==1)pause_select();
-	if(pauseg==2)quick_load();
-	if(pauseg==3)quick_option();
-
-#ifndef NO_LIBCO
-	co_switch(mainThread);
-#else
-	cpustop=0;
-#endif
+    cpuloop=0;
 
 }
 

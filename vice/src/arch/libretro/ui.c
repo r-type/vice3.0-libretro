@@ -27,6 +27,8 @@
 #include "vice.h"
 #include "machine.h"
 #include "cmdline.h"
+#include "uistatusbar.h"
+#include "resources.h"
 
 #include <stdio.h>
 #include <string.h>

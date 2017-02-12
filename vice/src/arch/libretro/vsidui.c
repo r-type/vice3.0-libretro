@@ -62,7 +62,7 @@ void vsid_ui_display_sync(int sync)
     char buf[50];
     sprintf(buf, "Using %s sync",
 	    sync == MACHINE_SYNC_PAL ? "PAL" : "NTSC");
-    log_message(LOG_DEFAULT, buf);
+    log_message(LOG_DEFAULT,"VSIDUI: %s", buf);
 }
 
 void vsid_ui_display_sid_model(int model)

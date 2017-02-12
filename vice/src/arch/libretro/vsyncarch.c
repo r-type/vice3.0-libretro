@@ -117,7 +117,7 @@ void vsyncarch_presync(void)
 						retrow,retroh,//384, 272,
                         XS,YS,//xs, ys,
                         0,0,//xi, yi,
-                        retrow*4,32);//384*4, 32);
+                        retrow*PITCH,8*PITCH);//384*4, 32);
 
 	//app_vkb_handle();
 

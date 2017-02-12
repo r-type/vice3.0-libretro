@@ -51,6 +51,10 @@ extern unsigned vice_devices[ 2 ];
 #endif
 
 //#define RENDER16B
+//#undef RENDER16B
+#ifdef RENDER16B
+#define M16B
+#endif
 #ifdef  RENDER16B
 	extern uint16_t *Retro_Screen;
 	extern uint16_t bmp[WINDOW_SIZE];

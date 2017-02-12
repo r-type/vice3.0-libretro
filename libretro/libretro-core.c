@@ -1,12 +1,6 @@
 #include "libretro.h"
 #include "libretro-core.h"
 
-//#define RENDER16B
-//#undef RENDER16B
-#ifdef RENDER16B
-#define M16B
-#endif
-
 //CORE VAR
 #ifdef _WIN32
 char slash = '\\';

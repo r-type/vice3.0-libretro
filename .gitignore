@@ -1,6 +1,4 @@
 *~
-/*
-!/*/
-!/.gitattributes
-!/.gitignore
 *.o
+*.so
+*.dll

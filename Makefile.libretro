@@ -207,6 +207,10 @@ OBJECTS     :=
  
 include Makefile.common
 
+ifeq ($(WANT_RGB565), 1)
+COMMONFLAGS += -DRENDER16B=1
+endif
+
 COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
 
 OBJECTS  += $(SOURCES_CC:.cc=.o) $(SOURCES_C:.c=.o) 

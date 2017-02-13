@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "libretro-core.h"
+
 struct video_canvas_s *RCANVAS;
 
 int machine_ui_done = 0;
@@ -56,10 +58,10 @@ video_canvas_t *video_canvas_create(video_canvas_t *canvas,
 
     printf ("canvas width wants to be : %d\ncanvas height wants to be : %d\ncanvas depth wants to be : %d\n", canvas->width, canvas->height, canvas->depth);
 
-    canvas->depth = 32;
+    canvas->depth = 8*PITCH;
 //canvas->width=320;canvas->height=200;
 
-    printf ("canvas set to %d x %d\n", canvas->width, canvas->height);
+    printf ("canvas set to %d x %d :%d\n", canvas->width, canvas->height,canvas->depth);
 
     video_canvas_set_palette(canvas, canvas->palette);
 
@@ -130,12 +132,20 @@ int video_canvas_set_palette(struct video_canvas_s *canvas,
     canvas->palette = palette;
 
 	for (i = 0; i < palette->num_entries; i++) {
+#ifdef RENDER16B
+#define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
+            col = RGB565(palette->entries[i].red, palette->entries[i].green, palette->entries[i].blue);
+#else
             col = palette->entries[i].red<<16| palette->entries[i].green<<8| palette->entries[i].blue;
-
+#endif
         video_render_setphysicalcolor(canvas->videoconfig, i, col, canvas->depth);
     }
     for (i = 0; i < 256; i++) {
+#ifdef RENDER16B
+	    video_render_setrawrgb(i, RGB565(i, 0, 0), RGB565(0, i, 0) , RGB565(0, 0, i) );
+#else
             video_render_setrawrgb(i, i, i, i);
+#endif
     }
     video_render_initraw(canvas->videoconfig);
     

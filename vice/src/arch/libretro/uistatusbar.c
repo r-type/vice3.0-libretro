@@ -367,11 +367,21 @@ RSDL_Surface fake;
 void uistatusbar_draw(void)
 {
     int i;
-    BYTE c, color_f, color_b;
+    BYTE c;//, color_f, color_b;
+#ifdef M16B
+unsigned short int color_f, color_b;
+    color_f = 0xffff;
+    color_b = 0;
+#else
+unsigned int color_f, color_b;
+    color_f = 0xffffffff;
+    color_b = 0;
+#endif
     unsigned int line;
 
-    color_f = 0xff;
-    color_b = 0;
+  //  color_f = 0xff;
+  //  color_b = 0;
+
     pitch =PITCH;
 
     char tmpstr[512];
@@ -396,7 +406,7 @@ void uistatusbar_draw(void)
 
         if (c & 0x80) {
 		sprintf(tmpstr,"%c",c&0x7f);
-		Retro_Draw_string(&fake, i*8, 0, tmpstr,2,1,1, color_f, color_b);
+		Retro_Draw_string(&fake, i*8, 0, tmpstr,2,1,1, color_b, color_f);
 	        //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
         } else {
          	//  uistatusbar_putchar(c, i, 0, color_f, color_b);

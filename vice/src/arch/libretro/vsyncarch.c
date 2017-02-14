@@ -66,8 +66,8 @@ extern struct video_canvas_s *RCANVAS;
 
 #include <time.h>
 
-/* SDL_Delay & GetTicks have 1ms resolution, while VICE needs 1us */
-#define VICE_SDL_TICKS_SCALE 1000
+#define TICKSPERSECOND  1000000L     /* Microseconds resolution. */
+
 /* hook to ui event dispatcher */
 static void_hook_t ui_dispatch_hook;
 
@@ -77,14 +77,14 @@ static void_hook_t ui_dispatch_hook;
 signed long vsyncarch_frequency(void)
 {
     /* Microseconds resolution. */
-    return  1000 * VICE_SDL_TICKS_SCALE;
+    return TICKSPERSECOND;
 }
 
 /* Get time in timer units. */
 unsigned long vsyncarch_gettime(void)
 {
-
- return GetTicks() * (unsigned long)VICE_SDL_TICKS_SCALE;
+    /* Microseconds resolution. */
+    return GetTicks();
 }
 
 void vsyncarch_init(void)

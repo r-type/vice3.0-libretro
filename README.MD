@@ -27,13 +27,22 @@ Win64 (crossbuild):
 
 make -f Makefile.libretro platform=wincross64 -j4
 
-Android Build:
+Android standalone toolchain Build:
 
 export path to your standalone toolchain like
 
 export PATH=$PATH:/opt/standtc/bin
 
-make -f Makefile.libretro platform=android -j4
+make -f Makefile.libretro platform=androidstc -j4
+
+Android ndk Build:
+
+export path to ANDROID_NDK_ARM and ANDROID_NDK_ROOT like
+
+export ANDROID_NDK_ROOT=/opt/ndk
+export ANDROID_NDK_ARM=/opt/ndk/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64
+
+make -f Makefile.libretro -j10 WANT_RGB565=1 platform=android 
 
 Source base: 
 https://sourceforge.net/p/vice-emu/code/32520/tree/tags/v3.0/

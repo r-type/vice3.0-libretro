@@ -108,8 +108,8 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "CTR" ,"CTR" ,-12},
 	{ "R/S" ,"R/S" ,-11},
 	{ "SHI" ,"SHI" ,-10},
-	{ "VFL","VFL",-5},
-	{ "COL" ,"COL",-3},
+	{ "F+","F+",-5},
+	{ "F-" ,"F-",-3},
 	{ "Ent" ,"Ent",RETROK_RETURN},
 	{ "KBD" ,"KBD",-4},
 

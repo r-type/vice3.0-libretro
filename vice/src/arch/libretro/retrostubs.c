@@ -118,8 +118,8 @@ void app_vkb_handle()
          }
          else if(i==-3)
          {
-            //KDB bgcolor
-            KCOL=-KCOL;
+	    //flilist prev
+	    fliplist_attach_head(8, 0);
             oldi=-1;
          }
          else if(i==-4)
@@ -173,8 +173,9 @@ void app_vkb_handle()
 	    else if(i==-13) //GUI
             {     
 	       pauseg=1;
-	       SHOWKEY=-SHOWKEY;
-	       Screen_SetFullUpdate(0);
+	       save_bkg();
+	       //SHOWKEY=-SHOWKEY;
+	       //Screen_SetFullUpdate(0);
                oldi=-1;
             }
 	    else if(i==-14) //JOY PORT TOGGLE
@@ -285,15 +286,62 @@ int Core_PollEvent()
 	if(vice_devices[0]==RETRO_DEVICE_VICE_JOYSTICK){
    	//shortcut for joy mode only
 
-	   	i=1;//show vkbd toggle
+	   	i=1;// Y -> vkbd toggle
 	   	if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 )
 	      		jbt[i]=1;
 	   	else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
 	   	{
 	      		jbt[i]=0;
 	      		SHOWKEY=-SHOWKEY;
-	      		Screen_SetFullUpdate(0);  
+	      		//Screen_SetFullUpdate(0);  
 	   	}
+
+	   	i=3;// START -> Gui toggle
+	   	if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 )
+	      		jbt[i]=1;
+	   	else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
+	   	{
+	      		jbt[i]=0;
+	       		pauseg=1;
+	       		save_bkg();  
+	   	}
+
+	   	i=10;// L -> Flip next
+	   	if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 )
+	      		jbt[i]=1;
+	   	else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
+	   	{
+	      		jbt[i]=0;
+			fliplist_attach_head(8, 1); 
+	   	}
+
+	   	i=11;// R -> Flip prev
+	   	if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 )
+	      		jbt[i]=1;
+	   	else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
+	   	{
+	      		jbt[i]=0;
+			fliplist_attach_head(8, 0);
+	   	}
+
+	   	i=12;// L2 -> toggle joy port
+	   	if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 )
+	      		jbt[i]=1;
+	   	else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
+	   	{
+		        cur_port++;
+			if(cur_port>2)cur_port=1; 
+	   	}
+/*
+	   	i=13;// R2 -> Flip prev
+	   	if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 )
+	      		jbt[i]=1;
+	   	else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
+	   	{
+	      		jbt[i]=0;
+			fliplist_attach_head(8, 0);
+	   	}
+*/
 	}//if vice_devices=joy
 
    }//if pauseg=0
@@ -305,7 +353,7 @@ int Core_PollEvent()
    else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
    {
       jbt[i]=0;
-      MOUSE_EMULATED=MOUSE_EMULATED;	  
+      MOUSE_EMULATED=-MOUSE_EMULATED;	  
    }
 
    if(slowdown>0)return 0;

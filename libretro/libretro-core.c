@@ -114,6 +114,40 @@ void retro_set_input_poll(retro_input_poll_t cb)
    input_poll_cb = cb;
 }
 
+static char CMDFILE[512];
+
+int loadcmdfile(char *argv)
+{
+    int res=0;
+
+    FILE *fp = fopen(argv,"r");
+
+    if( fp != NULL )
+    {
+	if ( fgets (CMDFILE , 512 , fp) != NULL )
+		res=1;	
+	fclose (fp);
+    }
+
+    return res;
+}
+
+int HandleExtension(char *path,char *ext)
+{
+   int len = strlen(path);
+
+   if (len >= 4 &&
+         path[len-4] == '.' &&
+         path[len-3] == ext[0] &&
+         path[len-2] == ext[1] &&
+         path[len-1] == ext[2])
+   {
+      return 1;
+   }
+
+   return 0;
+}
+
 #include <ctype.h>
 
 //Args for experimental_cmdline
@@ -143,9 +177,21 @@ void Add_Option(const char* option)
 
 int pre_main(const char *argv)
 {
-   int i;
+   int i=0;
    bool Only1Arg;
 
+   if (strlen(argv) > strlen("cmd"))
+   {
+      if( HandleExtension((char*)argv,"cmd") || HandleExtension((char*)argv,"CMD"))
+          i=loadcmdfile((char*)argv);     
+   }
+
+   if(i==1)
+   {
+      parse_cmdline(CMDFILE);      
+      LOGI("Starting game from command line :%s\n",CMDFILE);  
+   }
+   else
    parse_cmdline(argv); 
 
    Only1Arg = (strcmp(ARGUV[0],CORE_NAME) == 0) ? 0 : 1;
@@ -271,22 +317,6 @@ long GetTicks(void)
 #endif
 
 } 
-
-int HandleExtension(char *path,char *ext)
-{
-   int len = strlen(path);
-
-   if (len >= 4 &&
-         path[len-4] == '.' &&
-         path[len-3] == ext[0] &&
-         path[len-2] == ext[1] &&
-         path[len-1] == ext[2])
-   {
-      return 1;
-   }
-
-   return 0;
-}
 
 void save_bkg()
 {
@@ -563,7 +593,7 @@ void retro_get_system_info(struct retro_system_info *info)
    memset(info, 0, sizeof(*info));
    info->library_name     = CORE_NAME;
    info->library_version  = "3.0";
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64||g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd";
    info->need_fullpath    = true;
    info->block_extract = false;
 

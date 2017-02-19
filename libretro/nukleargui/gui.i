@@ -224,11 +224,10 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 		joy1on = nk_true;
 		joy2on = nk_false;
 	    }
-	    else {
+	    else if(cur_port==2){
 		joy2on = nk_true;
 		joy1on = nk_false;
 	    }
-
 	    if(retrojoy_init)resources_get_int("RetroJoy",&tmpval);
 	    else tmpval=0;
 
@@ -275,11 +274,11 @@ gui(struct file_browser *browser,struct nk_context *ctx)
             nk_checkbox_label(ctx, "Joy2 on", &joy2on);
             nk_checkbox_label(ctx, "RetroJoy on", &retrojoyon);
 
-	    if(joy1on){
+	    if(joy1on && cur_port!=1){
 		cur_port=1;
 		joy2on=false;
 	    }
-	    else if (joy2on){
+	    else if (joy2on && cur_port!=2){
 	    	cur_port=2;
 		joy1on=false;
    	    }

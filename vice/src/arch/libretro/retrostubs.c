@@ -329,6 +329,7 @@ int Core_PollEvent()
 	      		jbt[i]=1;
 	   	else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
 	   	{
+			jbt[i]=0;
 		        cur_port++;
 			if(cur_port>2)cur_port=1; 
 	   	}

@@ -375,6 +375,10 @@ void retro_set_environment(retro_environment_t cb)
          "vice_RetroJoy",
          "Retro joy0; disabled|enabled",
       },
+      {
+         "vice_Controller",
+         "Controller0 type; keyboard|joystick",
+      },
       { NULL, NULL },
    };
 
@@ -445,11 +449,22 @@ static void update_variables(void)
 		         resources_set_int( "RetroJoy", 1);
 		      if (strcmp(var.value, "disabled") == 0)
 		         resources_set_int( "RetroJoy", 0);
-		}/*
+		}
 		else {
 		      if (strcmp(var.value, "enabled") == 0)RETROJOY=1;
 		      if (strcmp(var.value, "disabled") == 0)RETROJOY=0;
-		}*/
+		}
+   }
+
+   var.key = "vice_Controller";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      	  if (strcmp(var.value, "keyboard") == 0)
+	       vice_devices[ 0 ] = 259;
+	  if (strcmp(var.value, "joystick") == 0)
+	       vice_devices[ 0 ] = 513;	  
    }
 
 }

@@ -1,27 +1,49 @@
-#if   defined(LINUX)
+#ifdef __WIN32__
 
-#elif defined(WINDOWS)
+#endif
 
-#elif defined(OSX)
+#if defined(__APPLE__) && defined(__MACH__)
+/*
+   #include <TargetConditionals.h>
+   #if TARGET_OS_IPHONE == 1 //ios
+
+   #elif TARGET_OS_MAC == 1 //osx
+
+   #endif
+*/
+
    #define AC_APPLE_UNIVERSAL_BUILD
    #define HAVE_TIME_T_IN_TIME_H 1
 
-#elif defined(ANDROID)
+#endif
 
-#elif defined(IOS)
+#ifdef __linux__ //android falls under this too
 
-#elif defined(VITA)
+#endif
+
+#if defined(VITA)
    #error "This platform is not currently supported."
 
-#elif defined(PSP)
+#endif
+
+#if defined(PSP)
    #error "This platform is not currently supported."
 
-#elif defined(N3DS)
+#endif
+
+#if defined(N3DS)
    #error "This platform is not currently supported."
 
-#else
-   #error "This platform is unknown!"
+#endif
 
+
+
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
+ significant byte first (like Motorola and SPARC, unlike Intel). */
+#if defined AC_APPLE_UNIVERSAL_BUILD
+   #if defined __BIG_ENDIAN__
+      #define WORDS_BIGENDIAN 1
+   #endif
 #endif
 
 #define HAVE_U_SHORT 1
@@ -111,7 +133,7 @@
 #define HAVE_UNISTD_H 1
 
 /* Can we use the ZLIB compression library? */
-#define HAVE_ZLIB
+//#define HAVE_ZLIB
 
 /* Define to the full name of this package. */
 #define PACKAGE "vice"

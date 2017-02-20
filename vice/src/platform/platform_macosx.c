@@ -52,7 +52,8 @@
 #include "vice.h"
 
 
-#if defined(__APPLE__) && !defined(RHAPSODY_COMPILE) && !defined(DARWIN_COMPILE)
+//#if defined(__APPLE__) && !defined(RHAPSODY_COMPILE) && !defined(DARWIN_COMPILE)
+#if 0
 
 #include <string.h>
 #include <sys/types.h>

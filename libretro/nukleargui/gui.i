@@ -18,8 +18,10 @@
 #include "diskcontents.h"
 #include "videoarch.h"
 #include "fliplist.h"
+#include "c64model.h"
 
 #define GET_DRIVE(code) ((code)&0x0F)
+#define NUMB(a) (sizeof(a) / sizeof(*a))
 
 extern int pauseg;
 extern int NPAGE,SHIFTON;
@@ -242,6 +244,22 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 	    }
 	    else showled = nk_false;
 
+	    //c64 model option
+	    static int current_model = 0;
+	    static int selected_model = 0;
+	    static int list_model = 0;
+	    static const char *c64mod[] =  {"C64 PAL","C64C PAL","C64 old PAL","C64 NTSC","C64C NTSC","C64 old NTSC","Drean","C64 SX PAL","C64 SX NTSC","Japanese","C64 GS","PET64 PAL","PET64 NTSC","MAX Machine"};
+	    int c64modint[] ={
+		C64MODEL_C64_PAL ,C64MODEL_C64C_PAL ,C64MODEL_C64_OLD_PAL ,C64MODEL_C64_NTSC ,
+		C64MODEL_C64C_NTSC ,C64MODEL_C64_OLD_NTSC ,C64MODEL_C64_PAL_N ,C64MODEL_C64SX_PAL ,C64MODEL_C64SX_NTSC ,
+		C64MODEL_C64_JAP ,C64MODEL_C64_GS ,C64MODEL_PET64_PAL,C64MODEL_PET64_NTSC ,C64MODEL_ULTIMAX 
+	    };
+	 	
+	    current_model = c64model_get();
+	    for(tmpval=0;tmpval< NUMB(c64modint);tmpval++)
+		if(c64modint[tmpval]==current_model)break;
+	    list_model = tmpval;
+
 	    //floppy option
 	    static int fliplst = nk_false;
 	    static int DriveTrueEmu = nk_false;
@@ -303,6 +321,15 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 	    }
 	    else if(vice_statusbar)
 		vice_statusbar = 0;
+
+	    //C64 Modele
+
+	    nk_layout_row_static(ctx, DEFHSZ, 100, 2);
+            nk_label(ctx, "C64 model:", NK_TEXT_LEFT);
+	    tmpval = nk_combo(ctx, c64mod, LEN(c64mod), list_model, 25, nk_vec2(200,200));
+	    selected_model=c64modint[tmpval];
+            if (selected_model != current_model)
+	        c64model_set(selected_model);
 
 	    //floppy option
 

@@ -133,7 +133,7 @@
 #define HAVE_UNISTD_H 1
 
 /* Can we use the ZLIB compression library? */
-//#define HAVE_ZLIB
+#define HAVE_ZLIB 1
 
 /* Define to the full name of this package. */
 #define PACKAGE "vice"

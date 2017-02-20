@@ -53,7 +53,7 @@ else ifeq ($(platform), crosspi)
 #-I./../sources/src/include
 else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
-   LDFLAGS += -dynamiclib
+   LDFLAGS += -dynamiclib -lz
    
    fpic = -fPIC
 	ifeq ($(arch),ppc)

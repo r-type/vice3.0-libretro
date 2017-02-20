@@ -37,6 +37,7 @@ extern char TAPE_NAME[512];
 extern void emu_reset(void);
 extern int HandleExtension(char *path,char *ext);
 extern void set_drive_type(int drive,int val);
+extern void retro_shutdown_core(void);
 
 static void
 gui(struct file_browser *browser,struct nk_context *ctx)
@@ -244,6 +245,13 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 	    }
 	    else showled = nk_false;
 
+	    //c64 sid model
+	    int sid_item=0;
+            static int sidmod=0;
+	    sid_engine_model_t **list = sid_get_engine_model_list();
+
+	    for (sid_item = 0; list[sid_item]; ++sid_item) {}
+
 	    //c64 model option
 	    static int current_model = 0;
 	    static int selected_model = 0;
@@ -275,7 +283,7 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 	    else DriveTrueEmu=nk_false;
 
 	    // button toggle GUI/EMU
-            nk_layout_row_static(ctx, DEFHSZ, DEFWSZ, 2);
+            nk_layout_row_dynamic(ctx, DEFHSZ, 3);
             if (nk_button_label(ctx, "Resume")){
                 fprintf(stdout, "quit GUI\n");
 		pauseg=0;
@@ -284,6 +292,11 @@ gui(struct file_browser *browser,struct nk_context *ctx)
                 fprintf(stdout, "quit GUI & reset\n");
 		pauseg=0;
 		emu_reset();
+	    }
+            if (nk_button_label(ctx, "Quit")){
+                fprintf(stdout, "quit GUI & emu\n");
+		pauseg=0;
+		retro_shutdown_core();
 	    }
 
 	    //joystick options
@@ -326,16 +339,40 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 
 	    nk_layout_row_static(ctx, DEFHSZ, 100, 2);
             nk_label(ctx, "C64 model:", NK_TEXT_LEFT);
-	    tmpval = nk_combo(ctx, c64mod, LEN(c64mod), list_model, 25, nk_vec2(200,200));
+	    tmpval = nk_combo(ctx, c64mod, LEN(c64mod), list_model, DEFHSZ, nk_vec2(200,200));
 	    selected_model=c64modint[tmpval];
             if (selected_model != current_model)
 	        c64model_set(selected_model);
+
+	    //c64 sid model
+
+            int sengine, smodel,cursidmod;
+            resources_get_int("SidEngine", &sengine);
+            resources_get_int("SidModel", &smodel);
+	    cursidmod=((sengine << 8) | smodel) ;
+
+            sidmod=cursidmod;
+
+            nk_layout_row_dynamic(ctx, DEFHSZ, 1);
+            nk_label(ctx, "C64 SID:", NK_TEXT_LEFT);
+            nk_layout_row_static(ctx, DEFHSZ, 250, 1);
+	    for (tmpval = 0; list[tmpval]; ++tmpval) {
+		int sdata=list[tmpval]->value;
+                sidmod = nk_option_label(ctx, (char*)list[tmpval]->name, sidmod == sdata) ? sdata : sidmod;
+	    }
+
+	    if(sidmod!=cursidmod){
+        	sengine = sidmod >> 8;
+        	smodel = sidmod & 0xff;
+        	sid_set_engine_model(sengine, smodel);
+		printf("sid change to %d\n",sidmod);
+	    }
 
 	    //floppy option
 
 	    nk_layout_row_static(ctx, DEFHSZ, 100, 2);
             nk_label(ctx, "Drive8Type:", NK_TEXT_LEFT);
-	    current_drvtype = nk_combo(ctx, drivename, LEN(drivename), current_drvtype, 25, nk_vec2(200,200));
+	    current_drvtype = nk_combo(ctx, drivename, LEN(drivename), current_drvtype, DEFHSZ, nk_vec2(200,200));
 
 	    if (old_drvtype != current_drvtype){
 

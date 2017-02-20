@@ -488,7 +488,7 @@ void Emu_uninit()
 void retro_shutdown_core(void)
 {
    LOGI("SHUTDOWN\n");
-
+   app_free(); 
    vice_main_exit();
    LOGI("quit vice!\n");
 

@@ -256,11 +256,11 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 	    static int current_model = 0;
 	    static int selected_model = 0;
 	    static int list_model = 0;
-	    static const char *c64mod[] =  {"C64 PAL","C64C PAL","C64 old PAL","C64 NTSC","C64C NTSC","C64 old NTSC","Drean","C64 SX PAL","C64 SX NTSC","Japanese","C64 GS","PET64 PAL","PET64 NTSC","MAX Machine"};
+	    static const char *c64mod[] =  {"C64 PAL","C64C PAL","C64 old PAL","C64 NTSC","C64C NTSC","C64 old NTSC","Drean","C64 SX PAL","C64 SX NTSC","Japanese","C64 GS","PET64 PAL","PET64 NTSC","MAX Machine","C64 UNKNOW Model"};
 	    int c64modint[] ={
 		C64MODEL_C64_PAL ,C64MODEL_C64C_PAL ,C64MODEL_C64_OLD_PAL ,C64MODEL_C64_NTSC ,
 		C64MODEL_C64C_NTSC ,C64MODEL_C64_OLD_NTSC ,C64MODEL_C64_PAL_N ,C64MODEL_C64SX_PAL ,C64MODEL_C64SX_NTSC ,
-		C64MODEL_C64_JAP ,C64MODEL_C64_GS ,C64MODEL_PET64_PAL,C64MODEL_PET64_NTSC ,C64MODEL_ULTIMAX 
+		C64MODEL_C64_JAP ,C64MODEL_C64_GS ,C64MODEL_PET64_PAL,C64MODEL_PET64_NTSC ,C64MODEL_ULTIMAX ,C64MODEL_UNKNOWN
 	    };
 	 	
 	    current_model = c64model_get();

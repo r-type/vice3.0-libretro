@@ -52,6 +52,7 @@ int snd_sampler = 44100 / 50;
 char RPATH[512];
 
 int pauseg=0; //emu status run/pause/end
+int want_quit=0;
 
 extern int MOUSE_EMULATED;
 
@@ -487,11 +488,6 @@ void Emu_uninit()
 
 void retro_shutdown_core(void)
 {
-   LOGI("SHUTDOWN\n");
-   app_free(); 
-   vice_main_exit();
-   LOGI("quit vice!\n");
-
    environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
 }
 
@@ -679,13 +675,13 @@ void retro_run(void)
 	cpuloop=1;
 
 	retro_blit();
-	//Core_PollEvent();
    }
 
    app_render(pauseg);
 
    video_cb(Retro_Screen,retrow,retroh,retrow<<PIXEL_BYTES);
 
+   if(want_quit)retro_shutdown_core();
 }
 
 /*

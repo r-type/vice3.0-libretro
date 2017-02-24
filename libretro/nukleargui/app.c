@@ -24,6 +24,8 @@ extern char Core_Key_Sate[512];
 extern char Core_old_Key_Sate[512];
 extern char RPATH[512];
 extern int SHOWKEY;
+extern int want_quit;
+
 char LCONTENT[512];
 int LOADCONTENT=-1;
 int LDRIVE=8;
@@ -144,7 +146,8 @@ int app_render(int poll)
 
     /* Draw */
     //nk_color_fv(bg, background);
-    nk_retro_render(nk_rgba(0,0,0,0));
+    if(pauseg==0 && SHOWKEY==-1);
+    else nk_retro_render(nk_rgba(0,0,0,0));
 
     return 0;
 }

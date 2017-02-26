@@ -655,6 +655,15 @@ void kbd_arch_init()
   keyboard_clear_keymatrix();
 }
 
+int archdep_network_init(void)
+{
+    return 0;
+}
+
+void archdep_network_shutdown(void)
+{
+}
+
 char *archdep_get_runtime_os(void)
 {
 #ifndef __WIN32__

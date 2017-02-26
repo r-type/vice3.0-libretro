@@ -32,6 +32,8 @@
 #include "archapi.h"
 /* Default sound output mode */
 #define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_SYSTEM
+#define ARCHDEP_SOCKET_ERROR errno
+
 #if defined(__WIN32__) 
 /* Filesystem dependant operators.  */
 #define FSDEVICE_DEFAULT_DIR "."

@@ -1,3 +1,5 @@
+
+
 #ifdef __WIN32__
 
 #endif
@@ -18,6 +20,12 @@
 #endif
 
 #ifdef __linux__ //android falls under this too
+#define HAVE_NETDB_H 1
+#define HAVE_NETINET_IN_H 1
+#define HAVE_NETWORK 1
+#define HAVE_SOCKET 1
+#define HAVE_SOCKLEN_T 1
+#define HAVE_IN_ADDR_T 1
 
 #endif
 
@@ -159,3 +167,5 @@
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a `char[]'. */
 #define YYTEXT_POINTER 1
+
+

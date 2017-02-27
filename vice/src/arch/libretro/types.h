@@ -32,13 +32,20 @@
 
 #include "vice.h"
 
+#if defined(__WIN32__) && defined(__LIBRETRO__)
+#include <windef.h>
+#endif
+
+#if !defined(_WINDEF_) && !defined(_WINDEF_H)
 #define BYTE unsigned char
+#endif
 
 typedef signed char SIGNED_CHAR;
 typedef unsigned short WORD;
 typedef signed short SWORD;
-
+#if !defined(_WINDEF_) && !defined(_WINDEF_H)
 typedef unsigned int DWORD;
+#endif
 typedef signed int SDWORD;
 
 typedef DWORD CLOCK;

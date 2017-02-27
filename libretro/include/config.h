@@ -1,7 +1,9 @@
 
 
 #ifdef __WIN32__
-
+#define HAVE_HTONS 1
+#define HAVE_HTONL 1
+#define HAVE_NETWORK 1
 #endif
 
 #if defined(__APPLE__) && defined(__MACH__)

@@ -45,11 +45,9 @@ static const cmdline_option_t cmdline_options[] = {
 /* Initialization  */
 int ui_resources_init(void)
 {
-
-    if (machine_class != VICE_MACHINE_VSID) {
-        return uistatusbar_init_resources();
-    }
-    return 0;
+   if (machine_class != VICE_MACHINE_VSID)
+      return uistatusbar_init_resources();
+   return 0;
 }
 
 void ui_resources_shutdown(void)
@@ -68,21 +66,21 @@ void ui_shutdown(void)
 
 void ui_check_mouse_cursor(void)
 {
-    /* needed */
+   /* needed */
 }
 
 void ui_error(const char *format, ...)
 {
 
-   	char text[512];	   	
-   	va_list	ap;	
+   char text[512];	   	
+   va_list	ap;	
 
-   	if (format == NULL)return;		
-		
-   	va_start(ap,format );		
-      		vsprintf(text, format, ap);	
-   	va_end(ap);	
-    fprintf(stderr, "ui_error: %s\n", text);
+   if (format == NULL)return;		
+
+   va_start(ap,format );		
+   vsprintf(text, format, ap);	
+   va_end(ap);	
+   fprintf(stderr, "ui_error: %s\n", text);
 }
 
 /* Update all the menus according to the current settings.  */
@@ -91,57 +89,57 @@ void ui_update_menus(void)
 {
 }
 
-int ui_extend_image_dialog()
+int ui_extend_image_dialog(void)
 {
-  return 0;
+   return 0;
 }
 
-void ui_dispatch_events()
+void ui_dispatch_events(void)
 {
 }
 
 int ui_cmdline_options_init(void)
 {
-  return cmdline_register_options(cmdline_options);
+   return cmdline_register_options(cmdline_options);
 }
 
-int ui_init_finish()
+int ui_init_finish(void)
 {
-  return 0;
+   return 0;
 }
 
-int ui_init_finalize()
+int ui_init_finalize(void)
 {
-  //FIXME
+   //FIXME
 
-  resources_set_int( "Mouse", 0);
-  resources_set_int( "Mousetype", 0);
-  resources_set_int( "Mouseport", 1);
+   resources_set_int( "Mouse", 0);
+   resources_set_int( "Mousetype", 0);
+   resources_set_int( "Mouseport", 1);
 
-  resources_set_int( "CrtcFilter",0);
-  resources_set_int( "CrtcStretchVertical",0);
+   resources_set_int( "CrtcFilter",0);
+   resources_set_int( "CrtcStretchVertical",0);
 
-  //RETRO CORE OPT
-  resources_set_int( "SDLStatusbar", 1);
-  if(RETROSTATUS==1)vice_statusbar=1;
-  else if(RETROSTATUS==0)vice_statusbar=0;
+   //RETRO CORE OPT
+   resources_set_int( "SDLStatusbar", 1);
+   if(RETROSTATUS==1)vice_statusbar=1;
+   else if(RETROSTATUS==0)vice_statusbar=0;
 
-  if(RETROJOY==1)resources_set_int( "RetroJoy", 1);
-  else if(RETROJOY==0)resources_set_int( "RetroJoy", 0);
+   if(RETROJOY==1)resources_set_int( "RetroJoy", 1);
+   else if(RETROJOY==0)resources_set_int( "RetroJoy", 0);
 
-  if(RETROTDE==1)resources_set_int("DriveTrueEmulation", 1);
-  else if(RETROTDE==0)resources_set_int("DriveTrueEmulation", 0);
+   if(RETROTDE==1)resources_set_int("DriveTrueEmulation", 1);
+   else if(RETROTDE==0)resources_set_int("DriveTrueEmulation", 0);
 
-  resources_set_int_sprintf("Drive%iType",RETRODRVTYPE , 8);
+   resources_set_int_sprintf("Drive%iType",RETRODRVTYPE , 8);
 
-  retro_ui_finalized = 1;
+   retro_ui_finalized = 1;
 
-  return 0;
+   return 0;
 }
 
 char* ui_get_file(const char *format,...)
 {
-    return NULL;
+   return NULL;
 }
 
 

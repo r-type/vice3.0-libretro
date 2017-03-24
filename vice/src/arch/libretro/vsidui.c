@@ -38,52 +38,51 @@ extern int num_checkmark_menu_items;
 
 int vsid_ui_init(void)
 {
-    /* TODO */
-    return 1;
+   return 1;
 }
 
 void vsid_ui_display_name(const char *name)
 {
-    log_message(LOG_DEFAULT, "Name: %s", name);
+   log_message(LOG_DEFAULT, "Name: %s", name);
 }
 
 void vsid_ui_display_author(const char *author)
 {
-    log_message(LOG_DEFAULT, "Author: %s", author);
+   log_message(LOG_DEFAULT, "Author: %s", author);
 }
 
 void vsid_ui_display_copyright(const char *copyright)
 {
-    log_message(LOG_DEFAULT, "Copyright: %s", copyright);
+   log_message(LOG_DEFAULT, "Copyright: %s", copyright);
 }
 
 void vsid_ui_display_sync(int sync)
 {
-    char buf[50];
-    sprintf(buf, "Using %s sync",
-	    sync == MACHINE_SYNC_PAL ? "PAL" : "NTSC");
-    log_message(LOG_DEFAULT,"VSIDUI: %s", buf);
+   char buf[50];
+   sprintf(buf, "Using %s sync",
+         sync == MACHINE_SYNC_PAL ? "PAL" : "NTSC");
+   log_message(LOG_DEFAULT,"VSIDUI: %s", buf);
 }
 
 void vsid_ui_display_sid_model(int model)
 {
-    log_message(LOG_DEFAULT, "Using %s emulation",
-		model == 0 ? "MOS6581" : "MOS8580");
+   log_message(LOG_DEFAULT, "Using %s emulation",
+         model == 0 ? "MOS6581" : "MOS8580");
 }
 
 void vsid_ui_set_default_tune(int nr)
 {
-    log_message(LOG_DEFAULT, "Default tune: %i", nr);
+   log_message(LOG_DEFAULT, "Default tune: %i", nr);
 }
 
 void vsid_ui_display_tune_nr(int nr)
 {
-    log_message(LOG_DEFAULT, "Playing tune: %i", nr);
+   log_message(LOG_DEFAULT, "Playing tune: %i", nr);
 }
 
 void vsid_ui_display_nr_of_tunes(int count)
 {
-    log_message(LOG_DEFAULT, "Number of tunes: %i", count);
+   log_message(LOG_DEFAULT, "Number of tunes: %i", count);
 }
 
 void vsid_ui_display_time(unsigned int sec)
@@ -92,7 +91,7 @@ void vsid_ui_display_time(unsigned int sec)
 
 void vsid_ui_display_irqtype(const char *irq)
 {
-    log_message(LOG_DEFAULT, "Using %s interrupt", irq);
+   log_message(LOG_DEFAULT, "Using %s interrupt", irq);
 }
 
 void vsid_ui_close(void)

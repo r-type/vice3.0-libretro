@@ -2,15 +2,12 @@ EMU := $(CORE_DIR)/vice/src
 GUI := $(CORE_DIR)/libretro/nukleargui
 
 INCFLAGS += \
-	-I$(CORE_DIR)/libretro/include \
-	-I$(CORE_DIR)/libretro \
-	-I$(GUI) \
-	-I$(GUI)/nuklear \
-	-I$(GUI)/retro \
-	-I$(CORE_DIR) -DHAVE_CONFIG_H
-
-CPPFLAGS += -DNO_LIBCO
-CFLAGS   += -DNO_LIBCO
+				-I$(CORE_DIR)/libretro/include \
+				-I$(CORE_DIR)/libretro \
+				-I$(GUI) \
+				-I$(GUI)/nuklear \
+				-I$(GUI)/retro \
+				-I$(CORE_DIR) -DHAVE_CONFIG_H
 
 VERSION   = 3
 REVISION  = 0

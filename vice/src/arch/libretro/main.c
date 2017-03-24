@@ -8,13 +8,11 @@
 int skel_main(int argc, char *argv[])
 {
    main_program(argc, argv);
-
    return(0);
 }
 
 void vice_main_exit()
 {
-   printf("vice exit\n");
    machine_shutdown();
 }
 

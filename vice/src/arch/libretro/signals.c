@@ -36,10 +36,8 @@
 #include <unistd.h>
 #endif
 
-//#include "intl.h"
 #include "log.h"
 #include "monitor.h"
-//#include "res.h"
 #include "signals.h"
 #include "translate.h"
 #include "uiapi.h"
@@ -48,24 +46,23 @@ static const char *translated_text = "An unexpected error occurred. Received sig
 
 static void get_translated_text(void)
 {
-
 }
 
 static RETSIGTYPE break64(int sig)
 {
-    const char * signalname = "";
+   const char * signalname = "";
 
-    get_translated_text();
+   get_translated_text();
 
-    /* provide a default text in case we could not translated the text. */
+   /* provide a default text in case we could not translated the text. */
 
 #ifdef SYS_SIGLIST_DECLARED
-    signalname = sys_siglist[sig]
+   signalname = sys_siglist[sig]
 #endif
 
-    ui_error(translated_text, sig, signalname);
+      ui_error(translated_text, sig, signalname);
 
-    exit(-1);
+   exit(-1);
 }
 
 /*
@@ -73,17 +70,17 @@ static RETSIGTYPE break64(int sig)
 */
 void signals_init(int do_core_dumps)
 {
-    signal(SIGINT, break64);
-    signal(SIGTERM, break64);
+   signal(SIGINT, break64);
+   signal(SIGTERM, break64);
 
-    if (!do_core_dumps) {
+   if (!do_core_dumps)
+   {
+      get_translated_text();
 
-        get_translated_text();
-
-        signal(SIGSEGV, break64);
-        signal(SIGILL, break64);
-        signal(SIGFPE, break64);
-    }
+      signal(SIGSEGV, break64);
+      signal(SIGILL, break64);
+      signal(SIGFPE, break64);
+   }
 }
 
 /*

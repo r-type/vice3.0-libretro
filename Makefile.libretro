@@ -20,7 +20,8 @@ ifeq ($(EMUTYPE),)
 	EMUTYPE = x64
 endif
 
-TARGET_NAME := $(EMUTYPE)
+CORE_DIR    := .
+TARGET_NAME := vice_$(EMUTYPE)
 
 # system platform
 system_platform = unix
@@ -35,7 +36,7 @@ endif
 
 ifeq ($(platform), unix)
    TARGET := $(TARGET_NAME)_libretro.so
-   LDFLAGS += -shared -Wl,--version-script=libretro/link.T -lz
+   LDFLAGS += -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -lz
    
    fpic = -fPIC
 else ifeq ($(platform), crosspi)
@@ -49,7 +50,7 @@ else ifeq ($(platform), crosspi)
    CFLAGS += -march=armv7-a -mfloat-abi=hard -mfpu=vfpv3 -O2 -pipe -fstack-protector 
 
    CFLAGS +=-I~/RPI/usr/include/arm-linux-gnueabihf -I/home/tech/RPI/usr/include
- LDFLAGS += -shared -Wl,--version-script=libretro/link.T -L/home/tech/RPI/usr/lib
+ LDFLAGS += -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -L/home/tech/RPI/usr/lib
 #-I./../sources/src/include
 else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
@@ -109,7 +110,7 @@ else ifeq ($(platform), qnx)
 # ANDROID STANDALONE TOOLCHAIN
 else ifeq ($(platform), androidstc)
    TARGET := $(TARGET_NAME)_libretro_android.so
-   LDFLAGS += -lstdc++ -llog -lz -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
+   LDFLAGS += -lstdc++ -llog -lz -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--no-undefined
    CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DLSB_FIRST -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
    CFLAGS += -O2 -pipe -fstack-protector 
 
@@ -140,7 +141,7 @@ endif
    COMMONFLAGS += -I$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm/usr/include -I$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include
    COMMONFLAGS += -I$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/include
 
-   LDFLAGS += -llog -lz -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
+   LDFLAGS += -llog -lz -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--no-undefined
    LDFLAGS += $(fpic) $(SHARED) -L$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/thumb
    LDFLAGS += -L$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm/usr/lib  --sysroot=$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm -march=armv7-a -mthumb -shared
    LDFLAGS += -lc -ldl -lm -landroid -llog -lsupc++ $(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/thumb/libgnustl_static.a -lgcc
@@ -180,14 +181,14 @@ else ifeq ($(platform), wincross64)
 #   CFLAGS += -mno-ms-bitfields
 # -DX64_WINDOWS_ABI
    TARGET := $(TARGET_NAME)_libretro.dll
-   LDFLAGS += --shared -static-libgcc -static-libstdc++ -Wl,--version-script=libretro/link.T -L/usr/x86_64-w64-mingw32/lib
+   LDFLAGS += --shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(CORE_DIR)/libretro/link.T -L/usr/x86_64-w64-mingw32/lib
 
 LDFLAGS += -lws2_32 -luser32 -lwinmm -ladvapi32 -lshlwapi -lwsock32 -lws2_32 -lpsapi -liphlpapi -lshell32 -luserenv -lmingw32 -shared -lgcc -lz -lm -lmingw32
 
 else
    CFLAGS += -D__WIN32__ -DHAVE_SNPRINTF -DHAVE_VSNPRINTF -D__USE_MINGW_ANSI_STDIO=1 -DDEBUG_MAIN=1 -DDEBUG_CMDLINE=1
    TARGET := $(TARGET_NAME)_libretro.dll
-   LDFLAGS += --shared -static-libgcc -static-libstdc++ -Wl,--version-script=libretro/link.T -L/usr/x86_64-w64-mingw32/lib
+   LDFLAGS += --shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(CORE_DIR)/libretro/link.T -L/usr/x86_64-w64-mingw32/lib
    LDFLAGS += -lws2_32 -luser32 -lwinmm -ladvapi32 -lshlwapi -lwsock32 -lws2_32 -lpsapi -liphlpapi -lshell32 -luserenv -lmingw32 -shared -lgcc -lz -lm -lmingw32
 
 endif
@@ -213,10 +214,10 @@ endif
 
 COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
 
-OBJECTS  += $(SOURCES_CC:.cc=.o) $(SOURCES_C:.c=.o) 
-CXXFLAGS += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS) -fpermissive
-CFLAGS   += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS) 
-LDFLAGS  += -lm $(fpic)
+OBJECTS     += $(SOURCES_CC:.cc=.o) $(SOURCES_C:.c=.o) 
+CXXFLAGS    += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS) -fpermissive
+CFLAGS      += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS) 
+LDFLAGS     += -lm $(fpic)
 
 ifeq ($(platform), theos_ios)
 COMMON_FLAGS := -DIOS -DARM $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error

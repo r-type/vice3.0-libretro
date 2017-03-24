@@ -602,11 +602,11 @@ void retro_set_controller_port_device( unsigned port, unsigned device )
 void retro_get_system_info(struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->library_name     = CORE_NAME;
+   info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.0";
    info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd";
    info->need_fullpath    = true;
-   info->block_extract = false;
+   info->block_extract    = false;
 
 }
 
@@ -703,18 +703,11 @@ lastchar=character;
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-   const char *full_path;
-
-   (void)info;
-
-   if (!info)
-      return false;
-
 /*
    struct retro_keyboard_callback cb = { keyboard_cb };
    environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &cb);
 */
-   full_path = info->path;
+   const char *full_path = info->path;
 
    strcpy(RPATH,full_path);
 

@@ -1,6 +1,5 @@
-
 EMU := $(CORE_DIR)/vice/src
-GUI = $(CORE_DIR)/libretro/nukleargui
+GUI := $(CORE_DIR)/libretro/nukleargui
 
 INCFLAGS += \
 	-I$(CORE_DIR)/libretro/include \
@@ -11,7 +10,7 @@ INCFLAGS += \
 	-I$(CORE_DIR) -DHAVE_CONFIG_H
 
 CPPFLAGS += -DNO_LIBCO
-CFLAGS += -DNO_LIBCO
+CFLAGS   += -DNO_LIBCO
 
 VERSION   = 3
 REVISION  = 0
@@ -20,10 +19,10 @@ CPPFLAGS += -fpermissive
 CXXFLAGS += $(CPPFLAGS)
 
 SOURCES_C += \
-	$(CORE_DIR)/libretro/libretro-core.c \
-	$(GUI)/retro/SDL_gfxPrimitives.c \
-	$(GUI)/retro/retro_surface.c  \
-	$(GUI)/app.c
+				 $(CORE_DIR)/libretro/libretro-core.c \
+				 $(GUI)/retro/SDL_gfxPrimitives.c \
+				 $(GUI)/retro/retro_surface.c  \
+				 $(GUI)/app.c
 
 ifeq ($(EMUTYPE), x128)
 include Makefile.x128
@@ -47,19 +46,26 @@ else
 include Makefile.x64
 endif
 
-SOURCES_CC := \
-	$(LOCAL_SRC_CC_FILES)
+SOURCES_CC := $(LOCAL_SRC_CC_FILES)
 
 SOURCES_C += \
-	$(LOCAL_SRC_FILES) \
-	$(EMU)/arch/libretro/joy.c $(EMU)/arch/libretro/video.c \
-	$(EMU)/arch/libretro/ui.c $(EMU)/arch/libretro/kbd.c \
-	$(EMU)/arch/libretro/main.c $(EMU)/arch/libretro/archdep.c \
-	$(EMU)/arch/libretro/vsidui.c $(EMU)/arch/libretro/blockdev.c \
-	$(EMU)/arch/libretro/c64ui.c $(EMU)/arch/libretro/console.c \
-	$(EMU)/arch/libretro/uicmdline.c $(EMU)/arch/libretro/uimon.c \
-	$(EMU)/arch/libretro/vsyncarch.c $(EMU)/arch/libretro/mousedrv.c \
-	$(EMU)/arch/libretro/signals.c  \
-	$(EMU)/arch/libretro/retrostubs.c $(EMU)/arch/libretro/uistatusbar.c
+				 $(LOCAL_SRC_FILES) \
+				 $(EMU)/arch/libretro/joy.c \
+				 $(EMU)/arch/libretro/video.c \
+				 $(EMU)/arch/libretro/ui.c \
+				 $(EMU)/arch/libretro/kbd.c \
+				 $(EMU)/arch/libretro/main.c \
+				 $(EMU)/arch/libretro/archdep.c \
+				 $(EMU)/arch/libretro/vsidui.c \
+				 $(EMU)/arch/libretro/blockdev.c \
+				 $(EMU)/arch/libretro/c64ui.c \
+				 $(EMU)/arch/libretro/console.c \
+				 $(EMU)/arch/libretro/uicmdline.c \
+				 $(EMU)/arch/libretro/uimon.c \
+				 $(EMU)/arch/libretro/vsyncarch.c \
+				 $(EMU)/arch/libretro/mousedrv.c \
+				 $(EMU)/arch/libretro/signals.c  \
+				 $(EMU)/arch/libretro/retrostubs.c \
+				 $(EMU)/arch/libretro/uistatusbar.c
 
 

@@ -28,7 +28,6 @@ char TAPE_NAME[512]="\0";
 #endif
 
 int cpuloop=1;
-//extern int Core_PollEvent(void);
 
 //VIDEO
 #ifdef  RENDER16B
@@ -483,7 +482,6 @@ void Emu_init(void)
 void Emu_uninit(void)
 {
    vice_main_exit();
-   LOGI("quit vice!\n");
 }
 
 void retro_shutdown_core(void)
@@ -536,10 +534,6 @@ void retro_init(void)
    sprintf(retro_system_data_directory, "%s/data",RETRO_DIR);
 #endif
 
-   LOGI("Retro SYSTEM_DIRECTORY %s\n",retro_system_directory);
-   LOGI("Retro SAVE_DIRECTORY %s\n",retro_save_directory);
-   LOGI("Retro CONTENT_DIRECTORY %s\n",retro_content_directory);
-
 #ifndef RENDER16B
    enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;
 #else
@@ -549,7 +543,6 @@ void retro_init(void)
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
       fprintf(stderr, "PIXEL FORMAT is not supported.\n");
-      LOGI("PIXEL FORMAT is not supported.\n");
       exit(0);
    }
 
@@ -577,10 +570,7 @@ void retro_init(void)
 void retro_deinit(void)
 {
    app_free(); 
-   //if(retro_load_ok)
    Emu_uninit(); 
-
-   LOGI("Retro DeInit\n");
 }
 
 unsigned retro_api_version(void)

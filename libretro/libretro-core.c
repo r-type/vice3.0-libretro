@@ -88,10 +88,10 @@ extern void set_truedrive_emultion(int val);
 #include "resources.h"
 //VICE DEF END
 
-extern void Emu_init();
-extern void Emu_uninit();
-extern void vice_main_exit();
-extern void emu_reset();
+extern void Emu_init(void);
+extern void Emu_uninit(void);
+extern void vice_main_exit(void);
+extern void emu_reset(void);
 
 const char *retro_save_directory;
 const char *retro_system_directory;
@@ -119,18 +119,18 @@ static char CMDFILE[512];
 
 int loadcmdfile(char *argv)
 {
-    int res=0;
+   int res=0;
 
-    FILE *fp = fopen(argv,"r");
+   FILE *fp = fopen(argv,"r");
 
-    if( fp != NULL )
-    {
-	if ( fgets (CMDFILE , 512 , fp) != NULL )
-		res=1;	
-	fclose (fp);
-    }
+   if( fp != NULL )
+   {
+      if ( fgets (CMDFILE , 512 , fp) != NULL )
+         res=1;	
+      fclose (fp);
+   }
 
-    return res;
+   return res;
 }
 
 int HandleExtension(char *path,char *ext)
@@ -184,7 +184,7 @@ int pre_main(const char *argv)
    if (strlen(argv) > strlen("cmd"))
    {
       if( HandleExtension((char*)argv,"cmd") || HandleExtension((char*)argv,"CMD"))
-          i=loadcmdfile((char*)argv);     
+         i=loadcmdfile((char*)argv);     
    }
 
    if(i==1)
@@ -193,7 +193,7 @@ int pre_main(const char *argv)
       LOGI("Starting game from command line :%s\n",CMDFILE);  
    }
    else
-   parse_cmdline(argv); 
+      parse_cmdline(argv); 
 
    Only1Arg = (strcmp(ARGUV[0],CORE_NAME) == 0) ? 0 : 1;
 
@@ -203,11 +203,11 @@ int pre_main(const char *argv)
 
    if(Only1Arg)
    {  Add_Option("x64");
-/*
-      if (strlen(RPATH) >= strlen("crt"))
+      /*
+         if (strlen(RPATH) >= strlen("crt"))
          if(!strcasecmp(&RPATH[strlen(RPATH)-strlen("crt")], "crt"))
-            Add_Option("-cartcrt");
-*/
+         Add_Option("-cartcrt");
+         */
       Add_Option(RPATH/*ARGUV[0]*/);
    }
    else
@@ -231,15 +231,15 @@ int pre_main(const char *argv)
 
 void parse_cmdline(const char *argv)
 {
-	char *p,*p2,*start_of_word;
-	int c,c2;
-	static char buffer[512*4];
-	enum states { DULL, IN_WORD, IN_STRING } state = DULL;
-	
-	strcpy(buffer,argv);
-	strcat(buffer," \0");
+   char *p,*p2,*start_of_word;
+   int c,c2;
+   static char buffer[512*4];
+   enum states { DULL, IN_WORD, IN_STRING } state = DULL;
 
-	for (p = buffer; *p != '\0'; p++)
+   strcpy(buffer,argv);
+   strcat(buffer," \0");
+
+   for (p = buffer; *p != '\0'; p++)
    {
       c = (unsigned char) *p; /* convert to unsigned char for is* functions */
       switch (state)
@@ -319,14 +319,14 @@ long GetTicks(void)
 
 } 
 
-void save_bkg()
+void save_bkg(void)
 {
-	memcpy(save_Screen,Retro_Screen,PITCH*WINDOW_SIZE);
+   memcpy(save_Screen,Retro_Screen,PITCH*WINDOW_SIZE);
 }
 
-void restore_bgk()
+void restore_bgk(void)
 {
-	memcpy(Retro_Screen,save_Screen,PITCH*WINDOW_SIZE);
+   memcpy(Retro_Screen,save_Screen,PITCH*WINDOW_SIZE);
 }
 
 void Screen_SetFullUpdate(int scr)
@@ -341,23 +341,23 @@ void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
 
-  static const struct retro_controller_description p1_controllers[] = {
-    { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-    { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-  };
-  static const struct retro_controller_description p2_controllers[] = {
-    { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-    { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-  };
+   static const struct retro_controller_description p1_controllers[] = {
+      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+   };
+   static const struct retro_controller_description p2_controllers[] = {
+      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+   };
 
 
-  static const struct retro_controller_info ports[] = {
-    { p1_controllers, 2  }, // port 1
-    { p2_controllers, 2  }, // port 2
-    { NULL, 0 }
-  };
+   static const struct retro_controller_info ports[] = {
+      { p1_controllers, 2  }, // port 1
+      { p2_controllers, 2  }, // port 2
+      { NULL, 0 }
+   };
 
-  cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
+   cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
 
    struct retro_variable variables[] = {
       {
@@ -396,16 +396,16 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-		if(retro_ui_finalized){
-    		  if (strcmp(var.value, "enabled") == 0)
-    		     vice_statusbar=1;
-    		  if (strcmp(var.value, "disabled") == 0)
-    		     vice_statusbar=0;
-		}
-		else {
-		  if (strcmp(var.value, "enabled") == 0)RETROSTATUS=1;
-		  if (strcmp(var.value, "disabled") == 0)RETROSTATUS=0;
-		}
+      if(retro_ui_finalized){
+         if (strcmp(var.value, "enabled") == 0)
+            vice_statusbar=1;
+         if (strcmp(var.value, "disabled") == 0)
+            vice_statusbar=0;
+      }
+      else {
+         if (strcmp(var.value, "enabled") == 0)RETROSTATUS=1;
+         if (strcmp(var.value, "disabled") == 0)RETROSTATUS=0;
+      }
    }
 
    var.key = "vice_Drive8Type";
@@ -418,9 +418,9 @@ static void update_variables(void)
       snprintf(str, sizeof(str), "%s", var.value);
       val = strtoul(str, NULL, 0);
 
-	  if(retro_ui_finalized)
-	  	set_drive_type(8, val);
-	  else RETRODRVTYPE=val;
+      if(retro_ui_finalized)
+         set_drive_type(8, val);
+      else RETRODRVTYPE=val;
    }
 
    var.key = "vice_DriveTrueEmulation";
@@ -428,16 +428,16 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-		if(retro_ui_finalized){
-      		if (strcmp(var.value, "enabled") == 0)
-         		set_truedrive_emultion(1);
-      		if (strcmp(var.value, "disabled") == 0)
-         		set_truedrive_emultion(0);
-		}
-		else  {
-			if (strcmp(var.value, "enabled") == 0)RETROTDE=1;
-			if (strcmp(var.value, "disabled") == 0)RETROTDE=0;
-		}
+      if(retro_ui_finalized){
+         if (strcmp(var.value, "enabled") == 0)
+            set_truedrive_emultion(1);
+         if (strcmp(var.value, "disabled") == 0)
+            set_truedrive_emultion(0);
+      }
+      else  {
+         if (strcmp(var.value, "enabled") == 0)RETROTDE=1;
+         if (strcmp(var.value, "disabled") == 0)RETROTDE=0;
+      }
    }
 
    var.key = "vice_RetroJoy";
@@ -445,16 +445,16 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-		if(retrojoy_init){
-		      if (strcmp(var.value, "enabled") == 0)
-		         resources_set_int( "RetroJoy", 1);
-		      if (strcmp(var.value, "disabled") == 0)
-		         resources_set_int( "RetroJoy", 0);
-		}
-		else {
-		      if (strcmp(var.value, "enabled") == 0)RETROJOY=1;
-		      if (strcmp(var.value, "disabled") == 0)RETROJOY=0;
-		}
+      if(retrojoy_init){
+         if (strcmp(var.value, "enabled") == 0)
+            resources_set_int( "RetroJoy", 1);
+         if (strcmp(var.value, "disabled") == 0)
+            resources_set_int( "RetroJoy", 0);
+      }
+      else {
+         if (strcmp(var.value, "enabled") == 0)RETROJOY=1;
+         if (strcmp(var.value, "disabled") == 0)RETROJOY=0;
+      }
    }
 
    var.key = "vice_Controller";
@@ -462,25 +462,25 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      	  if (strcmp(var.value, "keyboard") == 0)
-	       vice_devices[ 0 ] = 259;
-	  if (strcmp(var.value, "joystick") == 0)
-	       vice_devices[ 0 ] = 513;	  
+      if (strcmp(var.value, "keyboard") == 0)
+         vice_devices[ 0 ] = 259;
+      if (strcmp(var.value, "joystick") == 0)
+         vice_devices[ 0 ] = 513;	  
    }
 
 }
 
 
-void Emu_init()
+void Emu_init(void)
 {
 #ifdef RETRO_AND
    MOUSE_EMULATED=1;
 #endif 
-  update_variables();
-  pre_main(RPATH);
+   update_variables();
+   pre_main(RPATH);
 }
 
-void Emu_uninit()
+void Emu_uninit(void)
 {
    vice_main_exit();
    LOGI("quit vice!\n");
@@ -493,7 +493,7 @@ void retro_shutdown_core(void)
 
 void retro_reset(void)
 {
-	emu_reset();
+   emu_reset();
 }
 
 void retro_init(void)
@@ -541,43 +541,43 @@ void retro_init(void)
    LOGI("Retro CONTENT_DIRECTORY %s\n",retro_content_directory);
 
 #ifndef RENDER16B
-    	enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;
+   enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;
 #else
-    	enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
+   enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
 #endif
-   
+
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
       fprintf(stderr, "PIXEL FORMAT is not supported.\n");
-LOGI("PIXEL FORMAT is not supported.\n");
+      LOGI("PIXEL FORMAT is not supported.\n");
       exit(0);
    }
 
-	struct retro_input_descriptor inputDescriptors[] = {
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "A" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "B" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "X" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Y" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Up" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Down" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "R" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "L" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "R2" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "L2" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "R3" },
-		{ 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "L3" }
-	};
-	environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
+   struct retro_input_descriptor inputDescriptors[] = {
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "A" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "B" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "X" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Y" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Up" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Down" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "R" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "L" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "R2" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "L2" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "R3" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "L3" }
+   };
+   environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
 }
 
 void retro_deinit(void)
 {
    app_free(); 
- //if(retro_load_ok)
+   //if(retro_load_ok)
    Emu_uninit(); 
 
    LOGI("Retro DeInit\n");
@@ -645,7 +645,7 @@ void retro_audiocb(signed short int *sound_buffer,int sndbufsize){
    if(pauseg==0)for(x=0;x<sndbufsize;x++)audio_cb(sound_buffer[x],sound_buffer[x]);	
 }
 
-void retro_blit()
+void retro_blit(void)
 {
    memcpy(Retro_Screen,bmp,PITCH*WINDOW_SIZE);
 }
@@ -670,11 +670,11 @@ void retro_run(void)
 
    if(pauseg==0)
    {
-	while(cpuloop==1)
-		maincpu_mainloop_retro();
-	cpuloop=1;
+      while(cpuloop==1)
+         maincpu_mainloop_retro();
+      cpuloop=1;
 
-	retro_blit();
+      retro_blit();
    }
 
    app_render(pauseg);
@@ -685,28 +685,28 @@ void retro_run(void)
 }
 
 /*
-unsigned int lastdown,lastup,lastchar;
-static void keyboard_cb(bool down, unsigned keycode,
-      uint32_t character, uint16_t mod)
-{
+   unsigned int lastdown,lastup,lastchar;
+   static void keyboard_cb(bool down, unsigned keycode,
+   uint32_t character, uint16_t mod)
+   {
 
-  printf( "Down: %s, Code: %d, Char: %u, Mod: %u.\n",
-         down ? "yes" : "no", keycode, character, mod);
+   printf( "Down: %s, Code: %d, Char: %u, Mod: %u.\n",
+   down ? "yes" : "no", keycode, character, mod);
 
 
-if(down)lastdown=keycode;
-else lastup=keycode;
-lastchar=character;
+   if(down)lastdown=keycode;
+   else lastup=keycode;
+   lastchar=character;
 
-}
-*/
+   }
+   */
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-/*
-   struct retro_keyboard_callback cb = { keyboard_cb };
-   environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &cb);
-*/
+   /*
+      struct retro_keyboard_callback cb = { keyboard_cb };
+      environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &cb);
+      */
    const char *full_path = info->path;
 
    strcpy(RPATH,full_path);

@@ -71,6 +71,7 @@ else
 SOURCES_C += \
 	$(DEPS_DIR)/libz/adler32.c \
 	$(DEPS_DIR)/libz/crc32.c \
+	$(DEPS_DIR)/libz/deflate.c \
 	$(DEPS_DIR)/libz/inflate.c \
 	$(DEPS_DIR)/libz/inftrees.c \
 	$(DEPS_DIR)/libz/inffast.c \

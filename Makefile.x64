@@ -17,7 +17,8 @@ SOURCES_CC += \
 				  $(EMU)/resid/voice.cc \
 				  $(EMU)/resid/sid.cc \
 				  $(EMU)/sid/resid.cc \
-				  $(EMU)/sid/resid-dtv.cc
+				  $(EMU)/sid/resid-dtv.cc \
+				  $(EMU)/sid/sid.c
 
 SOURCES_C += $(EMU)/gcr.c \
 				 $(EMU)/machine-bus.c \
@@ -448,7 +449,6 @@ SOURCES_C += $(EMU)/gcr.c \
 				 $(EMU)/sid/hardsid.c \
 				 $(EMU)/sid/catweaselmkiii.c \
 				 $(EMU)/sid/sid-snapshot.c \
-				 $(EMU)/sid/sid.c \
 				 $(EMU)/sounddrv/soundaiff.c \
 				 $(EMU)/sounddrv/soundmovie.c \
 				 $(EMU)/sounddrv/soundalsa.c \

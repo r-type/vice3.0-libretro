@@ -17,6 +17,7 @@ SOURCES_CC :=  \
 					$(EMU)/resid/voice.cc \
 					$(EMU)/resid/wave.cc \
 					$(EMU)/sid/resid.cc \
+					$(EMU)/sid/sid.c \
 					$(EMU)/sid/resid-dtv.cc
 
 SOURCES_C	:= \
@@ -426,7 +427,6 @@ SOURCES_C	:= \
 					$(EMU)/sid/sid-cmdline-options.c \
 					$(EMU)/sid/sid-resources.c \
 					$(EMU)/sid/sid-snapshot.c \
-					$(EMU)/sid/sid.c \
 					$(EMU)/sid/ssi2001.c \
 					$(EMU)/sounddrv/soundaiff.c \
 					$(EMU)/sounddrv/soundalsa.c \

@@ -16,7 +16,8 @@ REVISION  = 0
 
 CXXFLAGS += $(CPPFLAGS)
 
-SOURCES_C += \
+SOURCES_CC :=
+SOURCES_C  := \
 				 $(CORE_DIR)/libretro/libretro-core.c \
 				 $(GUI)/retro/SDL_gfxPrimitives.c \
 				 $(GUI)/retro/retro_surface.c  \
@@ -44,7 +45,7 @@ else
 include $(CORE_DIR)/Makefile.x64
 endif
 
-SOURCES_CC := $(LOCAL_SRC_CC_FILES)
+SOURCES_CC += $(LOCAL_SRC_CC_FILES)
 
 SOURCES_C += \
 				 $(LOCAL_SRC_FILES) \

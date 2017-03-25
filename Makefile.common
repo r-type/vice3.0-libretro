@@ -79,5 +79,6 @@ SOURCES_C += \
 	$(DEPS_DIR)/libz/gzread.c \
 	$(DEPS_DIR)/libz/gzwrite.c \
 	$(DEPS_DIR)/libz/gzlib.c \
+	$(DEPS_DIR)/libz/gzclose.c \
 	$(DEPS_DIR)/libz/zutil.c
 endif

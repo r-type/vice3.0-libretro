@@ -17,7 +17,6 @@ SOURCES_CC :=  \
 					$(EMU)/resid/voice.cc  \
 					$(EMU)/resid/sid.cc  \
 					$(EMU)/sid/resid.cc \
-					$(EMU)/sid/sid.c  \
 					$(EMU)/sid/resid-dtv.cc 
 
 SOURCES_C	:= \
@@ -272,6 +271,7 @@ SOURCES_C	:= \
 					$(EMU)/sid/hardsid.c  \
 					$(EMU)/sid/catweaselmkiii.c  \
 					$(EMU)/sid/sid-snapshot.c  \
+					$(EMU)/sid/sid.c  \
 					$(EMU)/core/viacore.c  \
 					$(EMU)/core/t6721.c  \
 					$(EMU)/core/m93c86.c  \

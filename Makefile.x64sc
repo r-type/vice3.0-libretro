@@ -16,7 +16,8 @@ SOURCES_CC :=  \
 					$(EMU)/resid/version.cc \
 					$(EMU)/resid/voice.cc \
 					$(EMU)/resid/wave.cc \
-					$(EMU)/sid/resid.cc
+					$(EMU)/sid/resid.cc \
+					$(EMU)/sid/resid-dtv.cc
 
 SOURCES_C	:= \
 					$(EMU)/alarm.c \

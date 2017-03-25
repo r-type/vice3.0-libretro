@@ -74,5 +74,6 @@ SOURCES_C += \
 	$(DEPS_DIR)/libz/inflate.c \
 	$(DEPS_DIR)/libz/inftrees.c \
 	$(DEPS_DIR)/libz/inffast.c \
+	$(DEPS_DIR)/libz/gzwrite.c \
 	$(DEPS_DIR)/libz/zutil.c
 endif

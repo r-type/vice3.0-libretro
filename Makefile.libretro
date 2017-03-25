@@ -215,7 +215,7 @@ endif
 COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
 
 OBJECTS     += $(SOURCES_CC:.cc=.o) $(SOURCES_C:.c=.o) 
-CXXFLAGS    += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS) -fpermissive
+CXXFLAGS    += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 CFLAGS      += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS) 
 LDFLAGS     += -lm $(fpic)
 

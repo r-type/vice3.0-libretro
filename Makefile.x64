@@ -1,5 +1,3 @@
-#EMU := $(CORE_DIR)/vice/src
-
 INCFLAGS += \
 		-I$(EMU) -I$(EMU)/userport -I$(EMU)/video  -I$(EMU)/core -I$(EMU)/platform \
 		-I$(EMU)/sid -I$(EMU)/drive -I$(EMU)/vicii -I$(EMU)/tape -I$(EMU)/c64 \
@@ -7,6 +5,18 @@ INCFLAGS += \
 		-I$(EMU)/c64/cart -I$(EMU)/imagecontents -I$(EMU)/arch/libretro -I$(EMU)/src -I$(EMU)/diag \
 		-I$(EMU)/lib/p64 -I$(EMU)/drive/iec/c64exp -I$(EMU)/samplerdrv -I$(EMU)/drive/ieee -I$(EMU)/drive/tcbm \
 		-I$(EMU)/rtc -I$(EMU)/resid -I$(EMU)/monitor -I$(EMU)/joyport -I$(EMU)/tapeport  -I$(EMU)/drive/iec
+
+SOURCES_CC += \
+				  $(EMU)/resid/extfilt.cc \
+				  $(EMU)/resid/version.cc \
+				  $(EMU)/resid/filter.cc \
+				  $(EMU)/resid/pot.cc \
+				  $(EMU)/resid/wave.cc \
+				  $(EMU)/resid/envelope.cc \
+				  $(EMU)/resid/dac.cc \
+				  $(EMU)/resid/voice.cc \
+				  $(EMU)/resid/sid.cc \
+				  $(EMU)/sid/resid.cc
 
 SOURCES_C += $(EMU)/gcr.c \
 				 $(EMU)/machine-bus.c \
@@ -402,15 +412,6 @@ SOURCES_C += $(EMU)/gcr.c \
 				 $(EMU)/raster/raster-resources.c \
 				 $(EMU)/raster/raster-sprite-status.c \
 				 $(EMU)/raster/raster-cmdline-options.c \
-				 $(EMU)/resid/extfilt.c \
-				 $(EMU)/resid/version.c \
-				 $(EMU)/resid/filter.c \
-				 $(EMU)/resid/pot.c \
-				 $(EMU)/resid/wave.c \
-				 $(EMU)/resid/envelope.c \
-				 $(EMU)/resid/dac.c \
-				 $(EMU)/resid/voice.c \
-				 $(EMU)/resid/sid.c \
 				 $(EMU)/rs232drv/rs232drv.c \
 				 $(EMU)/rs232drv/rs232net.c \
 				 $(EMU)/rs232drv/rs232.c \
@@ -438,7 +439,6 @@ SOURCES_C += $(EMU)/gcr.c \
 				 $(EMU)/serial/fsdrive.c \
 				 $(EMU)/serial/serial-device.c \
 				 $(EMU)/serial/serial-iec-bus.c \
-				 $(EMU)/sid/resid.c \
 				 $(EMU)/sid/sid-cmdline-options.c \
 				 $(EMU)/sid/fastsid.c \
 				 $(EMU)/sid/parsid.c \

@@ -18,10 +18,13 @@ ifeq ($(TARGET_ARCH),mips)
 LOCAL_CFLAGS += -DANDROID_MIPS -D__mips__ -D__MIPSEL__
 endif
 
-CORE_DIR := ..
+EMUTYPE     := x64
+CORE_DIR    := ..
 
 SOURCES_C   :=
 SOURCES_ASM :=
+
+LOCAL_CFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
 
 ifeq ($(HAVE_DYNAREC),1)
 LOCAL_CFLAGS += -DHAVE_DYNAREC

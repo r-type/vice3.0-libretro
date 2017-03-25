@@ -1,7 +1,9 @@
-EMU := $(CORE_DIR)/vice/src
-GUI := $(CORE_DIR)/libretro/nukleargui
+EMU        := $(CORE_DIR)/vice/src
+GUI        := $(CORE_DIR)/libretro/nukleargui
+DEPS_DIR   := $(CORE_DIR)/deps
 
 INCFLAGS += \
+				-I$(CORE_DIR)/include \
 				-I$(CORE_DIR)/libretro/include \
 				-I$(CORE_DIR)/libretro \
 				-I$(GUI) \
@@ -64,4 +66,13 @@ SOURCES_C += \
 				 $(EMU)/arch/libretro/retrostubs.c \
 				 $(EMU)/arch/libretro/uistatusbar.c
 
-
+ifeq ($(STATIC_LINKING),1)
+else
+SOURCES_C += \
+	$(DEPS_DIR)/libz/adler32.c \
+	$(DEPS_DIR)/libz/crc32.c \
+	$(DEPS_DIR)/libz/inflate.c \
+	$(DEPS_DIR)/libz/inftrees.c \
+	$(DEPS_DIR)/libz/inffast.c \
+	$(DEPS_DIR)/libz/zutil.c
+endif

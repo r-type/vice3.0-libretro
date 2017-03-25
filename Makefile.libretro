@@ -63,8 +63,8 @@ else ifeq ($(platform), osx)
 	OSXVER = `sw_vers -productVersion | cut -d. -f 2`
 	OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
 	fpic += -mmacosx-version-min=10.1
-	CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF
-	CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF
+	CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF
+	CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF
 ifndef ($(UNIVERSAL))
 	CFLAGS += $(ARCHFLAGS)
 	CXXFLAGS += $(ARCHFLAGS)
@@ -83,8 +83,8 @@ else ifeq ($(platform), ios)
    CC = clang -arch armv7 -isysroot $(IOSSDK)
    CXX = clang++ -arch armv7 -isysroot $(IOSSDK)
 	COMMONFLAGS += -DIOS 
-	CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF
-	CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF
+	CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF
+	CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF
 	OSXVER = `sw_vers -productVersion | cut -d. -f 2`
 	OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
 	ifeq ($(OSX_LT_MAVERICKS),"YES")

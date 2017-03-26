@@ -9,6 +9,7 @@ INCFLAGS += \
 				-I$(GUI) \
 				-I$(GUI)/nuklear \
 				-I$(GUI)/retro \
+				-I$(CORE_DIR)/include/compat \
 				-I$(CORE_DIR) -DHAVE_CONFIG_H
 
 VERSION   = 3

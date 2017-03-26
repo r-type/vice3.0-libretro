@@ -69,7 +69,7 @@ static nk_retro_Font *RSDL_font;
 int app_init()
 {
 
-#ifdef  RENDER16B
+#ifdef  FRONTEND_SUPPORTS_RGB565
     screen_surface=Retro_CreateRGBSurface16(retrow,retroh,16,0,0,0,0);
     Retro_Screen=(unsigned short int *)screen_surface->pixels;
 #else

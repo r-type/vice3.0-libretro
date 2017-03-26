@@ -29,8 +29,7 @@ char TAPE_NAME[512]="\0";
 
 int cpuloop=1;
 
-//VIDEO
-#ifdef  RENDER16B
+#ifdef FRONTEND_SUPPORTS_RGB565
 	uint16_t *Retro_Screen;
 	uint16_t bmp[WINDOW_SIZE];
 	uint16_t save_Screen[WINDOW_SIZE];
@@ -534,10 +533,10 @@ void retro_init(void)
    sprintf(retro_system_data_directory, "%s/data",RETRO_DIR);
 #endif
 
-#ifndef RENDER16B
-   enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;
-#else
+#ifndef FRONTEND_SUPPORTS_RGB565
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
+#else
+   enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;
 #endif
 
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))

@@ -132,7 +132,7 @@ int video_canvas_set_palette(struct video_canvas_s *canvas,
    canvas->palette = palette;
 
    for (i = 0; i < palette->num_entries; i++) {
-#ifdef RENDER16B
+#ifdef FRONTEND_SUPPORTS_RGB565
 #define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
       col = RGB565(palette->entries[i].red, palette->entries[i].green, palette->entries[i].blue);
 #else
@@ -141,7 +141,7 @@ int video_canvas_set_palette(struct video_canvas_s *canvas,
       video_render_setphysicalcolor(canvas->videoconfig, i, col, canvas->depth);
    }
    for (i = 0; i < 256; i++) {
-#ifdef RENDER16B
+#ifdef FRONTEND_SUPPORTS_RGB565
       video_render_setrawrgb(i, RGB565(i, 0, 0), RGB565(0, i, 0) , RGB565(0, 0, i) );
 #else
       video_render_setrawrgb(i, i, i, i);

@@ -533,7 +533,7 @@ void retro_init(void)
    sprintf(retro_system_data_directory, "%s/data",RETRO_DIR);
 #endif
 
-#ifndef FRONTEND_SUPPORTS_RGB565
+#ifdef FRONTEND_SUPPORTS_RGB565
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
 #else
    enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;

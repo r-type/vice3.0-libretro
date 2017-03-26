@@ -45,8 +45,7 @@ else ifeq ($(platform), crosspi)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
    SHARED :=   -L~/RPI/usr/lib/arm-linux-gnueabihf -L~/RPI/lib -L~/RPI/lib/arm-linux-gnueabihf -shared -Wl,--no-undefined 
-#-Wl,--version-script=$(LIBRETRO_DIR)/link.T 
-   CFLAGS +=  -DARM -DRPIPORT -DLSB_FIRST -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
+   CFLAGS +=  -DARM -DRPIPORT -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
    CFLAGS += -march=armv7-a -mfloat-abi=hard -mfpu=vfpv3 -O2 -pipe -fstack-protector 
 
    CFLAGS +=-I~/RPI/usr/include/arm-linux-gnueabihf -I/home/tech/RPI/usr/include
@@ -115,7 +114,7 @@ else ifeq ($(platform), qnx)
 else ifeq ($(platform), androidstc)
    TARGET := $(TARGET_NAME)_libretro_android.so
    LDFLAGS += -lstdc++ -llog -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--no-undefined
-   CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DLSB_FIRST -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
+   CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
    CFLAGS += -O2 -pipe -fstack-protector 
 
    CC = arm-linux-androideabi-gcc
@@ -139,7 +138,7 @@ endif
    CC = $(ANDROID_NDK_ARM)/bin/arm-linux-androideabi-gcc 
    CXX = $(ANDROID_NDK_ARM)/bin/arm-linux-androideabi-g++
 
-   CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DLSB_FIRST -DALIGN_DWORD 
+   CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DALIGN_DWORD 
 
    COMMONFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mthumb -DANDROID -DALIGN_INTS -DALIGN_SHORTS 
    COMMONFLAGS += -I$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm/usr/include -I$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include

@@ -402,7 +402,6 @@ void maincpu_resync_limits(void)
 }
 
 #ifdef __LIBRETRO__
-#ifdef NO_LIBCO
 void maincpu_mainloop_retro(void)
 {
 #ifndef C64DTV
@@ -528,7 +527,6 @@ first1++;
     }
 }
 
-#endif
 #endif
 
 void maincpu_mainloop(void)

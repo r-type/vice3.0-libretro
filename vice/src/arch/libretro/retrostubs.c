@@ -52,47 +52,47 @@ void Keymap_KeyUp(int symkey)
 
 void Keymap_KeyDown(int symkey)
 {
-//FIXME detect retroarch hotkey
-	switch (symkey){
+   //FIXME detect retroarch hotkey
+   switch (symkey)
+   {
+      case RETROK_F9:		// F9: toggle vkbd
+         break;
+      case RETROK_F10:	// F10: 
+         pauseg=1;
+         save_bkg();
+         printf("enter gui!\n");
+         break;
+      case RETROK_F11:	// F11:
+         break;
+      case RETROK_F12:	// F12: Reset
+         machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
+         break;
+      case RETROK_NUMLOCK:
+         num_locked = true;
+         break;
+      case RETROK_KP_PLUS:	// '+' on keypad: FLip List NEXT
+         //flilist next
+         fliplist_attach_head(8, 1);
+         break;
+      case RETROK_KP_MINUS:	// '-' on keypad: FLip List PREV
+         //flilist prev
+         fliplist_attach_head(8, 0);
+         break;
+      case RETROK_KP_MULTIPLY:	// '*' on keypad: toggle current joy port
+         cur_port++;
+         if(cur_port>2)cur_port=1;
+         break;
+      case RETROK_KP_DIVIDE:	// '/' on keypad: Toggle GUI 
+         pauseg=1;
+         break;
 
-		case RETROK_F9:		// F9: toggle vkbd
-			break;
-		case RETROK_F10:	// F10: 
-			pauseg=1;
-		        save_bkg();
-      			printf("enter gui!\n");
-			break;
-		case RETROK_F11:	// F11:
-			break;
-		case RETROK_F12:	// F12: Reset
-			machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
-			break;
-		case RETROK_NUMLOCK:
-			num_locked = true;
-			break;
-		case RETROK_KP_PLUS:	// '+' on keypad: FLip List NEXT
-			//flilist next
-			fliplist_attach_head(8, 1);
-			break;
-		case RETROK_KP_MINUS:	// '-' on keypad: FLip List PREV
-			//flilist prev
-			fliplist_attach_head(8, 0);
-			break;
-		case RETROK_KP_MULTIPLY:	// '*' on keypad: toggle current joy port
-		        cur_port++;
-			if(cur_port>2)cur_port=1;
-			break;
-		case RETROK_KP_DIVIDE:	// '/' on keypad: Toggle GUI 
-			pauseg=1;
-			break;
-
-		default:
-			kbd_handle_keydown(symkey);
-			break;
-	}
+      default:
+         kbd_handle_keydown(symkey);
+         break;
+   }
 }
 
-void app_vkb_handle()
+void app_vkb_handle(void)
 {
    static int oldi=-1;
    int i;
@@ -105,138 +105,138 @@ void app_vkb_handle()
 
    if(vkey_pressed==-1)return;
 
-	 i=vkey_pressed;
-	 vkey_pressed=-1;
+   i=vkey_pressed;
+   vkey_pressed=-1;
 
 
-         if(i==-1){
-            oldi=-1;
-		 }
-         if(i==-2)
-         {
-            NPAGE=-NPAGE;oldi=-1;
-         }
-         else if(i==-3)
-         {
-	    //flilist prev
-	    fliplist_attach_head(8, 0);
-            oldi=-1;
-         }
-         else if(i==-4)
-         {
-            //VKbd show/hide 			
-            oldi=-1;
-            SHOWKEY=-SHOWKEY;
-         }
-         else if(i==-5)
-         {
-	    //flilist next
-	    fliplist_attach_head(8, 1);
-            oldi=-1;
-         }
-/*
-         else if(i==-6)
-         {
-			//Exit
-			retro_deinit();
-			oldi=-1;
-            exit(0);
-         }
-*/
-         else
-         {
+   if(i==-1){
+      oldi=-1;
+   }
+   if(i==-2)
+   {
+      NPAGE=-NPAGE;oldi=-1;
+   }
+   else if(i==-3)
+   {
+      //flilist prev
+      fliplist_attach_head(8, 0);
+      oldi=-1;
+   }
+   else if(i==-4)
+   {
+      //VKbd show/hide 			
+      oldi=-1;
+      SHOWKEY=-SHOWKEY;
+   }
+   else if(i==-5)
+   {
+      //flilist next
+      fliplist_attach_head(8, 1);
+      oldi=-1;
+   }
+   /*
+      else if(i==-6)
+      {
+   //Exit
+   retro_deinit();
+   oldi=-1;
+   exit(0);
+   }
+   */
+   else
+   {
 
-            if(i==-10) //SHIFT
-            {
-	       if(SHIFTON == 1)kbd_handle_keyup(RETROK_RSHIFT);
-	       else kbd_handle_keydown(RETROK_LSHIFT);
-               SHIFTON=-SHIFTON;
+      if(i==-10) //SHIFT
+      {
+         if(SHIFTON == 1)kbd_handle_keyup(RETROK_RSHIFT);
+         else kbd_handle_keydown(RETROK_LSHIFT);
+         SHIFTON=-SHIFTON;
 
-               oldi=-1;
-            }
-            else if(i==-11) //CTRL
-            {     
-               if(CTRLON == 1)kbd_handle_keyup(RETROK_LCTRL);
-	       else kbd_handle_keydown(RETROK_LCTRL);
-               CTRLON=-CTRLON;
+         oldi=-1;
+      }
+      else if(i==-11) //CTRL
+      {     
+         if(CTRLON == 1)kbd_handle_keyup(RETROK_LCTRL);
+         else kbd_handle_keydown(RETROK_LCTRL);
+         CTRLON=-CTRLON;
 
-               oldi=-1;
-            }
-	    else if(i==-12) //RSTOP
-            {
-               if(RSTOPON == 1)kbd_handle_keyup(RETROK_ESCAPE);
-	       else kbd_handle_keydown(RETROK_ESCAPE); 
-               RSTOPON=-RSTOPON;
+         oldi=-1;
+      }
+      else if(i==-12) //RSTOP
+      {
+         if(RSTOPON == 1)kbd_handle_keyup(RETROK_ESCAPE);
+         else kbd_handle_keydown(RETROK_ESCAPE); 
+         RSTOPON=-RSTOPON;
 
-               oldi=-1;
-            }
-	    else if(i==-13) //GUI
-            {     
-	       pauseg=1;
-	       save_bkg();
-	       //SHOWKEY=-SHOWKEY;
-	       //Screen_SetFullUpdate(0);
-               oldi=-1;
-            }
-	    else if(i==-14) //JOY PORT TOGGLE
-            {    
-	       //cur joy toggle
-	       cur_port++;if(cur_port>2)cur_port=1;
-               SHOWKEY=-SHOWKEY;
-               oldi=-1;
-            }
-            else
-            {
-               oldi=i;
- 	       kbd_handle_keydown(oldi); 
-            }
+         oldi=-1;
+      }
+      else if(i==-13) //GUI
+      {     
+         pauseg=1;
+         save_bkg();
+         //SHOWKEY=-SHOWKEY;
+         //Screen_SetFullUpdate(0);
+         oldi=-1;
+      }
+      else if(i==-14) //JOY PORT TOGGLE
+      {    
+         //cur joy toggle
+         cur_port++;if(cur_port>2)cur_port=1;
+         SHOWKEY=-SHOWKEY;
+         oldi=-1;
+      }
+      else
+      {
+         oldi=i;
+         kbd_handle_keydown(oldi); 
+      }
 
-         }
+   }
 
 
 }
 
 // Core input Key(not GUI) 
-void Core_Processkey()
+void Core_Processkey(void)
 {
-	int i;
+   int i;
 
-	for(i=0;i<320;i++)
-        	Core_Key_Sate[i]=input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0,i) ? 0x80: 0;
-   
-	if(memcmp( Core_Key_Sate,Core_old_Key_Sate , sizeof(Core_Key_Sate) ) )
-	 	for(i=0;i<320;i++)
-			if(Core_Key_Sate[i] && Core_Key_Sate[i]!=Core_old_Key_Sate[i]  )
-        	{	
+   for(i=0;i<320;i++)
+      Core_Key_Sate[i]=input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0,i) ? 0x80: 0;
 
-				if(i==RETROK_LALT){
-					//KBMOD=-KBMOD;
-					//printf("Modifier alt pressed %d \n",KBMOD); 
-					continue;
-				}
-				//printf("press: %d \n",i);
-				Keymap_KeyDown(i);
-	
-        	}	
-        	else if ( !Core_Key_Sate[i] && Core_Key_Sate[i]!=Core_old_Key_Sate[i]  )
-        	{
+   if(memcmp( Core_Key_Sate,Core_old_Key_Sate , sizeof(Core_Key_Sate) ) )
+      for(i=0;i<320;i++)
+         if(Core_Key_Sate[i] && Core_Key_Sate[i]!=Core_old_Key_Sate[i]  )
+         {	
+            if(i==RETROK_LALT)
+            {
+               //KBMOD=-KBMOD;
+               //printf("Modifier alt pressed %d \n",KBMOD); 
+               continue;
+            }
+            //printf("press: %d \n",i);
+            Keymap_KeyDown(i);
 
-				if(i==RETROK_LALT){
-					//KBMOD=-KBMOD;
-					//printf("Modifier alt released %d \n",KBMOD); 
-					continue;
-				}
-				//printf("release: %d \n",i);
-				Keymap_KeyUp(i);
-	
-        	}	
+         }	
+         else if ( !Core_Key_Sate[i] && Core_Key_Sate[i]!=Core_old_Key_Sate[i]  )
+         {
+            if(i==RETROK_LALT)
+            {
+               //KBMOD=-KBMOD;
+               //printf("Modifier alt released %d \n",KBMOD); 
+               continue;
+            }
+            //printf("release: %d \n",i);
+            Keymap_KeyUp(i);
 
-	memcpy(Core_old_Key_Sate,Core_Key_Sate , sizeof(Core_Key_Sate) );
+         }	
+
+   memcpy(Core_old_Key_Sate,Core_Key_Sate , sizeof(Core_Key_Sate) );
 
 }
 
 // Core input (not GUI) 
-int Core_PollEvent()
+int Core_PollEvent(void)
 {
     //   RETRO        B    Y    SLT  STA  UP   DWN  LEFT RGT  A    X    L    R    L2   R2   L3   R3
     //   INDEX        0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15

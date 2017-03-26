@@ -157,19 +157,13 @@ int main_program(int argc, char **argv)
         return -1;
     }
 #else
-/*
-#ifndef NO_LIBCO
-    if (atexit(main_exit) < 0) {
-        archdep_startup_log_error("atexit failed.\n");
-        return -1;
+#if 0
+    if (atexit(vice_main_exit) < 0)
+    {
+       archdep_startup_log_error("atexit failed.\n");
+       return -1;
     }
-#else
-    if (atexit(vice_main_exit) < 0) {
-         archdep_startup_log_error("atexit failed.\n");
-         return -1;
-     }
 #endif
-*/
 #endif
     maincpu_early_init();
     machine_setup_context();
@@ -311,14 +305,8 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, "Main CPU: starting at ($FFFC).");
 
 #ifdef __LIBRETRO__
-#ifndef NO_LIBCO
-    resources_save("./vicerc0"); 
-    co_switch(mainThread);
-    maincpu_mainloop();
-#else
      resources_save("./vicerc0");
      maincpu_mainloop_retro();
-#endif
 #else
     maincpu_mainloop();
 #endif

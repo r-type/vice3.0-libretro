@@ -549,7 +549,6 @@ void maincpu_resync_limits(void)
 }
 
 #ifdef __LIBRETRO__
-#ifdef NO_LIBCO
 void maincpu_mainloop_retro(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at
@@ -641,8 +640,6 @@ first1++;
 #endif
     }
 }
-
-#endif
 #endif
 
 void maincpu_mainloop(void)

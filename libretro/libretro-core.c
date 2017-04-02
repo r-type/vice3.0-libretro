@@ -364,15 +364,15 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_Drive8Type",
-         "Drive8Type; 1540|1541|1542|1551|1570|1571|1573|1581|2000|4000|2031|2040|3040|4040|1001|8050|8250",
+         "Drive8Type; 1541|1540|1542|1551|1570|1571|1573|1581|2000|4000|2031|2040|3040|4040|1001|8050|8250",
       },
       {
          "vice_DriveTrueEmulation",
-         "DriveTrueEmulation; disabled|enabled",
+         "DriveTrueEmulation; enabled|disabled",
       },
       {
          "vice_RetroJoy",
-         "Retro joy0; disabled|enabled",
+         "Retro joy0; enabled|disabled",
       },
       {
          "vice_Controller",

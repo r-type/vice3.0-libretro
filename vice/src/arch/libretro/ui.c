@@ -29,12 +29,13 @@
 #include "cmdline.h"
 #include "uistatusbar.h"
 #include "resources.h"
+#include "sid.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
 
-int RETROJOY=0,RETROTDE=0,RETROSTATUS=0,RETRODRVTYPE=1542;
+int RETROJOY=0,RETROTDE=0,RETROSTATUS=0,RETRODRVTYPE=1542,RETROSIDMODL=0;
 int retro_ui_finalized = 0;
 extern int vice_statusbar;
 
@@ -132,6 +133,8 @@ int ui_init_finalize(void)
 
    resources_set_int_sprintf("Drive%iType",RETRODRVTYPE , 8);
 
+   sid_set_engine_model((RETROSIDMODL >> 8),  (RETROSIDMODL & 0xff));
+	
    retro_ui_finalized = 1;
 
    return 0;

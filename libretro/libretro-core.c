@@ -77,13 +77,14 @@ int	retroh=272;
 
 unsigned vice_devices[ 2 ];
 
-extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE;
+extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL;
 extern int retrojoy_init,retro_ui_finalized;
 extern void set_drive_type(int drive,int val);
 extern void set_truedrive_emultion(int val);
 
 //VICE DEF BEGIN
 #include "resources.h"
+#include "sid.h"
 //VICE DEF END
 
 extern void Emu_init(void);
@@ -364,15 +365,19 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_Drive8Type",
-         "Drive8Type; 1540|1541|1542|1551|1570|1571|1573|1581|2000|4000|2031|2040|3040|4040|1001|8050|8250",
+         "Drive8Type; 1541|1540|1542|1551|1570|1571|1573|1581|2000|4000|2031|2040|3040|4040|1001|8050|8250",
       },
       {
          "vice_DriveTrueEmulation",
-         "DriveTrueEmulation; disabled|enabled",
+         "DriveTrueEmulation; enabled|disabled",
+      },
+      {
+         "vice_SidModel",
+         "SidModel; 6581F|8580F|6581R|8580R|8580RD",
       },
       {
          "vice_RetroJoy",
-         "Retro joy0; disabled|enabled",
+         "Retro joy0; enabled|disabled",
       },
       {
          "vice_Controller",
@@ -436,6 +441,26 @@ static void update_variables(void)
          if (strcmp(var.value, "enabled") == 0)RETROTDE=1;
          if (strcmp(var.value, "disabled") == 0)RETROTDE=0;
       }
+   }
+
+   var.key = "vice_SidModel";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int eng=0,modl=0,sidmdl=0;
+
+      if (strcmp(var.value, "6581F") == 0){eng=0;modl=0;}
+      else if (strcmp(var.value, "8580F") == 0){eng=0;modl=1;}
+      else if (strcmp(var.value, "6581R") == 0){eng=1;modl=0;}
+      else if (strcmp(var.value, "8580R") == 0){eng=1;modl=1;}
+      else if (strcmp(var.value, "8580RD") == 0){eng=1;modl=2;}
+
+      sidmdl=((eng << 8) | modl) ;
+
+      if(retro_ui_finalized)
+        sid_set_engine_model(eng, modl);
+      else RETROSIDMODL=sidmdl;
    }
 
    var.key = "vice_RetroJoy";

@@ -69,7 +69,7 @@ ifndef ($(UNIVERSAL))
 	CXXFLAGS += $(ARCHFLAGS)
 	LDFLAGS += $(ARCHFLAGS)
 endif
-else ifeq ($(platform), ios)
+else ifneq (,$(findstring ios,$(platform)))
    TARGET := $(TARGET_NAME)_libretro_ios.dylib
    COMMONFLAGS += -DHAVE_POSIX_MEMALIGN=1 -marm
    fpic = -fPIC

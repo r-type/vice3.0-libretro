@@ -185,7 +185,7 @@ const char *archdep_home_path(void)
 {
 #if defined(__ANDROID__) || defined(ANDROID)
     return "/mnt/sdcard";
-#elif defined(__WIN32__) 
+#elif defined(__WIN32__) || defined(GEKKO)
 return retro_system_data_directory;
 #else
     char *home;

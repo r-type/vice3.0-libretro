@@ -81,7 +81,7 @@ int	retroh=272;
 
 unsigned vice_devices[ 2 ];
 
-extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL;
+extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL;
 extern int retrojoy_init,retro_ui_finalized;
 extern void set_drive_type(int drive,int val);
 extern void set_truedrive_emultion(int val);
@@ -89,6 +89,10 @@ extern void set_truedrive_emultion(int val);
 //VICE DEF BEGIN
 #include "resources.h"
 #include "sid.h"
+#include "c64model.h"
+#if  defined(__VIC20__)
+#include "vic20model.h"
+#endif
 //VICE DEF END
 
 extern void Emu_init(void);
@@ -379,6 +383,17 @@ void retro_set_environment(retro_environment_t cb)
          "vice_SidModel",
          "SidModel; 6581F|8580F|6581R|8580R|8580RD",
       },
+#if  defined(__VIC20__)
+      {
+         "vice_VIC20Model",
+         "VIC20Model; VIC20MODEL_VIC20_PAL|VIC20MODEL_VIC20_NTSC|VIC20MODEL_VIC21|VIC20MODEL_UNKNOWN",
+      },
+#else
+      {
+         "vice_C64Model",
+         "C64Model; C64MODEL_C64_PAL|C64MODEL_C64C_PAL|C64MODEL_C64_OLD_PAL|C64MODEL_C64_NTSC|C64MODEL_C64C_NTSC|C64MODEL_C64_OLD_NTSC|C64MODEL_C64_PAL_N|C64MODEL_C64SX_PAL|C64MODEL_C64SX_NTSC|C64MODEL_C64_JAP|C64MODEL_C64_GS|C64MODEL_PET64_PAL|C64MODEL_PET64_NTSC|C64MODEL_ULTIMAX|C64MODEL_UNKNOWN",
+      },
+#endif
       {
          "vice_RetroJoy",
          "Retro joy0; enabled|disabled",
@@ -466,6 +481,54 @@ static void update_variables(void)
         sid_set_engine_model(eng, modl);
       else RETROSIDMODL=sidmdl;
    }
+
+#if  defined(__VIC20__)
+   var.key = "vice_VIC20Model";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int modl=0;
+
+      if (strcmp(var.value, "VIC20MODEL_VIC20_PAL") == 0)modl=VIC20MODEL_VIC20_PAL;
+      else if (strcmp(var.value, "VIC20MODEL_VIC20_NTSC") == 0)modl=VIC20MODEL_VIC20_NTSC;
+      else if (strcmp(var.value, "VIC20MODEL_VIC21") == 0)modl=VIC20MODEL_VIC21;
+      else if (strcmp(var.value, "VIC20MODEL_UNKNOWN") == 0)modl=VIC20MODEL_UNKNOWN;
+
+      if(retro_ui_finalized)
+        vic20model_set(modl);
+      else RETROC64MODL=modl;
+   }
+#else
+
+   var.key = "vice_C64Model";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int modl=0;
+
+      if (strcmp(var.value, "C64MODEL_C64_PAL") == 0)modl=C64MODEL_C64_PAL;
+      else if (strcmp(var.value, "C64MODEL_C64C_PAL") == 0)modl=C64MODEL_C64C_PAL;
+      else if (strcmp(var.value, "C64MODEL_C64_OLD_PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
+      else if (strcmp(var.value, "C64MODEL_C64_NTSC") == 0)modl=C64MODEL_C64_NTSC;
+      else if (strcmp(var.value, "C64MODEL_C64C_NTSC") == 0)modl=C64MODEL_C64C_NTSC;
+      else if (strcmp(var.value, "C64MODEL_C64_OLD_NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
+      else if (strcmp(var.value, "C64MODEL_C64_PAL_N") == 0)modl=C64MODEL_C64_PAL_N;
+      else if (strcmp(var.value, "C64MODEL_C64SX_PAL") == 0)modl=C64MODEL_C64SX_PAL;
+      else if (strcmp(var.value, "C64MODEL_C64SX_NTSC") == 0)modl=C64MODEL_C64SX_NTSC;
+      else if (strcmp(var.value, "C64MODEL_C64_JAP") == 0)modl=C64MODEL_C64_JAP;
+      else if (strcmp(var.value, "C64MODEL_C64_GS") == 0)modl=C64MODEL_C64_GS;
+      else if (strcmp(var.value, "C64MODEL_PET64_PAL") == 0)modl=C64MODEL_PET64_PAL;
+      else if (strcmp(var.value, "C64MODEL_PET64_NTSC") == 0)modl=C64MODEL_PET64_NTSC;
+      else if (strcmp(var.value, "C64MODEL_ULTIMAX") == 0)modl=C64MODEL_ULTIMAX;
+      else if (strcmp(var.value, "C64MODEL_UNKNOWN") == 0)modl=C64MODEL_UNKNOWN;
+
+      if(retro_ui_finalized)
+        c64model_set(modl);
+      else RETROC64MODL=modl;
+   }
+#endif
 
    var.key = "vice_RetroJoy";
    var.value = NULL;

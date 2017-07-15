@@ -113,6 +113,7 @@ int app_free()
    nk_retro_shutdown();
 
    Retro_FreeSurface(screen_surface);
+   printf("free surfscreen\n");
    if (screen_surface)
       free(screen_surface);
    screen_surface = NULL;
@@ -133,7 +134,8 @@ int app_event(int poll)
 
 int app_render(int poll)
 {
-    if( poll==0 && SHOWKEY==-1 )return 0;
+    static int prevpoll=0,prevstate=0,reset_state=0;
+    if(prevpoll!=poll || reset_state){nk_clear(ctx);reset_state=0;}
 
     if(poll==0)
 	app_vkb_handle();
@@ -142,12 +144,13 @@ int app_render(int poll)
 
     app_event(poll);
 
-    gui(&browser,ctx);
+    int state=gui(&browser,ctx);
+    if(state==1 && prevstate!=1)reset_state=1;
 
-    /* Draw */
-    //nk_color_fv(bg, background);
-    if(pauseg==0 && SHOWKEY==-1);
-    else nk_retro_render(nk_rgba(0,0,0,0));
+    nk_retro_render(nk_rgba(0,0,0,0));
+
+    prevpoll=poll;
+    prevstate=state;
 
     return 0;
 }

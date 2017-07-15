@@ -53,6 +53,7 @@ int pauseg=0; //emu status run/pause/end
 int want_quit=0;
 
 extern int MOUSE_EMULATED;
+extern int SHOWKEY;
 
 extern int app_init(void);
 extern int app_free(void);
@@ -65,7 +66,10 @@ int VIRTUAL_WIDTH;
 #if defined(__CBM2__)
 int	retrow=704;
 int	retroh=266;
-#elif defined(__CBM5X__)
+#elif defined(__CBM5X__) 
+int	retrow=448;
+int	retroh=284;
+#elif defined(__VIC20__)
 int	retrow=448;
 int	retroh=284;
 #else
@@ -201,7 +205,7 @@ int pre_main(const char *argv)
 
 
    if(Only1Arg)
-   {  Add_Option("x64");
+   {  Add_Option(CORE_NAME);
       /*
          if (strlen(RPATH) >= strlen("crt"))
          if(!strcasecmp(&RPATH[strlen(RPATH)-strlen("crt")], "crt"))
@@ -689,9 +693,10 @@ void retro_run(void)
       cpuloop=1;
 
       retro_blit();
+      if(SHOWKEY==1)app_render(0);
    }
-
-   app_render(pauseg);
+   else if (pauseg==1)app_render(1);
+   //app_render(pauseg);
 
    video_cb(Retro_Screen,retrow,retroh,retrow<<PIXEL_BYTES);
 

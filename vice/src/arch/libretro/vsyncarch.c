@@ -46,7 +46,7 @@
 #define YS 19
 #elif defined(__VIC20__)
 //XS:576 YS:28 XI:0 YI:0 W:448 H:284
-#define XS 576
+#define XS 588
 #define YS 28
 #elif defined(__CBM2__)
 //XS:0 YS:8 XI:0 YI:0 W:704 H:266
@@ -113,6 +113,9 @@ void vsyncarch_presync(void)
 	
 	retro_poll_event(v);
 
+#if defined(__VIC20__)
+        RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
+#endif
 	video_canvas_render(RCANVAS,(BYTE *)bmp/*Retro_Screen*/,
 						retrow,retroh,//384, 272,
                         XS,YS,//xs, ys,

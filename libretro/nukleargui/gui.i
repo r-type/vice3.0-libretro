@@ -28,6 +28,13 @@ static const char *c64mod[] =  {"VIC20 PAL","VIC20 NTSC","VIC21","VIC20 UNKNOW M
 int c64modint[] ={
 		VIC20MODEL_VIC20_PAL,VIC20MODEL_VIC20_NTSC ,VIC20MODEL_VIC21 ,VIC20MODEL_UNKNOWN
 };
+#elif defined(__PLUS4__)
+#include "plus4model.h"
+static const char *c64mod[] =  {"C16/C116 (PAL)","C16/C116 (NTSC)","Plus4 (PAL)","Plus4/C264 (NTSC)","V364 (NTSC)","C232 (NTSC)","PLUS4 UNKNOW Model"};
+int c64modint[] ={
+		PLUS4MODEL_C16_PAL,PLUS4MODEL_C16_NTSC ,PLUS4MODEL_PLUS4_PAL ,PLUS4MODEL_PLUS4_NTSC,
+PLUS4MODEL_V364_NTSC,PLUS4MODEL_232_NTSC,PLUS4MODEL_UNKNOWN
+};
 #else
 static const char *c64mod[] =  {"C64 PAL","C64C PAL","C64 old PAL","C64 NTSC","C64C NTSC","C64 old NTSC","Drean","C64 SX PAL","C64 SX NTSC","Japanese","C64 GS","PET64 PAL","PET64 NTSC","MAX Machine","C64 UNKNOW Model"};
 int c64modint[] ={

@@ -72,6 +72,9 @@ int	retroh=284;
 #elif defined(__VIC20__)
 int	retrow=448;
 int	retroh=284;
+#elif defined(__PLUS4__)
+int	retrow=384;
+int	retroh=288;
 #else
 int	retrow=384;
 int	retroh=272;
@@ -92,6 +95,8 @@ extern void set_truedrive_emultion(int val);
 #include "c64model.h"
 #if  defined(__VIC20__)
 #include "vic20model.h"
+#elif defined(__PLUS4__)
+#include "plus4model.h"
 #endif
 //VICE DEF END
 
@@ -388,6 +393,11 @@ void retro_set_environment(retro_environment_t cb)
          "vice_VIC20Model",
          "VIC20Model; VIC20MODEL_VIC20_PAL|VIC20MODEL_VIC20_NTSC|VIC20MODEL_VIC21|VIC20MODEL_UNKNOWN",
       },
+#elif  defined(__PLUS4__)
+      {
+         "vice_PLUS4Model",
+         "PLUS4Model; PLUS4MODEL_C16_PAL|PLUS4MODEL_C16_NTSC|PLUS4MODEL_PLUS4_PAL|PLUS4MODEL_PLUS4_NTSC|PLUS4MODEL_V364_NTSC|PLUS4MODEL_232_NTSC|PLUS4MODEL_UNKNOWN",
+      },
 #else
       {
          "vice_C64Model",
@@ -497,6 +507,26 @@ static void update_variables(void)
 
       if(retro_ui_finalized)
         vic20model_set(modl);
+      else RETROC64MODL=modl;
+   }
+#elif  defined(__PLUS4__)
+   var.key = "vice_PLUS4Model";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int modl=0;
+
+      if (strcmp(var.value, "PLUS4MODEL_C16_PAL") == 0)modl=PLUS4MODEL_C16_PAL;
+      else if (strcmp(var.value, "PLUS4MODEL_C16_NTSC") == 0)modl=PLUS4MODEL_C16_NTSC;
+      else if (strcmp(var.value, "PLUS4MODEL_PLUS4_PAL") == 0)modl=PLUS4MODEL_PLUS4_PAL;
+      else if (strcmp(var.value, "PLUS4MODEL_PLUS4_NTSC") == 0)modl=PLUS4MODEL_PLUS4_NTSC;
+      else if (strcmp(var.value, "PLUS4MODEL_V364_NTSC") == 0)modl=PLUS4MODEL_V364_NTSC;
+      else if (strcmp(var.value, "PLUS4MODEL_232_NTSC") == 0)modl=PLUS4MODEL_232_NTSC;
+      else if (strcmp(var.value, "PLUS4MODEL_UNKNOWN") == 0)modl=PLUS4MODEL_UNKNOWN;
+
+      if(retro_ui_finalized)
+        plus4model_set(modl);
       else RETROC64MODL=modl;
    }
 #else

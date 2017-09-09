@@ -16,6 +16,10 @@ char DISKA_NAME[512]="\0";
 char DISKB_NAME[512]="\0";
 char TAPE_NAME[512]="\0";
 
+int mapper_keys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+char keys[4096];
+char buf[10][4096];
+
 //TIME
 #ifdef __CELLOS_LV2__
 #include "sys/sys_time.h"
@@ -349,6 +353,18 @@ void Screen_SetFullUpdate(int scr)
       memset(&bmp,0,sizeof(bmp));
 }
 
+int keyId(const char *val)
+{
+   int i=0;
+   while (keyDesc[i]!=NULL)
+   {
+      if (!strcmp(keyDesc[i],val))
+         return keyVal[i];
+      i++;
+   }
+   return 0;
+}
+
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
@@ -370,6 +386,29 @@ void retro_set_environment(retro_environment_t cb)
    };
 
    cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
+
+   int i=0;
+   while (keyDesc[i]!=NULL)
+   {
+      if (i == 0)
+         strcpy (keys, keyDesc[i]);
+      else
+         strcat (keys, keyDesc[i]);
+      if (keyDesc[i+1]!=NULL)
+         strcat (keys, "|");
+      i++;
+   }
+
+   snprintf(buf[0],sizeof(buf[0]), "RetroPad Y; %s|%s","RETROK_F9",     keys);
+   snprintf(buf[1],sizeof(buf[1]), "RetroPad X; %s|%s","RETROK_RETURN",     keys);
+   snprintf(buf[2],sizeof(buf[2]), "RetroPad B; %s|%s","RETROK_ESCAPE",     keys);
+   snprintf(buf[3],sizeof(buf[3]), "RetroPad L; %s|%s","RETROK_KP_PLUS",     keys);
+   snprintf(buf[4],sizeof(buf[4]), "RetroPad R; %s|%s","RETROK_KP_MINUS",     keys);
+   snprintf(buf[5],sizeof(buf[5]), "RetroPad L2; %s|%s","RETROK_KP_MULTIPLY",    keys);
+   snprintf(buf[6],sizeof(buf[6]), "RetroPad R2; %s|%s","RETROK_ESCAPE",   keys);
+   snprintf(buf[7],sizeof(buf[7]), "RetroPad L3; %s|%s","RETROK_TAB",   keys);
+   snprintf(buf[8],sizeof(buf[8]), "RetroPad R3; %s|%s","RETROK_F5",  keys);
+   snprintf(buf[9],sizeof(buf[9]),"RetroPad START; %s|%s","RETROK_KP_DIVIDE", keys);
 
    struct retro_variable variables[] = {
       {
@@ -412,6 +451,17 @@ void retro_set_environment(retro_environment_t cb)
          "vice_Controller",
          "Controller0 type; keyboard|joystick",
       },
+   { "vice_mapper_y", buf[0] },
+   { "vice_mapper_x", buf[1] },
+   { "vice_mapper_b", buf[2] },
+   { "vice_mapper_l", buf[3] },
+   { "vice_mapper_r", buf[4] },
+   { "vice_mapper_l2", buf[5] },
+   { "vice_mapper_r2", buf[6] },
+   { "vice_mapper_l3", buf[7] },
+   { "vice_mapper_r3", buf[8] },
+   { "vice_mapper_start", buf[9] },
+
       { NULL, NULL },
    };
 
@@ -586,6 +636,86 @@ static void update_variables(void)
          vice_devices[ 0 ] = 259;
       if (strcmp(var.value, "joystick") == 0)
          vice_devices[ 0 ] = 513;	  
+   }
+
+   var.key = "vice_mapper_y";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[1] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_x";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[9] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_b";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[0] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_l";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[10] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_r";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[11] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_l2";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[12] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_r2";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[13] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_l3";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[14] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_r3";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[15] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_start";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[3] = keyId(var.value);
    }
 
 }

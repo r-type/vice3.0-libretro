@@ -224,7 +224,30 @@ int pre_main(const char *argv)
          if(!strcasecmp(&RPATH[strlen(RPATH)-strlen("crt")], "crt"))
          Add_Option("-cartcrt");
          */
-      Add_Option(RPATH/*ARGUV[0]*/);
+
+#if defined(__VIC20__)
+     if (strlen(RPATH) >= strlen(".20"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".20")], ".20"))
+	 Add_Option("-cart2");
+
+     if (strlen(RPATH) >= strlen(".40"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".40")], ".40"))
+	 Add_Option("-cart4");
+     
+     if (strlen(RPATH) >= strlen(".60"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".60")], ".60"))
+	 Add_Option("-cart6");
+
+     if (strlen(RPATH) >= strlen(".a0"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".a0")], ".a0"))
+	 Add_Option("-carta");
+
+     if (strlen(RPATH) >= strlen(".b0"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".b0")], ".b0"))
+	 Add_Option("-cartb");
+#endif
+
+     Add_Option(RPATH/*ARGUV[0]*/);
    }
    else
    { // Pass all cmdline args

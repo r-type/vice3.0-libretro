@@ -604,9 +604,11 @@ static void update_variables(void)
       else if (strcmp(var.value, "C64MODEL_ULTIMAX") == 0)modl=C64MODEL_ULTIMAX;
       else if (strcmp(var.value, "C64MODEL_UNKNOWN") == 0)modl=C64MODEL_UNKNOWN;
 
+      printf("XXXXXXXX before c64model_set\n");
       if(retro_ui_finalized)
         c64model_set(modl);
       else RETROC64MODL=modl;
+      printf("XXXXXXXX after c64model_set");
    }
 #endif
 

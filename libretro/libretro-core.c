@@ -224,7 +224,30 @@ int pre_main(const char *argv)
          if(!strcasecmp(&RPATH[strlen(RPATH)-strlen("crt")], "crt"))
          Add_Option("-cartcrt");
          */
-      Add_Option(RPATH/*ARGUV[0]*/);
+
+#if defined(__VIC20__)
+     if (strlen(RPATH) >= strlen(".20"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".20")], ".20"))
+	 Add_Option("-cart2");
+
+     if (strlen(RPATH) >= strlen(".40"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".40")], ".40"))
+	 Add_Option("-cart4");
+     
+     if (strlen(RPATH) >= strlen(".60"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".60")], ".60"))
+	 Add_Option("-cart6");
+
+     if (strlen(RPATH) >= strlen(".a0"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".a0")], ".a0"))
+	 Add_Option("-cartA");
+
+     if (strlen(RPATH) >= strlen(".b0"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".b0")], ".b0"))
+	 Add_Option("-cartB");
+#endif
+
+     Add_Option(RPATH/*ARGUV[0]*/);
    }
    else
    { // Pass all cmdline args
@@ -607,6 +630,7 @@ static void update_variables(void)
       if(retro_ui_finalized)
         c64model_set(modl);
       else RETROC64MODL=modl;
+
    }
 #endif
 
@@ -845,7 +869,11 @@ void retro_get_system_info(struct retro_system_info *info)
    memset(info, 0, sizeof(*info));
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.0";
+#if defined(__VIC20__)
+   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd";
+#else
    info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd";
+#endif
    info->need_fullpath    = true;
    info->block_extract    = false;
 

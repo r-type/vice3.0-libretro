@@ -240,11 +240,11 @@ int pre_main(const char *argv)
 
      if (strlen(RPATH) >= strlen(".a0"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".a0")], ".a0"))
-	 Add_Option("-carta");
+	 Add_Option("-cartA");
 
      if (strlen(RPATH) >= strlen(".b0"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".b0")], ".b0"))
-	 Add_Option("-cartb");
+	 Add_Option("-cartB");
 #endif
 
      Add_Option(RPATH/*ARGUV[0]*/);

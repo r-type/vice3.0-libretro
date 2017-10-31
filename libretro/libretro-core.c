@@ -16,6 +16,10 @@ char DISKA_NAME[512]="\0";
 char DISKB_NAME[512]="\0";
 char TAPE_NAME[512]="\0";
 
+int mapper_keys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+char keys[4096];
+char buf[10][4096];
+
 //TIME
 #ifdef __CELLOS_LV2__
 #include "sys/sys_time.h"
@@ -53,6 +57,7 @@ int pauseg=0; //emu status run/pause/end
 int want_quit=0;
 
 extern int MOUSE_EMULATED;
+extern int SHOWKEY;
 
 extern int app_init(void);
 extern int app_free(void);
@@ -65,9 +70,15 @@ int VIRTUAL_WIDTH;
 #if defined(__CBM2__)
 int	retrow=704;
 int	retroh=266;
-#elif defined(__CBM5X__)
+#elif defined(__CBM5X__) 
 int	retrow=448;
 int	retroh=284;
+#elif defined(__VIC20__)
+int	retrow=448;
+int	retroh=284;
+#elif defined(__PLUS4__)
+int	retrow=384;
+int	retroh=288;
 #else
 int	retrow=384;
 int	retroh=272;
@@ -77,13 +88,20 @@ int	retroh=272;
 
 unsigned vice_devices[ 2 ];
 
-extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE;
+extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL;
 extern int retrojoy_init,retro_ui_finalized;
 extern void set_drive_type(int drive,int val);
 extern void set_truedrive_emultion(int val);
 
 //VICE DEF BEGIN
 #include "resources.h"
+#include "sid.h"
+#include "c64model.h"
+#if  defined(__VIC20__)
+#include "vic20model.h"
+#elif defined(__PLUS4__)
+#include "plus4model.h"
+#endif
 //VICE DEF END
 
 extern void Emu_init(void);
@@ -200,13 +218,36 @@ int pre_main(const char *argv)
 
 
    if(Only1Arg)
-   {  Add_Option("x64");
+   {  Add_Option(CORE_NAME);
       /*
          if (strlen(RPATH) >= strlen("crt"))
          if(!strcasecmp(&RPATH[strlen(RPATH)-strlen("crt")], "crt"))
          Add_Option("-cartcrt");
          */
-      Add_Option(RPATH/*ARGUV[0]*/);
+
+#if defined(__VIC20__)
+     if (strlen(RPATH) >= strlen(".20"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".20")], ".20"))
+	 Add_Option("-cart2");
+
+     if (strlen(RPATH) >= strlen(".40"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".40")], ".40"))
+	 Add_Option("-cart4");
+     
+     if (strlen(RPATH) >= strlen(".60"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".60")], ".60"))
+	 Add_Option("-cart6");
+
+     if (strlen(RPATH) >= strlen(".a0"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".a0")], ".a0"))
+	 Add_Option("-cartA");
+
+     if (strlen(RPATH) >= strlen(".b0"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".b0")], ".b0"))
+	 Add_Option("-cartB");
+#endif
+
+     Add_Option(RPATH/*ARGUV[0]*/);
    }
    else
    { // Pass all cmdline args
@@ -335,6 +376,18 @@ void Screen_SetFullUpdate(int scr)
       memset(&bmp,0,sizeof(bmp));
 }
 
+int keyId(const char *val)
+{
+   int i=0;
+   while (keyDesc[i]!=NULL)
+   {
+      if (!strcmp(keyDesc[i],val))
+         return keyVal[i];
+      i++;
+   }
+   return 0;
+}
+
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
@@ -357,6 +410,29 @@ void retro_set_environment(retro_environment_t cb)
 
    cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
 
+   int i=0;
+   while (keyDesc[i]!=NULL)
+   {
+      if (i == 0)
+         strcpy (keys, keyDesc[i]);
+      else
+         strcat (keys, keyDesc[i]);
+      if (keyDesc[i+1]!=NULL)
+         strcat (keys, "|");
+      i++;
+   }
+
+   snprintf(buf[0],sizeof(buf[0]), "RetroPad Y; %s|%s","RETROK_F9",     keys);
+   snprintf(buf[1],sizeof(buf[1]), "RetroPad X; %s|%s","RETROK_RETURN",     keys);
+   snprintf(buf[2],sizeof(buf[2]), "RetroPad B; %s|%s","RETROK_ESCAPE",     keys);
+   snprintf(buf[3],sizeof(buf[3]), "RetroPad L; %s|%s","RETROK_KP_PLUS",     keys);
+   snprintf(buf[4],sizeof(buf[4]), "RetroPad R; %s|%s","RETROK_KP_MINUS",     keys);
+   snprintf(buf[5],sizeof(buf[5]), "RetroPad L2; %s|%s","RETROK_KP_MULTIPLY",    keys);
+   snprintf(buf[6],sizeof(buf[6]), "RetroPad R2; %s|%s","RETROK_ESCAPE",   keys);
+   snprintf(buf[7],sizeof(buf[7]), "RetroPad L3; %s|%s","RETROK_TAB",   keys);
+   snprintf(buf[8],sizeof(buf[8]), "RetroPad R3; %s|%s","RETROK_F5",  keys);
+   snprintf(buf[9],sizeof(buf[9]),"RetroPad START; %s|%s","RETROK_KP_DIVIDE", keys);
+
    struct retro_variable variables[] = {
       {
          "vice_Statusbar",
@@ -364,20 +440,51 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_Drive8Type",
-         "Drive8Type; 1540|1541|1542|1551|1570|1571|1573|1581|2000|4000|2031|2040|3040|4040|1001|8050|8250",
+         "Drive8Type; 1541|1540|1542|1551|1570|1571|1573|1581|2000|4000|2031|2040|3040|4040|1001|8050|8250",
       },
       {
          "vice_DriveTrueEmulation",
-         "DriveTrueEmulation; disabled|enabled",
+         "DriveTrueEmulation; enabled|disabled",
       },
       {
+         "vice_SidModel",
+         "SidModel; 6581F|8580F|6581R|8580R|8580RD",
+      },
+#if  defined(__VIC20__)
+      {
+         "vice_VIC20Model",
+         "VIC20Model; VIC20MODEL_VIC20_PAL|VIC20MODEL_VIC20_NTSC|VIC20MODEL_VIC21|VIC20MODEL_UNKNOWN",
+      },
+#elif  defined(__PLUS4__)
+      {
+         "vice_PLUS4Model",
+         "PLUS4Model; PLUS4MODEL_C16_PAL|PLUS4MODEL_C16_NTSC|PLUS4MODEL_PLUS4_PAL|PLUS4MODEL_PLUS4_NTSC|PLUS4MODEL_V364_NTSC|PLUS4MODEL_232_NTSC|PLUS4MODEL_UNKNOWN",
+      },
+#else
+      {
+         "vice_C64Model",
+         "C64Model; C64MODEL_C64_PAL|C64MODEL_C64C_PAL|C64MODEL_C64_OLD_PAL|C64MODEL_C64_NTSC|C64MODEL_C64C_NTSC|C64MODEL_C64_OLD_NTSC|C64MODEL_C64_PAL_N|C64MODEL_C64SX_PAL|C64MODEL_C64SX_NTSC|C64MODEL_C64_JAP|C64MODEL_C64_GS|C64MODEL_PET64_PAL|C64MODEL_PET64_NTSC|C64MODEL_ULTIMAX|C64MODEL_UNKNOWN",
+      },
+#endif
+      {
          "vice_RetroJoy",
-         "Retro joy0; disabled|enabled",
+         "Retro joy0; enabled|disabled",
       },
       {
          "vice_Controller",
          "Controller0 type; keyboard|joystick",
       },
+   { "vice_mapper_y", buf[0] },
+   { "vice_mapper_x", buf[1] },
+   { "vice_mapper_b", buf[2] },
+   { "vice_mapper_l", buf[3] },
+   { "vice_mapper_r", buf[4] },
+   { "vice_mapper_l2", buf[5] },
+   { "vice_mapper_r2", buf[6] },
+   { "vice_mapper_l3", buf[7] },
+   { "vice_mapper_r3", buf[8] },
+   { "vice_mapper_start", buf[9] },
+
       { NULL, NULL },
    };
 
@@ -438,6 +545,95 @@ static void update_variables(void)
       }
    }
 
+   var.key = "vice_SidModel";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int eng=0,modl=0,sidmdl=0;
+
+      if (strcmp(var.value, "6581F") == 0){eng=0;modl=0;}
+      else if (strcmp(var.value, "8580F") == 0){eng=0;modl=1;}
+      else if (strcmp(var.value, "6581R") == 0){eng=1;modl=0;}
+      else if (strcmp(var.value, "8580R") == 0){eng=1;modl=1;}
+      else if (strcmp(var.value, "8580RD") == 0){eng=1;modl=2;}
+
+      sidmdl=((eng << 8) | modl) ;
+
+      if(retro_ui_finalized)
+        sid_set_engine_model(eng, modl);
+      else RETROSIDMODL=sidmdl;
+   }
+
+#if  defined(__VIC20__)
+   var.key = "vice_VIC20Model";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int modl=0;
+
+      if (strcmp(var.value, "VIC20MODEL_VIC20_PAL") == 0)modl=VIC20MODEL_VIC20_PAL;
+      else if (strcmp(var.value, "VIC20MODEL_VIC20_NTSC") == 0)modl=VIC20MODEL_VIC20_NTSC;
+      else if (strcmp(var.value, "VIC20MODEL_VIC21") == 0)modl=VIC20MODEL_VIC21;
+      else if (strcmp(var.value, "VIC20MODEL_UNKNOWN") == 0)modl=VIC20MODEL_UNKNOWN;
+
+      if(retro_ui_finalized)
+        vic20model_set(modl);
+      else RETROC64MODL=modl;
+   }
+#elif  defined(__PLUS4__)
+   var.key = "vice_PLUS4Model";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int modl=0;
+
+      if (strcmp(var.value, "PLUS4MODEL_C16_PAL") == 0)modl=PLUS4MODEL_C16_PAL;
+      else if (strcmp(var.value, "PLUS4MODEL_C16_NTSC") == 0)modl=PLUS4MODEL_C16_NTSC;
+      else if (strcmp(var.value, "PLUS4MODEL_PLUS4_PAL") == 0)modl=PLUS4MODEL_PLUS4_PAL;
+      else if (strcmp(var.value, "PLUS4MODEL_PLUS4_NTSC") == 0)modl=PLUS4MODEL_PLUS4_NTSC;
+      else if (strcmp(var.value, "PLUS4MODEL_V364_NTSC") == 0)modl=PLUS4MODEL_V364_NTSC;
+      else if (strcmp(var.value, "PLUS4MODEL_232_NTSC") == 0)modl=PLUS4MODEL_232_NTSC;
+      else if (strcmp(var.value, "PLUS4MODEL_UNKNOWN") == 0)modl=PLUS4MODEL_UNKNOWN;
+
+      if(retro_ui_finalized)
+        plus4model_set(modl);
+      else RETROC64MODL=modl;
+   }
+#else
+
+   var.key = "vice_C64Model";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int modl=0;
+
+      if (strcmp(var.value, "C64MODEL_C64_PAL") == 0)modl=C64MODEL_C64_PAL;
+      else if (strcmp(var.value, "C64MODEL_C64C_PAL") == 0)modl=C64MODEL_C64C_PAL;
+      else if (strcmp(var.value, "C64MODEL_C64_OLD_PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
+      else if (strcmp(var.value, "C64MODEL_C64_NTSC") == 0)modl=C64MODEL_C64_NTSC;
+      else if (strcmp(var.value, "C64MODEL_C64C_NTSC") == 0)modl=C64MODEL_C64C_NTSC;
+      else if (strcmp(var.value, "C64MODEL_C64_OLD_NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
+      else if (strcmp(var.value, "C64MODEL_C64_PAL_N") == 0)modl=C64MODEL_C64_PAL_N;
+      else if (strcmp(var.value, "C64MODEL_C64SX_PAL") == 0)modl=C64MODEL_C64SX_PAL;
+      else if (strcmp(var.value, "C64MODEL_C64SX_NTSC") == 0)modl=C64MODEL_C64SX_NTSC;
+      else if (strcmp(var.value, "C64MODEL_C64_JAP") == 0)modl=C64MODEL_C64_JAP;
+      else if (strcmp(var.value, "C64MODEL_C64_GS") == 0)modl=C64MODEL_C64_GS;
+      else if (strcmp(var.value, "C64MODEL_PET64_PAL") == 0)modl=C64MODEL_PET64_PAL;
+      else if (strcmp(var.value, "C64MODEL_PET64_NTSC") == 0)modl=C64MODEL_PET64_NTSC;
+      else if (strcmp(var.value, "C64MODEL_ULTIMAX") == 0)modl=C64MODEL_ULTIMAX;
+      else if (strcmp(var.value, "C64MODEL_UNKNOWN") == 0)modl=C64MODEL_UNKNOWN;
+
+      if(retro_ui_finalized)
+        c64model_set(modl);
+      else RETROC64MODL=modl;
+
+   }
+#endif
+
    var.key = "vice_RetroJoy";
    var.value = NULL;
 
@@ -464,6 +660,86 @@ static void update_variables(void)
          vice_devices[ 0 ] = 259;
       if (strcmp(var.value, "joystick") == 0)
          vice_devices[ 0 ] = 513;	  
+   }
+
+   var.key = "vice_mapper_y";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[1] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_x";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[9] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_b";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[0] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_l";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[10] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_r";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[11] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_l2";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[12] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_r2";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[13] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_l3";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[14] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_r3";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[15] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_start";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+
+      mapper_keys[3] = keyId(var.value);
    }
 
 }
@@ -593,7 +869,11 @@ void retro_get_system_info(struct retro_system_info *info)
    memset(info, 0, sizeof(*info));
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.0";
+#if defined(__VIC20__)
+   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd";
+#else
    info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd";
+#endif
    info->need_fullpath    = true;
    info->block_extract    = false;
 
@@ -664,9 +944,10 @@ void retro_run(void)
       cpuloop=1;
 
       retro_blit();
+      if(SHOWKEY==1)app_render(0);
    }
-
-   app_render(pauseg);
+   else if (pauseg==1)app_render(1);
+   //app_render(pauseg);
 
    video_cb(Retro_Screen,retrow,retroh,retrow<<PIXEL_BYTES);
 

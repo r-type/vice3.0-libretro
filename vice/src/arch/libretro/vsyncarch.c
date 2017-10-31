@@ -46,7 +46,7 @@
 #define YS 19
 #elif defined(__VIC20__)
 //XS:576 YS:28 XI:0 YI:0 W:448 H:284
-#define XS 576
+#define XS 588
 #define YS 28
 #elif defined(__CBM2__)
 //XS:0 YS:8 XI:0 YI:0 W:704 H:266
@@ -100,8 +100,16 @@ void vsyncarch_display_speed(double speed, double frame_rate, int warp_enabled)
 
 /* Sleep a number of timer units. */
 void vsyncarch_sleep(signed long delay)
-{//printf("delay:%d \n",delay);
+{
+#ifndef WIIU
 	usleep(delay);
+#else 
+/* FIXME: There must be somethings wrong with wiiu retroarch usleep implementation ?
+   https://github.com/libretro/RetroArch/blob/2492f3d6b38a74bf77774429fff4d7ff65aee40b/wiiu/system/missing_libc_functions.c
+   As if we comment usleep for wiiu then emulator run almost at fullspeed (c64/fastsid)
+*/
+#warning FIXME: If usleep used on wiiu then emulator is slow , if not then it is fullspeed.
+#endif
 }
 
 void vsyncarch_presync(void)
@@ -113,6 +121,9 @@ void vsyncarch_presync(void)
 	
 	retro_poll_event(v);
 
+#if defined(__VIC20__)
+        RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
+#endif
 	video_canvas_render(RCANVAS,(BYTE *)bmp/*Retro_Screen*/,
 						retrow,retroh,//384, 272,
                         XS,YS,//xs, ys,

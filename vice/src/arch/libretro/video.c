@@ -55,11 +55,10 @@ video_canvas_t *video_canvas_create(video_canvas_t *canvas,
 {
 
    canvas->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
-
+   //canvas->width=retrow;canvas->height=retroh;
    printf ("canvas width wants to be : %d\ncanvas height wants to be : %d\ncanvas depth wants to be : %d\n", canvas->width, canvas->height, canvas->depth);
 
    canvas->depth = 8*PITCH;
-   //canvas->width=320;canvas->height=200;
 
    printf ("canvas set to %d x %d :%d\n", canvas->width, canvas->height,canvas->depth);
 
@@ -161,7 +160,6 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
 #ifdef RETRO_DEBUG
    printf("XS:%d YS:%d XI:%d YI:%d W:%d H:%d\n",xs,ys,xi,yi,w,h);
 #endif
-
    RCANVAS=canvas;
 }
 

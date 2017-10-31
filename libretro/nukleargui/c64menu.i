@@ -59,43 +59,47 @@
 
     	    palette_info_t *palettelist = palette_get_info_list();
 
-	    resources_get_string_sprintf("%sPaletteFile", &external_file_name, "VICII");
+	    int res=resources_get_string_sprintf("%sPaletteFile", &external_file_name, "VICII");
 
 	    tmpval=0;
-    	    while (palettelist->name) {
-        	if (palettelist->chip && !strcmp(palettelist->chip, "VICII")) {		
-			if(!strcmp( (char*)palettelist->file,external_file_name) )cur_palette=tmpval;
+    	    while (palettelist->name ) {
+        	if (palettelist->chip && !strcmp(palettelist->chip, "VICII")) {	
+			if(res!=-1)if(!strcmp( (char*)palettelist->file,external_file_name) )cur_palette=tmpval;
 	       		++tmpval;
         	}
         	++palettelist;
     	    }
+
 	    palette_av = malloc( (tmpval)*sizeof(char*) );
 	    numb_pal=tmpval;
 
 	    //c64 model option
+
 	    static int current_model = 0;
 	    static int selected_model = 0;
 	    static int list_model = 0;
-	    static const char *c64mod[] =  {"C64 PAL","C64C PAL","C64 old PAL","C64 NTSC","C64C NTSC","C64 old NTSC","Drean","C64 SX PAL","C64 SX NTSC","Japanese","C64 GS","PET64 PAL","PET64 NTSC","MAX Machine","C64 UNKNOW Model"};
-	    int c64modint[] ={
-		C64MODEL_C64_PAL ,C64MODEL_C64C_PAL ,C64MODEL_C64_OLD_PAL ,C64MODEL_C64_NTSC ,
-		C64MODEL_C64C_NTSC ,C64MODEL_C64_OLD_NTSC ,C64MODEL_C64_PAL_N ,C64MODEL_C64SX_PAL ,C64MODEL_C64SX_NTSC ,
-		C64MODEL_C64_JAP ,C64MODEL_C64_GS ,C64MODEL_PET64_PAL,C64MODEL_PET64_NTSC ,C64MODEL_ULTIMAX ,C64MODEL_UNKNOWN
-	    };
-	 	
+
+#if defined(__VIC20__)
+	    current_model = vic20model_get();
+	    for(tmpval=0;tmpval< NUMB(c64modint);tmpval++)
+		if(c64modint[tmpval]==current_model)break;
+	    list_model = tmpval;
+#elif defined(__PLUS4__)
+	    current_model = plus4model_get();
+	    for(tmpval=0;tmpval< NUMB(c64modint);tmpval++)
+		if(c64modint[tmpval]==current_model)break;
+	    list_model = tmpval;
+#else
 	    current_model = c64model_get();
 	    for(tmpval=0;tmpval< NUMB(c64modint);tmpval++)
 		if(c64modint[tmpval]==current_model)break;
 	    list_model = tmpval;
-
+#endif
 	    //floppy option
 	    static int fliplst = nk_false;
 	    static int DriveTrueEmu = nk_false;
 	    static int current_drvtype = 2;
 	    static int old_drvtype = 2;
-	    static char DF8NAME[512]="Choose Content\0";
-	    static char DF9NAME[512]="Choose Content\0";
-	    static const char *drivename[] =  {"1540","1541","1542","1551","1570","1571","1573","1581","2000","4000","2031","2040","3040","4040","1001","8050","8250"};
 
 	    resources_get_int("DriveTrueEmulation",&tmpval);
 
@@ -155,15 +159,30 @@
 	    else if(vice_statusbar)
 		vice_statusbar = 0;
 
-	    //C64 Modele
+	    //C64/VIC20 Modele
+#if  defined(__VIC20__)
 
+	    nk_layout_row_static(ctx, DEFHSZ, 100, 2);
+            nk_label(ctx, "VIC20 model:", NK_TEXT_LEFT);
+	    tmpval = nk_combo(ctx, c64mod, LEN(c64mod), list_model, DEFHSZ, nk_vec2(200,200));
+	    selected_model=c64modint[tmpval];
+            if (selected_model != current_model)
+	        vic20model_set(selected_model);
+#elif defined(__PLUS4__)
+	    nk_layout_row_static(ctx, DEFHSZ, 100, 2);
+            nk_label(ctx, "PLUS4 model:", NK_TEXT_LEFT);
+	    tmpval = nk_combo(ctx, c64mod, LEN(c64mod), list_model, DEFHSZ, nk_vec2(200,200));
+	    selected_model=c64modint[tmpval];
+            if (selected_model != current_model)
+	        plus4model_set(selected_model);
+#else
 	    nk_layout_row_static(ctx, DEFHSZ, 100, 2);
             nk_label(ctx, "C64 model:", NK_TEXT_LEFT);
 	    tmpval = nk_combo(ctx, c64mod, LEN(c64mod), list_model, DEFHSZ, nk_vec2(200,200));
 	    selected_model=c64modint[tmpval];
             if (selected_model != current_model)
 	        c64model_set(selected_model);
-
+#endif
 	    //c64 sid model
 
 	    for (tmpval = 0; list[tmpval]; ++tmpval) {
@@ -311,7 +330,7 @@
 	    
 	    }
 	    else if(LOADCONTENT==2)LOADCONTENT=-1;
-		
+	
 	   for(tmpval=0;tmpval<numb_pal;tmpval++)free(palette_av[tmpval]);
 	   free(palette_av);
 

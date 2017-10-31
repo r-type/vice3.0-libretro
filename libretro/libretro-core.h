@@ -40,10 +40,18 @@ extern unsigned vice_devices[ 2 ];
 #define WINDOW_WIDTH 704
 #define WINDOW_HEIGHT 266
 #define WINDOW_SIZE (704*266)
-#elif defined(__CBM5X__)
+#elif defined(__CBM5X__)  
 #define WINDOW_WIDTH 448
 #define WINDOW_HEIGHT 284
 #define WINDOW_SIZE (448*284)
+#elif  defined(__VIC20__)
+#define WINDOW_WIDTH 448
+#define WINDOW_HEIGHT 284
+#define WINDOW_SIZE (448*284)
+#elif  defined(__PLUS4__)
+#define WINDOW_WIDTH 384
+#define WINDOW_HEIGHT 288
+#define WINDOW_SIZE (384*288)
 #else
 #define WINDOW_WIDTH 384
 #define WINDOW_HEIGHT 272

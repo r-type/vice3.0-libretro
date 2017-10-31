@@ -258,6 +258,10 @@ int plus4ui_init(void)
 {
      return 0;
 }
+int plus4ui_shutdown(void)
+{
+
+}
 
 int vic20ui_init(void)
 {

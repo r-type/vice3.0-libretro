@@ -36,6 +36,7 @@ unsigned int cur_port = 2;
 bool num_locked = false;
 
 extern bool retro_load_ok;
+extern int mapper_keys[16];
 
 void emu_reset()
 {
@@ -56,6 +57,7 @@ void Keymap_KeyDown(int symkey)
    switch (symkey)
    {
       case RETROK_F9:		// F9: toggle vkbd
+//SHOWKEY=-SHOWKEY;
          break;
       case RETROK_F10:	// F10: 
          pauseg=1;
@@ -83,6 +85,8 @@ void Keymap_KeyDown(int symkey)
          if(cur_port>2)cur_port=1;
          break;
       case RETROK_KP_DIVIDE:	// '/' on keypad: Toggle GUI 
+         save_bkg();
+         printf("enter gui!\n");
          pauseg=1;
          break;
 
@@ -267,6 +271,7 @@ int Core_PollEvent(void)
       kbt[i]=0;
       SHOWKEY=-SHOWKEY;
    }
+
 /*
    // F10 GUI
    i=1;
@@ -286,6 +291,38 @@ int Core_PollEvent(void)
 	if(vice_devices[0]==RETRO_DEVICE_VICE_JOYSTICK){
    	//shortcut for joy mode only
 
+/*
+--------------------------------
+Default action       keys
+--------------------------------
+Y       showvkey      F9
+START   gui  	      F10 or KP/
+L       flip next     KP+
+R       flip prev     KP-
+L2      togge joyport KP*
+F12     reset         F12
+--------------------------------
+*/
+
+		for(i=0;i<16;i++){
+			if( (i<4 || i>8) && i!=2){
+
+			        if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 )
+				{
+			      		jbt[i]=1;
+					if(mapper_keys[i]!=RETROK_F9)Keymap_KeyDown(mapper_keys[i]);
+//printf("kup:%d\n",mapper_keys[i]);
+				}
+			   	else if ( jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) )
+			   	{
+			      		jbt[i]=0;
+					if(mapper_keys[i]!=RETROK_F9)Keymap_KeyUp(mapper_keys[i]);
+					else SHOWKEY=-SHOWKEY;
+//printf("kdown:%d\n",mapper_keys[i]);
+			   	}
+			}
+		}
+#if 0
 	   	i=1;// Y -> vkbd toggle
 	   	if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 )
 	      		jbt[i]=1;
@@ -343,6 +380,7 @@ int Core_PollEvent(void)
 			fliplist_attach_head(8, 0);
 	   	}
 */
+#endif
 	}//if vice_devices=joy
 
    }//if pauseg=0

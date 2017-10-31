@@ -21,9 +21,37 @@
 #include "c64model.h"
 #include "palette.h"
 
+//c64/vic20 model option
+#if  defined(__VIC20__)
+#include "vic20model.h"
+static const char *c64mod[] =  {"VIC20 PAL","VIC20 NTSC","VIC21","VIC20 UNKNOW Model"};
+int c64modint[] ={
+		VIC20MODEL_VIC20_PAL,VIC20MODEL_VIC20_NTSC ,VIC20MODEL_VIC21 ,VIC20MODEL_UNKNOWN
+};
+#elif defined(__PLUS4__)
+#include "plus4model.h"
+static const char *c64mod[] =  {"C16/C116 (PAL)","C16/C116 (NTSC)","Plus4 (PAL)","Plus4/C264 (NTSC)","V364 (NTSC)","C232 (NTSC)","PLUS4 UNKNOW Model"};
+int c64modint[] ={
+		PLUS4MODEL_C16_PAL,PLUS4MODEL_C16_NTSC ,PLUS4MODEL_PLUS4_PAL ,PLUS4MODEL_PLUS4_NTSC,
+PLUS4MODEL_V364_NTSC,PLUS4MODEL_232_NTSC,PLUS4MODEL_UNKNOWN
+};
+#else
+static const char *c64mod[] =  {"C64 PAL","C64C PAL","C64 old PAL","C64 NTSC","C64C NTSC","C64 old NTSC","Drean","C64 SX PAL","C64 SX NTSC","Japanese","C64 GS","PET64 PAL","PET64 NTSC","MAX Machine","C64 UNKNOW Model"};
+int c64modint[] ={
+		C64MODEL_C64_PAL ,C64MODEL_C64C_PAL ,C64MODEL_C64_OLD_PAL ,C64MODEL_C64_NTSC ,
+		C64MODEL_C64C_NTSC ,C64MODEL_C64_OLD_NTSC ,C64MODEL_C64_PAL_N ,C64MODEL_C64SX_PAL ,C64MODEL_C64SX_NTSC ,
+		C64MODEL_C64_JAP ,C64MODEL_C64_GS ,C64MODEL_PET64_PAL,C64MODEL_PET64_NTSC ,C64MODEL_ULTIMAX ,C64MODEL_UNKNOWN
+};
+#endif
+
+//floppy option
+static char DF8NAME[512]="Choose Content\0";
+static char DF9NAME[512]="Choose Content\0";
+static const char *drivename[] =  {"1540","1541","1542","1551","1570","1571","1573","1581","2000","4000","2031","2040","3040","4040","1001","8050","8250"};
+
 #define GET_DRIVE(code) ((code)&0x0F)
 #define NUMB(a) (sizeof(a) / sizeof(*a))
-#define GUIRECT nk_rect(10,30, 364, 212)
+#define GUIRECT nk_rect(5,25, 364+10, 222) //nk_rect(10,30, 364, 212)
 
 typedef enum
 {
@@ -55,7 +83,7 @@ extern void retro_shutdown_core(void);
 static char **palette_av;
 static char **sid_mod;
 
-static void
+static int
 gui(struct file_browser *browser,struct nk_context *ctx)
 {
     struct nk_rect total_space;
@@ -117,5 +145,11 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 
     }
 
+    if(pauseg==1 && SHOWKEY==1)SHOWKEY=-1;
+    if(pauseg==0 && SHOWKEY==1)GUISTATE=GUI_VKBD;
+    if(pauseg==1 && SHOWKEY==-1 && LOADCONTENT==1)GUISTATE=GUI_BROWSE;
+    if(pauseg==1 && SHOWKEY==-1 && LOADCONTENT!=1)GUISTATE=GUI_MAIN;
+
+return GUISTATE;
 }
 

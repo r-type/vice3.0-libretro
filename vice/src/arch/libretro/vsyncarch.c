@@ -37,28 +37,6 @@
 
 #include "libretro-core.h"
 
-#if defined(__X64SC__)
-//XS:0   YS:16 XI:0 YI:0 W:384 H:272 XSC64
-#define XS 0
-#define YS 16
-#elif defined(__PLUS4__)
-#define XS 28
-#define YS 19
-#elif defined(__VIC20__)
-//XS:576 YS:28 XI:0 YI:0 W:448 H:284
-#define XS 588
-#define YS 28
-#elif defined(__CBM2__)
-//XS:0 YS:8 XI:0 YI:0 W:704 H:266
-#define XS 0
-#define YS 8
-#else
-//CBM5x
-//XS:104 YS:16 XI:0 YI:0 W:384 H:272 X64
-#define XS 104
-#define YS 16
-#endif
-
 extern void retro_poll_event(int joyon);
 extern void app_vkb_handle();
 
@@ -124,13 +102,11 @@ void vsyncarch_presync(void)
 #if defined(__VIC20__)
         RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
 #endif
-	video_canvas_render(RCANVAS,(BYTE *)bmp/*Retro_Screen*/,
-						retrow,retroh,//384, 272,
-                        XS,YS,//xs, ys,
+	video_canvas_render(RCANVAS,(BYTE *)bmp,
+			retroW,retroH,
+                        retroXS,retroYS,
                         0,0,//xi, yi,
-                        retrow*PITCH,8*PITCH);//384*4, 32);
-
-	//app_vkb_handle();
+                        retrow*PITCH,8*PITCH);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE && vice_statusbar==1) {
 		

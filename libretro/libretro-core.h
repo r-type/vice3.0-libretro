@@ -17,9 +17,6 @@
 
 extern unsigned vice_devices[ 2 ];
 
-#define TEX_WIDTH 384
-#define TEX_HEIGHT 272
-
 //LOG
 #if  defined(__ANDROID__) || defined(ANDROID)
 #include <android/log.h>
@@ -36,27 +33,9 @@ extern unsigned vice_devices[ 2 ];
 #define uint32 uint32_t
 #define uint8 uint8_t
 
-#if defined(__CBM2__)
-#define WINDOW_WIDTH 704
-#define WINDOW_HEIGHT 266
-#define WINDOW_SIZE (704*266)
-#elif defined(__CBM5X__)  
-#define WINDOW_WIDTH 448
-#define WINDOW_HEIGHT 284
-#define WINDOW_SIZE (448*284)
-#elif  defined(__VIC20__)
-#define WINDOW_WIDTH 448
-#define WINDOW_HEIGHT 284
-#define WINDOW_SIZE (448*284)
-#elif  defined(__PLUS4__)
-#define WINDOW_WIDTH 384
-#define WINDOW_HEIGHT 288
-#define WINDOW_SIZE (384*288)
-#else
-#define WINDOW_WIDTH 384
-#define WINDOW_HEIGHT 272
-#define WINDOW_SIZE (384*272)
-#endif
+#define WINDOW_WIDTH 1024
+#define WINDOW_HEIGHT 768
+#define WINDOW_SIZE (1024*768)
 
 #ifdef FRONTEND_SUPPORTS_RGB565
 #define M16B
@@ -114,6 +93,10 @@ extern int retrow ;
 extern int retroh ;
 extern int cpuloop;
 extern int vice_statusbar;
+extern int retroXS;
+extern int retroYS;
+extern int retroH;
+extern int retroW;
 
 //FUNCS
 extern void maincpu_mainloop_retro(void);

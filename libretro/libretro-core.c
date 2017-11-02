@@ -67,22 +67,14 @@ int CROP_WIDTH;
 int CROP_HEIGHT;
 int VIRTUAL_WIDTH;
 
-#if defined(__CBM2__)
-int	retrow=704;
-int	retroh=266;
-#elif defined(__CBM5X__) 
-int	retrow=448;
-int	retroh=284;
-#elif defined(__VIC20__)
-int	retrow=448;
-int	retroh=284;
-#elif defined(__PLUS4__)
-int	retrow=384;
-int	retroh=288;
-#else
-int	retrow=384;
-int	retroh=272;
-#endif
+int retroXS=0;
+int retroYS=0;
+int retroW=1024;
+int retroH=768;
+int retrow=1024;
+int retroh=768;
+int lastW=1024;
+int lastH=768;
 
 #include "vkbd.i"
 
@@ -744,7 +736,6 @@ static void update_variables(void)
 
 }
 
-
 void Emu_init(void)
 {
 #ifdef RETRO_AND
@@ -879,10 +870,19 @@ void retro_get_system_info(struct retro_system_info *info)
 
 }
 
+void update_geometry()
+{
+   struct retro_system_av_info system_av_info;
+   system_av_info.geometry.base_width = retroW;
+   system_av_info.geometry.base_height = retroH;
+   system_av_info.geometry.aspect_ratio = (float)4.0/3.0;
+   environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
+}
+
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    /* FIXME handle PAL/NTSC */
-   struct retro_game_geometry geom = { retrow, retroh, retrow, retroh,4.0 / 3.0 };
+   struct retro_game_geometry geom = { 320, 240, retrow, retroh,4.0 / 3.0 };
    struct retro_system_timing timing = { 50.0, 44100.0 };
 
    info->geometry = geom;
@@ -924,13 +924,20 @@ void retro_run(void)
    static int mfirst=1;
    bool updated = false;
 
+   if(lastW!=retroW || lastH!=retroH){
+      update_geometry();
+      printf("Update Geometry Old(%d,%d) New(%d,%d)\n",lastW,lastH,retroW,retroH);
+      lastW=retroW;
+      lastH=retroH;
+   }
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
 
    if(mfirst==1)
    {
       mfirst++;
-      printf("MAIN FIRST\n");
+      printf("First time we return from retro_run()!\n");
       retro_load_ok=true;
 
       Emu_init();
@@ -949,7 +956,7 @@ void retro_run(void)
    else if (pauseg==1)app_render(1);
    //app_render(pauseg);
 
-   video_cb(Retro_Screen,retrow,retroh,retrow<<PIXEL_BYTES);
+   video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
    if(want_quit)retro_shutdown_core();
 }

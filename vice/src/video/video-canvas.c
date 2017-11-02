@@ -111,6 +111,8 @@ void video_canvas_render(video_canvas_t *canvas, BYTE *trg, int width,
                       viewport);
 }
 
+extern int retroXS,retroYS,retroH,retroW;
+
 void video_canvas_refresh_all(video_canvas_t *canvas)
 {
     viewport_t *viewport;
@@ -123,6 +125,27 @@ void video_canvas_refresh_all(video_canvas_t *canvas)
     viewport = canvas->viewport;
     geometry = canvas->geometry;
 
+#ifdef __LIBRETRO__
+#ifdef RETRO_DEBUG
+    printf("canvas:XS:%d YS:%d XI:%d YI:%d W:%d H:%d\n",
+                         viewport->first_x
+                         + geometry->extra_offscreen_border_left,
+                         viewport->first_line,
+                         viewport->x_offset,
+                         viewport->y_offset,
+                         MIN(canvas->draw_buffer->canvas_width,
+                             geometry->screen_size.width - viewport->first_x),
+                         MIN(canvas->draw_buffer->canvas_height,
+                             viewport->last_line - viewport->first_line + 1));
+#endif
+	retroXS=viewport->first_x
+                         + geometry->extra_offscreen_border_left;
+	retroYS= viewport->first_line;
+	retroH=MIN(canvas->draw_buffer->canvas_height,
+                             viewport->last_line - viewport->first_line + 1);
+	retroW=MIN(canvas->draw_buffer->canvas_width,
+                             geometry->screen_size.width - viewport->first_x);
+#endif
     video_canvas_refresh(canvas,
                          viewport->first_x
                          + geometry->extra_offscreen_border_left,

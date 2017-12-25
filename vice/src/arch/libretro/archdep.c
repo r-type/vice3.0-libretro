@@ -200,7 +200,7 @@ return retro_system_data_directory;
             home = ".";
         }
     }
-
+    return home;
 #endif
 }
 

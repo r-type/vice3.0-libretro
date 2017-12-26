@@ -939,6 +939,8 @@ void retro_run(void)
       mfirst++;
       printf("First time we return from retro_run()!\n");
       retro_load_ok=true;
+      app_init();
+      memset(SNDBUF,0,1024*2*2);
 
       Emu_init();
       return;
@@ -990,9 +992,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
    update_variables();
 
-   app_init();
 
-   memset(SNDBUF,0,1024*2*2);
 
    return true;
 }

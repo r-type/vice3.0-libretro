@@ -133,8 +133,8 @@ int archdep_rtc_get_centisecond(void)
     status = gettimeofday(&tm, NULL);
     if(status==0)
         dtm.tv_nsec = tm.tv_usec * 1000;
-#elif
-    status = clock_gettime(CLOCK_REALTIME, &dtm)
+#else
+    status = clock_gettime(CLOCK_REALTIME, &dtm);
 #endif
     if (status == 0) {
         return dtm.tv_nsec / 10000L;

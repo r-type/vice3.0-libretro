@@ -83,7 +83,7 @@ unsigned vice_devices[ 2 ];
 extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL;
 extern int retrojoy_init,retro_ui_finalized;
 extern void set_drive_type(int drive,int val);
-extern void set_truedrive_emultion(int val);
+extern void set_truedrive_emulation(int val);
 
 //VICE DEF BEGIN
 #include "resources.h"
@@ -527,9 +527,9 @@ static void update_variables(void)
    {
       if(retro_ui_finalized){
          if (strcmp(var.value, "enabled") == 0)
-            set_truedrive_emultion(1);
+            set_truedrive_emulation(1);
          if (strcmp(var.value, "disabled") == 0)
-            set_truedrive_emultion(0);
+            set_truedrive_emulation(0);
       }
       else  {
          if (strcmp(var.value, "enabled") == 0)RETROTDE=1;

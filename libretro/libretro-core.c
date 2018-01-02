@@ -760,6 +760,95 @@ void retro_reset(void)
    emu_reset();
 }
 
+struct DiskImage {
+    char* fname;
+};
+
+static int diskIndex = 0;
+static int diskCount = 0;
+static struct DiskImage diskImage[80];
+static bool ejected = false;
+#include <attach.h>
+
+static bool retro_set_eject_state(bool ejected) {
+    printf("EJECT %d", (int)ejected);
+    if(ejected)
+        file_system_detach_disk(8);
+    else
+        file_system_attach_disk(8, diskImage[diskIndex].fname);
+}
+
+/* Gets current eject state. The initial state is 'not ejected'. */
+static bool retro_get_eject_state(void) {
+    return ejected;
+}
+
+/* Gets current disk index. First disk is index 0.
+ * If return value is >= get_num_images(), no disk is currently inserted.
+ */
+static unsigned retro_get_image_index(void) {
+    return diskIndex;
+}
+
+/* Sets image index. Can only be called when disk is ejected.
+ * The implementation supports setting "no disk" by using an 
+ * index >= get_num_images().
+ */
+static bool retro_set_image_index(unsigned index) {
+    diskIndex = index;
+}
+
+/* Gets total number of images which are available to use. */
+static unsigned retro_get_num_images(void) {
+    return diskCount;
+}
+
+
+/* Replaces the disk image associated with index.
+ * Arguments to pass in info have same requirements as retro_load_game().
+ * Virtual disk tray must be ejected when calling this.
+ *
+ * Replacing a disk image with info = NULL will remove the disk image 
+ * from the internal list.
+ * As a result, calls to get_image_index() can change.
+ *
+ * E.g. replace_image_index(1, NULL), and previous get_image_index() 
+ * returned 4 before.
+ * Index 1 will be removed, and the new index is 3.
+ */
+static bool retro_replace_image_index(unsigned index,
+      const struct retro_game_info *info) {
+    if(diskImage[index].fname)
+        free(diskImage[index].fname);
+    if(info == NULL) {
+        memcpy(&diskImage[index], &diskImage[index+1], sizeof(struct DiskImage)*(diskCount-index-1));
+        diskCount--;
+        if(diskIndex > 0)
+            diskIndex--;
+    } else
+    diskImage[index].fname = strdup(info->path);
+}
+
+/* Adds a new valid index (get_num_images()) to the internal disk list.
+ * This will increment subsequent return values from get_num_images() by 1.
+ * This image index cannot be used until a disk image has been set 
+ * with replace_image_index. */
+static bool retro_add_image_index(void) {
+    diskImage[diskCount].fname = NULL;
+    diskCount++;
+    return true;
+}
+
+static struct retro_disk_control_callback diskControl = {
+    retro_set_eject_state,
+    retro_get_eject_state,
+    retro_get_image_index,
+    retro_set_image_index,
+    retro_get_num_images,
+    retro_replace_image_index,
+    retro_add_image_index,
+};
+
 void retro_init(void)
 {    	
    const char *system_dir = NULL;
@@ -831,6 +920,9 @@ void retro_init(void)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "L3" }
    };
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
+   bool noGame = true;
+   environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &noGame);
+   environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &diskControl);
 }
 
 void retro_deinit(void)

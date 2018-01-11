@@ -37,6 +37,10 @@
 
 #include "libretro-core.h"
 
+#if defined(VITA)
+#include <psp2/kernel/threadmgr.h>
+#endif
+
 extern void retro_poll_event(int joyon);
 extern void app_vkb_handle();
 

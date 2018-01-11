@@ -20,17 +20,8 @@ int mapper_keys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 char keys[4096];
 char buf[10][4096];
 
-//TIME
-#ifdef __CELLOS_LV2__
-#include "sys/sys_time.h"
-#include "sys/timer.h"
-#define usleep  sys_timer_usleep
-#else
-#include <sys/types.h>
-#include <sys/time.h>
-#include <time.h>
-#endif
-
+// Our virtual time counter, increased by retro_run()
+long microSecCounter=0;
 int cpuloop=1;
 
 #ifdef FRONTEND_SUPPORTS_RGB565
@@ -318,36 +309,16 @@ void parse_cmdline(const char *argv)
    }
 }
 
-long GetTicks(void)
-{ // in MSec
-#ifndef _ANDROID_
-
-#ifdef __CELLOS_LV2__
-
-   //#warning "GetTick PS3\n"
-
-   unsigned long	ticks_micro;
-   uint64_t secs;
-   uint64_t nsecs;
-
-   sys_time_get_current_time(&secs, &nsecs);
-   ticks_micro =  secs * 1000000UL + (nsecs / 1000);
-
-   return ticks_micro;///1000;
-#else
-   struct timeval tv;
-   gettimeofday (&tv, NULL);
-   return (tv.tv_sec*1000000 + tv.tv_usec);///1000;
-
-#endif
-
-#else
-
-   struct timespec now;
-   clock_gettime(CLOCK_MONOTONIC, &now);
-   return (now.tv_sec*1000000 + now.tv_nsec/1000);///1000;
-#endif
-
+long GetTicks(void) {
+   // NOTE: Cores should normally not depend on real time, so we return a
+   // counter here
+   // GetTicks() is used by vsyncarch_gettime() which is used by
+   // * Vsync (together with sleep) to sync to 50Hz
+   // * Mouse timestamps
+   // * Networking
+   // Returning a frame based msec counter could potentially break
+   // networking but it's not something libretro uses at the moment.
+   return microSecCounter;
 } 
 
 void save_bkg(void)
@@ -757,6 +728,7 @@ void retro_shutdown_core(void)
 
 void retro_reset(void)
 {
+   microSecCounter = 0;
    emu_reset();
 }
 
@@ -923,6 +895,7 @@ void retro_init(void)
    bool noGame = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &noGame);
    environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &diskControl);
+   microSecCounter = 0;
 }
 
 void retro_deinit(void)
@@ -1053,6 +1026,7 @@ void retro_run(void)
    video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
    if(want_quit)retro_shutdown_core();
+   microSecCounter += (1000000/50);
 }
 
 /*

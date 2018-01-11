@@ -83,19 +83,9 @@ void vsyncarch_display_speed(double speed, double frame_rate, int warp_enabled)
 /* Sleep a number of timer units. */
 void vsyncarch_sleep(signed long delay)
 {
-#ifndef WIIU
-#if defined(VITA)
-   sceKernelDelayThread(delay);
-#else
-   usleep(delay);
-#endif
-#else 
-/* FIXME: There must be somethings wrong with wiiu retroarch usleep implementation ?
-   https://github.com/libretro/RetroArch/blob/2492f3d6b38a74bf77774429fff4d7ff65aee40b/wiiu/system/missing_libc_functions.c
-   As if we comment usleep for wiiu then emulator run almost at fullspeed (c64/fastsid)
-*/
-#warning FIXME: If usleep used on wiiu then emulator is slow , if not then it is fullspeed.
-#endif
+    // NOTE: Cores should not sleep. vsyncarch_sleep is only used by vice to
+    // keep a stable 50Hz refresh rate, which for libretro is the responsibility
+    // of the frontend.
 }
 
 void vsyncarch_presync(void)

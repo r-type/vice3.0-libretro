@@ -20,17 +20,8 @@ int mapper_keys[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 char keys[4096];
 char buf[10][4096];
 
-//TIME
-#ifdef __CELLOS_LV2__
-#include "sys/sys_time.h"
-#include "sys/timer.h"
-#define usleep  sys_timer_usleep
-#else
-#include <sys/types.h>
-#include <sys/time.h>
-#include <time.h>
-#endif
-
+// Our virtual time counter, increased by retro_run()
+long microSecCounter=0;
 int cpuloop=1;
 
 #ifdef FRONTEND_SUPPORTS_RGB565
@@ -83,7 +74,7 @@ unsigned vice_devices[ 2 ];
 extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL;
 extern int retrojoy_init,retro_ui_finalized;
 extern void set_drive_type(int drive,int val);
-extern void set_truedrive_emultion(int val);
+extern void set_truedrive_emulation(int val);
 
 //VICE DEF BEGIN
 #include "resources.h"
@@ -318,36 +309,16 @@ void parse_cmdline(const char *argv)
    }
 }
 
-long GetTicks(void)
-{ // in MSec
-#ifndef _ANDROID_
-
-#ifdef __CELLOS_LV2__
-
-   //#warning "GetTick PS3\n"
-
-   unsigned long	ticks_micro;
-   uint64_t secs;
-   uint64_t nsecs;
-
-   sys_time_get_current_time(&secs, &nsecs);
-   ticks_micro =  secs * 1000000UL + (nsecs / 1000);
-
-   return ticks_micro;///1000;
-#else
-   struct timeval tv;
-   gettimeofday (&tv, NULL);
-   return (tv.tv_sec*1000000 + tv.tv_usec);///1000;
-
-#endif
-
-#else
-
-   struct timespec now;
-   clock_gettime(CLOCK_MONOTONIC, &now);
-   return (now.tv_sec*1000000 + now.tv_nsec/1000);///1000;
-#endif
-
+long GetTicks(void) {
+   // NOTE: Cores should normally not depend on real time, so we return a
+   // counter here
+   // GetTicks() is used by vsyncarch_gettime() which is used by
+   // * Vsync (together with sleep) to sync to 50Hz
+   // * Mouse timestamps
+   // * Networking
+   // Returning a frame based msec counter could potentially break
+   // networking but it's not something libretro uses at the moment.
+   return microSecCounter;
 } 
 
 void save_bkg(void)
@@ -527,9 +498,9 @@ static void update_variables(void)
    {
       if(retro_ui_finalized){
          if (strcmp(var.value, "enabled") == 0)
-            set_truedrive_emultion(1);
+            set_truedrive_emulation(1);
          if (strcmp(var.value, "disabled") == 0)
-            set_truedrive_emultion(0);
+            set_truedrive_emulation(0);
       }
       else  {
          if (strcmp(var.value, "enabled") == 0)RETROTDE=1;
@@ -757,8 +728,98 @@ void retro_shutdown_core(void)
 
 void retro_reset(void)
 {
+   microSecCounter = 0;
    emu_reset();
 }
+
+struct DiskImage {
+    char* fname;
+};
+
+static int diskIndex = 0;
+static int diskCount = 0;
+static struct DiskImage diskImage[80];
+static bool ejected = false;
+#include <attach.h>
+
+static bool retro_set_eject_state(bool ejected) {
+    printf("EJECT %d", (int)ejected);
+    if(ejected)
+        file_system_detach_disk(8);
+    else
+        file_system_attach_disk(8, diskImage[diskIndex].fname);
+}
+
+/* Gets current eject state. The initial state is 'not ejected'. */
+static bool retro_get_eject_state(void) {
+    return ejected;
+}
+
+/* Gets current disk index. First disk is index 0.
+ * If return value is >= get_num_images(), no disk is currently inserted.
+ */
+static unsigned retro_get_image_index(void) {
+    return diskIndex;
+}
+
+/* Sets image index. Can only be called when disk is ejected.
+ * The implementation supports setting "no disk" by using an 
+ * index >= get_num_images().
+ */
+static bool retro_set_image_index(unsigned index) {
+    diskIndex = index;
+}
+
+/* Gets total number of images which are available to use. */
+static unsigned retro_get_num_images(void) {
+    return diskCount;
+}
+
+
+/* Replaces the disk image associated with index.
+ * Arguments to pass in info have same requirements as retro_load_game().
+ * Virtual disk tray must be ejected when calling this.
+ *
+ * Replacing a disk image with info = NULL will remove the disk image 
+ * from the internal list.
+ * As a result, calls to get_image_index() can change.
+ *
+ * E.g. replace_image_index(1, NULL), and previous get_image_index() 
+ * returned 4 before.
+ * Index 1 will be removed, and the new index is 3.
+ */
+static bool retro_replace_image_index(unsigned index,
+      const struct retro_game_info *info) {
+    if(diskImage[index].fname)
+        free(diskImage[index].fname);
+    if(info == NULL) {
+        memcpy(&diskImage[index], &diskImage[index+1], sizeof(struct DiskImage)*(diskCount-index-1));
+        diskCount--;
+        if(diskIndex > 0)
+            diskIndex--;
+    } else
+    diskImage[index].fname = strdup(info->path);
+}
+
+/* Adds a new valid index (get_num_images()) to the internal disk list.
+ * This will increment subsequent return values from get_num_images() by 1.
+ * This image index cannot be used until a disk image has been set 
+ * with replace_image_index. */
+static bool retro_add_image_index(void) {
+    diskImage[diskCount].fname = NULL;
+    diskCount++;
+    return true;
+}
+
+static struct retro_disk_control_callback diskControl = {
+    retro_set_eject_state,
+    retro_get_eject_state,
+    retro_get_image_index,
+    retro_set_image_index,
+    retro_get_num_images,
+    retro_replace_image_index,
+    retro_add_image_index,
+};
 
 void retro_init(void)
 {    	
@@ -831,6 +892,10 @@ void retro_init(void)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "L3" }
    };
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
+   bool noGame = true;
+   environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &noGame);
+   environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &diskControl);
+   microSecCounter = 0;
 }
 
 void retro_deinit(void)
@@ -961,6 +1026,7 @@ void retro_run(void)
    video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
    if(want_quit)retro_shutdown_core();
+   microSecCounter += (1000000/50);
 }
 
 /*

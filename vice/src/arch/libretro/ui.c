@@ -35,6 +35,8 @@
 #include "vic20model.h"
 #elif defined(__PLUS4__)
 #include "plus4model.h"
+#elif  defined(__X128__)
+#include "c128model.h"
 #endif
 
 #include <stdio.h>
@@ -145,6 +147,8 @@ int ui_init_finalize(void)
    vic20model_set(RETROC64MODL);
 #elif defined(__PLUS4__)
    plus4model_set(RETROC64MODL);
+#elif defined(__X128__)
+   c128model_set(RETROC64MODL);
 #else
    c64model_set(RETROC64MODL);
 #endif

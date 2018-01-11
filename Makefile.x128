@@ -6,6 +6,9 @@ INCFLAGS += \
 				-I$(EMU)/lib/p64 -I$(EMU)/drive/iec/c64exp -I$(EMU)/samplerdrv -I$(EMU)/drive/ieee -I$(EMU)/drive/tcbm \
 				-I$(EMU)/rtc -I$(EMU)/resid -I$(EMU)/monitor -I$(EMU)/joyport -I$(EMU)/tapeport  -I$(EMU)/drive/iec
 
+
+COMMONFLAGS += -D__X128__
+
 SOURCES_CC :=  \
 					$(EMU)/resid/extfilt.cc  \
 					$(EMU)/resid/version.cc  \
@@ -88,7 +91,6 @@ SOURCES_C	+= \
 					$(EMU)/c64/c64printer.c  \
 					$(EMU)/c64/c64rsuser.c  \
 					$(EMU)/c64/c64sound.c  \
-					$(EMU)/c64/patchrom.c  \
 					$(EMU)/c64/cart/actionreplay.c  \
 					$(EMU)/c64/cart/actionreplay2.c  \
 					$(EMU)/c64/cart/actionreplay3.c  \

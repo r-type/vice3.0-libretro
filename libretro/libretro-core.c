@@ -84,6 +84,8 @@ extern void set_truedrive_emulation(int val);
 #include "vic20model.h"
 #elif defined(__PLUS4__)
 #include "plus4model.h"
+#elif defined(__X128__)
+#include "c128model.h"
 #endif
 //VICE DEF END
 
@@ -423,6 +425,11 @@ void retro_set_environment(retro_environment_t cb)
          "vice_PLUS4Model",
          "PLUS4Model; PLUS4MODEL_C16_PAL|PLUS4MODEL_C16_NTSC|PLUS4MODEL_PLUS4_PAL|PLUS4MODEL_PLUS4_NTSC|PLUS4MODEL_V364_NTSC|PLUS4MODEL_232_NTSC|PLUS4MODEL_UNKNOWN",
       },
+#elif  defined(__X128__)
+      {
+         "vice_C128Model",
+         "C128Model; C128MODEL_C128_PAL|C128MODEL_C128DCR_PAL|C128MODEL_C128_NTSC|C128MODEL_C128DCR_NTSC|C128MODEL_UNKNOWN",
+      },
 #else
       {
          "vice_C64Model",
@@ -563,6 +570,23 @@ static void update_variables(void)
 
       if(retro_ui_finalized)
         plus4model_set(modl);
+      else RETROC64MODL=modl;
+   }
+#elif  defined(__X128__)
+   var.key = "vice_C128Model";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int modl=0;
+
+      if (strcmp(var.value, "C128MODEL_C128_PAL") == 0)modl=C128MODEL_C128_PAL;
+      else if (strcmp(var.value, "C128MODEL_C128DCR_PAL") == 0)modl=C128MODEL_C128DCR_PAL;
+      else if (strcmp(var.value, "C128MODEL_C128_NTSC") == 0)modl=C128MODEL_C128_NTSC;
+      else if (strcmp(var.value, "C128MODEL_C128DCR_NTSC") == 0)modl=C128MODEL_C128DCR_NTSC;
+      else if (strcmp(var.value, "C128MODEL_UNKNOWN") == 0)modl=C128MODEL_UNKNOWN;
+      if(retro_ui_finalized)
+        c128model_set(modl);
       else RETROC64MODL=modl;
    }
 #else

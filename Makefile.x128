@@ -18,7 +18,7 @@ SOURCES_CC :=  \
 					$(EMU)/resid/sid.cc  \
 					$(EMU)/sid/resid.cc
 
-SOURCES_C	:= \
+SOURCES_C	+= \
 					$(EMU)/alarm.c  \
 					$(EMU)/attach.c  \
 					$(EMU)/autostart-prg.c  \

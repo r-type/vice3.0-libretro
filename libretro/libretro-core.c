@@ -75,6 +75,7 @@ extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL;
 extern int retrojoy_init,retro_ui_finalized;
 extern void set_drive_type(int drive,int val);
 extern void set_truedrive_emulation(int val);
+extern void reset_mouse_pos();
 
 //VICE DEF BEGIN
 #include "resources.h"
@@ -504,10 +505,14 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if(retro_ui_finalized){
-         if (strcmp(var.value, "enabled") == 0)
+         if (strcmp(var.value, "enabled") == 0){
             set_truedrive_emulation(1);
-         if (strcmp(var.value, "disabled") == 0)
+	    resources_set_int("VirtualDevices", 0);
+         }
+         if (strcmp(var.value, "disabled") == 0){
             set_truedrive_emulation(0);
+            resources_set_int("VirtualDevices", 1);
+	 }
       }
       else  {
          if (strcmp(var.value, "enabled") == 0)RETROTDE=1;
@@ -1018,6 +1023,7 @@ void retro_run(void)
       printf("Update Geometry Old(%d,%d) New(%d,%d)\n",lastW,lastH,retroW,retroH);
       lastW=retroW;
       lastH=retroH;
+      reset_mouse_pos();
    }
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)

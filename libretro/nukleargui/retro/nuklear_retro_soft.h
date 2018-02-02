@@ -436,6 +436,11 @@ nk_retro_get_text_width(nk_handle handle, float height, const char *text, int le
     return len * font->width;
 }
 
+void reset_mouse_pos(){
+	revent.gmx=(retroW/*.width*//2)-1;
+	revent.gmy=(retroH/*.height*//2)-1;
+}
+
 static void retro_init_event()
 {
 	revent.MOUSE_EMULATED=-1;
@@ -470,8 +475,8 @@ nk_retro_init(nk_retro_Font *rsdlfont,RSDL_Surface *screen_surface,unsigned int 
     font->width = nk_retro_get_text_width;
 
     retro.screen_surface = screen_surface;
-    retro.width=w;
-    retro.height=h;
+    retro.width=retroW;//w;
+    retro.height=retroH;//h;
 
     nk_init_default(&retro.ctx, font);
     retro.ctx.clip.copy = nk_retro_clipbard_copy;

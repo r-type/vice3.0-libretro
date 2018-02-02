@@ -136,8 +136,14 @@ int ui_init_finalize(void)
    if(RETROJOY==1)resources_set_int( "RetroJoy", 1);
    else if(RETROJOY==0)resources_set_int( "RetroJoy", 0);
 
-   if(RETROTDE==1)resources_set_int("DriveTrueEmulation", 1);
-   else if(RETROTDE==0)resources_set_int("DriveTrueEmulation", 0);
+   if(RETROTDE==1){
+	resources_set_int("DriveTrueEmulation", 1);
+	resources_set_int("VirtualDevices", 0);
+   }
+   else if(RETROTDE==0){
+	resources_set_int("DriveTrueEmulation", 0);
+	resources_set_int("VirtualDevices", 1);
+   }
 
    resources_set_int_sprintf("Drive%iType",RETRODRVTYPE , 8);
 

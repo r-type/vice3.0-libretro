@@ -453,36 +453,48 @@ void retro_poll_event(int joyon)
 	if(joyon) // retro joypad take control over keyboard joy
 	{
 
-    	BYTE j = joystick_value[cur_port];
+		for (int retro_port = 0; retro_port <= 1; retro_port++) {
 
-    	if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ){
-        	j |= 0x01;
-    	} else {
-        	j &= ~0x01;
-    	}
-    	if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ){
-        	j |= 0x02;
-    	} else {
-        	j &= ~0x02;
-    	}
-    	if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ){
-        	j |= 0x04;
-    	} else {
-        	j &=~ 0x04;
-    	}
-    	if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT) ){
-        	j |= 0x08;
-    	} else {
-    	    j &= ~0x08;
-    	}
-    	if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) ){
-    	    j |= 0x10;
-    	} else {
-    	    j &= ~0x10;
-    	}
-	
-    	joystick_value[cur_port] = j;
+			int vice_port = cur_port;
 
+			if (retro_port == 1) { // second joypad controls other player
+				if (cur_port == 2) {
+					vice_port = 1;
+				} else {
+					vice_port = 2;
+				}
+			}
+
+			BYTE j = joystick_value[vice_port];
+			
+			if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ){
+				j |= 0x01;
+			} else {
+				j &= ~0x01;
+			}
+			if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ){
+				j |= 0x02;
+			} else {
+				j &= ~0x02;
+			}
+			if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ){
+				j |= 0x04;
+			} else {
+				j &=~ 0x04;
+			}
+			if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT) ){
+				j |= 0x08;
+			} else {
+				j &= ~0x08;
+			}
+			if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) ){
+				j |= 0x10;
+			} else {
+				j &= ~0x10;
+			}
+
+			joystick_value[vice_port] = j;
+		}
 	}
 
 }

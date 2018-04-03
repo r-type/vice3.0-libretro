@@ -452,8 +452,8 @@ void retro_poll_event(int joyon)
 
 	if(joyon) // retro joypad take control over keyboard joy
 	{
-
-		for (int retro_port = 0; retro_port <= 1; retro_port++) {
+		int retro_port;
+		for (retro_port = 0; retro_port <= 1; retro_port++) {
 
 			int vice_port = cur_port;
 

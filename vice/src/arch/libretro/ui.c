@@ -31,6 +31,7 @@
 #include "resources.h"
 #include "sid.h"
 #include "c64model.h"
+#include "userport_joystick.h"
 #if  defined(__VIC20__)
 #include "vic20model.h"
 #elif defined(__PLUS4__)
@@ -43,7 +44,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-int RETROJOY=0,RETROTDE=0,RETROSTATUS=0,RETRODRVTYPE=1542,RETROSIDMODL=0,RETROC64MODL=0;
+int RETROJOY=0,RETROTDE=0,RETROSTATUS=0,RETRODRVTYPE=1542,RETROSIDMODL=0,RETROC64MODL=0,RETROUSERPORTJOY=-1;
 int retro_ui_finalized = 0;
 extern int vice_statusbar;
 
@@ -132,6 +133,12 @@ int ui_init_finalize(void)
    resources_set_int( "SDLStatusbar", 1);
    if(RETROSTATUS==1)vice_statusbar=1;
    else if(RETROSTATUS==0)vice_statusbar=0;
+
+   if(RETROUSERPORTJOY==-1)resources_set_int("UserportJoy", 0);
+   else {
+      resources_set_int("UserportJoy", 1);
+      resources_set_int("UserportJoyType", RETROUSERPORTJOY);
+   }
 
    if(RETROJOY==1)resources_set_int( "RetroJoy", 1);
    else if(RETROJOY==0)resources_set_int( "RetroJoy", 0);

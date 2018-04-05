@@ -453,7 +453,7 @@ void retro_poll_event(int joyon)
 	if(joyon) // retro joypad take control over keyboard joy
 	{
 		int retro_port;
-		for (retro_port = 0; retro_port <= 1; retro_port++) {
+		for (retro_port = 0; retro_port <= 4; retro_port++) {
 
 			int vice_port = cur_port;
 
@@ -463,6 +463,12 @@ void retro_poll_event(int joyon)
 				} else {
 					vice_port = 2;
 				}
+			} else if (retro_port == 2) {
+				vice_port = 3;
+			} else if (retro_port == 3) {
+				vice_port = 4;
+			} else if (retro_port == 4) {
+				vice_port = 5;
 			}
 
 			BYTE j = joystick_value[vice_port];

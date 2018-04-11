@@ -958,7 +958,7 @@ void retro_init(void)
 
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
-      fprintf(stderr, "PIXEL FORMAT is not supported.\n");
+      log_cb(RETRO_LOG_ERROR, "PIXEL FORMAT is not supported.\n");
       exit(0);
    }
 

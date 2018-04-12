@@ -19,7 +19,8 @@ include $(CLEAR_VARS)
 LOCAL_MODULE       := retro
 LOCAL_SRC_FILES    := $(SOURCES_C) $(SOURCES_CC)
 LOCAL_CPPFLAGS     := $(COREFLAGS)
-LOCAL_LDFLAGS      := -Wl,-version-script=$(CORE_DIR)/link.T
+LOCAL_CFLAGS       := $(COREFLAGS)
+LOCAL_LDFLAGS      := -Wl,-version-script=$(CORE_DIR)/libretro/link.T
 LOCAL_LDLIBS       := -llog
 LOCAL_CPP_FEATURES := rtti exceptions
 include $(BUILD_SHARED_LIBRARY)

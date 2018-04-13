@@ -472,6 +472,9 @@ void retro_set_environment(retro_environment_t cb)
    };
 
    cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+
+   bool allowNoGameMode = true;
+   environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
 }
 
 static void update_variables(void)
@@ -994,8 +997,6 @@ void retro_init(void)
 #undef RETRO_DESCRIPTOR_BLOCK
 
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
-   bool noGame = true;
-   environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &noGame);
    environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &diskControl);
    microSecCounter = 0;
 }
@@ -1155,13 +1156,18 @@ bool retro_load_game(const struct retro_game_info *info)
       struct retro_keyboard_callback cb = { keyboard_cb };
       environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &cb);
       */
-   const char *full_path = info->path;
 
-   strcpy(RPATH,full_path);
+   if (info)
+   {
+      const char *full_path = info->path;
+      strcpy(RPATH,full_path);
+   }
+   else
+   {
+      RPATH[0]=0;
+   }
 
    update_variables();
-
-
 
    return true;
 }

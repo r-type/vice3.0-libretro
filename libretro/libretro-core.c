@@ -34,7 +34,7 @@ int cpuloop=1;
 	unsigned int *Retro_Screen;
 	unsigned int bmp[WINDOW_SIZE];
 	unsigned int save_Screen[WINDOW_SIZE];
-#endif 
+#endif
 
 int vice_statusbar=0;
 
@@ -132,7 +132,7 @@ int loadcmdfile(char *argv)
    if( fp != NULL )
    {
       if ( fgets (CMDFILE , 512 , fp) != NULL )
-         res=1;	
+         res=1;
       fclose (fp);
    }
 
@@ -175,7 +175,7 @@ void Add_Option(const char* option)
 
    if(first==0)
    {
-      PARAMCOUNT=0;	
+      PARAMCOUNT=0;
       first++;
    }
 
@@ -190,16 +190,16 @@ int pre_main(const char *argv)
    if (strlen(argv) > strlen("cmd"))
    {
       if( HandleExtension((char*)argv,"cmd") || HandleExtension((char*)argv,"CMD"))
-         i=loadcmdfile((char*)argv);     
+         i=loadcmdfile((char*)argv);
    }
 
    if(i==1)
    {
-      parse_cmdline(CMDFILE);      
-      LOGI("Starting game from command line :%s\n",CMDFILE);  
+      parse_cmdline(CMDFILE);
+      LOGI("Starting game from command line :%s\n",CMDFILE);
    }
    else
-      parse_cmdline(argv); 
+      parse_cmdline(argv);
 
    Only1Arg = (strcmp(ARGUV[0],CORE_NAME) == 0) ? 0 : 1;
 
@@ -223,7 +223,7 @@ int pre_main(const char *argv)
      if (strlen(RPATH) >= strlen(".40"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".40")], ".40"))
 	 Add_Option("-cart4");
-     
+
      if (strlen(RPATH) >= strlen(".60"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".60")], ".60"))
 	 Add_Option("-cart6");
@@ -251,7 +251,7 @@ int pre_main(const char *argv)
       LOGI("%2d  %s\n",i,XARGV[i]);
    }
 
-   skel_main(PARAMCOUNT,( char **)xargv_cmd); 
+   skel_main(PARAMCOUNT,( char **)xargv_cmd);
 
    xargv_cmd[PARAMCOUNT - 2] = NULL;
 
@@ -294,7 +294,7 @@ void parse_cmdline(const char *argv)
                //... do something with the word ...
                for (c2 = 0,p2 = start_of_word; p2 < p; p2++, c2++)
                   ARGUV[ARGUC][c2] = (unsigned char) *p2;
-               ARGUC++; 
+               ARGUC++;
 
                state = DULL; /* back to "not in word, not in string" state */
             }
@@ -307,12 +307,12 @@ void parse_cmdline(const char *argv)
                //... do something with the word ...
                for (c2 = 0,p2 = start_of_word; p2 <p; p2++,c2++)
                   ARGUV[ARGUC][c2] = (unsigned char) *p2;
-               ARGUC++; 
+               ARGUC++;
 
                state = DULL; /* back to "not in word, not in string" state */
             }
             continue; /* either still IN_WORD or we handled the end above */
-      }	
+      }
    }
 }
 
@@ -326,7 +326,7 @@ long GetTicks(void) {
    // Returning a frame based msec counter could potentially break
    // networking but it's not something libretro uses at the moment.
    return microSecCounter;
-} 
+}
 
 void save_bkg(void)
 {
@@ -360,8 +360,6 @@ int keyId(const char *val)
 
 void retro_set_environment(retro_environment_t cb)
 {
-   environ_cb = cb;
-
    static const struct retro_controller_description p1_controllers[] = {
       { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
       { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
@@ -371,39 +369,14 @@ void retro_set_environment(retro_environment_t cb)
       { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
    };
 
-
    static const struct retro_controller_info ports[] = {
       { p1_controllers, 2  }, // port 1
       { p2_controllers, 2  }, // port 2
       { NULL, 0 }
    };
 
-   cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
-
-   int i=0;
-   while (keyDesc[i]!=NULL)
+   struct retro_variable variables[] =
    {
-      if (i == 0)
-         strcpy (keys, keyDesc[i]);
-      else
-         strcat (keys, keyDesc[i]);
-      if (keyDesc[i+1]!=NULL)
-         strcat (keys, "|");
-      i++;
-   }
-
-   snprintf(buf[0],sizeof(buf[0]), "RetroPad Y; %s|%s","RETROK_F9",     keys);
-   snprintf(buf[1],sizeof(buf[1]), "RetroPad X; %s|%s","RETROK_RETURN",     keys);
-   snprintf(buf[2],sizeof(buf[2]), "RetroPad B; %s|%s","RETROK_ESCAPE",     keys);
-   snprintf(buf[3],sizeof(buf[3]), "RetroPad L; %s|%s","RETROK_KP_PLUS",     keys);
-   snprintf(buf[4],sizeof(buf[4]), "RetroPad R; %s|%s","RETROK_KP_MINUS",     keys);
-   snprintf(buf[5],sizeof(buf[5]), "RetroPad L2; %s|%s","RETROK_KP_MULTIPLY",    keys);
-   snprintf(buf[6],sizeof(buf[6]), "RetroPad R2; %s|%s","RETROK_ESCAPE",   keys);
-   snprintf(buf[7],sizeof(buf[7]), "RetroPad L3; %s|%s","RETROK_TAB",   keys);
-   snprintf(buf[8],sizeof(buf[8]), "RetroPad R3; %s|%s","RETROK_F5",  keys);
-   snprintf(buf[9],sizeof(buf[9]),"RetroPad START; %s|%s","RETROK_KP_DIVIDE", keys);
-
-   struct retro_variable variables[] = {
       {
          "vice_Statusbar",
          "Status Bar; disabled|enabled",
@@ -457,23 +430,54 @@ void retro_set_environment(retro_environment_t cb)
          "vice_Controller",
          "Controller0 type; keyboard|joystick",
       },
-   { "vice_mapper_y", buf[0] },
-   { "vice_mapper_x", buf[1] },
-   { "vice_mapper_b", buf[2] },
-   { "vice_mapper_l", buf[3] },
-   { "vice_mapper_r", buf[4] },
-   { "vice_mapper_l2", buf[5] },
-   { "vice_mapper_r2", buf[6] },
-   { "vice_mapper_l3", buf[7] },
-   { "vice_mapper_r3", buf[8] },
-   { "vice_mapper_start", buf[9] },
+
+      { "vice_mapper_y", buf[0] },
+      { "vice_mapper_x", buf[1] },
+      { "vice_mapper_b", buf[2] },
+      { "vice_mapper_l", buf[3] },
+      { "vice_mapper_r", buf[4] },
+      { "vice_mapper_l2", buf[5] },
+      { "vice_mapper_r2", buf[6] },
+      { "vice_mapper_l3", buf[7] },
+      { "vice_mapper_r3", buf[8] },
+      { "vice_mapper_start", buf[9] },
 
       { NULL, NULL },
    };
 
+   bool allowNoGameMode;
+   int i;
+
+   environ_cb = cb;
+
+   cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
+
+   i=0;
+   while (keyDesc[i]!=NULL)
+   {
+      if (i == 0)
+         strcpy (keys, keyDesc[i]);
+      else
+         strcat (keys, keyDesc[i]);
+      if (keyDesc[i+1]!=NULL)
+         strcat (keys, "|");
+      i++;
+   }
+
+   snprintf(buf[0],sizeof(buf[0]), "RetroPad Y; %s|%s","RETROK_F9",     keys);
+   snprintf(buf[1],sizeof(buf[1]), "RetroPad X; %s|%s","RETROK_RETURN",     keys);
+   snprintf(buf[2],sizeof(buf[2]), "RetroPad B; %s|%s","RETROK_ESCAPE",     keys);
+   snprintf(buf[3],sizeof(buf[3]), "RetroPad L; %s|%s","RETROK_KP_PLUS",     keys);
+   snprintf(buf[4],sizeof(buf[4]), "RetroPad R; %s|%s","RETROK_KP_MINUS",     keys);
+   snprintf(buf[5],sizeof(buf[5]), "RetroPad L2; %s|%s","RETROK_KP_MULTIPLY",    keys);
+   snprintf(buf[6],sizeof(buf[6]), "RetroPad R2; %s|%s","RETROK_ESCAPE",   keys);
+   snprintf(buf[7],sizeof(buf[7]), "RetroPad L3; %s|%s","RETROK_TAB",   keys);
+   snprintf(buf[8],sizeof(buf[8]), "RetroPad R3; %s|%s","RETROK_F5",  keys);
+   snprintf(buf[9],sizeof(buf[9]),"RetroPad START; %s|%s","RETROK_KP_DIVIDE", keys);
+
    cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
 
-   bool allowNoGameMode = true;
+   allowNoGameMode = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
 }
 
@@ -702,7 +706,7 @@ static void update_variables(void)
       if (strcmp(var.value, "keyboard") == 0)
          vice_devices[ 0 ] = 259;
       if (strcmp(var.value, "joystick") == 0)
-         vice_devices[ 0 ] = 513;	  
+         vice_devices[ 0 ] = 513;
    }
 
    var.key = "vice_mapper_y";
@@ -791,7 +795,7 @@ void Emu_init(void)
 {
 #ifdef RETRO_AND
    MOUSE_EMULATED=1;
-#endif 
+#endif
    update_variables();
    pre_main(RPATH);
 }
@@ -843,7 +847,7 @@ static unsigned retro_get_image_index(void) {
 }
 
 /* Sets image index. Can only be called when disk is ejected.
- * The implementation supports setting "no disk" by using an 
+ * The implementation supports setting "no disk" by using an
  * index >= get_num_images().
  */
 static bool retro_set_image_index(unsigned index) {
@@ -860,11 +864,11 @@ static unsigned retro_get_num_images(void) {
  * Arguments to pass in info have same requirements as retro_load_game().
  * Virtual disk tray must be ejected when calling this.
  *
- * Replacing a disk image with info = NULL will remove the disk image 
+ * Replacing a disk image with info = NULL will remove the disk image
  * from the internal list.
  * As a result, calls to get_image_index() can change.
  *
- * E.g. replace_image_index(1, NULL), and previous get_image_index() 
+ * E.g. replace_image_index(1, NULL), and previous get_image_index()
  * returned 4 before.
  * Index 1 will be removed, and the new index is 3.
  */
@@ -883,7 +887,7 @@ static bool retro_replace_image_index(unsigned index,
 
 /* Adds a new valid index (get_num_images()) to the internal disk list.
  * This will increment subsequent return values from get_num_images() by 1.
- * This image index cannot be used until a disk image has been set 
+ * This image index cannot be used until a disk image has been set
  * with replace_image_index. */
 static bool retro_add_image_index(void) {
     diskImage[diskCount].fname = NULL;
@@ -907,7 +911,7 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 }
 
 void retro_init(void)
-{    	
+{
    struct retro_log_callback log;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
@@ -919,24 +923,24 @@ void retro_init(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir) && system_dir)
    {
-      // if defined, use the system directory			
-      retro_system_directory=system_dir;		
-   }		   
+      // if defined, use the system directory
+      retro_system_directory=system_dir;
+   }
 
    const char *content_dir = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY, &content_dir) && content_dir)
    {
-      // if defined, use the system directory			
-      retro_content_directory=content_dir;		
-   }			
+      // if defined, use the system directory
+      retro_content_directory=content_dir;
+   }
 
    const char *save_dir = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) && save_dir)
    {
       // If save directory is defined use it, otherwise use system directory
-      retro_save_directory = *save_dir ? save_dir : retro_system_directory;      
+      retro_save_directory = *save_dir ? save_dir : retro_system_directory;
    }
    else
    {
@@ -947,7 +951,7 @@ void retro_init(void)
    if(retro_system_directory==NULL)sprintf(RETRO_DIR, "%s",".");
    else sprintf(RETRO_DIR, "%s", retro_system_directory);
 
-#if defined(__WIN32__) 
+#if defined(__WIN32__)
    sprintf(retro_system_data_directory, "%s\\data",RETRO_DIR);
 #else
    sprintf(retro_system_data_directory, "%s/data",RETRO_DIR);
@@ -1003,8 +1007,8 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-   app_free(); 
-   Emu_uninit(); 
+   app_free();
+   Emu_uninit();
 }
 
 unsigned retro_api_version(void)
@@ -1078,8 +1082,8 @@ void retro_audio_cb( short l, short r)
 }
 
 void retro_audiocb(signed short int *sound_buffer,int sndbufsize){
-   int x; 
-   if(pauseg==0)for(x=0;x<sndbufsize;x++)audio_cb(sound_buffer[x],sound_buffer[x]);	
+   int x;
+   if(pauseg==0)for(x=0;x<sndbufsize;x++)audio_cb(sound_buffer[x],sound_buffer[x]);
 }
 
 void retro_blit(void)

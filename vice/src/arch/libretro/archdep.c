@@ -105,7 +105,6 @@ int chdir( const char* path)
 }
 #endif
 
-static FILE *log_file = NULL;
 int joystick_arch_cmdline_options_init(void)
 {
         return 1;
@@ -145,16 +144,6 @@ int archdep_rtc_get_centisecond(void)
 int archdep_init(int *argc, char **argv)
 {
     argv0 = lib_stralloc(argv[0]);
-
-#ifdef RETRO_DEBUG
-#if defined(__ANDROID__) || defined(ANDROID)
-    log_file = fopen("/mnt/sdcard/vicelog.txt", "w");
-#elif defined(VITA)
-    log_file = fopen("ux0:/data/vicelog.txt", "w");
-#else
-    log_file = fopen("./vicelog.txt", "w");
-#endif
-#endif
 
 #if defined(__WIN32__)
 //FIXME
@@ -391,7 +380,7 @@ char *archdep_default_save_resource_file_name(void)
 
 FILE *archdep_open_default_log_file(void)
 {
-    return (log_file) ? log_file : NULL;
+    return NULL;
 }
 
 int archdep_num_text_lines(void)
@@ -417,10 +406,6 @@ int archdep_num_text_columns(void)
 }
 
 int archdep_default_logger(const char *level_string, const char *txt) {
-    if (fputs(level_string, stdout) == EOF
-        || fprintf(stdout, "%s", txt)  < 0
-        || fputc ('\n', stdout) == EOF)
-        return -1;
     return 0;
 }
 
@@ -673,9 +658,6 @@ void archdep_shutdown(void)
 {
     log_message(LOG_DEFAULT, "\nExiting...");
 
-#ifdef RETRO_DEBUG
-    if (log_file) fclose(log_file);
-#endif
     lib_free(argv0);
     lib_free(boot_path);
 

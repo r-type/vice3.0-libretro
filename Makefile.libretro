@@ -1,5 +1,8 @@
 DEBUG=0
-GIT_VERSION := $(shell git describe --abbrev=4 --dirty --always --tags)
+GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
+ifneq ($(GIT_VERSION)," unknown")
+   COMMONFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
 
 UNAME=$(shell uname -a)
 
@@ -211,7 +214,7 @@ endif
 ifeq ($(DEBUG), 1)
 COMMONFLAGS += -O0 -g
 else
-COMMONFLAGS += -O3 -DNDEBUG -DGIT_VERSION=\"$(GIT_VERSION)\" 
+COMMONFLAGS += -O3 -DNDEBUG
 endif
 
 COMMONFLAGS += -DWANT_ZLIB

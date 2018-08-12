@@ -41,6 +41,9 @@ static int start_value = 0;
 static int value_invert = 64;
 static int pattern_invert = 0;
 
+extern BYTE mem_ram[] ;
+int g_mem_ram_size = 0 ;
+
 static int set_start_value(int val, void *param)
 {
     start_value = val;
@@ -139,6 +142,9 @@ void ram_init(BYTE *memram, unsigned int ramsize)
             v ^= 0xff;
         }
     }
+
+    if ( memram == mem_ram )
+        g_mem_ram_size = ramsize ;
 }
 
 /* create a preview of the RAM init pattern - this should be as fast as

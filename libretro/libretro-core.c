@@ -1,5 +1,6 @@
 #include "libretro.h"
 #include "libretro-core.h"
+#include "mem.h"
 
 //CORE VAR
 #ifdef _WIN32
@@ -79,6 +80,8 @@ extern unsigned int cur_port;
 extern void set_drive_type(int drive,int val);
 extern void set_truedrive_emulation(int val);
 extern void reset_mouse_pos();
+extern BYTE mem_ram[] ;
+extern int g_mem_ram_size ;
 
 //VICE DEF BEGIN
 #include "resources.h"
@@ -1214,13 +1217,15 @@ bool retro_unserialize(const void *data_, size_t size)
 
 void *retro_get_memory_data(unsigned id)
 {
-   (void)id;
+   if ( id == RETRO_MEMORY_SYSTEM_RAM )
+      return mem_ram;
    return NULL;
 }
 
 size_t retro_get_memory_size(unsigned id)
 {
-   (void)id;
+   if ( id == RETRO_MEMORY_SYSTEM_RAM )
+      return g_mem_ram_size;
    return 0;
 }
 

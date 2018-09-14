@@ -23,6 +23,9 @@ CXXFLAGS += $(CPPFLAGS)
 SOURCES_CC :=
 SOURCES_C  := \
 				 $(CORE_DIR)/libretro/libretro-core.c \
+				 $(CORE_DIR)/libretro/retro_strings.c \
+				 $(CORE_DIR)/libretro/retro_files.c \
+				 $(CORE_DIR)/libretro/retro_disk_control.c \
 				 $(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 				 $(LIBRETRO_COMM_DIR)/file/retro_dirent.c \
 				 $(LIBRETRO_COMM_DIR)/encodings/encoding_utf.c \

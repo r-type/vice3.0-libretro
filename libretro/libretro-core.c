@@ -114,6 +114,11 @@ static retro_audio_sample_t audio_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
 
+#include "retro_strings.h"
+#include "retro_files.h"
+#include "retro_disk_control.h"
+static dc_storage* dc;
+
 void retro_set_input_state(retro_input_state_t cb)
 {
    input_state_cb = cb;
@@ -823,30 +828,40 @@ struct DiskImage {
     char* fname;
 };
 
-static int diskIndex = 0;
-static int diskCount = 0;
-static struct DiskImage diskImage[80];
-static bool ejected = false;
 #include <attach.h>
 
 static bool retro_set_eject_state(bool ejected) {
     log_cb(RETRO_LOG_INFO, "EJECT %d", (int)ejected);
-    if(ejected)
-        file_system_detach_disk(8);
-    else
-        file_system_attach_disk(8, diskImage[diskIndex].fname);
+
+	if (dc)
+	{
+		dc->eject_state = ejected;
+		
+		if(dc->eject_state)
+			file_system_detach_disk(8);
+		else
+			file_system_attach_disk(8, dc->files[dc->index]);		
+	}
+	
+	return true;
 }
 
 /* Gets current eject state. The initial state is 'not ejected'. */
 static bool retro_get_eject_state(void) {
-    return ejected;
+	if (dc)
+		return dc->eject_state;
+	
+	return true;
 }
 
 /* Gets current disk index. First disk is index 0.
  * If return value is >= get_num_images(), no disk is currently inserted.
  */
 static unsigned retro_get_image_index(void) {
-    return diskIndex;
+	if (dc)
+		return dc->index;
+	
+	return 0;
 }
 
 /* Sets image index. Can only be called when disk is ejected.
@@ -854,12 +869,31 @@ static unsigned retro_get_image_index(void) {
  * index >= get_num_images().
  */
 static bool retro_set_image_index(unsigned index) {
-    diskIndex = index;
+	// Insert disk
+	if (dc)
+	{
+		// Same disk...
+		// This can mess things in the emu
+		if(index == dc->index)
+			return true;
+		
+		if ((index < dc->count) && (dc->files[index]))
+		{
+			dc->index = index;
+			log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive A : %s\n", dc->index+1, dc->files[dc->index]);
+			return true;
+		}
+	}
+	
+	return false;
 }
 
 /* Gets total number of images which are available to use. */
 static unsigned retro_get_num_images(void) {
-    return diskCount;
+	if (dc)
+		return dc->count;
+
+	return 0;
 }
 
 
@@ -877,15 +911,22 @@ static unsigned retro_get_num_images(void) {
  */
 static bool retro_replace_image_index(unsigned index,
       const struct retro_game_info *info) {
-    if(diskImage[index].fname)
-        free(diskImage[index].fname);
-    if(info == NULL) {
-        memcpy(&diskImage[index], &diskImage[index+1], sizeof(struct DiskImage)*(diskCount-index-1));
-        diskCount--;
-        if(diskIndex > 0)
-            diskIndex--;
-    } else
-    diskImage[index].fname = strdup(info->path);
+	if (dc)
+	{
+		if(dc->files[index])
+		{
+			free(dc->files[index]);
+			dc->files[index] = NULL;
+		}
+		
+		// TODO : Handling removing of a disk image when info = NULL
+		
+		if(info != NULL) {
+			dc->files[index] = strdup(info->path);
+		}
+	}
+	
+    return false;	
 }
 
 /* Adds a new valid index (get_num_images()) to the internal disk list.
@@ -893,9 +934,17 @@ static bool retro_replace_image_index(unsigned index,
  * This image index cannot be used until a disk image has been set
  * with replace_image_index. */
 static bool retro_add_image_index(void) {
-    diskImage[diskCount].fname = NULL;
-    diskCount++;
-    return true;
+	if (dc)
+	{
+		if(dc->count <= DC_MAX_SIZE)
+		{
+			dc->files[dc->count] = NULL;
+			dc->count++;
+			return true;
+		}
+	}
+	
+    return false;
 }
 
 static struct retro_disk_control_callback diskControl = {
@@ -916,6 +965,9 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 void retro_init(void)
 {
    struct retro_log_callback log;
+
+	// Init disk control context
+   	dc = dc_create();
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
       log_cb = log.log;
@@ -1012,6 +1064,10 @@ void retro_deinit(void)
 {
    app_free();
    Emu_uninit();
+   
+	// Clean the disk control context
+	if(dc)
+		dc_free(dc);
 }
 
 unsigned retro_api_version(void)
@@ -1039,9 +1095,9 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.0" GIT_VERSION;
 #if defined(__VIC20__)
-   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd";
+   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u";
 #else
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u";
 #endif
    info->need_fullpath    = true;
    info->block_extract    = false;
@@ -1160,6 +1216,8 @@ void retro_run(void)
    }
    */
 
+#define M3U_FILE_EXT "m3u"
+
 bool retro_load_game(const struct retro_game_info *info)
 {
    /*
@@ -1169,8 +1227,37 @@ bool retro_load_game(const struct retro_game_info *info)
 
    if (info)
    {
-      const char *full_path = info->path;
-      strcpy(RPATH,full_path);
+	const char *full_path;
+
+	(void)info;
+
+	full_path = info->path;
+
+	// If it's a m3u file
+	if(strendswith(full_path, M3U_FILE_EXT))
+	{
+		// Parse the m3u file
+		dc_parse_m3u(dc, full_path);
+
+		// Some debugging
+		log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
+		for(unsigned i = 0; i < dc->count; i++)
+		{
+			log_cb(RETRO_LOG_INFO, "file %d: %s\n", i+1, dc->files[i]);
+		}	
+	}
+	else
+	{
+		// Add the file to disk control context
+		// Maybe, in a later version of retroarch, we could add disk on the fly (didn't find how to do this)
+		dc_add_file(dc, full_path);
+	}
+
+	// Init first disk
+	dc->index = 0;
+	dc->eject_state = false;
+	log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive A : %s\n", dc->index+1, dc->files[dc->index]);
+	strcpy(RPATH,dc->files[0]);
    }
    else
    {

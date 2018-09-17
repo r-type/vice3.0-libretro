@@ -1,4 +1,4 @@
-Vice 3.0 LIBRETRO WIP
+# Vice 3.0 LIBRETRO WIP
 
 Very WIP port of VICE 3.0 for libretro .
 
@@ -8,44 +8,71 @@ Use it at you own risk !
 
 Supported platforms : Linux Win64 Android emscripten
 
-EMUTYPE is limited to : x64 (default) for now
+Source base: 
+https://sourceforge.net/p/vice-emu/code/32520/tree/tags/v3.0/
+
+## M3U Support and Disk control
+When you have a multi disk game, you can use a m3u file to specify each disk of the game and change them from the RetroArch Disk control interface.
+
+A M3U file is a simple text file with one disk per line (see https://en.wikipedia.org/wiki/M3U).
+
+Example :
+
+Ultima VI - The False Prophet (1990)(Origin Systems).m3u
+```
+Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 1 of 3 Side A)(Game).d64
+Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 1 of 3 Side B)(Surface).d64
+Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 2 of 3 Side A)(Dungeon).d64
+Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 2 of 3 Side B)(Populace A).d64
+Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 3 of 3 Side A)(Populace A).d64
+Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 3 of 3 Side B)(Populace A).d64
+```
+Path can be absolute or relative to the location of the M3U file.
+
+When a game ask for it, you can change the current disk in the RetroArch 'Disk Control' menu :
+- Eject the current disk with 'Disk Cycle Tray Status'.
+- Select the right disk index.
+- Insert the new disk with 'Disk Cycle Tray Status'.
+
+Note : zip support is provided by RetroArch and is done before passing the game to the core. So, when using a m3u file, the specified disk image must be uncompressed (.d64 file formats).
+
+## Build instructions
 
 LIBDIR set to /mnt/srdcard/data for Android
 and (retro_system_dir)/data for linux/Win
 
 Add WANT_RGB565=1 to make for RGB565 16 bits depth (32 bits depth default)
 
-Setup core :
+### Setup core
 
 Copy the data folder to LIBDIR .
  
-Linux:
-
+### Linux
+```
 CC=gcc make -f Makefile.libretro -j10
-
-Win64 (crossbuild):
-
+```
+### Win64 (crossbuild)
+```
 make -f Makefile.libretro platform=wincross64 -j4
-
-Android standalone toolchain Build:
-
+```
+### Android standalone toolchain Build
+```
 export path to your standalone toolchain like
 
 export PATH=$PATH:/opt/standtc/bin
 
 make -f Makefile.libretro platform=androidstc -j4
-
-Android ndk Build:
-
+```
+### Android ndk Build
+```
 export path to ANDROID_NDK_ARM and ANDROID_NDK_ROOT like
 
 export ANDROID_NDK_ROOT=/opt/ndk
 export ANDROID_NDK_ARM=/opt/ndk/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64
 
-make -f Makefile.libretro -j10 WANT_RGB565=1 platform=android 
-
-Source base: 
-https://sourceforge.net/p/vice-emu/code/32520/tree/tags/v3.0/
+make -f Makefile.libretro -j10 WANT_RGB565=1 platform=android
+```
+## Original readme
 
  ----------------------------------------------------------------------------
 

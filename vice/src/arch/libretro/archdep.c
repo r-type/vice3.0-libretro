@@ -84,7 +84,7 @@ static char *boot_path = NULL;
 /* alternate storage of preferences */
 const char *archdep_pref_path = NULL; /* NULL -> use home_path + ".vice" */
 
-#if defined(VITA)
+#if defined(VITA) || defined(__SWITCH__)
 #include <stddef.h>
 
 char* getcwd( char* buf, size_t size )
@@ -190,6 +190,8 @@ const char *archdep_boot_path(void)
  return "/mnt/sdcard";
 #elif defined(VITA)
  return "ux0:/data";
+#elif defined(__SWITCH__)
+ return "/";
 #else
 printf("bootp:(%s)\n",retro_system_data_directory);
  return retro_system_data_directory;
@@ -213,6 +215,8 @@ const char *archdep_home_path(void)
     return "/mnt/sdcard";
 #elif defined(VITA)
     return "ux0:/data";
+#elif defined(__SWITCH__)
+    return "/";
 #elif defined(__WIN32__) || defined(GEKKO)
 return retro_system_data_directory;
 #else

@@ -169,6 +169,8 @@ file_browser_init(struct file_browser *browser)
         if (!home) home = getenv("USERPROFILE");
 #elif defined(VITA)
         if (!home) home = "ux0:/";
+#elif defined(__SWITCH__)
+        if (!home) home = "/";
 #else
         if (!home) home = getpwuid(getuid())->pw_dir;
         {

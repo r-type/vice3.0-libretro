@@ -44,7 +44,8 @@
 #include <string.h>
 #include <stdarg.h>
 
-int RETROJOY=0,RETROTDE=0,RETROSTATUS=0,RETRODRVTYPE=1542,RETROSIDMODL=0,RETROC64MODL=0,RETROUSERPORTJOY=-1;
+int RETROJOY=0,RETROTDE=0,RETROSTATUS=0,RETRODRVTYPE=1542,RETROSIDMODL=0,RETROC64MODL=0,RETROUSERPORTJOY=-1,RETROEXTPAL=-1;
+char RETROEXTPALNAME[512]="pepto-pal";
 int retro_ui_finalized = 0;
 extern int vice_statusbar;
 
@@ -133,6 +134,12 @@ int ui_init_finalize(void)
    resources_set_int( "SDLStatusbar", 1);
    if(RETROSTATUS==1)vice_statusbar=1;
    else if(RETROSTATUS==0)vice_statusbar=0;
+
+   if(RETROEXTPAL==-1)resources_set_int("VICIIExternalPalette", 0);
+   else {
+      resources_set_int("VICIIExternalPalette", 1);
+      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "VICII");
+   }
 
    if(RETROUSERPORTJOY==-1)resources_set_int("UserportJoy", 0);
    else {

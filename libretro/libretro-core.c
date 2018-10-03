@@ -74,7 +74,8 @@ int lastH=768;
 
 unsigned vice_devices[ 2 ];
 
-extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL,RETROUSERPORTJOY;
+extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL,RETROUSERPORTJOY,RETROEXTPAL;
+extern char RETROEXTPALNAME[512];
 extern int retrojoy_init,retro_ui_finalized;
 extern unsigned int cur_port;
 extern void set_drive_type(int drive,int val);
@@ -423,6 +424,10 @@ void retro_set_environment(retro_environment_t cb)
       },
 #endif
       {
+         "vice_ExternalPalette",
+         "External palette; none|pepto-pal|pepto-palold|pepto-ntsc-sony|pepto-ntsc|colodore|vice|c64hq|c64s|ccs64|frodo|godot|pc64|rgb|deekay|ptoing|community-colors",
+      },
+	  {
          "vice_UserportJoyType",
          "4-player adapter; none|Protovision_CGA|PET|Hummer|OEM|Hit|Kingsoft|Starbyte",
       },
@@ -652,6 +657,44 @@ static void update_variables(void)
 
    }
 #endif
+
+   var.key = "vice_ExternalPalette";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int extpal=-1;
+      if (strcmp(var.value, "none") == 0)extpal=-1;
+      else if (strcmp(var.value, "pepto-pal") == 0)extpal=0;
+      else if (strcmp(var.value, "pepto-pal-old") == 0)extpal=1;
+      else if (strcmp(var.value, "pepto-ntsc-sony") == 0)extpal=2;
+      else if (strcmp(var.value, "pepto-ntsc") == 0)extpal=3;
+      else if (strcmp(var.value, "colodore") == 0)extpal=4;
+      else if (strcmp(var.value, "vice") == 0)extpal=5;
+      else if (strcmp(var.value, "c64hq") == 0)extpal=6;
+      else if (strcmp(var.value, "c64s") == 0)extpal=7;
+      else if (strcmp(var.value, "ccs64") == 0)extpal=8;
+      else if (strcmp(var.value, "frodo") == 0)extpal=9;
+      else if (strcmp(var.value, "godot") == 0)extpal=10;
+      else if (strcmp(var.value, "pc64") == 0)extpal=11;
+      else if (strcmp(var.value, "rgb") == 0)extpal=12;
+      else if (strcmp(var.value, "deekay") == 0)extpal=13;
+      else if (strcmp(var.value, "ptoing") == 0)extpal=14;
+      else if (strcmp(var.value, "community-colors") == 0)extpal=15;
+
+      if(retro_ui_finalized){
+         if(extpal==-1)resources_set_int("VICIIExternalPalette", 0);
+         else {
+            resources_set_int("VICIIExternalPalette", 1);
+            resources_set_string_sprintf("%sPaletteFile", var.value, "VICII");
+         }
+      } else {
+         RETROEXTPAL=extpal;
+         if(extpal!=-1){
+            sprintf(RETROEXTPALNAME, "%s", var.value);
+         }
+      }
+   }
 
    var.key = "vice_UserportJoyType";
    var.value = NULL;

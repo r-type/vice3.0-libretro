@@ -72,6 +72,22 @@
 
 /* Mostly POSIX compatibily */
 
+#ifndef ARCHDEP_R_OK
+#define ARCHDEP_R_OK 0x04
+#endif
+
+#ifndef ARCHDEP_W_OK
+#define ARCHDEP_W_OK 0x02
+#endif
+
+#ifndef ARCHDEP_X_OK
+#define ARCHDEP_X_OK 0x01
+#endif
+
+#ifndef ARCHDEP_F_OK
+#define ARCHDEP_F_OK 0x00
+#endif
+
 int ioutil_access(const char *pathname, int mode)
 {
     int access_mode = 0;

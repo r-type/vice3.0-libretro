@@ -33,12 +33,7 @@
 #define _ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE 1
 #endif
 
-#ifdef WATCOM_COMPILE
-#define _STDIO_H_INCLUDED
-#include <cstdio>
-using std::FILE;
-using std::sprintf;
-#endif
+#include <string>
 
 extern "C" {
 
@@ -48,15 +43,6 @@ extern "C" {
 #    define _FVEC_H_INCLUDED
 #    define _DVEC_H_INCLUDED
 #  endif
-#endif
-
-/* QNX has problems with const and inline definitions
-   in its string.h file when using g++ */
-
-#ifndef __QNX__
-#include <string.h>
-#else
-extern char *strcpy(char *s1, char *s2);
 #endif
 
 #include "sid/sid.h" /* sid_engine_t */

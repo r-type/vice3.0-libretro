@@ -39,7 +39,7 @@
 
 /* Types */
 
-#ifndef bool
+#if !defined(bool) || defined(__CELLOS_LV2__)
 typedef int bool;
 #endif
 

@@ -30,9 +30,6 @@ static struct file_browser browser;
 #include <unistd.h>
 #endif
 
-#ifndef _WIN32
-# include <pwd.h>
-#endif
 
 static void
 die(const char *fmt, ...)
@@ -164,14 +161,19 @@ file_browser_init(struct file_browser *browser)
 
     {
         /* load files and sub-directory list */
-        const char *home = getenv("HOME");
 #if defined(_WIN32)
+        const char *home = getenv("HOME");
         if (!home) home = getenv("USERPROFILE");
 #elif defined(VITA)
+        const char *home = getenv("HOME");
         if (!home) home = "ux0:/";
 #elif defined(__SWITCH__)
+        const char *home = getenv("HOME");
         if (!home) home = "/";
+#elif defined(__CELLOS_LV2__)
+        const char *home = "/";
 #else
+# include <pwd.h>
         if (!home) home = getpwuid(getuid())->pw_dir;
         {
             size_t l;

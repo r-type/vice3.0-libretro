@@ -34,6 +34,7 @@
 #include "vice.h"
 
 #include <string>
+#include <string.h>
 
 extern "C" {
 

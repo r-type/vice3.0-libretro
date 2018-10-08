@@ -34,6 +34,7 @@
 #endif
 
 #include <string>
+#include <string.h>
 
 extern "C" {
 

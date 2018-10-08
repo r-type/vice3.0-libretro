@@ -174,6 +174,7 @@ file_browser_init(struct file_browser *browser)
         const char *home = "/";
 #else
 # include <pwd.h>
+        const char *home = getenv("HOME");
         if (!home) home = getpwuid(getuid())->pw_dir;
         {
             size_t l;

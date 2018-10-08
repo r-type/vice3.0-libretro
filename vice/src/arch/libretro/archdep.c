@@ -34,14 +34,8 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#ifndef __WIN32__
-#include <pwd.h>
-#endif
 #include <sys/stat.h>
 #include <sys/types.h>
-#ifndef __WIN32__
-#include <sys/wait.h>
-#endif
 #include <unistd.h>
 
 #ifdef HAVE_VFORK_H
@@ -217,9 +211,10 @@ const char *archdep_home_path(void)
     return "ux0:/data";
 #elif defined(__SWITCH__)
     return "/";
-#elif defined(__WIN32__) || defined(GEKKO)
+#elif defined(__WIN32__) || defined(GEKKO) || defined(__CELLOS_LV2__)
 return retro_system_data_directory;
 #else
+#include <pwd.h>
     char *home;
 
     home = getenv("HOME");
@@ -430,6 +425,9 @@ int archdep_spawn(const char *name, char **argv,
 #ifndef HAVE_VFORK
     return -1;
 #else
+#ifndef __WIN32__
+#include <sys/wait.h>
+#endif
     pid_t child_pid;
     int child_status;
     char *stdout_redir = NULL;

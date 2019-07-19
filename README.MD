@@ -38,8 +38,7 @@ Note : zip support is provided by RetroArch and is done before passing the game 
 
 ## Build instructions
 
-LIBDIR set to /mnt/srdcard/data for Android
-and (retro_system_dir)/data for linux/Win
+LIBDIR set to retro_system_dir
 
 Add WANT_RGB565=1 to make for RGB565 16 bits depth (32 bits depth default)
 

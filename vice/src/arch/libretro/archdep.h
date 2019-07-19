@@ -185,11 +185,7 @@ extern const char *archdep_pref_path;
 extern  char retro_system_data_directory[512];
 #define RETRO_DEBUG 1
 
-#if defined(ANDROID) || defined(__ANDROID__)
-#define LIBDIR "/mnt/sdcard/data"
-#else
 #define LIBDIR retro_system_data_directory
-#endif
 
 #endif //__LIBRETRO__
 

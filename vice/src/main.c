@@ -305,7 +305,6 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, "Main CPU: starting at ($FFFC).");
 
 #ifdef __LIBRETRO__
-     resources_save("./vicerc0");
      maincpu_mainloop_retro();
 #else
     maincpu_mainloop();

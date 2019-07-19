@@ -106,7 +106,7 @@ extern void emu_reset(void);
 const char *retro_save_directory;
 const char *retro_system_directory;
 const char *retro_content_directory;
-char retro_system_data_directory[512];;
+char retro_system_data_directory[512];
 
 /*static*/ retro_input_state_t input_state_cb;
 /*static*/ retro_input_poll_t input_poll_cb;
@@ -839,7 +839,6 @@ static void update_variables(void)
 
       mapper_keys[3] = keyId(var.value);
    }
-
 }
 
 void Emu_init(void)
@@ -1046,14 +1045,23 @@ void retro_init(void)
       retro_save_directory=retro_system_directory;
    }
 
-   if(retro_system_directory==NULL)sprintf(RETRO_DIR, "%s",".");
-   else sprintf(RETRO_DIR, "%s", retro_system_directory);
-
-#if defined(__WIN32__)
-   sprintf(retro_system_data_directory, "%s\\data",RETRO_DIR);
+   if(retro_system_directory==NULL)
+   {
+#if defined(__ANDROID__) || defined(ANDROID)
+      strcpy(RETRO_DIR, "/mnt/sdcard");
+#elif defined(VITA)
+      strcpy(RETRO_DIR, "ux0:/data");
+#elif defined(__SWITCH__)
+      strcpy(RETRO_DIR, "/");
 #else
-   sprintf(retro_system_data_directory, "%s/data",RETRO_DIR);
+      strcpy(RETRO_DIR, ".");
 #endif
+   }
+   else
+      sprintf(RETRO_DIR, "%s", retro_system_directory);
+
+   // Use system directory for data files such as C64/*.vpl etc.
+   strcpy(retro_system_data_directory, RETRO_DIR);
 
 #ifdef FRONTEND_SUPPORTS_RGB565
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;

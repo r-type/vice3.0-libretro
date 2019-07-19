@@ -174,6 +174,20 @@ keyboard_parse_set_pos_row(127, 6, 6,8);               /*          Del -> Up Arr
 keyboard_parse_set_neg_row(280, -3, 0);
 keyboard_parse_set_neg_row(0 ,-3, 1);
 
+//# joystick keymap A (port 1)
+keyboard_parse_set_neg_row(256, -1, 0);               /*     NumPad 0 -> FIRE         */
+keyboard_parse_set_neg_row(265, -1, 7);               /*     NumPad 9 -> UP           */
+keyboard_parse_set_neg_row(259, -1, 2);               /*     NumPad 3 -> DOWN         */
+keyboard_parse_set_neg_row(263, -1, 4);               /*     NumPad 7 -> LEFT         */
+keyboard_parse_set_neg_row(257, -1, 5);               /*     NumPad 1 -> RIGHT        */
+
+//# joystick Keymap B (port 2)
+keyboard_parse_set_neg_row(261, -2, 0);               /*     NumPad 5 -> FIRE         */
+keyboard_parse_set_neg_row(264, -2, 7);               /*     NumPad 8 -> UP           */
+keyboard_parse_set_neg_row(258, -2, 2);               /*     NumPad 2 -> DOWN         */
+keyboard_parse_set_neg_row(260, -2, 4);               /*     NumPad 4 -> LEFT         */
+keyboard_parse_set_neg_row(262, -2, 5);               /*     NumPad 6 -> RIGHT        */
+
 //# Joyport attached keypad key mappings
 keyboard_parse_set_neg_row(300, -5, 0);               /*      NumLock -> keypad x0    */
 keyboard_parse_set_neg_row(263, -5, 1);               /*     NumPad 7 -> keypad 7     */

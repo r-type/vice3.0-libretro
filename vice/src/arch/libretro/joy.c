@@ -40,7 +40,6 @@
 static const resource_int_t resources_int[] = {
     { NULL }
 };
-
 /* ------------------------------------------------------------------------- */
 
 int joystick_arch_init_resources(void)

@@ -360,7 +360,7 @@ int keyId(const char *val)
    int i=0;
    while (keyDesc[i]!=NULL)
    {
-      if (!strcmp(keyDesc[i],val))
+      if (strstr(keyDesc[i],val))
          return keyVal[i];
       i++;
    }
@@ -477,16 +477,16 @@ void retro_set_environment(retro_environment_t cb)
       i++;
    }
 
-   snprintf(buf[0],sizeof(buf[0]), "RetroPad Y; %s|%s","RETROK_F9",     keys);
+   snprintf(buf[0],sizeof(buf[0]), "RetroPad Y; %s|%s","RETROK_F9 (Virtual Keyboard)",     keys);
    snprintf(buf[1],sizeof(buf[1]), "RetroPad X; %s|%s","RETROK_RETURN",     keys);
-   snprintf(buf[2],sizeof(buf[2]), "RetroPad B; %s|%s","RETROK_ESCAPE",     keys);
-   snprintf(buf[3],sizeof(buf[3]), "RetroPad L; %s|%s","RETROK_KP_PLUS",     keys);
-   snprintf(buf[4],sizeof(buf[4]), "RetroPad R; %s|%s","RETROK_KP_MINUS",     keys);
-   snprintf(buf[5],sizeof(buf[5]), "RetroPad L2; %s|%s","RETROK_KP_MULTIPLY",    keys);
-   snprintf(buf[6],sizeof(buf[6]), "RetroPad R2; %s|%s","RETROK_ESCAPE",   keys);
+   snprintf(buf[2],sizeof(buf[2]), "RetroPad B; %s|%s","RETROK_ESCAPE (Run/Stop)",     keys);
+   snprintf(buf[3],sizeof(buf[3]), "RetroPad L; %s|%s","RETROK_KP_PLUS (Fliplist Next)",     keys);
+   snprintf(buf[4],sizeof(buf[4]), "RetroPad R; %s|%s","RETROK_KP_MINUS (Fliplist Previous)",     keys);
+   snprintf(buf[5],sizeof(buf[5]), "RetroPad L2; %s|%s","RETROK_KP_MULTIPLY (Swap Joyports)",    keys);
+   snprintf(buf[6],sizeof(buf[6]), "RetroPad R2; %s|%s","RETROK_ESCAPE (Run/Stop)",   keys);
    snprintf(buf[7],sizeof(buf[7]), "RetroPad L3; %s|%s","RETROK_TAB",   keys);
    snprintf(buf[8],sizeof(buf[8]), "RetroPad R3; %s|%s","RETROK_F5",  keys);
-   snprintf(buf[9],sizeof(buf[9]),"RetroPad START; %s|%s","RETROK_KP_DIVIDE", keys);
+   snprintf(buf[9],sizeof(buf[9]),"RetroPad START; %s|%s","RETROK_KP_DIVIDE (Vice Menu)", keys);
 
    cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
 

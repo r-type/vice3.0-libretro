@@ -49,7 +49,7 @@ static int set_retrojoy(int val, void *param)
 }
 
 static const resource_int_t retrojoy_resources_int[] = {
-    { "RetroJoy", 0, RES_EVENT_NO, NULL,
+    { "RetroJoy", 1, RES_EVENT_NO, NULL,
       &retrojoy_enabled, set_retrojoy, NULL },
     RESOURCE_INT_LIST_END
 };

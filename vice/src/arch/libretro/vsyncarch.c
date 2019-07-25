@@ -41,7 +41,7 @@
 #include <psp2/kernel/threadmgr.h>
 #endif
 
-extern void retro_poll_event(int joyon);
+extern void retro_poll_event();
 extern void app_vkb_handle();
 
 extern struct video_canvas_s *RCANVAS;
@@ -90,12 +90,8 @@ void vsyncarch_sleep(signed long delay)
 
 void vsyncarch_presync(void)
 {
-	int v;
-	resources_get_int("RetroJoy",&v);
-
-        kbdbuf_flush();
-	
-	retro_poll_event(v);
+    kbdbuf_flush();
+    retro_poll_event();
 
 #if defined(__VIC20__)
         RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;

@@ -72,11 +72,11 @@ int lastH=768;
 
 #include "vkbd.i"
 
-unsigned vice_devices[ 2 ];
+unsigned vice_devices[ 5 ];
 
-extern int RETROJOY,RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL,RETROUSERPORTJOY,RETROEXTPAL;
+extern int RETROTDE,RETROSTATUS,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL,RETROUSERPORTJOY,RETROEXTPAL;
 extern char RETROEXTPALNAME[512];
-extern int retrojoy_init,retro_ui_finalized;
+extern int retro_ui_finalized;
 extern unsigned int cur_port;
 extern void set_drive_type(int drive,int val);
 extern void set_truedrive_emulation(int val);
@@ -370,17 +370,37 @@ int keyId(const char *val)
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_controller_description p1_controllers[] = {
-      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Vice Joystick", RETRO_DEVICE_JOYPAD },
+      { "Vice Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Disconnected", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p2_controllers[] = {
-      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Vice Joystick", RETRO_DEVICE_JOYPAD },
+      { "Vice Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Disconnected", RETRO_DEVICE_NONE },
+   };
+   static const struct retro_controller_description p3_controllers[] = {
+      { "Vice Joystick", RETRO_DEVICE_JOYPAD },
+      { "Vice Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Disconnected", RETRO_DEVICE_NONE },
+   };
+   static const struct retro_controller_description p4_controllers[] = {
+      { "Vice Joystick", RETRO_DEVICE_JOYPAD },
+      { "Vice Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Disconnected", RETRO_DEVICE_NONE },
+   };
+   static const struct retro_controller_description p5_controllers[] = {
+      { "Vice Joystick", RETRO_DEVICE_JOYPAD },
+      { "Vice Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Disconnected", RETRO_DEVICE_NONE },
    };
 
    static const struct retro_controller_info ports[] = {
-      { p1_controllers, 2  }, // port 1
-      { p2_controllers, 2  }, // port 2
+      { p1_controllers, 3 }, // port 1
+      { p2_controllers, 3 }, // port 2
+      { p3_controllers, 3 }, // port 3
+      { p4_controllers, 3 }, // port 4
+      { p5_controllers, 3 }, // port 5
       { NULL, 0 }
    };
 
@@ -435,15 +455,6 @@ void retro_set_environment(retro_environment_t cb)
          "vice_JoyPort",
          "Controller0 port; port_2|port_1",
       },
-      {
-         "vice_RetroJoy",
-         "Retro joy0; enabled|disabled",
-      },
-      {
-         "vice_Controller",
-         "Controller0 type; keyboard|joystick",
-      },
-
       { "vice_mapper_y", buf[0] },
       { "vice_mapper_x", buf[1] },
       { "vice_mapper_b", buf[2] },
@@ -730,34 +741,6 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "port_2") == 0)cur_port=2;
       else if (strcmp(var.value, "port_1") == 0)cur_port=1;
-   }
-
-   var.key = "vice_RetroJoy";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if(retrojoy_init){
-         if (strcmp(var.value, "enabled") == 0)
-            resources_set_int( "RetroJoy", 1);
-         if (strcmp(var.value, "disabled") == 0)
-            resources_set_int( "RetroJoy", 0);
-      }
-      else {
-         if (strcmp(var.value, "enabled") == 0)RETROJOY=1;
-         if (strcmp(var.value, "disabled") == 0)RETROJOY=0;
-      }
-   }
-
-   var.key = "vice_Controller";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (strcmp(var.value, "keyboard") == 0)
-         vice_devices[ 0 ] = 259;
-      if (strcmp(var.value, "joystick") == 0)
-         vice_devices[ 0 ] = 513;
    }
 
    var.key = "vice_mapper_y";
@@ -1129,10 +1112,9 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device( unsigned port, unsigned device )
 {
-   if ( port < 2 )
+   if ( port < 5 )
    {
-      vice_devices[ port ] = device;
-
+      vice_devices[port] = device;
       log_cb(RETRO_LOG_INFO, "[retro_set_controller_port_device] (%d)=%d \n",port,device);
    }
 }

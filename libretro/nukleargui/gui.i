@@ -76,7 +76,6 @@ extern int NPAGE,SHIFTON;
 extern int vkey_pressed;
 extern int vice_statusbar;
 extern unsigned int cur_port;
-extern int retrojoy_init;
 
 extern char DISKA_NAME[512];
 extern char DISKB_NAME[512];

@@ -18,17 +18,12 @@ static void retro_defaultkeyboard(){
 
         keyboard_keyword_clear();
 
-	joystick_joypad_clear();
 	kbd_lshiftrow = 1;
 	kbd_lshiftcol = 7;
-	joystick_joypad_clear();
 	kbd_rshiftrow = 6;
 	kbd_rshiftcol = 4;
- 	joystick_joypad_clear();
 	vshift=KEY_RSHIFT;
-	joystick_joypad_clear();
 	shiftl=KEY_LSHIFT;
-	joystick_joypad_clear();
 
 #if defined(__VIC20__)
 keyboard_parse_set_pos_row(27, 0, 3,8);               /*          ESC -> Run/Stop     */

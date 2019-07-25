@@ -55,6 +55,8 @@ NK_API struct nk_retro_event* nk_retro_event_ptr();
 
 extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
+extern int mapper_keys[16];
+static int joy_button_latch[16] = { 0 };
 
 struct nk_retro_event {
 
@@ -627,81 +629,81 @@ NK_API void
 nk_retro_handle_event(int *evt,int poll)
 {
    struct nk_context *ctx = &retro.ctx;
-
-   if(poll)input_poll_cb();
-
    static int lmx=0,lmy=0;
    static int mmbL=0,mmbR=0,mmbM=0;
    static int mbt[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-   int mouse_l,mouse_m,mouse_r;
-
+   int mouse_l=0;
+   int mouse_m=0;
+   int mouse_r=0;
    int16_t mouse_x=0,mouse_y=0;
+   int i;
+
+   if(poll)input_poll_cb();
 
    Process_key();
 
-   int i=2;//TOGGLE: real mouse/ joypad emulate mouse 
-   if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && mbt[i]==0 )
-      mbt[i]=1;
-   else if ( mbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) ){
-      mbt[i]=0;
-      revent.MOUSE_EMULATED=-revent.MOUSE_EMULATED;
+   if (pauseg == 1)
+   // allow the menu button to toggle the gui off as well as on
+   {
+      for(i=0; i<16; i++)
+      {
+         if( (i<4 || i>8) && i!=2)
+         {
+            if (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !joy_button_latch[i])
+            {
+               if (mapper_keys[i] == RETROK_F10 || mapper_keys[i] == RETROK_KP_DIVIDE)
+                  joy_button_latch[i] = 1;
+            }
+            else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && joy_button_latch[i])
+            {
+               if (mapper_keys[i] == RETROK_F10 || mapper_keys[i] == RETROK_KP_DIVIDE)
+               {
+                  joy_button_latch[i] = 0;
+                  pauseg = 0;
+               }
+            }
+         }
+      }
    }
 
    revent.mouse_wu = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_WHEELUP);
    revent.mouse_wd = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_WHEELDOWN);
    if(revent.mouse_wu || revent.mouse_wd)mousebut(4,revent.mouse_wd?-1:1,0,0);
 
-   if(revent.MOUSE_EMULATED==1){
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) || input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT))
+      mouse_l = 1;
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) || input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT))
+      mouse_r = 1;
+   if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y) || input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE))
+      mouse_m = 1;
 
-      if(revent.slowdown>0)return;
+   //relative
+   if(revent.MOUSE_RELATIVE)
+   {
+      if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))mouse_x += revent.MOUSE_PAS;
+      if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))mouse_x -= revent.MOUSE_PAS;
+      if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))mouse_y += revent.MOUSE_PAS;
+      if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))mouse_y -= revent.MOUSE_PAS;
 
-      mouse_l=input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
-      mouse_r=input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
-      mouse_m=input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
-
+      mouse_x += input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+      mouse_y += input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+      revent.gmx+=mouse_x;
+      revent.gmy+=mouse_y;
+      if(revent.gmx<0)revent.gmx=0;
+      if(revent.gmx>retro.width-1)revent.gmx=retro.width-1;
+      if(revent.gmy<0)revent.gmy=0;
+      if(revent.gmy>retro.height-1)revent.gmy=retro.height-1;
 
    }
-   else {
-   		mouse_l    = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
-   		mouse_r    = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
-   		mouse_m    = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE); 
-   }
-
-	//relative
-	if(revent.MOUSE_RELATIVE){
-
-   		if(revent.MOUSE_EMULATED==1){
-
-      		if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))mouse_x += revent.MOUSE_PAS;
-      		if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))mouse_x -= revent.MOUSE_PAS;
-      		if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))mouse_y += revent.MOUSE_PAS;
-      		if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))mouse_y -= revent.MOUSE_PAS;
-
-   		}
-   		else {
-
-   			mouse_x = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-   			mouse_y = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-
-   		}
-
-   		revent.gmx+=mouse_x;
-   		revent.gmy+=mouse_y;
-   		if(revent.gmx<0)revent.gmx=0;
-   		if(revent.gmx>retro.width-1)revent.gmx=retro.width-1;
-   		if(revent.gmy<0)revent.gmy=0;
-   		if(revent.gmy>retro.height-1)revent.gmy=retro.height-1;
-
-	}
-   else{
-
+   else
+   {
       //absolute
       //FIXME FULLSCREEN no pointer
       int p_x = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
       int p_y = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
 
-      if(p_x!=0 && p_y!=0){
+      if(p_x!=0 && p_y!=0)
+      {
          int px=(int)((p_x+0x7fff)*retro.width/0xffff);
          int py=(int)((p_y+0x7fff)*retro.height/0xffff);
          //printf("px:%d py:%d (%d,%d)\n",p_x,p_y,px,py);
@@ -733,7 +735,6 @@ nk_retro_handle_event(int *evt,int poll)
          //FIXME: mouse left button in scale widget.
 #endif
 #endif
-
       }
 
    }

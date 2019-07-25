@@ -125,7 +125,7 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 
 	case GUI_VKBD:
 
-		if (nk_begin(ctx,"Vice keyboard", GUIRECT, window_flags)){
+		if (nk_begin(ctx,"Vice Keyboard", GUIRECT, window_flags)){
 		#include "vkboard.i"
 	    	nk_end(ctx);
 		}
@@ -141,7 +141,7 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 
 	case GUI_MAIN:
 
-		if (nk_begin(ctx,"Vice GUI", GUIRECT, window_flags)){
+		if (nk_begin(ctx,"Vice Menu", GUIRECT, window_flags)){
 		#include "c64menu.i"
 		nk_end(ctx);
 		}

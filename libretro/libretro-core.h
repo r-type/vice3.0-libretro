@@ -11,12 +11,6 @@
 
 #define MATRIX(a,b) (((a) << 3) | (b))
 
-// DEVICE VICE
-#define RETRO_DEVICE_VICE_KEYBOARD RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_KEYBOARD, 0)
-#define RETRO_DEVICE_VICE_JOYSTICK RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
-
-extern unsigned vice_devices[ 2 ];
-
 //LOG
 #if  defined(__ANDROID__) || defined(ANDROID)
 #include <android/log.h>

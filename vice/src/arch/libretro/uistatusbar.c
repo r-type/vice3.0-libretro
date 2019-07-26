@@ -53,12 +53,12 @@
 #define MAX_STATUSBAR_LEN           128
 #define STATUSBAR_SPEED_POS         0
 #define STATUSBAR_PAUSE_POS         4
-#define STATUSBAR_DRIVE_POS         12
-#define STATUSBAR_DRIVE8_TRACK_POS  14
-#define STATUSBAR_DRIVE9_TRACK_POS  19
-#define STATUSBAR_DRIVE10_TRACK_POS 24
-#define STATUSBAR_DRIVE11_TRACK_POS 29
-#define STATUSBAR_TAPE_POS          33
+#define STATUSBAR_DRIVE_POS         24
+#define STATUSBAR_DRIVE8_TRACK_POS  26
+#define STATUSBAR_DRIVE9_TRACK_POS  31
+#define STATUSBAR_DRIVE10_TRACK_POS 36
+#define STATUSBAR_DRIVE11_TRACK_POS 41
+#define STATUSBAR_TAPE_POS          46
 #define STATUSBAR_JOY_POS			0
 
 static char statusbar_text[MAX_STATUSBAR_LEN] = "                                       ";
@@ -94,10 +94,12 @@ static void display_tape(void)
 static void display_joyport(void)
 {
     int len;
-    char tmpstr[16];
+    char tmpstr[25];
     
-    sprintf(tmpstr,"j%d:%2d ",1,joystick_value[1]);
-    sprintf(tmpstr + strlen(tmpstr),"j%d:%2d",2,joystick_value[2]);
+    sprintf(tmpstr, "j%d:%2d ", 1, joystick_value[1]);
+    sprintf(tmpstr + strlen(tmpstr), "j%d:%2d ", 2, joystick_value[2]);
+    sprintf(tmpstr + strlen(tmpstr), "j%d:%2d ", 3, joystick_value[3]);
+    sprintf(tmpstr + strlen(tmpstr), "j%d:%2d", 4, joystick_value[4]);
     //Retro_Draw_string(&fake, x+200, y, tmpstr,16,1,1, color_f, color_b);
 
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), tmpstr);

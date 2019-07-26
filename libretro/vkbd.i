@@ -91,6 +91,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 } ;
 
 const char* keyDesc[] = {
+"---",//0,
 "RETROK_BACKSPACE",//8,
 "RETROK_TAB",//9,
 "RETROK_CLEAR",//12,
@@ -230,6 +231,7 @@ NULL
 };
 
 int keyVal[] = {
+0,
 8,
 9,
 12,

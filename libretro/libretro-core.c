@@ -518,8 +518,8 @@ void retro_set_environment(retro_environment_t cb)
       i++;
    }
 
-   snprintf(buf[0],sizeof(buf[0]),"RetroPad SELECT; %s|%s","", keys);
-   snprintf(buf[1],sizeof(buf[1]),"RetroPad START; %s|%s","", keys);
+   snprintf(buf[0],sizeof(buf[0]),"RetroPad SELECT; %s|%s","---", keys);
+   snprintf(buf[1],sizeof(buf[1]),"RetroPad START; %s|%s","---", keys);
    
    snprintf(buf[2],sizeof(buf[2]), "RetroPad Y; %s|%s","RETROK_SPACE", keys);
    snprintf(buf[3],sizeof(buf[3]), "RetroPad X; %s|%s","RETROK_TAB", keys);

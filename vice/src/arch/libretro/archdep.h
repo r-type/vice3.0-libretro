@@ -84,6 +84,7 @@
 #define archdep_signals_init(x)
 #define archdep_signals_pipe_set()
 #define archdep_signals_pipe_unset()
+
 #define ARCHDEP_SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_MEDIUM
 
 #else

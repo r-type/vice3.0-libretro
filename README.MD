@@ -1,3 +1,28 @@
+# This fork
+Done:
+- Virtual keyboard revamped
+- Other GUI removed
+- Autostart PRG mode to inject
+- System-subdir renamed to vice and created automatically
+- Keyrah joystick maps 
+- Retrojoy disabled while using virtual keyboard
+- Cursor keys disabled while using Retrojoy
+- New settings:
+  - Drive Sound Emulation + Volume
+  - Reset type (autostart, soft, hard)
+  - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset)
+  - Analog sticks mappable
+
+
+
+Todo:
+- Vice 3.3
+- x64sc
+- savestates
+
+
+
+
 # Vice 3.0 LIBRETRO WIP
 
 Very WIP port of VICE 3.0 for libretro .

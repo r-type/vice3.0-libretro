@@ -80,6 +80,7 @@ const char *archdep_pref_path = NULL; /* NULL -> use home_path + ".vice" */
 
 #include <stddef.h>
 
+#if defined(VITA) || defined(__SWITCH__)
 char* getcwd( char* buf, size_t size )
 {
   if (size > strlen(retro_system_data_directory) && buf)
@@ -95,6 +96,7 @@ int chdir( const char* path)
 {
   return 0;
 }
+#endif
 
 int joystick_arch_cmdline_options_init(void)
 {

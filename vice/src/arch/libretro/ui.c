@@ -44,7 +44,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-int RETROTDE=0,RETRODSE=0,RETRODSEVOL=800,RETROSTATUS=0,RETRORESET=0,RETRODRVTYPE=1542,RETROSIDMODL=0,RETROC64MODL=0,RETROUSERPORTJOY=-1,RETROEXTPAL=-1;
+int RETROTDE=0,RETRODSE=0,RETRODSEVOL=800,RETROSTATUS=0,RETRORESET=0,RETRODRVTYPE=1542,RETROSIDMODL=0,RETROC64MODL=0,RETROUSERPORTJOY=-1,RETROEXTPAL=-1,RETROAUTOSTARTWARP=0;
 char RETROEXTPALNAME[512]="pepto-pal";
 int retro_ui_finalized = 0;
 
@@ -161,6 +161,8 @@ int ui_init_finalize(void)
    resources_set_int("DriveSoundEmulationVolume", RETRODSEVOL);
 
    resources_set_int_sprintf("Drive%iType", RETRODRVTYPE, 8);
+
+   resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 
    sid_set_engine_model((RETROSIDMODL >> 8),  (RETROSIDMODL & 0xff));
 

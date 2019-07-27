@@ -76,7 +76,7 @@ int lastH=768;
 
 unsigned vice_devices[5];
 
-extern int RETROJOY,RETROTDE,RETRODSE,RETRODSEVOL,RETROSTATUS,RETRORESET,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL,RETROUSERPORTJOY,RETROEXTPAL;
+extern int RETROJOY,RETROTDE,RETRODSE,RETRODSEVOL,RETROSTATUS,RETRORESET,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL,RETROUSERPORTJOY,RETROEXTPAL,RETROAUTOSTARTWARP;
 extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
@@ -438,6 +438,10 @@ void retro_set_environment(retro_environment_t cb)
          "Drive8 Type; 1541|1542|1581|1540|1551|1570|1571|1573|2000|4000|2031|2040|3040|4040|1001|8050|8250",
       },
       {
+         "vice_autostart_warp",
+         "Autostart Warp; disabled|enabled",
+      },
+      {
          "vice_sid_model",
          "Sid Model; 6581F|8580F|6581R|8580R|8580RD",
       },
@@ -579,6 +583,23 @@ static void update_variables(void)
       else {
          if (strcmp(var.value, "enabled") == 0)RETROSTATUS=1;
          if (strcmp(var.value, "disabled") == 0)RETROSTATUS=0;
+      }
+   }
+
+   var.key = "vice_autostart_warp";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if(retro_ui_finalized){
+         if (strcmp(var.value, "enabled") == 0)
+            resources_set_int("AutostartWarp", 1);
+         if (strcmp(var.value, "disabled") == 0)
+            resources_set_int("AutostartWarp", 0);
+      }
+      else {
+         if (strcmp(var.value, "enabled") == 0)RETROAUTOSTARTWARP=1;
+         if (strcmp(var.value, "disabled") == 0)RETROAUTOSTARTWARP=0;
       }
    }
 

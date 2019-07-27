@@ -39,13 +39,15 @@ unsigned int cur_port=2;
 bool num_locked = false;
 
 extern bool retro_load_ok;
-extern int mapper_keys[28];
+extern int mapper_keys[29];
 int statusbar;
 
 #define EMU_VKBD 1
 #define EMU_STATUSBAR 2
 #define EMU_JOYPORT 3
 #define EMU_RESET 4
+#define EMU_WARP_ON 5
+#define EMU_WARP_OFF 6
 
 extern void emu_reset(void);
 
@@ -69,6 +71,12 @@ void emu_function(int function) {
             break;
         case EMU_RESET:
             emu_reset();
+            break;
+        case EMU_WARP_ON:
+            resources_set_int("WarpMode", 1);
+            break;
+        case EMU_WARP_OFF:
+            resources_set_int("WarpMode", 0);
             break;
     } 
 }
@@ -205,12 +213,10 @@ int Core_PollEvent(void)
 {
     //   RETRO        B    Y    SLT  STA  UP   DWN  LEFT RGT  A    X    L    R    L2   R2   L3   R3  LR  LL  LD  LU  RR  RL  RD  RU
     //   INDEX        0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15  16  17  18  19  20  21  22  23
-    //   C64          BOOT VKB  M/J  R/S  UP   DWN  LEFT RGT  B1   GUI  F7   F1   F5   F3   SPC  1 
 
     int i;
     static int jbt[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    static int vbt[16]={0x1C,0x39,0x01,0x3B,0x01,0x02,0x04,0x08,0x80,0x40,0x15,0x31,0x24,0x1F,0x6E,0x6F};
-    static int kbt[4]={0,0,0,0};
+    static int kbt[5]={0,0,0,0,0};
     
     // MXjoy[0]=0;
     if(!retro_load_ok)return 1;
@@ -264,8 +270,19 @@ int Core_PollEvent(void)
         kbt[i]=0;
     }
 
+    /* Warp */
+    i=4;
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[28]) && kbt[i]==0){
+        kbt[i]=1;
+        emu_function(EMU_WARP_ON);
+    }   
+    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[28]) ){
+        kbt[i]=0;
+        emu_function(EMU_WARP_OFF);
+    }
+
     /* The check for kbt[i] here prevents the hotkey from generating C64 key events */
-    if(SHOWKEY==-1 && kbt[0] == 0 && kbt[1] == 0 && kbt[2] == 0 && kbt[3] == 0)
+    if(SHOWKEY==-1 && kbt[0] == 0 && kbt[1] == 0 && kbt[2] == 0 && kbt[3] == 0 && kbt[4] == 0)
         Core_Processkey();
 
     if (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD)
@@ -286,6 +303,8 @@ int Core_PollEvent(void)
                         emu_function(EMU_JOYPORT);
                     } else if(mapper_keys[i]==mapper_keys[27]) { /* Reset */
                         emu_function(EMU_RESET);
+                    } else if(mapper_keys[i]==mapper_keys[28]) { /* Warp Mode */
+                        emu_function(EMU_WARP_ON);
                     } else {
                         Keymap_KeyDown(mapper_keys[i]);
                     }
@@ -299,6 +318,8 @@ int Core_PollEvent(void)
                     } else if(mapper_keys[i]==mapper_keys[25]) {
                     } else if(mapper_keys[i]==mapper_keys[26]) {
                     } else if(mapper_keys[i]==mapper_keys[27]) {
+                    } else if(mapper_keys[i]==mapper_keys[28]) {
+                        emu_function(EMU_WARP_OFF);
                     } else {
                         Keymap_KeyUp(mapper_keys[i]);
                     }

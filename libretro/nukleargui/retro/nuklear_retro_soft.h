@@ -55,6 +55,7 @@ NK_API struct nk_retro_event* nk_retro_event_ptr();
 
 extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
+extern struct nk_vec2 offset; /* needed for correct wraparound in vkbd */
 
 struct nk_retro_event {
 
@@ -716,8 +717,6 @@ nk_retro_handle_event(int *evt,int poll)
    		if(revent.JOYPAD_PRESSED > 0) {
    	    	// Joypad wraparound
             // Offset changes depending on whether borders are on or off
-            struct nk_vec2 offset;
-            offset = nk_window_get_position(ctx);
             if(revent.gmx<offset.x+12) 	revent.gmx=offset.x+319-20-12;
             if(revent.gmx>offset.x+319-12) revent.gmx=offset.x+18+12;
             if(revent.gmy<offset.y+4) 	revent.gmy=offset.y+199-12;

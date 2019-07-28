@@ -1415,7 +1415,22 @@ void update_geometry()
    struct retro_system_av_info system_av_info;
    system_av_info.geometry.base_width = retroW;
    system_av_info.geometry.base_height = retroH;
-   system_av_info.geometry.aspect_ratio = (float)4.0/3.0;
+   /* aspect ratio without borders is retroW/retroH, otherwise 4/3 */
+   /* this code is needed because changing borders on/off causes a reset */
+   int border_disabled = 0; 
+   if(retro_ui_finalized)
+#if defined(__VIC20__)
+        resources_get_int("VICBorderMode", &border_disabled);
+#elif defined(__PLUS4__)
+        resources_get_int("TEDBorderMode", &border_disabled);
+#else 
+        resources_get_int("VICIIBorderMode", &border_disabled);
+#endif
+      else border_disabled = RETROBORDERS;
+   if (border_disabled)
+     system_av_info.geometry.aspect_ratio = (float)retroW/retroH;
+   else
+     system_av_info.geometry.aspect_ratio = (float)4.0/3.0;
    environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
 }
 

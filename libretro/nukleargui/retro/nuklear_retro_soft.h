@@ -715,10 +715,13 @@ nk_retro_handle_event(int *evt,int poll)
    		
    		if(revent.JOYPAD_PRESSED > 0) {
    	    	// Joypad wraparound
-   	    	if(revent.gmx<32+12) 	revent.gmx=32+319-20-12;
-       		if(revent.gmx>32+319-12) revent.gmx=32+18+12;
-       		if(revent.gmy<35+4) 	revent.gmy=35+199-12;
-       		if(revent.gmy>35+199-4) revent.gmy=35+20;
+            // Offset changes depending on whether borders are on or off
+            struct nk_vec2 offset;
+            offset = nk_window_get_position(ctx);
+            if(revent.gmx<offset.x+12) 	revent.gmx=offset.x+319-20-12;
+            if(revent.gmx>offset.x+319-12) revent.gmx=offset.x+18+12;
+            if(revent.gmy<offset.y+4) 	revent.gmy=offset.y+199-12;
+            if(revent.gmy>offset.y+199-4) revent.gmy=offset.y+20;
    		} else {
        		// Mouse corners
        		if(revent.gmx<0)		revent.gmx=0;

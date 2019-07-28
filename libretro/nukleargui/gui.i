@@ -74,6 +74,8 @@ int GUISTATE=GUI_NONE;
 extern int NPAGE,SHIFTON;
 extern int vkey_pressed;
 extern unsigned int cur_port;
+extern int RETROBORDERS;
+extern int retro_ui_finalized;
 
 extern char DISKA_NAME[512];
 extern char DISKB_NAME[512];
@@ -113,18 +115,42 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 
     int tmpval;
 
-    if(SHOWKEY==1)GUISTATE=GUI_VKBD;
+    int border_disabled = 0;
+    if(SHOWKEY==1)
+    {
+        GUISTATE = GUI_VKBD;
+
+        /* this code is needed because changing borders on/off causes a reset */
+        if(retro_ui_finalized)
+#if defined(__VIC20__)
+            resources_get_int("VICBorderMode", &border_disabled);
+#elif defined(__PLUS4__)
+            resources_get_int("TEDBorderMode", &border_disabled);
+#else
+            resources_get_int("VICIIBorderMode", &border_disabled);
+#endif
+        else
+            border_disabled = RETROBORDERS;
+    }
 
     switch(GUISTATE){
 
 	case GUI_VKBD:
-
 		if (nk_begin(ctx,"Vice Keyboard", GUIRECT, window_flags)){
-		#include "vkboard.i"
-	    	nk_end(ctx);
+			#include "vkboard.i"
+			struct nk_vec2 pos;
+			if (border_disabled) {
+				pos.x = 0;
+				pos.y = 0;
+			} else {
+				pos.x = GUIRECT.x;
+				pos.y = GUIRECT.y;
+			}
+			nk_window_set_position(ctx, pos);
+			nk_end(ctx);
 		}
 		break;
-	
+
 	/*
 	case GUI_BROWSE:
 

@@ -45,6 +45,7 @@ static RSDL_Surface *screen_surface;
 
 extern void restore_bgk();
 extern void save_bkg();
+struct nk_vec2 offset = {0, 0};
 
 /* macros */
 

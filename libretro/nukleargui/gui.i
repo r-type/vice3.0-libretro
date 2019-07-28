@@ -138,15 +138,15 @@ gui(struct file_browser *browser,struct nk_context *ctx)
 	case GUI_VKBD:
 		if (nk_begin(ctx,"Vice Keyboard", GUIRECT, window_flags)){
 			#include "vkboard.i"
-			struct nk_vec2 pos;
+			/* ensure vkbd is centered regardless of border setting */
 			if (border_disabled) {
-				pos.x = 0;
-				pos.y = 0;
+				offset.x = 0;
+				offset.y = 0;
 			} else {
-				pos.x = GUIRECT.x;
-				pos.y = GUIRECT.y;
+				offset.x = GUIRECT.x;
+				offset.y = GUIRECT.y;
 			}
-			nk_window_set_position(ctx, pos);
+			nk_window_set_position(ctx, offset);
 			nk_end(ctx);
 		}
 		break;

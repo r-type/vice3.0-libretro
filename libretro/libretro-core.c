@@ -1451,7 +1451,8 @@ void update_geometry()
    struct retro_system_av_info system_av_info;
    system_av_info.geometry.base_width = retroW;
    system_av_info.geometry.base_height = retroH;
-   /* aspect ratio without borders is retroW/retroH, otherwise 4/3 */
+   /* aspect ratio is retroW/retroH * 15/16, because */
+   /* the original machine had a 15/16 pixel ratio (non-square pixels) */
    /* this code is needed because changing borders on/off causes a reset */
    int border_disabled = 0; 
    if(retro_ui_finalized)
@@ -1464,7 +1465,7 @@ void update_geometry()
 #endif
       else border_disabled = RETROBORDERS;
    if (border_disabled)
-     system_av_info.geometry.aspect_ratio = (float)retroW/retroH;
+     system_av_info.geometry.aspect_ratio = ((float)retroW / (float)retroH) * (15.0 / 16.0);
    else
      system_av_info.geometry.aspect_ratio = (float)4.0/3.0;
    environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);

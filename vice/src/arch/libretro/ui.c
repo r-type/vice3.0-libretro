@@ -30,14 +30,20 @@
 #include "uistatusbar.h"
 #include "resources.h"
 #include "sid.h"
-#include "c64model.h"
 #include "userport_joystick.h"
 #if  defined(__VIC20__)
+#include "c64model.h"
 #include "vic20model.h"
 #elif defined(__PLUS4__)
+#include "c64model.h"
 #include "plus4model.h"
 #elif  defined(__X128__)
+#include "c64model.h"
 #include "c128model.h"
+#elif  defined(__PET__)
+#include "petmodel.h"
+#else
+#include "c64model.h"
 #endif
 
 #include <stdio.h>
@@ -183,6 +189,8 @@ int ui_init_finalize(void)
    plus4model_set(RETROC64MODL);
 #elif defined(__X128__)
    c128model_set(RETROC64MODL);
+#elif defined(__PET__)
+   petmodel_set(RETROC64MODL);
 #else
    c64model_set(RETROC64MODL);
 #endif

@@ -55,6 +55,7 @@ int RETROC64MODL=0;
 int RETROUSERPORTJOY=-1;
 int RETROEXTPAL=-1;
 int RETROAUTOSTARTWARP=0;
+int RETROBORDERS=0;
 char RETROEXTPALNAME[512]="pepto-pal";
 int retro_ui_finalized = 0;
 
@@ -184,6 +185,14 @@ int ui_init_finalize(void)
    c128model_set(RETROC64MODL);
 #else
    c64model_set(RETROC64MODL);
+#endif
+
+#if defined(__VIC20__)
+   resources_set_int("VICBorderMode", RETROBORDERS);
+#elif defined(__PLUS4__)
+   resources_set_int("TEDBorderMode", RETROBORDERS);
+#else
+   resources_set_int("VICIIBorderMode", RETROBORDERS);
 #endif
 
    retro_ui_finalized = 1;

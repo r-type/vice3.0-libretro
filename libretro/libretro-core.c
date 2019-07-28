@@ -88,6 +88,7 @@ extern int RETROC64MODL;
 extern int RETROUSERPORTJOY;
 extern int RETROEXTPAL;
 extern int RETROAUTOSTARTWARP;
+extern int RETROBORDERS;
 extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
@@ -478,6 +479,10 @@ void retro_set_environment(retro_environment_t cb)
       },
 #endif
       {
+         "vice_border",
+         "Display borders; enabled|disabled",
+      },
+      {
          "vice_external_palette",
          "External palette; none|pepto-pal|pepto-palold|pepto-ntsc-sony|pepto-ntsc|colodore|vice|c64hq|c64s|ccs64|frodo|godot|pc64|rgb|deekay|ptoing|community-colors",
       },
@@ -790,6 +795,26 @@ static void update_variables(void)
 
    }
 #endif
+
+   var.key = "vice_border";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int border=0; /* 0 : normal, 1: full, 2: debug, 3: none */
+      if (strcmp(var.value, "enabled") == 0)border=0;
+      else if (strcmp(var.value, "disabled") == 0)border=3;
+
+      if(retro_ui_finalized)
+#if defined(__VIC20__)
+        resources_set_int("VICBorderMode", border);
+#elif defined(__PLUS4__)
+        resources_set_int("TEDBorderMode", border);
+#else 
+        resources_set_int("VICIIBorderMode", border);
+#endif
+      else RETROBORDERS=border;
+   }
 
    var.key = "vice_external_palette";
    var.value = NULL;

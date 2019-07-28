@@ -44,7 +44,18 @@
 #include <string.h>
 #include <stdarg.h>
 
-int RETROTDE=0,RETRODSE=0,RETRODSEVOL=800,RETROSTATUS=0,RETRORESET=0,RETRODRVTYPE=1542,RETROSIDMODL=0,RETROC64MODL=0,RETROUSERPORTJOY=-1,RETROEXTPAL=-1,RETROAUTOSTARTWARP=0;
+int RETROTDE=0;
+int RETRODSE=0;
+int RETRODSEVOL=800;
+int RETROSTATUS=0;
+int RETRORESET=0;
+int RETRODRVTYPE=1542;
+int RETROSIDMODL=0;
+int RETROC64MODL=0;
+int RETROUSERPORTJOY=-1;
+int RETROEXTPAL=-1;
+int RETROAUTOSTARTWARP=0;
+int RETROBORDERS=0;
 char RETROEXTPALNAME[512]="pepto-pal";
 int retro_ui_finalized = 0;
 
@@ -174,6 +185,14 @@ int ui_init_finalize(void)
    c128model_set(RETROC64MODL);
 #else
    c64model_set(RETROC64MODL);
+#endif
+
+#if defined(__VIC20__)
+   resources_set_int("VICBorderMode", RETROBORDERS);
+#elif defined(__PLUS4__)
+   resources_set_int("TEDBorderMode", RETROBORDERS);
+#else
+   resources_set_int("VICIIBorderMode", RETROBORDERS);
 #endif
 
    retro_ui_finalized = 1;

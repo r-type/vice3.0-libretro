@@ -26,9 +26,9 @@ char DISKA_NAME[512]="\0";
 char DISKB_NAME[512]="\0";
 char TAPE_NAME[512]="\0";
 
-int mapper_keys[28]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int mapper_keys[29]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 char keys[4096];
-char buf[23][4096];
+char buf[24][4096];
 
 
 // Our virtual time counter, increased by retro_run()
@@ -76,7 +76,19 @@ int lastH=768;
 
 unsigned vice_devices[5];
 
-extern int RETROJOY,RETROTDE,RETRODSE,RETRODSEVOL,RETROSTATUS,RETRORESET,RETRODRVTYPE,RETROSIDMODL,RETROC64MODL,RETROUSERPORTJOY,RETROEXTPAL,RETROAUTOSTARTWARP;
+extern int RETROJOY;
+extern int RETROTDE;
+extern int RETRODSE;
+extern int RETRODSEVOL;
+extern int RETROSTATUS;
+extern int RETRORESET;
+extern int RETRODRVTYPE;
+extern int RETROSIDMODL;
+extern int RETROC64MODL;
+extern int RETROUSERPORTJOY;
+extern int RETROEXTPAL;
+extern int RETROAUTOSTARTWARP;
+extern int RETROBORDERS;
 extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
@@ -467,6 +479,10 @@ void retro_set_environment(retro_environment_t cb)
       },
 #endif
       {
+         "vice_border",
+         "Display borders; enabled|disabled",
+      },
+      {
          "vice_external_palette",
          "External palette; none|pepto-pal|pepto-palold|pepto-ntsc-sony|pepto-ntsc|colodore|vice|c64hq|c64s|ccs64|frodo|godot|pc64|rgb|deekay|ptoing|community-colors",
       },
@@ -508,6 +524,7 @@ void retro_set_environment(retro_environment_t cb)
       { "vice_mapper_statusbar", buf[20] },
       { "vice_mapper_joyport_switch", buf[21] },
       { "vice_mapper_reset", buf[22] },
+      { "vice_mapper_warp_mode", buf[23] },
 
       { NULL, NULL },
    };
@@ -557,6 +574,7 @@ void retro_set_environment(retro_environment_t cb)
    snprintf(buf[20],sizeof(buf[20]),"Hotkey: Toggle Statusbar; %s|%s","RETROK_F10", keys);
    snprintf(buf[21],sizeof(buf[21]),"Hotkey: Switch Joyports; %s|%s","RETROK_RCTRL", keys);
    snprintf(buf[22],sizeof(buf[22]),"Hotkey: Reset; %s|%s","RETROK_END", keys);
+   snprintf(buf[23],sizeof(buf[23]),"Hotkey: Warp Mode; %s|%s","RETROK_PAGEDOWN", keys);
 
    cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
 
@@ -777,6 +795,26 @@ static void update_variables(void)
 
    }
 #endif
+
+   var.key = "vice_border";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int border=0; /* 0 : normal, 1: full, 2: debug, 3: none */
+      if (strcmp(var.value, "enabled") == 0)border=0;
+      else if (strcmp(var.value, "disabled") == 0)border=3;
+
+      if(retro_ui_finalized)
+#if defined(__VIC20__)
+        resources_set_int("VICBorderMode", border);
+#elif defined(__PLUS4__)
+        resources_set_int("TEDBorderMode", border);
+#else 
+        resources_set_int("VICIIBorderMode", border);
+#endif
+      else RETROBORDERS=border;
+   }
 
    var.key = "vice_external_palette";
    var.value = NULL;
@@ -1027,6 +1065,13 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       mapper_keys[27] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_warp_mode";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[28] = keyId(var.value);
    }
 
 }

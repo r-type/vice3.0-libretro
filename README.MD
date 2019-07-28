@@ -1,5 +1,6 @@
 # This fork
 Done:
+- x64sc
 - Virtual keyboard revamped
 - Other GUI removed
 - Autostart PRG mode to inject
@@ -17,7 +18,6 @@ Done:
 
 Todo:
 - Vice 3.3
-- x64sc
 - savestates
 
 

@@ -232,51 +232,53 @@ int Core_PollEvent(void)
 
     /* Virtual Keyboard */
     i=0;
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[24]) && kbt[i]==0){ 
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[24]) && kbt[i]==0 && mapper_keys[24]!=0)
+    {
         kbt[i]=1;
         emu_function(EMU_VKBD);
-    }   
-    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[24]) ){
-        kbt[i]=0;
     }
+    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[24]) && mapper_keys[24]!=0)
+        kbt[i]=0;
 
     /* Statusbar */
     i=1;
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[25]) && kbt[i]==0){ 
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[25]) && kbt[i]==0 && mapper_keys[25]!=0)
+    {
         kbt[i]=1;
         emu_function(EMU_STATUSBAR);
     }
-    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[25]) ){
+    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[25]) && mapper_keys[25]!=0)
         kbt[i]=0;
-    }
 
     /* Switch Joyport */
     i=2;
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[26]) && kbt[i]==0){ 
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[26]) && kbt[i]==0 && mapper_keys[26]!=0)
+    {
         kbt[i]=1;
         emu_function(EMU_JOYPORT);
-    }   
-    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[26]) ){
-        kbt[i]=0;
     }
+    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[26]) && mapper_keys[26]!=0)
+        kbt[i]=0;
 
     /* Reset */
     i=3;
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[27]) && kbt[i]==0){ 
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[27]) && kbt[i]==0 && mapper_keys[27]!=0)
+    {
         kbt[i]=1;
         emu_function(EMU_RESET);
-    }   
-    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[27]) ){
-        kbt[i]=0;
     }
+    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[27]) && mapper_keys[27]!=0)
+        kbt[i]=0;
 
     /* Warp */
     i=4;
-    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[28]) && kbt[i]==0){
+    if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[28]) && kbt[i]==0 && mapper_keys[28]!=0)
+    {
         kbt[i]=1;
         emu_function(EMU_WARP_ON);
-    }   
-    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[28]) ){
+    }
+    else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[28]) && mapper_keys[28]!=0)
+    {
         kbt[i]=0;
         emu_function(EMU_WARP_OFF);
     }
@@ -287,123 +289,120 @@ int Core_PollEvent(void)
 
     if (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD)
     {
-        /* shortcut for joy mode only */
-        for(i=0;i<16;i++)
-        {
-            if(i<4 || i>8)
-            { 
-                if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0)
-                {
-                    jbt[i]=1;
-                    if(mapper_keys[i]==mapper_keys[24]) { /* Virtual Keyborad */
-                        emu_function(EMU_VKBD);
-                    } else if(mapper_keys[i]==mapper_keys[25]) { /* Statusbar */
-                        emu_function(EMU_STATUSBAR);
-                    } else if(mapper_keys[i]==mapper_keys[26]) { /* Switch Joyport */
-                        emu_function(EMU_JOYPORT);
-                    } else if(mapper_keys[i]==mapper_keys[27]) { /* Reset */
-                        emu_function(EMU_RESET);
-                    } else if(mapper_keys[i]==mapper_keys[28]) { /* Warp Mode */
-                        emu_function(EMU_WARP_ON);
-                    } else {
-                        Keymap_KeyDown(mapper_keys[i]);
-                    }
-
-                    //printf("kdown: %d %d\n",mapper_keys[i],i);
-                }
-                else if (jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i))
-                {
-                    jbt[i]=0;
-                    if(mapper_keys[i]==mapper_keys[24]) {
-                    } else if(mapper_keys[i]==mapper_keys[25]) {
-                    } else if(mapper_keys[i]==mapper_keys[26]) {
-                    } else if(mapper_keys[i]==mapper_keys[27]) {
-                    } else if(mapper_keys[i]==mapper_keys[28]) {
-                        emu_function(EMU_WARP_OFF);
-                    } else {
-                        Keymap_KeyUp(mapper_keys[i]);
-                    }
-                }
-            }
-        }
-
         LX = input_state_cb(0, RETRO_DEVICE_ANALOG, 0, 0);
         LY = input_state_cb(0, RETRO_DEVICE_ANALOG, 0, 1);
         RX = input_state_cb(0, RETRO_DEVICE_ANALOG, 1, 0);
         RY = input_state_cb(0, RETRO_DEVICE_ANALOG, 1, 1);
-        
-        i=19; /* LU */
-        if(LY < -threshold && jbt[i]==0) {
-            jbt[i]=1;
-            Keymap_KeyDown(mapper_keys[i]);
-        } else if(LY > -threshold && jbt[i]==1) {
-            jbt[i]=0;
-            Keymap_KeyUp(mapper_keys[i]);
-        }
-    
-        i=18; /* LD */
-        if(LY > threshold && jbt[i]==0) {
-            jbt[i]=1;
-            Keymap_KeyDown(mapper_keys[i]);
-        } else if(LY < threshold && jbt[i]==1) {
-            jbt[i]=0;
-            Keymap_KeyUp(mapper_keys[i]);
-        }
 
-        i=17; /* LL */
-        if(LX < -threshold && jbt[i]==0) {
-            jbt[i]=1;
-            Keymap_KeyDown(mapper_keys[i]);
-        } else if(LX > -threshold && jbt[i]==1) {
-            jbt[i]=0;
-            Keymap_KeyUp(mapper_keys[i]);
-        }
+        /* shortcut for joy mode only */
+        for(i = 0; i < 24; i++)
+        {
+            int just_pressed = 0;
+            int just_released = 0;
+            if((i<4 || i>8) && i < 16) /* remappable retropad buttons (all apart from DPAD and A) */
+            {
+                if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0)
+                    just_pressed = 1;
+                else if (jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i))
+                    just_released = 1;
+            }
+            else if (i >= 16) /* remappable retropad joystick directions */
+            {
+                switch (i)
+                {
+                    case 16: /* LR */
+                        if (LX > threshold && jbt[i] == 0)
+                            just_pressed = 1;
+                        else if (LX < threshold && jbt[i] == 1)
+                            just_released = 1;
+                        break;
+                    case 17: /* LL */
+                        if (LX < -threshold && jbt[i] == 0)
+                            just_pressed = 1;
+                        else if (LX > -threshold && jbt[i] == 1)
+                            just_released = 1;
+                        break;
+                    case 18: /* LD */
+                        if (LY > threshold && jbt[i] == 0)
+                            just_pressed = 1;
+                        else if (LY < threshold && jbt[i] == 1)
+                            just_released = 1;
+                        break;
+                    case 19: /* LU */
+                        if (LY < -threshold && jbt[i] == 0)
+                            just_pressed = 1;
+                        else if (LY > -threshold && jbt[i] == 1)
+                            just_released = 1;
+                        break;
+                    case 20: /* RR */
+                        if (RX > threshold && jbt[i] == 0)
+                            just_pressed = 1;
+                        else if (RX < threshold && jbt[i] == 1)
+                            just_released = 1;
+                        break;
+                    case 21: /* RL */
+                        if (RX < -threshold && jbt[i] == 0)
+                            just_pressed = 1;
+                        else if (RX > -threshold && jbt[i] == 1)
+                            just_released = 1;
+                        break;
+                    case 22: /* RD */
+                        if (RY > threshold && jbt[i] == 0)
+                            just_pressed = 1;
+                        else if (RY < threshold && jbt[i] == 1)
+                            just_released = 1;
+                        break;
+                    case 23: /* RU */
+                        if (RY < -threshold && jbt[i] == 0)
+                            just_pressed = 1;
+                        else if (RY > -threshold && jbt[i] == 1)
+                            just_released = 1;
+                        break;
+                    default:
+                        break;
+                }
+            }
 
-        i=16; /* LR */
-        if(LX > threshold && jbt[i]==0) {
-            jbt[i]=1;
-            Keymap_KeyDown(mapper_keys[i]);
-        } else if(LX < threshold && jbt[i]==1) {
-            jbt[i]=0;
-            Keymap_KeyUp(mapper_keys[i]);
-        }
+            if (just_pressed)
+            {
+                jbt[i] = 1;
+                if(mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
+                    continue;
 
-        i=23; /* RU */
-        if(RY < -threshold && jbt[i]==0) {
-            jbt[i]=1;
-            Keymap_KeyDown(mapper_keys[i]);
-        } else if(RY > -threshold && jbt[i]==1) {
-            jbt[i]=0;
-            Keymap_KeyUp(mapper_keys[i]);
-        }
-    
-        i=22; /* RD */
-        if(RY > threshold && jbt[i]==0) {
-            jbt[i]=1;
-            Keymap_KeyDown(mapper_keys[i]);
-        } else if(RY < threshold && jbt[i]==1) {
-            jbt[i]=0;
-            Keymap_KeyUp(mapper_keys[i]);
-        }
+                if(mapper_keys[i] == mapper_keys[24]) /* Virtual Keyborad */
+                    emu_function(EMU_VKBD);
+                else if(mapper_keys[i] == mapper_keys[25]) /* Statusbar */
+                    emu_function(EMU_STATUSBAR);
+                else if(mapper_keys[i] == mapper_keys[26]) /* Switch Joyport */
+                    emu_function(EMU_JOYPORT);
+                else if(mapper_keys[i] == mapper_keys[27]) /* Reset */
+                    emu_function(EMU_RESET);
+                else if(mapper_keys[i] == mapper_keys[28]) /* Warp Mode */
+                    emu_function(EMU_WARP_ON);
+                else
+                    Keymap_KeyDown(mapper_keys[i]);
+            }
+            else if (just_released)
+            {
+                jbt[i] = 0;
+                if(mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
+                    continue;
 
-        i=21; /* RL */
-        if(RX < -threshold && jbt[i]==0) {
-            jbt[i]=1;
-            Keymap_KeyDown(mapper_keys[i]);
-        } else if(RX > -threshold && jbt[i]==1) {
-            jbt[i]=0;
-            Keymap_KeyUp(mapper_keys[i]);
-        }
-
-        i=20; /* RR */
-        if(RX > threshold && jbt[i]==0) {
-            jbt[i]=1;
-            Keymap_KeyDown(mapper_keys[i]);
-        } else if(RX < threshold && jbt[i]==1) {
-            jbt[i]=0;
-            Keymap_KeyUp(mapper_keys[i]);
-        }
-    }/* if vice_devices=joy */
+                if(mapper_keys[i] == mapper_keys[24])
+                    ; /* nop */
+                else if(mapper_keys[i] == mapper_keys[25])
+                    ; /* nop */
+                else if(mapper_keys[i] == mapper_keys[26])
+                    ; /* nop */
+                else if(mapper_keys[i] == mapper_keys[27])
+                    ; /* nop */
+                else if(mapper_keys[i] == mapper_keys[28])
+                    emu_function(EMU_WARP_OFF);
+                else
+                    Keymap_KeyUp(mapper_keys[i]);
+            }
+        } /* for i */
+    } /* if vice_devices[0]==joypad or joystick */
 
     return 1;
 }

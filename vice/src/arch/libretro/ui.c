@@ -145,6 +145,8 @@ int ui_init_finalize(void)
 
    resources_set_int("CrtcFilter", 0);
    resources_set_int("CrtcStretchVertical", 0);
+   
+   resources_set_int("AutostartPrgMode", 1);
 
    //RETRO CORE OPT
    if(RETROSTATUS==1) {

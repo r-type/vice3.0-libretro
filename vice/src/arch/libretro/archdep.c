@@ -72,6 +72,13 @@ int maincpu_stretch;
  CLOCK c128cpu_memory_refresh_clk;
 #endif
 
+#include "../shared/archdep_atexit.c"
+//#include "../shared/archdep_program_name.c"
+#include "../shared/archdep_program_path.c"
+#include "../shared/archdep_extra_title_text.c"
+
+
+
 static char *argv0 = NULL;
 static char *boot_path = NULL;
 
@@ -160,7 +167,7 @@ int archdep_rename(const char *oldpath, const char *newpath)
     return rename(oldpath, newpath);
 }
 
-char *archdep_program_name(void)
+const char *archdep_program_name(void)
 {
     static char *program_name = NULL;
 
@@ -669,6 +676,7 @@ void kbd_arch_init()
   keyboard_clear_keymatrix();
 }
 
+/*
 int archdep_network_init(void)
 {
     return 0;
@@ -677,6 +685,7 @@ int archdep_network_init(void)
 void archdep_network_shutdown(void)
 {
 }
+*/
 
 char *archdep_get_runtime_os(void)
 {
@@ -692,3 +701,17 @@ char *archdep_get_runtime_cpu(void)
     return "Unknown CPU";
 }
 
+
+int archdep_rmdir(const char *pathname)
+{
+}
+
+
+
+
+/*
+void archdep_vice_exit(int excode)
+{
+    exit(excode);
+}
+*/

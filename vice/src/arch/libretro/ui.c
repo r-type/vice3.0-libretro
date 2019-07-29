@@ -98,7 +98,6 @@ void ui_check_mouse_cursor(void)
 
 void ui_error(const char *format, ...)
 {
-
    char text[512];	   	
    va_list	ap;	
 
@@ -108,6 +107,15 @@ void ui_error(const char *format, ...)
    vsprintf(text, format, ap);	
    va_end(ap);	
    fprintf(stderr, "ui_error: %s\n", text);
+}
+
+int ui_emulation_is_paused(void)
+{
+    return 0;
+}
+
+void ui_pause_emulation(void)
+{
 }
 
 /* Update all the menus according to the current settings.  */
@@ -233,6 +241,17 @@ int ui_init_finalize(void)
 char* ui_get_file(const char *format,...)
 {
    return NULL;
+}
+
+
+int c64ui_init_early(void)
+{
+    return 0;
+}
+
+int c64scui_init_early(void)
+{
+    return 0;
 }
 
 

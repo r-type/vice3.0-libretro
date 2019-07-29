@@ -73,7 +73,7 @@ SOURCES_C += \
 				 $(EMU)/arch/libretro/uimon.c \
 				 $(EMU)/arch/libretro/vsyncarch.c \
 				 $(EMU)/arch/libretro/mousedrv.c \
-				 $(EMU)/arch/libretro/signals.c  \
+				 $(EMU)/arch/libretro/signals.c \
 				 $(EMU)/arch/libretro/retrostubs.c \
 				 $(EMU)/arch/libretro/uistatusbar.c
 

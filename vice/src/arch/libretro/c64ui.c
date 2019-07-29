@@ -244,11 +244,7 @@ int c64scui_init(void)
 {
      return 0;
 }
-/*
-void c64scui_shutdown(void)
-{
-}
-*/
+
 int scpu64ui_init(void)
 {
      return 0;

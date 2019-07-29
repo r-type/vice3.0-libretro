@@ -95,8 +95,8 @@ extern unsigned int cur_port;
 extern void set_drive_type(int drive,int val);
 extern void set_truedrive_emulation(int val);
 extern void reset_mouse_pos();
-extern BYTE mem_ram[] ;
-extern int g_mem_ram_size ;
+extern uint8_t mem_ram[];
+extern int g_mem_ram_size;
 
 //VICE DEF BEGIN
 #include "resources.h"

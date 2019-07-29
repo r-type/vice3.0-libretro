@@ -29,7 +29,11 @@
 #ifndef _ARCHDEP_H
 #define _ARCHDEP_H
 
+//#include "archdep.h"
+#define VICE_ARCHAPI_PRIVATE_API
 #include "archapi.h"
+#undef VICE_ARCHAPI_PRIVATE_API
+
 /* Default sound output mode */
 #define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_SYSTEM
 #define ARCHDEP_SOCKET_ERROR errno
@@ -167,7 +171,7 @@
 #define ARCHDEP_KEYBOARD_SYM_NONE 0
 /* Keyword to use for a static prototype */
 #define STATIC_PROTOTYPE static
-extern int sound_init_psp_device();
+//extern int sound_init_psp_device();
 extern const char *archdep_home_path(void);
 
 /* set this path to customize the preference storage */ 
@@ -199,3 +203,5 @@ extern  char retro_system_data_directory[512];
 #define VICEUSERDIR     ".vice"
 
 #endif
+
+

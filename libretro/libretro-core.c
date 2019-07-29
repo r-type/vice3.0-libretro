@@ -266,6 +266,10 @@ int pre_main(const char *argv)
 	 Add_Option("-cartB");
 #endif
 
+     if (strlen(RPATH) >= strlen(".prg"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".prg")], ".prg"))
+         RETROTDE=0;
+
      if (strlen(RPATH) >= strlen(".d71"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d71")], ".d71"))
          RETRODRVTYPE=1571;

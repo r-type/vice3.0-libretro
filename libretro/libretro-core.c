@@ -497,10 +497,27 @@ void retro_set_environment(retro_environment_t cb)
          "vice_border",
          "Display borders; enabled|disabled",
       },
+#if defined(__VIC20__)
+      {
+         "vice_vic20_external_palette",
+         "External palette; none|mike-ntsc|mike-pal|colodore_vic|vice",
+      },
+#elif defined(__PLUS4__) 
+      {
+         "vice_plus4_external_palette",
+         "External palette; none|yape-pal|yape-ntsc|colodore_ted",
+      },
+#elif defined(__PET__)
+      {
+         "vice_pet_external_palette",
+         "External palette; none|amber|green|white",
+      },
+#else
       {
          "vice_external_palette",
          "External palette; none|pepto-pal|pepto-palold|pepto-ntsc-sony|pepto-ntsc|colodore|vice|c64hq|c64s|ccs64|frodo|godot|pc64|rgb|deekay|ptoing|community-colors",
       },
+#endif
       {
          "vice_reset",
          "Reset type; autostart|soft|hard",
@@ -856,6 +873,83 @@ static void update_variables(void)
       else RETROBORDERS=border;
    }
 
+#if defined(__VIC20__)
+   var.key = "vice_vic20_external_palette";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int extpal=-1;
+      if (strcmp(var.value, "none") == 0)extpal=-1;
+      else if (strcmp(var.value, "mike-ntsc") == 0)extpal=0;
+      else if (strcmp(var.value, "mike-pal") == 0)extpal=1;
+      else if (strcmp(var.value, "colodore_vic") == 0)extpal=2;
+      else if (strcmp(var.value, "vice") == 0)extpal=3;
+
+      if(retro_ui_finalized){
+         if(extpal==-1)resources_set_int("VICExternalPalette", 0);
+         else {
+            resources_set_int("VICExternalPalette", 1);
+            resources_set_string_sprintf("%sPaletteFile", var.value, "VIC");
+         }
+      } else {
+         RETROEXTPAL=extpal;
+         if(extpal!=-1){
+            sprintf(RETROEXTPALNAME, "%s", var.value);
+         }
+      }
+   }
+#elif defined(__PLUS4__)
+   var.key = "vice_plus4_external_palette";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int extpal=-1;
+      if (strcmp(var.value, "none") == 0)extpal=-1;
+      else if (strcmp(var.value, "yape-pal") == 0)extpal=0;
+      else if (strcmp(var.value, "yape-ntsc") == 0)extpal=1;
+      else if (strcmp(var.value, "colodore_ted") == 0)extpal=2;
+
+      if(retro_ui_finalized){
+         if(extpal==-1)resources_set_int("TEDExternalPalette", 0);
+         else {
+            resources_set_int("TEDExternalPalette", 1);
+            resources_set_string_sprintf("%sPaletteFile", var.value, "TED");
+         }
+      } else {
+         RETROEXTPAL=extpal;
+         if(extpal!=-1){
+            sprintf(RETROEXTPALNAME, "%s", var.value);
+         }
+      }
+   }
+#elif defined(__PET__)
+   var.key = "vice_pet_external_palette";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int extpal=-1;
+      if (strcmp(var.value, "none") == 0)extpal=-1;
+      else if (strcmp(var.value, "amber") == 0)extpal=0;
+      else if (strcmp(var.value, "green") == 0)extpal=1;
+      else if (strcmp(var.value, "white") == 0)extpal=2;
+
+      if(retro_ui_finalized){
+         if(extpal==-1)resources_set_int("CrtcExternalPalette", 0);
+         else {
+            resources_set_int("CrtcExternalPalette", 1);
+            resources_set_string_sprintf("%sPaletteFile", var.value, "Crtc");
+         }
+      } else {
+         RETROEXTPAL=extpal;
+         if(extpal!=-1){
+            sprintf(RETROEXTPALNAME, "%s", var.value);
+         }
+      }
+   }
+#else
    var.key = "vice_external_palette";
    var.value = NULL;
 
@@ -864,7 +958,7 @@ static void update_variables(void)
       int extpal=-1;
       if (strcmp(var.value, "none") == 0)extpal=-1;
       else if (strcmp(var.value, "pepto-pal") == 0)extpal=0;
-      else if (strcmp(var.value, "pepto-pal-old") == 0)extpal=1;
+      else if (strcmp(var.value, "pepto-palold") == 0)extpal=1;
       else if (strcmp(var.value, "pepto-ntsc-sony") == 0)extpal=2;
       else if (strcmp(var.value, "pepto-ntsc") == 0)extpal=3;
       else if (strcmp(var.value, "colodore") == 0)extpal=4;
@@ -893,6 +987,7 @@ static void update_variables(void)
          }
       }
    }
+#endif
 
    var.key = "vice_userport_joytype";
    var.value = NULL;

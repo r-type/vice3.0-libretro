@@ -564,6 +564,7 @@ EMBEDDED_H_FILES = \
 	ted_colodore_ted_vpl.h \
 	vic_mike_ntsc_vpl.h \
 	vic_mike_pal_vpl.h \
+	vic_colodore_vic_vpl.h \
 	vic_vice_vpl.h
 
 if NATIVE_TOOLS
@@ -959,6 +960,9 @@ vic_mike_ntsc_vpl.h: $(EMBEDDED_DEPENDS) palette2c
 vic_mike_pal_vpl.h: $(EMBEDDED_DEPENDS) palette2c
 	./palette2c $(top_srcdir)/data/VIC20/mike-pal.vpl vic_mike_pal_vpl.h "unsigned char vic_mike_pal_vpl[]"
 
+vic_colodore_vic_vpl.h: $(EMBEDDED_DEPENDS) palette2c
+	./palette2c $(top_srcdir)/data/VIC20/colodore_vic.vpl vic_colodore_vic_vpl.h "unsigned char vic_colodore_vic_vpl[]"
+
 vic_vice_vpl.h: $(EMBEDDED_DEPENDS) palette2c
 	./palette2c $(top_srcdir)/data/VIC20/vice.vpl vic_vice_vpl.h "unsigned char vic_vice_vpl[]"
 
@@ -1195,6 +1199,9 @@ vicii_c64s_vpl.h: $(EMBEDDED_DEPENDS)
 vicii_ccs64_vpl.h: $(EMBEDDED_DEPENDS)
 	$(SHELL) $(srcdir)/buildtools/palette2c.sh <$(top_srcdir)/data/C64/ccs64.vpl vicii_ccs64_vpl.h "unsigned char vicii_ccs64_vpl[]"
 
+vicii_colodore_vpl.h: $(EMBEDDED_DEPENDS)
+	$(SHELL) $(srcdir)/buildtools/palette2c.sh <$(top_srcdir)/data/C64/colodore.vpl vicii_colodore_vpl.h "unsigned char vicii_colodore_vpl[]"
+
 vicii_community_colors_vpl.h: $(EMBEDDED_DEPENDS)
 	$(SHELL) $(srcdir)/buildtools/palette2c.sh <$(top_srcdir)/data/C64/community-colors.vpl vicii_community_colors_vpl.h "unsigned char vicii_community_colors_vpl[]"
 
@@ -1257,6 +1264,9 @@ vic_mike_ntsc_vpl.h: $(EMBEDDED_DEPENDS)
 
 vic_mike_pal_vpl.h: $(EMBEDDED_DEPENDS)
 	$(SHELL) $(srcdir)/buildtools/palette2c.sh <$(top_srcdir)/data/VIC20/mike-pal.vpl vic_mike_pal_vpl.h "unsigned char vic_mike_pal_vpl[]"
+
+vic_colodore_vic_vpl.h: $(EMBEDDED_DEPENDS) palette2c
+	$(SHELL) $(srcdir)/buildtools/palette2c.sh <$(top_srcdir)/data/VIC20/colodore_vic.vpl vic_colodore_vic_vpl.h "unsigned char vic_colodore_vic_vpl[]"
 
 vic_vice_vpl.h: $(EMBEDDED_DEPENDS)
 	$(SHELL) $(srcdir)/buildtools/palette2c.sh <$(top_srcdir)/data/VIC20/vice.vpl vic_vice_vpl.h "unsigned char vic_vice_vpl[]"

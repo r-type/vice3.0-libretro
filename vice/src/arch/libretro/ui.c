@@ -154,12 +154,32 @@ int ui_init_finalize(void)
    } else if(RETROSTATUS==0) {
       resources_set_int("SDLStatusbar", 0);
    }
-   
+
+#if defined(__VIC20__)
+   if(RETROEXTPAL==-1)resources_set_int("VICExternalPalette", 0);
+   else {
+      resources_set_int("VICExternalPalette", 1);
+      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "VIC");
+   }
+#elif defined(__PLUS4__)
+   if(RETROEXTPAL==-1)resources_set_int("TEDExternalPalette", 0);
+   else {
+      resources_set_int("TEDExternalPalette", 1);
+      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "TED");
+   }
+#elif defined(__PET__)
+   if(RETROEXTPAL==-1)resources_set_int("CrtcExternalPalette", 0);
+   else {
+      resources_set_int("CrtcExternalPalette", 1);
+      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "Crtc");
+   }
+#else
    if(RETROEXTPAL==-1)resources_set_int("VICIIExternalPalette", 0);
    else {
       resources_set_int("VICIIExternalPalette", 1);
       resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "VICII");
    }
+#endif
 
    if(RETROUSERPORTJOY==-1)resources_set_int("UserportJoy", 0);
    else {

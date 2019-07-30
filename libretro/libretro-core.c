@@ -484,8 +484,8 @@ void retro_set_environment(retro_environment_t cb)
       },
 #elif  defined(__PET__)
       {
-         "vice_PETModel",
-         "PETModel; PETMODEL_2001|PETMODEL_3008|PETMODEL_3016|PETMODEL_3032|PETMODEL_3032B|PETMODEL_4016|PETMODEL_4032|PETMODEL_4032B|PETMODEL_8032|PETMODEL_8096|PETMODEL_8296|PETMODEL_SUPERPET|PETMODEL_UNKNOWN",
+         "vice_pet_model",
+         "PET Model; PETMODEL_2001|PETMODEL_3008|PETMODEL_3016|PETMODEL_3032|PETMODEL_3032B|PETMODEL_4016|PETMODEL_4032|PETMODEL_4032B|PETMODEL_8032|PETMODEL_8096|PETMODEL_8296|PETMODEL_SUPERPET|PETMODEL_UNKNOWN",
       },
 #else
       {
@@ -797,7 +797,7 @@ static void update_variables(void)
       else RETROC64MODL=modl;
    }
 #elif  defined(__PET__)
-   var.key = "vice_PETModel";
+   var.key = "vice_pet_model";
    var.value = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -816,7 +816,7 @@ static void update_variables(void)
       else if (strcmp(var.value, "PETMODEL_8096") == 0)modl=PETMODEL_8096;
       else if (strcmp(var.value, "PETMODEL_8296") == 0)modl=PETMODEL_8296;
       else if (strcmp(var.value, "PETMODEL_SUPERPET") == 0)modl=PETMODEL_SUPERPET;
-      else if (strcmp(var.value, "C128MODEL_UNKNOWN") == 0)modl=PETMODEL_UNKNOWN;
+      else if (strcmp(var.value, "PETMODEL_UNKNOWN") == 0)modl=PETMODEL_UNKNOWN;
       if(retro_ui_finalized)
         petmodel_set(modl);
       else RETROC64MODL=modl;

@@ -136,7 +136,10 @@
 #define ARCHDEP_LINE_DELIMITER "\n"
 
 /* Ethernet default device */
-#define ARCHDEP_ETHERNET_DEFAULT_DEVICE "eth0"
+#define ARCHDEP_ETHERNET_DEFAULT_DEVICE ""
+#define archdep_signals_init(x)
+#define archdep_signals_pipe_set()
+#define archdep_signals_pipe_unset()
 
 /* Default sound fragment size */
 #define ARCHDEP_SOUND_FRAGMENT_SIZE 1

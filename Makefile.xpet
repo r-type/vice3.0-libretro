@@ -86,7 +86,6 @@ SOURCES_C += \
                             $(EMU)/fsdevice/fsdevice-flush.c \
                             $(EMU)/userport/userport_digimax.c \
                             $(EMU)/userport/userport_dac.c \
-                            $(EMU)/userport/userport_diag_586220_harness.c \
                             $(EMU)/userport/userport.c \
                             $(EMU)/userport/userport_4bit_sampler.c \
                             $(EMU)/userport/userport_8bss.c \
@@ -132,6 +131,7 @@ SOURCES_C += \
                             $(EMU)/vdrive/vdrive.c \
                             $(EMU)/vdrive/vdrive-internal.c \
                             $(EMU)/vdrive/vdrive-rel.c \
+                            $(EMU)/vicefeatures.c \
                             $(EMU)/diskimage/fsimage-p64.c \
                             $(EMU)/diskimage/diskimage.c \
                             $(EMU)/diskimage/fsimage-probe.c \
@@ -398,7 +398,6 @@ SOURCES_C += \
                                  $(EMU)/samplerdrv/file_drv.c \
                                  $(EMU)/samplerdrv/portaudio_drv.c \
                                  $(EMU)/tapeport/cp-clockf83.c \
-                                 $(EMU)/tapeport/tape_diag_586220_harness.c \
                                  $(EMU)/tapeport/dtl-basic-dongle.c \
                                  $(EMU)/tapeport/tapeport.c \
                                  $(EMU)/tapeport/sense-dongle.c \

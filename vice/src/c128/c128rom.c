@@ -648,14 +648,12 @@ int mem_load(void)
         return -1;
     }
 
-    /*
     if (resources_get_string("ChargenNOName", &rom_name) < 0) {
         return -1;
     }
     if (c128rom_load_chargen_no(rom_name) < 0) {
         return -1;
     }
-    */
 
     c128rom_chargen_setup();
 

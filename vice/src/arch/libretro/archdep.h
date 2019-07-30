@@ -29,7 +29,6 @@
 #ifndef _ARCHDEP_H
 #define _ARCHDEP_H
 
-//#include "archdep.h"
 #define VICE_ARCHAPI_PRIVATE_API
 #include "archapi.h"
 #undef VICE_ARCHAPI_PRIVATE_API

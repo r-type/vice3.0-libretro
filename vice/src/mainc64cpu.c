@@ -555,31 +555,30 @@ void maincpu_mainloop_retro(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at
        least, on gcc 2.7.2.x).  */
-    uint8_t reg_a = 0;
-    uint8_t reg_x = 0;
-    uint8_t reg_y = 0;
-    uint8_t reg_p = 0;
-    uint8_t reg_sp = 0;
-    uint8_t flag_n = 0;
-    uint8_t flag_z = 0;
+static    uint8_t reg_a = 0;
+static    uint8_t reg_x = 0;
+static    uint8_t reg_y = 0;
+static    uint8_t reg_p = 0;
+static    uint8_t reg_sp = 0;
+static    uint8_t flag_n = 0;
+static    uint8_t flag_z = 0;
 #ifndef NEED_REG_PC
     /* FIXME: this should really be uint16_t, but it breaks things (eg trap17.prg) */
-    unsigned int reg_pc;
+static    unsigned int reg_pc;
 #endif
-    uint8_t *bank_base;
-    int bank_start = 0;
-    int bank_limit = 0;
+static    uint8_t *bank_base;
+static    int bank_start = 0;
+static    int bank_limit = 0;
 
-    static int first1=0;
-    if(first1==0){
-        first1++;
+static int first1=0;
+if(first1==0){
+    first1++;
+    o_bank_base = &bank_base;
+    o_bank_start = &bank_start;
+    o_bank_limit = &bank_limit;
 
-        o_bank_base = &bank_base;
-        o_bank_start = &bank_start;
-        o_bank_limit = &bank_limit;
-        
-        machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
-    }
+    machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
+}
 
     /*while (1)*/ {
 #define CLK maincpu_clk

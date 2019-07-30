@@ -258,9 +258,10 @@ int plus4ui_init(void)
 {
      return 0;
 }
+
 int plus4ui_shutdown(void)
 {
-
+     return 0;
 }
 
 int vic20ui_init(void)
@@ -270,7 +271,7 @@ int vic20ui_init(void)
   
 int vic20ui_shutdown(void)
 {
-
+     return 0;
 }
 
 int cbm5x0ui_init(void)
@@ -280,7 +281,7 @@ int cbm5x0ui_init(void)
 
 int cbm5x0ui_shutdown(void)
 {
-
+     return 0;
 }
 
 int cbm2ui_init(void)
@@ -290,7 +291,7 @@ int cbm2ui_init(void)
 
 int cbm2ui_shutdown(void)
 {
-
+     return 0;
 }
 
 int petui_init(void)
@@ -300,5 +301,5 @@ int petui_init(void)
 
 int petui_shutdown(void)
 {
-
+     return 0;
 }

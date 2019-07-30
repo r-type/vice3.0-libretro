@@ -102,7 +102,7 @@ static void display_joyport(void)
     sprintf(tmpstr + strlen(tmpstr), "j%d:%2d", 4, joystick_value[4]);
     //Retro_Draw_string(&fake, x+200, y, tmpstr,16,1,1, color_f, color_b);
 
-    len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), tmpstr);
+    len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {

@@ -1,23 +1,46 @@
 INCFLAGS += \
-        -I$(EMU) -I$(EMU)/userport -I$(EMU)/video -I$(EMU)/core \
-        -I$(EMU)/sid -I$(EMU)/drive -I$(EMU)/vicii -I$(EMU)/tape -I$(EMU)/c64 \
-        -I$(EMU)/c64dtv -I$(EMU)/vdc -I$(EMU)/raster -I$(EMU)/crtc -I$(EMU)/vdrive \
-        -I$(EMU)/c64/cart -I$(EMU)/imagecontents -I$(EMU)/arch/libretro -I$(EMU)/src -I$(EMU)/diag \
-        -I$(EMU)/lib/p64 -I$(EMU)/drive/iec/c64exp -I$(EMU)/samplerdrv -I$(EMU)/drive/ieee -I$(EMU)/drive/tcbm \
-        -I$(EMU)/rtc -I$(EMU)/resid -I$(EMU)/monitor -I$(EMU)/joyport -I$(EMU)/tapeport -I$(EMU)/drive/iec \
-        -I$(EMU)/platform -I$(EMU)/socketdrv
+		-I$(EMU)/sid \
+		-I$(EMU) \
+		-I$(EMU)/arch/libretro \
+		-I$(EMU)/c64 \
+		-I$(EMU)/c64dtv \
+		-I$(EMU)/c64/cart \
+		-I$(EMU)/core \
+		-I$(EMU)/crtc \
+		-I$(EMU)/diag \
+		-I$(EMU)/drive \
+		-I$(EMU)/drive/iec \
+		-I$(EMU)/drive/iec/c64exp \
+		-I$(EMU)/drive/ieee \
+		-I$(EMU)/drive/tcbm \
+		-I$(EMU)/imagecontents \
+		-I$(EMU)/joyport \
+		-I$(EMU)/lib/p64 \
+		-I$(EMU)/monitor \
+		-I$(EMU)/raster \
+		-I$(EMU)/resid \
+		-I$(EMU)/rtc \
+		-I$(EMU)/samplerdrv \
+		-I$(EMU)/socketdrv \
+		-I$(EMU)/tape \
+		-I$(EMU)/tapeport \
+		-I$(EMU)/userport \
+		-I$(EMU)/vdc \
+		-I$(EMU)/vdrive \
+		-I$(EMU)/vicii \
+		-I$(EMU)/video
 
 SOURCES_CC += \
-        $(EMU)/resid/dac.cc \
-        $(EMU)/resid/envelope.cc \
-        $(EMU)/resid/extfilt.cc \
-        $(EMU)/resid/filter.cc \
-        $(EMU)/resid/pot.cc \
-        $(EMU)/resid/sid.cc \
-        $(EMU)/resid/version.cc \
-        $(EMU)/resid/voice.cc \
-        $(EMU)/resid/wave.cc \
-        $(EMU)/sid/resid.cc
+		$(EMU)/resid/dac.cc \
+		$(EMU)/resid/envelope.cc \
+		$(EMU)/resid/extfilt.cc \
+		$(EMU)/resid/filter.cc \
+		$(EMU)/resid/pot.cc \
+		$(EMU)/resid/sid.cc \
+		$(EMU)/resid/version.cc \
+		$(EMU)/resid/voice.cc \
+		$(EMU)/resid/wave.cc \
+		$(EMU)/sid/resid.cc
 				  
 SOURCES_C += \
         $(EMU)/alarm.c \

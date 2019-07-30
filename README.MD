@@ -26,12 +26,11 @@ Todo:
 
 Very WIP port of VICE 3.3 for libretro with nuklear GUI virtual keyboard
 
-Use it at you own risk !
-
 Supported platforms : Linux Win64 Android emscripten
 
 Source base: 
 https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
+
 
 ## M3U Support and Disk control
 When you have a multi disk game, you can use a m3u file to specify each disk of the game and change them from the RetroArch Disk control interface.

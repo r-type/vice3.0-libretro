@@ -30,7 +30,6 @@ INCFLAGS += \
         -I$(EMU)/userport \
         -I$(EMU)/vdc \
         -I$(EMU)/vdrive \
-        -I$(EMU)/vicii \
         -I$(EMU)/viciisc \
         -I$(EMU)/video
 

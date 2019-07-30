@@ -104,9 +104,9 @@ void vsyncarch_presync(void)
     kbdbuf_flush();
     retro_poll_event();
 
-//#if defined(__VIC20__)
-//        RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
-//#endif
+#if defined(__VIC20__)
+        RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
+#endif
 	video_canvas_render(RCANVAS,(BYTE *)bmp,
 			retroW,retroH,
                         retroXS,retroYS,

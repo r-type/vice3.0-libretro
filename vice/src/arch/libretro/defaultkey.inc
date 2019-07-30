@@ -170,9 +170,9 @@ keyboard_parse_set_pos_row(274, 0, 7,8);               /*         Down -> CRSR D
 keyboard_parse_set_pos_row(277, 6 ,0,8);               /*          Ins -> Pound        */
 keyboard_parse_set_pos_row(127, 6, 6,8);               /*          Del -> Up Arrow     */
 #endif
+
 //# Restore key mappings
 keyboard_parse_set_neg_row(280, -3, 0);
-keyboard_parse_set_neg_row(0 ,-3, 1);
 
 //# Joyport attached keypad key mappings
 keyboard_parse_set_neg_row(300, -5, 0);               /*      NumLock -> keypad x0    */

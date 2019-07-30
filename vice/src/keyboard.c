@@ -1370,7 +1370,7 @@ int keyboard_set_keymap_index(int val, void *param)
     if (val < 2) {
         if (switch_keymap_file(&val, &mapping, &type) < 0) {
             DBG(("<keyboard_set_keymap_index switch_keymap_file ERROR\n"));
-            log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");
+            /*log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");*/
             /* return -1; */
             return 0; /* HACK: allow to start up when default keymap is missing */
         }
@@ -1399,7 +1399,7 @@ int keyboard_set_keyboard_type(int val, void *param)
     DBG((">keyboard_set_keyboard_type(idx:%d mapping:%d type:%d)\n", idx, mapping, val));
     if (idx < 2) {
         if (switch_keymap_file(&idx, &mapping, &val) < 0) {
-            log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");
+            /*log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");*/
             /* return -1; */
             return 0; /* HACK: allow to start up when default keymap is missing */
         }
@@ -1434,11 +1434,11 @@ int keyboard_set_keyboard_mapping(int val, void *param)
 
     if (idx < 2) {
         if (switch_keymap_file(&idx, &val, &type) < 0) {
-            log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");
+            /*log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");*/
             /* return -1; */
 #ifdef __LIBRETRO__
-log_error(keyboard_log, "Default keymap embedded libretro...");
-	retro_defaultkeyboard();
+            log_message(keyboard_log, "Default keymap embedded libretro...");
+            retro_defaultkeyboard();
 #endif
             return 0; /* HACK: allow to start up when default keymap is missing */
         }

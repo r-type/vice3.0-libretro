@@ -16,12 +16,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifdef IDE_COMPILE
-#include "ffmpeg-config.h"
-#include "ide-config.h"
-#else
 #include "config.h"
-#endif
 
 #include "file.h"
 #include "internal.h"
@@ -44,6 +39,14 @@
 
 #ifdef __LIBRETRO__
 extern  char retro_system_data_directory[512];
+#endif
+
+#ifndef SIZE_MAX
+#  ifdef __SIZE_MAX__
+#    define SIZE_MAX __SIZE_MAX__
+#  else
+#    error no SIZE_MAX
+#  endif
 #endif
 
 typedef struct {

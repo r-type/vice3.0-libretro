@@ -1,10 +1,37 @@
-INCFLAGS +=  -D__X64SC__ \
-        -I$(EMU) -I$(EMU)/userport -I$(EMU)/video  -I$(EMU)/core -I$(EMU)/platform \
-        -I$(EMU)/sid -I$(EMU)/drive -I$(EMU)/vicii -I$(EMU)/viciisc -I$(EMU)/tape -I$(EMU)/c64 \
-        -I$(EMU)/c64dtv -I$(EMU)/vdc -I$(EMU)/raster -I$(EMU)/crtc -I$(EMU)/vdrive \
-        -I$(EMU)/c64/cart -I$(EMU)/imagecontents -I$(EMU)/arch/libretro -I$(EMU)/src -I$(EMU)/diag \
-        -I$(EMU)/lib/p64 -I$(EMU)/drive/iec/c64exp -I$(EMU)/samplerdrv -I$(EMU)/drive/ieee -I$(EMU)/drive/tcbm \
-        -I$(EMU)/rtc -I$(EMU)/resid -I$(EMU)/monitor -I$(EMU)/joyport -I$(EMU)/tapeport  -I$(EMU)/drive/iec
+COMMONFLAGS += -D__X64SC__ 
+
+INCFLAGS += \
+        -I$(EMU)/sid \
+        -I$(EMU) \
+        -I$(EMU)/arch/libretro \
+        -I$(EMU)/c64 \
+        -I$(EMU)/c64/cart \
+        -I$(EMU)/c64dtv \
+        -I$(EMU)/core \
+        -I$(EMU)/crtc \
+        -I$(EMU)/diag \
+        -I$(EMU)/drive \
+        -I$(EMU)/drive/iec \
+        -I$(EMU)/drive/iec/c64exp \
+        -I$(EMU)/drive/ieee \
+        -I$(EMU)/drive/tcbm \
+        -I$(EMU)/imagecontents \
+        -I$(EMU)/joyport \
+        -I$(EMU)/lib/p64 \
+        -I$(EMU)/monitor \
+        -I$(EMU)/platform \
+        -I$(EMU)/raster \
+        -I$(EMU)/resid \
+        -I$(EMU)/rtc \
+        -I$(EMU)/samplerdrv \
+        -I$(EMU)/socketdrv \
+        -I$(EMU)/tape \
+        -I$(EMU)/tapeport \
+        -I$(EMU)/userport \
+        -I$(EMU)/vdc \
+        -I$(EMU)/vdrive \
+        -I$(EMU)/viciisc \
+        -I$(EMU)/video
 
 SOURCES_CC += \
         $(EMU)/resid/dac.cc \
@@ -207,6 +234,7 @@ SOURCES_C += \
         $(EMU)/drive/iec/c64exp/iec-c64exp.c \
         $(EMU)/drive/iec/c64exp/profdos.c \
         $(EMU)/drive/iec/c64exp/supercard.c \
+        $(EMU)/drive/iec/c64exp/stardos-exp.c \
         $(EMU)/drive/iec/cia1571d.c \
         $(EMU)/drive/iec/cia1581d.c \
         $(EMU)/drive/iec/fdd.c \
@@ -293,6 +321,9 @@ SOURCES_C += \
         $(EMU)/joyport/sampler2bit.c \
         $(EMU)/joyport/sampler4bit.c \
         $(EMU)/joyport/script64_dongle.c \
+        $(EMU)/joyport/snespad.c \
+        $(EMU)/joyport/vizawrite64_dongle.c \
+        $(EMU)/joyport/waasoft_dongle.c \
         $(EMU)/kbdbuf.c \
         $(EMU)/keyboard.c \
         $(EMU)/lib.c \
@@ -339,36 +370,6 @@ SOURCES_C += \
         $(EMU)/palette.c \
         $(EMU)/parallel/parallel-trap.c \
         $(EMU)/parallel/parallel.c \
-        $(EMU)/platform/platform.c \
-        $(EMU)/platform/platform_amigaos3_runtime_os.c \
-        $(EMU)/platform/platform_amigaos4_runtime_os.c \
-        $(EMU)/platform/platform_amix_runtime_os.c \
-        $(EMU)/platform/platform_aros_runtime_os.c \
-        $(EMU)/platform/platform_beos_runtime_os.c \
-        $(EMU)/platform/platform_cygwin_runtime_os.c \
-        $(EMU)/platform/platform_darwin_runtime_os.c \
-        $(EMU)/platform/platform_dos_runtime_os.c \
-        $(EMU)/platform/platform_dragonfly_runtime_os.c \
-        $(EMU)/platform/platform_freebsd_runtime_os.c \
-        $(EMU)/platform/platform_hurd_runtime_os.c \
-        $(EMU)/platform/platform_interix_runtime_os.c \
-        $(EMU)/platform/platform_linux_runtime_os.c \
-        $(EMU)/platform/platform_macosx.c \
-        $(EMU)/platform/platform_minix_runtime_os.c \
-        $(EMU)/platform/platform_netbsd_runtime_os.c \
-        $(EMU)/platform/platform_nextopenstep_runtime_os.c \
-        $(EMU)/platform/platform_openbsd_runtime_os.c \
-        $(EMU)/platform/platform_os2_runtime_os.c \
-        $(EMU)/platform/platform_qnx6_runtime_os.c \
-        $(EMU)/platform/platform_rhapsody_runtime_os.c \
-        $(EMU)/platform/platform_sco_runtime_os.c \
-        $(EMU)/platform/platform_skyos_runtime_os.c \
-        $(EMU)/platform/platform_solaris_runtime_os.c \
-        $(EMU)/platform/platform_sunos_runtime_os.c \
-        $(EMU)/platform/platform_syllable_runtime_os.c \
-        $(EMU)/platform/platform_ultrix_runtime_os.c \
-        $(EMU)/platform/platform_windows_runtime_os.c \
-        $(EMU)/platform/platform_x86_runtime_cpu.c \
         $(EMU)/printerdrv/driver-select.c \
         $(EMU)/printerdrv/drv-1520.c \
         $(EMU)/printerdrv/drv-ascii.c \
@@ -440,6 +441,7 @@ SOURCES_C += \
         $(EMU)/sid/ssi2001.c \
         $(EMU)/snapshot.c \
         $(EMU)/socket.c \
+        $(EMU)/socketdrv/socketdrv.c \
         $(EMU)/sound.c \
         $(EMU)/sounddrv/soundaiff.c \
         $(EMU)/sounddrv/soundalsa.c \
@@ -464,10 +466,10 @@ SOURCES_C += \
         $(EMU)/tapeport/cp-clockf83.c \
         $(EMU)/tapeport/dtl-basic-dongle.c \
         $(EMU)/tapeport/sense-dongle.c \
+        $(EMU)/tapeport/tapecart.c \
         $(EMU)/tapeport/tapelog.c \
         $(EMU)/tapeport/tapeport.c \
         $(EMU)/tapeport/tape_diag_586220_harness.c \
-        $(EMU)/translate.c \
         $(EMU)/traps.c \
         $(EMU)/userport/userport.c \
         $(EMU)/userport/userport_4bit_sampler.c \

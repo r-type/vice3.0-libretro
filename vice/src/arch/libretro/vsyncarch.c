@@ -48,7 +48,18 @@ extern struct video_canvas_s *RCANVAS;
 
 #include <time.h>
 
+//#define TICKSPERSECOND  1000000L     /* Microseconds resolution. */
+#ifdef HAVE_NANOSLEEP
+#define TICKSPERSECOND  1000000000L  /* Nanoseconds resolution. */
+#define TICKSPERMSEC    1000000L
+#define TICKSPERUSEC    1000L
+#define TICKSPERNSEC    1L
+#else
 #define TICKSPERSECOND  1000000L     /* Microseconds resolution. */
+#define TICKSPERMSEC    1000L
+#define TICKSPERUSEC    1L
+#endif
+
 
 /* hook to ui event dispatcher */
 static void_hook_t ui_dispatch_hook;
@@ -56,7 +67,7 @@ static void_hook_t ui_dispatch_hook;
 /* ------------------------------------------------------------------------- */
 
 /* Number of timer units per second. */
-signed long vsyncarch_frequency(void)
+unsigned long vsyncarch_frequency(void)
 {
     /* Microseconds resolution. */
     return TICKSPERSECOND;
@@ -81,7 +92,7 @@ void vsyncarch_display_speed(double speed, double frame_rate, int warp_enabled)
 }
 
 /* Sleep a number of timer units. */
-void vsyncarch_sleep(signed long delay)
+void vsyncarch_sleep(unsigned long delay)
 {
     // NOTE: Cores should not sleep. vsyncarch_sleep is only used by vice to
     // keep a stable 50Hz refresh rate, which for libretro is the responsibility

@@ -1,5 +1,6 @@
 # This fork
 Done:
+- Vice 3.3
 - x64sc
 - Virtual keyboard revamped
 - Other GUI removed
@@ -15,26 +16,21 @@ Done:
   - Analog sticks mappable
 
 
-
 Todo:
-- Vice 3.3
 - savestates
 
 
 
 
-# Vice 3.0 LIBRETRO WIP
+# Vice 3.3 LIBRETRO WIP
 
-Very WIP port of VICE 3.0 for libretro .
-
-minimal Libretro arch port (minimal nuklear GUI)
-
-Use it at you own risk !
+Very WIP port of VICE 3.3 for libretro with nuklear GUI virtual keyboard
 
 Supported platforms : Linux Win64 Android emscripten
 
 Source base: 
-https://sourceforge.net/p/vice-emu/code/32520/tree/tags/v3.0/
+https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
+
 
 ## M3U Support and Disk control
 When you have a multi disk game, you can use a m3u file to specify each disk of the game and change them from the RetroArch Disk control interface.
@@ -67,10 +63,6 @@ LIBDIR set to retro_system_dir
 
 Add WANT_RGB565=1 to make for RGB565 16 bits depth (32 bits depth default)
 
-### Setup core
-
-Copy the data folder to LIBDIR .
- 
 ### Linux
 ```
 CC=gcc make -f Makefile.libretro -j10
@@ -100,7 +92,7 @@ make -f Makefile.libretro -j10 WANT_RGB565=1 platform=android
 
  ----------------------------------------------------------------------------
 
- VICE  3.0                                                        Dec 2016
+  VICE  3.3                                                        Dec 2018
 
 
                  _______________
@@ -119,8 +111,17 @@ make -f Makefile.libretro -j10 WANT_RGB565=1 platform=android
 
  ----------------------------------------------------------------------------
 
+ This release stabilizes and introduces the GTK3 UI as the primary user 
+ interface for all major ports. For "lesser" platforms we still have the SDL 
+ based interface. All other user interfaces have been removed. RIP
 
- This is version 3.0 of VICE, the multi-platform C64, C128, VIC20,
+ We are still looking for dedicated maintainers for the Windows- and macOS 
+ ports, if you want to help improving these and/or want to provide binaries, 
+ please get in touch.
+
+ ----------------------------------------------------------------------------
+
+ This is version 3.3 of VICE, the multi-platform C64, C128, VIC20,
  PET, PLUS4 and CBM-II emulator.  This version can be compiled for
  MSDOS, Win32, OS/2, BeOS, QNX 4.x, QNX 6.x, AmigaOS, Dingoo,
  Syllable, SkyOS and for most Unix systems provided with
@@ -178,36 +179,35 @@ make -f Makefile.libretro -j10 WANT_RGB565=1 platform=android
      - vice.texi, the complete documentation; documentation in various different
        formats may be generated from it (vice.txt, vice.pdf, vice.chm, vice.hlp, 
        vice.guide, vice.inf, vice.info)
-     - NLS-Howto.txt, some documentation about Unix NLS support;
      - iec-bus.txt, overview of the VICE IEC bus emulation;
      - CIA-README.txt, overview of the VICE CIA emulation;
      - coding-guidelines.txt, description of VICE coding style
      - Documentation-Howto.txt, information on how to edit the documentation
      - Doxygen-Howto.txt, how to generate doxygen documentation
-     - MacOSX-ResourceTree.txt, overview of the Mac OSX resource tree
+     - Release-Howto.txt, some hints and reminders on how to create a release
+       tarball (for maintainers)
+     - ffmpeg-support.txt, this document details the results of test compiles 
+       with regards to the included ffmpeg library.
+     - SDL-support.txt, this document details the results of test compiles with 
+       regards to the SDL 1 and SDL 2 support.
+     - hardware-sids.txt, this document details the hardware SIDs and how they 
+       are supported on the various platforms.
 
    - in the doc/readmes directory:
 
-     - Readme-DOS.txt, MS-DOS specific documentation;
-     - Readme-BeOS.txt, BeOS specific documentation;
-     - Readme-Amiga.txt, Amiga specific documentation;
-     - Readme-MacOSX.txt, Mac OSX specific documentation;
-     - Readme-OS2.txt, OS/2 specific documentation;
+     - Readme-GTK3.txt, GTK3 specific documentation;
      - Readme-SDL.txt, SDL specific documentation;
+     - Readme-SDL2.txt, SDL2 specific documentation;
 
    - in the doc/building directory:
 
-     - MSDOS-Howto.txt, how to compile the MSDOS port.
-     - MSDOS-Ethernet-Howto.txt, how to compile the MSDOS port with ethernet 
-       support.
-     - OpenWatcom-Howto.txt, how to compile the MSDOS port with open watcom
-     - Win32-Mingw32-Howto.txt, how to compile the Win32 port using ming32
-     - Win32-Cygwin-Howto.txt, how to compile the Win32 port using cygwin
-     - Linux-Mingw32-Howto.txt, how to crosscompile the Win32 port on linux
-     - MacOSX-Howto.txt, how to compile the Mac OSX port
-     - Minix-Howto.txt, how to compile the Minix port
-     - OpenVMS-Howto.txt, how to compile the OpenVMS port
-     - SDL-Howto.txt, how to compile the SDL port
+     - Windows-MinGW-GTK3-Howto.txt, how to compile the Windows port using MingGW/MSYS2
+     - Linux-GTK3-Howto.txt, how to compile the GTK3 port on Linux
+     - GTK3-macOS.txt, how to compile the Mac OSX port with GTK3 UI
+     - SDL-Howto.txt, how to compile the SDL port on various platforms
+     - Android-Howto, how to compile the Android SDL port
+     - FreeBSD-GTK3-Howto.txt, hints on compiling the GTK3 port on FreeBSD
+     - NetBSD-howto.txt, hints on compiling for NetBSD
 
  For the latest news, have a look at the VICE home page:
 
@@ -234,17 +234,18 @@ make -f Makefile.libretro -j10 WANT_RGB565=1 platform=android
  VICE, the Versatile Commodore Emulator
 
     Core Team Members:
-    1999-2017 Martin Pottendorfer
-    2005-2017 Marco van den Heuvel
-    2007-2017 Fabrizio Gennari
-    2009-2017 Groepaz
-    2010-2017 Olaf Seibert
-    2011-2017 Marcus Sutton
-    2011-2017 Kajtar Zsolt
-    2016-2017 AreaScout
-    2016-2017 Bas Wassink
+    2005-2018 Marco van den Heuvel
+    2007-2018 Fabrizio Gennari
+    2009-2018 Groepaz
+    2010-2018 Olaf Seibert
+    2011-2018 Marcus Sutton
+    2011-2018 Kajtar Zsolt
+    2016-2018 AreaScout
+    2016-2018 Bas Wassink
+    2017-2018 Michael C. Martin
 
     Inactive/Ex Team Members:
+    1999-2017 Martin Pottendorfer
     2011-2016 Stefan Haubenthal
     2015-2016 BSzili
     1999-2016 Andreas Matthies

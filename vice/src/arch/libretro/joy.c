@@ -34,7 +34,7 @@
 #include "joystick.h"
 #include "machine.h"
 #include "resources.h"
-#include "translate.h"
+//#include "translate.h"
 #include "types.h"
 
 static const resource_int_t resources_int[] = {

@@ -40,6 +40,11 @@ void cbm2iec_init(void)
 {
 }
 
+void iec_update_cpu_bus(BYTE data)
+{
+
+}
+
 void iec_update_ports(void)
 {
     /* Not used for now.  */

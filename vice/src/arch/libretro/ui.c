@@ -31,17 +31,19 @@
 #include "resources.h"
 #include "sid.h"
 #include "userport_joystick.h"
-#if  defined(__VIC20__)
+#if defined(__VIC20__)
 #include "c64model.h"
 #include "vic20model.h"
 #elif defined(__PLUS4__)
 #include "c64model.h"
 #include "plus4model.h"
-#elif  defined(__X128__)
+#elif defined(__X128__)
 #include "c64model.h"
 #include "c128model.h"
-#elif  defined(__PET__)
+#elif defined(__PET__)
 #include "petmodel.h"
+#elif defined(__CBM2__)
+#include "cbm2model.h"
 #else
 #include "c64model.h"
 #endif
@@ -221,6 +223,8 @@ int ui_init_finalize(void)
    c128model_set(RETROC64MODL);
 #elif defined(__PET__)
    petmodel_set(RETROC64MODL);
+#elif defined(__CBM2__)
+   cbm2model_set(RETROC64MODL);
 #else
    c64model_set(RETROC64MODL);
 #endif
@@ -266,6 +270,11 @@ int petui_init_early(void)
 }
 #elif defined(__PLUS4__) 
 int plus4ui_init_early(void)
+{
+    return 0;
+}
+#elif defined(__CBM2__) 
+int cbm2ui_init_early(void)
 {
     return 0;
 }

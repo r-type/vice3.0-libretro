@@ -113,6 +113,8 @@ extern int g_mem_ram_size;
 #include "c128model.h"
 #elif defined(__PET__)
 #include "petmodel.h"
+#elif defined(__CBM2__)
+#include "cbm2model.h"
 #else
 #include "c64model.h"
 #endif
@@ -821,8 +823,31 @@ static void update_variables(void)
         petmodel_set(modl);
       else RETROC64MODL=modl;
    }
-#else
+#elif  defined(__CBM2__)
+   var.key = "vice_cbm2_model";
+   var.value = NULL;
 
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int modl=0;
+
+      if (strcmp(var.value, "CBM2MODEL_510_PAL") == 0)modl=CBM2MODEL_510_PAL;
+      else if (strcmp(var.value, "CBM2MODEL_510_NTSC") == 0)modl=CBM2MODEL_510_NTSC;
+      else if (strcmp(var.value, "CBM2MODEL_610_PAL") == 0)modl=CBM2MODEL_610_PAL;
+      else if (strcmp(var.value, "CBM2MODEL_610_NTSC") == 0)modl=CBM2MODEL_610_NTSC;
+      else if (strcmp(var.value, "CBM2MODEL_620_PAL") == 0)modl=CBM2MODEL_620_PAL;
+      else if (strcmp(var.value, "CBM2MODEL_620_NTSC") == 0)modl=CBM2MODEL_620_NTSC;
+      else if (strcmp(var.value, "CBM2MODEL_620PLUS_PAL") == 0)modl=CBM2MODEL_620PLUS_PAL;
+      else if (strcmp(var.value, "CBM2MODEL_620PLUS_NTSC") == 0)modl=CBM2MODEL_620PLUS_NTSC;
+      else if (strcmp(var.value, "CBM2MODEL_710_NTSC") == 0)modl=CBM2MODEL_710_NTSC;
+      else if (strcmp(var.value, "CBM2MODEL_720_NTSC") == 0)modl=CBM2MODEL_720_NTSC;
+      else if (strcmp(var.value, "CBM2MODEL_720PLUS_NTSC") == 0)modl=CBM2MODEL_720PLUS_NTSC;
+      else if (strcmp(var.value, "CBM2MODEL_UNKNOWN") == 0)modl=CBM2MODEL_UNKNOWN;
+      if(retro_ui_finalized)
+        cbm2model_set(modl);
+      else RETROC64MODL=modl;
+   }
+#else
    var.key = "vice_c64_model";
    var.value = NULL;
 
@@ -849,7 +874,6 @@ static void update_variables(void)
       if(retro_ui_finalized)
         c64model_set(modl);
       else RETROC64MODL=modl;
-
    }
 #endif
 

@@ -55,6 +55,7 @@
 #include "vdrive.h"
 #include "video.h"
 #include "vsync.h"
+#include "sound.h"
 
 #include "init.h"
 

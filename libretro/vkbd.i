@@ -84,11 +84,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "CrL","CrL" ,RETROK_LEFT},
 	{ "CrD","CrD" ,RETROK_DOWN}, 
 	{ "CrR","CrR" ,RETROK_RIGHT},
-
-
-	//{ "PG1","PG1" ,-2},
-	//{ "PG2","PG2" ,-2},
-} ;
+};
 
 const char* keyDesc[] = {
 "---",//0,

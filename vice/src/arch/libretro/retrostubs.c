@@ -99,72 +99,37 @@ void Keymap_KeyDown(int symkey)
 
 void app_vkb_handle(void)
 {
-   static int oldi=-1;
-   int i;
 
-   if(oldi!=-1)
-   {  
-      kbd_handle_keyup(oldi);
-      oldi=-1;
-   }
+    static int last_vkey_pressed = -1;
 
-   if(vkey_pressed==-1)return;
+    /* key up */
+    if(vkey_pressed == -1 && last_vkey_pressed >= 0)
+        kbd_handle_keyup(last_vkey_pressed);
 
-   i=vkey_pressed;
-   vkey_pressed=-1;
-
-   if(i==-1){
-      oldi=-1;
-   }
-   if(i==-2)
-   {
-      NPAGE=-NPAGE;oldi=-1;
-   }
-   else if(i==-3)
-   {
-      emu_function(EMU_VKBD);
-      oldi=-1;
-   }
-   else if(i==-4)
-   {
-      emu_function(EMU_JOYPORT);
-      oldi=-1;
-   }
-   else if(i==-5)
-   {
-      emu_function(EMU_STATUSBAR);
-      oldi=-1;
-   }
-   else
-   {
-      if(i==-10) //SHIFT
-      {
-         if(SHIFTON == 1)kbd_handle_keyup(RETROK_LSHIFT);
-         else kbd_handle_keydown(RETROK_LSHIFT);
-         SHIFTON=-SHIFTON;
-         oldi=-1;
-      }
-      else if(i==-11) //CTRL
-      {     
-         if(CTRLON == 1)kbd_handle_keyup(RETROK_LCTRL);
-         else kbd_handle_keydown(RETROK_LCTRL);
-         CTRLON=-CTRLON;
-         oldi=-1;
-      }
-      else if(i==-12) //RSTOP
-      {
-         if(RSTOPON == 1)kbd_handle_keyup(RETROK_ESCAPE);
-         else kbd_handle_keydown(RETROK_ESCAPE); 
-         RSTOPON=-RSTOPON;
-
-         oldi=-1;
-      }
-      else
-      {
-         oldi=i;
-         kbd_handle_keydown(oldi);
-      }
-   }
+    /* key down */
+    if (vkey_pressed != -1 && last_vkey_pressed == -1)
+    {
+        switch (vkey_pressed)
+        {
+            case -4:
+                emu_function(EMU_JOYPORT);
+                break;
+            case -5:
+                emu_function(EMU_STATUSBAR);
+                break;
+            case -10: /* sticky shift */
+                if(SHIFTON == 1)
+                    kbd_handle_keyup(RETROK_LSHIFT);
+                else
+                    kbd_handle_keydown(RETROK_LSHIFT);
+                SHIFTON=-SHIFTON;
+                break;
+            default:
+                kbd_handle_keydown(vkey_pressed);
+                break;
+        }
+    }
+    last_vkey_pressed = vkey_pressed;
 }
 
 // Core input Key(not GUI) 

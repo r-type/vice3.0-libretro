@@ -22,11 +22,10 @@ extern int RETROBORDERS;
 extern int retro_ui_finalized;
 
 extern void emu_reset(void);
-extern int HandleExtension(char *path,char *ext);
 extern void retro_shutdown_core(void);
 
 static int
-gui(struct file_browser *browser, struct nk_context *ctx)
+gui(struct nk_context *ctx)
 {
     struct nk_rect total_space;
 

@@ -13,11 +13,7 @@
 #include <libretro.h>
 #include <libretro-core.h>
 
-extern void filebrowser_init();
-extern void filebrowser_free();
-
 extern void Screen_SetFullUpdate(int scr);
-extern void vkbd_key(int key,int pressed);
 extern void app_vkb_handle();
 
 extern char core_key_state[512];
@@ -64,7 +60,6 @@ struct nk_context *ctx;
 static nk_retro_Font *RSDL_font;
 
 #include "style.c"
-#include "filebrowser.c"
 #include "gui.i"
 
 int app_init()
@@ -91,11 +86,6 @@ int app_init()
     /* THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK */
     set_style(ctx, THEME_C64);
 
-    /* icons */
-
-    filebrowser_init();
-    sprintf(LCONTENT,"%s",RPATH);
-
     memset(core_key_state,0,512);
     memset(core_old_key_state ,0, sizeof(core_old_key_state));
 
@@ -110,7 +100,6 @@ int app_free()
    if (RSDL_font)
       free(RSDL_font);
    RSDL_font = NULL;
-   filebrowser_free();
    nk_retro_shutdown();
 
    Retro_FreeSurface(screen_surface);
@@ -145,7 +134,7 @@ int app_render(int poll)
 
     app_event(poll);
 
-    int state=gui(&browser,ctx);
+    int state=gui(ctx);
     if(state==1 && prevstate!=1)reset_state=1;
 
     nk_retro_render(nk_rgba(0,0,0,0));

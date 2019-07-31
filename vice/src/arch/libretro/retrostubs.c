@@ -21,20 +21,12 @@ extern unsigned vice_devices[5];
 //EMU FLAGS
 int SHOWKEY=-1;
 int SHIFTON=-1;
-int KBMOD=-1;
-int RSTOPON=-1;
-int CTRLON=-1;
-int NPAGE=-1;
-int KCOL=1;
 int SND=1;
 int vkey_pressed;
-unsigned char MXjoy[2]; // joy
 char core_key_state[512];
 char core_old_key_state[512];
-int MOUSE_EMULATED=-1,PAS=4;
+int PAS=4;
 int slowdown=0;
-int pushi=0; //mouse button
-int c64mouse_enable=0;
 unsigned int cur_port=2;
 bool num_locked = false;
 
@@ -148,11 +140,8 @@ void Core_Processkey(void)
          {	
             if(i==RETROK_LALT)
             {
-               //KBMOD=-KBMOD;
-               //printf("Modifier alt pressed %d \n",KBMOD);
                continue;
             }
-            //printf("press: %d \n",i);
             Keymap_KeyDown(i);
 
          }
@@ -160,11 +149,8 @@ void Core_Processkey(void)
          {
             if(i==RETROK_LALT)
             {
-               //KBMOD=-KBMOD;
-               //printf("Modifier alt released %d \n",KBMOD);
                continue;
             }
-            //printf("release: %d \n",i);
             Keymap_KeyUp(i);
 
          }
@@ -183,7 +169,6 @@ int Core_PollEvent(void)
     static int jbt[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     static int kbt[5]={0,0,0,0,0};
     
-    // MXjoy[0]=0;
     if(!retro_load_ok)return 1;
     input_poll_cb();
 

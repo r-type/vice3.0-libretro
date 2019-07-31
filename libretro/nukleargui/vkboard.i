@@ -1,6 +1,4 @@
 int x = 0,y = 0;
-int page = 0;
-page = 0;
 
 char *name;
 ctx->style.window.padding = nk_vec2(10,2);
@@ -26,15 +24,15 @@ for(y=0;y<NLIGN;y++)
              ctx->style.button.normal = key_color_default;
 
              // Function key color
-             name = MVk[(y*NPLGN)+x+page].norml;
+             name = MVk[(y*NPLGN)+x].norml;
              if (strcmp(name, "F1") == 0 || strcmp(name, "F3") == 0 || strcmp(name, "F5") == 0 || strcmp(name, "F7") == 0)
                     ctx->style.button.normal = key_color_alt;
 
-             if (nk_button_text(ctx, SHIFTON == -1 ? MVk[(y*NPLGN)+x+page].norml : MVk[(y*NPLGN)+x+page].shift , \
-             SHIFTON == -1 ? strlen(MVk[(y*NPLGN)+x+page].norml) : strlen(MVk[(y*NPLGN)+x+page].shift)))
+             if (nk_button_text(ctx, SHIFTON == -1 ? MVk[(y*NPLGN)+x].norml : MVk[(y*NPLGN)+x].shift , \
+             SHIFTON == -1 ? strlen(MVk[(y*NPLGN)+x].norml) : strlen(MVk[(y*NPLGN)+x].shift)))
              {
-                    LOGI("(%s) pressed! (%d,%d)\n", SHIFTON == -1 ? MVk[(y*NPLGN)+x+page].norml : MVk[(y*NPLGN)+x+page].shift,x,y);
-                    vkey_pressed=MVk[(y*NPLGN)+x+page].val;
+                    LOGI("(%s) pressed! (%d,%d)\n", SHIFTON == -1 ? MVk[(y*NPLGN)+x].norml : MVk[(y*NPLGN)+x].shift,x,y);
+                    vkey_pressed=MVk[(y*NPLGN)+x].val;
              }
       }
 }

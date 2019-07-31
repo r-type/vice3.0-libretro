@@ -62,7 +62,6 @@ struct nk_retro_event {
 	char key_state[512];
 	char old_key_state[512];
 	int LSHIFTON;
-	//int MOUSE_EMULATED; // 1 = joypad act as mouse in GUI
 	int MOUSE_PAS; // 4 = default
 	int MOUSE_RELATIVE; //0 = absolute
 	int JOYPAD_PRESSED;
@@ -445,7 +444,6 @@ void reset_mouse_pos(){
 
 static void retro_init_event()
 {
-	//revent.MOUSE_EMULATED=1;
 	revent.MOUSE_PAS=28;
 	revent.MOUSE_RELATIVE=1;
 	revent.JOYPAD_PRESSED=0;
@@ -540,7 +538,6 @@ static void mousebut(int but,int down,int x,int y){
  	else if(but==2)nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
  	else if(but==3)nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
 	else if(but==4)nk_input_scroll(ctx,(float)down);
-	//printf("but:%d %s (%d,%d)\n",but,down==1?"pressed":"released",x,y);
 }
 
 static void Process_key()
@@ -560,30 +557,6 @@ static void Process_key()
 					printf("Modifier shift pressed %d \n",revent.LSHIFTON); 
 					continue;
 				}
-/*
-				if(i==RETROK_F12){
-					//play_tape();
-					continue;
-				}
-
-				if(i==RETROK_RCTRL){
-					//CTRLON=-CTRLON;
-					printf("Modifier crtl pressed %d \n",CTRLON); 
-					continue;
-				}
-				if(i==RETROK_RSHIFT){
-					//SHITFON=-SHITFON;
-					printf("Modifier shift pressed %d \n",SHIFTON); 
-					continue;
-				}
-
-				if(i==RETROK_LALT){
-					//KBMOD=-KBMOD;
-					printf("Modifier alt pressed %d \n",KBMOD); 
-					continue;
-				}
-//printf("press: %d \n",i);
-*/
 				retro_key(i,1);
 	
         	}	
@@ -594,30 +567,6 @@ static void Process_key()
 					printf("Modifier shift released %d \n",revent.LSHIFTON); 
 					continue;
 				}
-/*
-				if(i==RETROK_F12){
-      				//kbd_buf_feed("|tape\nrun\"\n^");
-					continue;
-				}
-
-				if(i==RETROK_RCTRL){
-					CTRLON=-CTRLON;
-					printf("Modifier crtl released %d \n",CTRLON); 
-					continue;
-				}
-				if(i==RETROK_RSHIFT){
-					SHIFTON=-SHIFTON;
-					printf("Modifier shift released %d \n",SHIFTON); 
-					continue;
-				}
-
-				if(i==RETROK_LALT){
-					KBMOD=-KBMOD;
-					printf("Modifier alt released %d \n",KBMOD); 
-					continue;
-				}
-//printf("release: %d \n",i);
-*/
 				retro_key(i,0);
 	
         	}	
@@ -642,16 +591,6 @@ nk_retro_handle_event(int *evt,int poll)
    int16_t mouse_x=0,mouse_y=0;
 
    Process_key();
-
-   /* pointless
-   int i=2;//TOGGLE: real mouse/ joypad emulate mouse 
-   if ( input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && mbt[i]==0 )
-      mbt[i]=1;
-   else if ( mbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) ){
-      mbt[i]=0;
-      revent.MOUSE_EMULATED=-revent.MOUSE_EMULATED;
-   }
-   */
 
    revent.mouse_wu = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_WHEELUP);
    revent.mouse_wd = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_WHEELDOWN);

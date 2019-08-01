@@ -217,6 +217,7 @@ int pre_main(const char *argv)
 {
    int i=0;
    bool Only1Arg;
+   bool Skip_Option=0;
 
    if (strlen(argv) > strlen("cmd"))
    {
@@ -284,13 +285,33 @@ int pre_main(const char *argv)
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d81")], ".d81"))
          RETRODRVTYPE=1581;
 
+     if (strlen(RPATH) >= strlen("j1"))
+       if (strstr(strlwr(RPATH), "j1") != NULL)
+         cur_port=1;
+
+     if (strlen(RPATH) >= strlen("j2"))
+       if (strstr(strlwr(RPATH), "j2") != NULL)
+         cur_port=2;
+
 
      Add_Option(RPATH/*ARGUV[0]*/);
    }
    else
    { // Pass all cmdline args
-      for(i = 0; i < ARGUC; i++)
-         Add_Option(ARGUV[i]);
+      for(i = 0; i < ARGUC; i++) {
+         Skip_Option=0;
+         if(strstr(ARGUV[i], "-j1") != NULL) {
+            Skip_Option=1;
+            cur_port=1;
+         }
+         if(strstr(ARGUV[i], "-j2") != NULL) {
+            Skip_Option=1;
+            cur_port=2;
+         }
+         
+         if(!Skip_Option)
+            Add_Option(ARGUV[i]);
+      }
    }
 
    for (i = 0; i < PARAMCOUNT; i++)

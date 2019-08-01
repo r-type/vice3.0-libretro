@@ -289,11 +289,11 @@ int pre_main(const char *argv)
          RETRODRVTYPE=1581;
 
      if (strlen(RPATH) >= strlen("j1"))
-       if (strstr(strlwr(RPATH), "_j1.") != NULL || strstr(strlwr(RPATH), "(j1)."))
+       if (strstr(strlwr(RPATH), "_j1.") || strstr(strlwr(RPATH), "(j1)."))
          cur_port=1;
 
      if (strlen(RPATH) >= strlen("j2"))
-       if (strstr(strlwr(RPATH), "_j2.") != NULL || strstr(strlwr(RPATH), "(j2)."))
+       if (strstr(strlwr(RPATH), "_j2.") || strstr(strlwr(RPATH), "(j2)."))
          cur_port=2;
 
 
@@ -303,11 +303,11 @@ int pre_main(const char *argv)
    { // Pass all cmdline args
       for(i = 0; i < ARGUC; i++) {
          Skip_Option=0;
-         if(strstr(ARGUV[i], "-j1") != NULL) {
+         if(strstr(ARGUV[i], "-j1")) {
             Skip_Option=1;
             cur_port=1;
          }
-         if(strstr(ARGUV[i], "-j2") != NULL) {
+         if(strstr(ARGUV[i], "-j2")) {
             Skip_Option=1;
             cur_port=2;
          }

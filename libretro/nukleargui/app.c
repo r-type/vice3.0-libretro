@@ -83,7 +83,7 @@ int app_init()
     ctx = nk_retro_init(RSDL_font,screen_surface,retrow,retroh);
 
     /* style.c */
-    /* THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK */
+    /* THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK, THEME_C64, THEME_C64C */
     set_style(ctx, THEME_C64);
 
     memset(core_key_state,0,512);

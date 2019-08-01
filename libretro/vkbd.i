@@ -75,12 +75,12 @@ Mvk MVk[NPLGN*NLIGN*2]={
 
 	// 60
 	{ "C=" ,"C="  ,RETROK_LCTRL},
+	{ "ShL","ShL" ,-10},
 	{ "LSh","LSh" ,RETROK_LSHIFT},
 	{ "Spc","Spc" ,RETROK_SPACE},
-	{ "RSh","RSh" ,RETROK_RSHIFT},
-	{ "ShL","ShL" ,-10},
 	{ "Joy","Joy" ,-4},
 	{ "StB","StB" ,-5},
+	{ "RSh","RSh" ,RETROK_RSHIFT},
 	{ "CrL","CrL" ,RETROK_LEFT},
 	{ "CrD","CrD" ,RETROK_DOWN}, 
 	{ "CrR","CrR" ,RETROK_RIGHT},

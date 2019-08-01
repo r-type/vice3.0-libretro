@@ -1,7 +1,16 @@
-# This fork
-Done:
-- Vice 3.3
-- x64sc
+# Vice 3.3 LIBRETRO
+
+Port of VICE 3.3 for libretro with nuklear GUI virtual keyboard
+
+Supported platforms : Linux Win64 Android emscripten Switch Vita
+
+Source base: 
+https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
+
+## Recent improvements
+
+- Vice 3.3 update
+- x64sc / xpet
 - Virtual keyboard revamped
 - Other GUI removed
 - Autostart PRG mode to inject
@@ -14,23 +23,11 @@ Done:
   - Reset type (autostart, soft, hard)
   - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset)
   - Analog sticks mappable
+  - Virtual keyboard themes
 
+## To Do List
 
-Todo:
-- savestates
-
-
-
-
-# Vice 3.3 LIBRETRO WIP
-
-Very WIP port of VICE 3.3 for libretro with nuklear GUI virtual keyboard
-
-Supported platforms : Linux Win64 Android emscripten
-
-Source base: 
-https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
-
+- Savestates
 
 ## M3U Support and Disk control
 When you have a multi disk game, you can use a m3u file to specify each disk of the game and change them from the RetroArch Disk control interface.

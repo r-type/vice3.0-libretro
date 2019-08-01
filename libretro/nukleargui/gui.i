@@ -19,6 +19,7 @@ int GUISTATE = GUI_NONE;
 extern int SHIFTON;
 extern int vkey_pressed;
 extern int RETROBORDERS;
+extern int RETROTHEME;
 extern int retro_ui_finalized;
 
 extern void emu_reset(void);
@@ -72,6 +73,12 @@ gui(struct nk_context *ctx)
     {
         case GUI_VKBD:
             if (nk_begin(ctx,"Vice Keyboard", GUIRECT, window_flags)) {
+
+                if(RETROTHEME==1)
+                  set_style(ctx, THEME_C64C);
+                else
+                  set_style(ctx, THEME_C64);
+                
                 #include "vkboard.i"
                 /* ensure vkbd is centered regardless of border setting */
                 if (border_disabled) {

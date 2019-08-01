@@ -9,6 +9,8 @@
 #include "snapshot.h"
 #include "autostart.h"
 
+
+
 //CORE VAR
 #ifdef _WIN32
 char slash = '\\';
@@ -89,6 +91,7 @@ extern int RETROUSERPORTJOY;
 extern int RETROEXTPAL;
 extern int RETROAUTOSTARTWARP;
 extern int RETROBORDERS;
+extern int RETROTHEME;
 extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
@@ -545,6 +548,10 @@ void retro_set_environment(retro_environment_t cb)
          "External palette; none|pepto-pal|pepto-palold|pepto-ntsc-sony|pepto-ntsc|colodore|vice|c64hq|c64s|ccs64|frodo|godot|pc64|rgb|deekay|ptoing|community-colors",
       },
 #endif
+      {
+         "vice_theme",
+         "Virtual keyboard theme; C64|C64C",
+      },
       {
          "vice_reset",
          "Reset type; autostart|soft|hard",
@@ -1085,6 +1092,17 @@ static void update_variables(void)
          RETRORESET=1;
       if (strcmp(var.value, "hard") == 0)
          RETRORESET=2;
+   }
+
+   var.key = "vice_theme";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "C64") == 0)
+         RETROTHEME=0;
+      else if (strcmp(var.value, "C64C") == 0)
+         RETROTHEME=1;
    }
 
    var.key = "vice_mapper_select";

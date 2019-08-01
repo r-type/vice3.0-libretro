@@ -270,7 +270,11 @@ int pre_main(const char *argv)
 
      if (strlen(RPATH) >= strlen(".prg"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".prg")], ".prg"))
-         RETROTDE=0;
+         RETRODSE=0;
+
+     if (strlen(RPATH) >= strlen(".crt"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".crt")], ".crt"))
+         RETRODSE=0;
 
      if (strlen(RPATH) >= strlen(".d71"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d71")], ".d71"))

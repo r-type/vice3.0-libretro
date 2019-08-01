@@ -2,7 +2,7 @@
 
 Port of VICE 3.3 for libretro with nuklear GUI virtual keyboard
 
-Supported platforms : Linux Win64 Android emscripten Switch Vita
+Supported platforms : Linux Win64 Android emscripten Switch Vita Apple
 
 Source base: 
 https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz

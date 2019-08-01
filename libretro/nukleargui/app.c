@@ -21,6 +21,7 @@ extern char core_old_key_state[512];
 extern char RPATH[512];
 extern int SHOWKEY;
 extern int want_quit;
+extern int RETROTHEME;
 
 char LCONTENT[512];
 int LOADCONTENT=-1;
@@ -83,8 +84,11 @@ int app_init()
     ctx = nk_retro_init(RSDL_font,screen_surface,retrow,retroh);
 
     /* style.c */
-    /* THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK */
-    set_style(ctx, THEME_C64);
+    /* THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK, THEME_C64, THEME_C64C */
+    if(RETROTHEME==1) 
+      set_style(ctx, THEME_C64C);
+    else 
+      set_style(ctx, THEME_C64);
 
     memset(core_key_state,0,512);
     memset(core_old_key_state ,0, sizeof(core_old_key_state));

@@ -64,6 +64,7 @@ int RETROUSERPORTJOY=-1;
 int RETROEXTPAL=-1;
 int RETROAUTOSTARTWARP=0;
 int RETROBORDERS=0;
+int RETROTHEME=0;
 char RETROEXTPALNAME[512]="pepto-pal";
 int retro_ui_finalized = 0;
 

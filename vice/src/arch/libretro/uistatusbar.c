@@ -90,17 +90,15 @@ static void display_tape(void)
     }
 }
 
-
 static void display_joyport(void)
 {
     int len;
     char tmpstr[25];
     
-    sprintf(tmpstr, "j%d:%2d ", 1, joystick_value[1]);
-    sprintf(tmpstr + strlen(tmpstr), "j%d:%2d ", 2, joystick_value[2]);
-    sprintf(tmpstr + strlen(tmpstr), "j%d:%2d ", 3, joystick_value[3]);
-    sprintf(tmpstr + strlen(tmpstr), "j%d:%2d", 4, joystick_value[4]);
-    //Retro_Draw_string(&fake, x+200, y, tmpstr,16,1,1, color_f, color_b);
+    sprintf(tmpstr, "J%d:%2d ", 1, joystick_value[1]);
+    sprintf(tmpstr + strlen(tmpstr), "J%d:%2d ", 2, joystick_value[2]);
+    sprintf(tmpstr + strlen(tmpstr), "J%d:%2d ", 3, joystick_value[3]);
+    sprintf(tmpstr + strlen(tmpstr), "J%d:%2d", 4, joystick_value[4]);
 
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
@@ -109,7 +107,6 @@ static void display_joyport(void)
         uistatusbar_state |= UISTATUSBAR_REPAINT;
     }
 }
-
 
 
 static int per = 0;
@@ -419,13 +416,30 @@ unsigned int color_f, color_b;
     fake.clip_rect.x=0;
     fake.clip_rect.y=0;
     
-    int x, y;
-    x=32;
-    y=236;
 
-    //sprintf(tmpstr,"joy%d:%2d ",1,joystick_value[1]);
-    //sprintf(tmpstr + strlen(tmpstr),"joy%d:%2d",2,joystick_value[2]);
-    //Retro_Draw_string(&fake, x+200, y, tmpstr,16,1,1, color_f, color_b);
+    /* Statusbar location with or without borders */
+    int x, y, border;
+#if defined(__VIC20__)
+    resources_get_int("VICBorderMode", &border);
+#elif defined(__PLUS4__)
+    resources_get_int("TEDBorderMode", &border);
+#else
+    resources_get_int("VICIIBorderMode", &border);
+#endif
+    
+    /* 0 : normal, 1: full, 2: debug, 3: none */
+    switch(border) {
+        default:
+        case 0:
+            x=32;
+            y=236;
+            break;
+        case 3: 
+            x=0;
+            y=192;
+            break;
+    }
+
     display_joyport();
 
     for (i = 0; i < MAX_STATUSBAR_LEN; ++i) {

@@ -9,6 +9,8 @@
 #include "snapshot.h"
 #include "autostart.h"
 
+
+
 //CORE VAR
 #ifdef _WIN32
 char slash = '\\';
@@ -89,6 +91,7 @@ extern int RETROUSERPORTJOY;
 extern int RETROEXTPAL;
 extern int RETROAUTOSTARTWARP;
 extern int RETROBORDERS;
+extern int RETROTHEME;
 extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
@@ -217,6 +220,7 @@ int pre_main(const char *argv)
 {
    int i=0;
    bool Only1Arg;
+   bool Skip_Option=0;
 
    if (strlen(argv) > strlen("cmd"))
    {
@@ -270,7 +274,11 @@ int pre_main(const char *argv)
 
      if (strlen(RPATH) >= strlen(".prg"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".prg")], ".prg"))
-         RETROTDE=0;
+         RETRODSE=0;
+
+     if (strlen(RPATH) >= strlen(".crt"))
+       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".crt")], ".crt"))
+         RETRODSE=0;
 
      if (strlen(RPATH) >= strlen(".d71"))
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d71")], ".d71"))
@@ -280,13 +288,33 @@ int pre_main(const char *argv)
        if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d81")], ".d81"))
          RETRODRVTYPE=1581;
 
+     if (strlen(RPATH) >= strlen("j1"))
+       if (strstr(strlwr(RPATH), "_j1.") || strstr(strlwr(RPATH), "(j1)."))
+         cur_port=1;
+
+     if (strlen(RPATH) >= strlen("j2"))
+       if (strstr(strlwr(RPATH), "_j2.") || strstr(strlwr(RPATH), "(j2)."))
+         cur_port=2;
+
 
      Add_Option(RPATH/*ARGUV[0]*/);
    }
    else
    { // Pass all cmdline args
-      for(i = 0; i < ARGUC; i++)
-         Add_Option(ARGUV[i]);
+      for(i = 0; i < ARGUC; i++) {
+         Skip_Option=0;
+         if(strstr(ARGUV[i], "-j1")) {
+            Skip_Option=1;
+            cur_port=1;
+         }
+         if(strstr(ARGUV[i], "-j2")) {
+            Skip_Option=1;
+            cur_port=2;
+         }
+         
+         if(!Skip_Option)
+            Add_Option(ARGUV[i]);
+      }
    }
 
    for (i = 0; i < PARAMCOUNT; i++)
@@ -520,6 +548,10 @@ void retro_set_environment(retro_environment_t cb)
          "External palette; none|pepto-pal|pepto-palold|pepto-ntsc-sony|pepto-ntsc|colodore|vice|c64hq|c64s|ccs64|frodo|godot|pc64|rgb|deekay|ptoing|community-colors",
       },
 #endif
+      {
+         "vice_theme",
+         "Virtual keyboard theme; C64|C64C",
+      },
       {
          "vice_reset",
          "Reset type; autostart|soft|hard",
@@ -1060,6 +1092,17 @@ static void update_variables(void)
          RETRORESET=1;
       if (strcmp(var.value, "hard") == 0)
          RETRORESET=2;
+   }
+
+   var.key = "vice_theme";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "C64") == 0)
+         RETROTHEME=0;
+      else if (strcmp(var.value, "C64C") == 0)
+         RETROTHEME=1;
    }
 
    var.key = "vice_mapper_select";

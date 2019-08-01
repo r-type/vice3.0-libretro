@@ -125,7 +125,7 @@ void app_vkb_handle(void)
 }
 
 // Core input Key(not GUI) 
-void Core_Processkey(void)
+void Core_Processkey(int disable_physical_cursor_keys)
 {
    int i;
 
@@ -139,18 +139,17 @@ void Core_Processkey(void)
          if(core_key_state[i] && core_key_state[i]!=core_old_key_state[i])
          {	
             if(i==RETROK_LALT)
-            {
                continue;
-            }
+            if (disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
+               continue;
             Keymap_KeyDown(i);
-
          }
          else if (!core_key_state[i] && core_key_state[i] != core_old_key_state[i])
          {
             if(i==RETROK_LALT)
-            {
                continue;
-            }
+            if (disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
+               continue;
             Keymap_KeyUp(i);
 
          }
@@ -160,7 +159,7 @@ void Core_Processkey(void)
 }
 
 // Core input (not GUI) 
-int Core_PollEvent(void)
+int Core_PollEvent(int disable_physical_cursor_keys)
 {
     //   RETRO        B    Y    SLT  STA  UP   DWN  LEFT RGT  A    X    L    R    L2   R2   L3   R3  LR  LL  LD  LU  RR  RL  RD  RU
     //   INDEX        0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15  16  17  18  19  20  21  22  23
@@ -235,7 +234,7 @@ int Core_PollEvent(void)
 
     /* The check for kbt[i] here prevents the hotkey from generating C64 key events */
     if(SHOWKEY==-1 && kbt[0] == 0 && kbt[1] == 0 && kbt[2] == 0 && kbt[3] == 0 && kbt[4] == 0)
-        Core_Processkey();
+        Core_Processkey(disable_physical_cursor_keys);
 
     if (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD)
     {
@@ -359,18 +358,18 @@ int Core_PollEvent(void)
 
 void retro_poll_event()
 {
-    /* if port 1 is set to Joystick or Joypad, then prevent up/down/left/right/fire from generating
-     * keyboard key presses, this prevent cursor up becoming run/stop etc.
-    */
-    if (!(
-        (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && 
+    /* if user plays with cursor keys, then prevent up/down/left/right from generating */
+    /* keyboard key presses, this prevent cursor up from becoming a run/stop input */
+    if (
+        (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) &&
         (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
-        input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
-        input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
-        input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT) ||
-        input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A))
-    ))
-        Core_PollEvent();
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
+    )
+        Core_PollEvent(1); /* Process all inputs but disable cursor keys */
+    else
+        Core_PollEvent(0); /* Process all inputs */
 
     if(SHOWKEY==-1) /* retro joypad take control over keyboard joy */
     {

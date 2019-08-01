@@ -29,6 +29,13 @@ https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
 
 - Savestates
 
+## Joyport control via Filename
+
+C64 games sometimes use joystick port 1 and sometimes joystick port 2 for player 1. There are several ways to switch ports in this core:
+- Use the core option for it: `Quickmenu->Options->Controller0` 
+- Bring up the virtual keyboard and press the key labeled `Joy`
+- Re-name your games, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2. Note this only works with extracted files (`.PRG`, `.D64` etc.) not with zip files.
+
 ## M3U Support and Disk control
 When you have a multi disk game, you can use a m3u file to specify each disk of the game and change them from the RetroArch Disk control interface.
 

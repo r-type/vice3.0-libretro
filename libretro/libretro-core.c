@@ -1,11 +1,11 @@
 #include "libretro.h"
 #include "libretro-core.h"
-#include "mem.h"
 
 #include "archdep.h"
-
-#include "machine.h"
+#include "c64.h"
 #include "c64mem.h"
+#include "mem.h"
+#include "machine.h"
 #include "snapshot.h"
 #include "autostart.h"
 
@@ -50,7 +50,7 @@ int cpuloop=1;
 //SOUND
 short signed int SNDBUF[1024*2];
 //FIXME: handle 50/60
-int snd_sampler = 44100 / 50;
+//int snd_sampler = 44100 / 50;
 
 //PATH
 char RPATH[512];
@@ -105,7 +105,7 @@ extern int g_mem_ram_size;
 #include "resources.h"
 #include "sid.h"
 #include "userport_joystick.h"
-#if  defined(__VIC20__)
+#if defined(__VIC20__)
 #include "c64model.h"
 #include "vic20model.h"
 #elif defined(__PLUS4__)
@@ -789,9 +789,9 @@ static void update_variables(void)
       else if (strcmp(var.value, "VIC20MODEL_VIC21") == 0)modl=VIC20MODEL_VIC21;
       else if (strcmp(var.value, "VIC20MODEL_UNKNOWN") == 0)modl=VIC20MODEL_UNKNOWN;
 
+      RETROC64MODL=modl;
       if(retro_ui_finalized)
         vic20model_set(modl);
-      else RETROC64MODL=modl;
    }
 #elif  defined(__PLUS4__)
    var.key = "vice_plus4_model";
@@ -809,9 +809,9 @@ static void update_variables(void)
       else if (strcmp(var.value, "PLUS4MODEL_232_NTSC") == 0)modl=PLUS4MODEL_232_NTSC;
       else if (strcmp(var.value, "PLUS4MODEL_UNKNOWN") == 0)modl=PLUS4MODEL_UNKNOWN;
 
+      RETROC64MODL=modl;
       if(retro_ui_finalized)
         plus4model_set(modl);
-      else RETROC64MODL=modl;
    }
 #elif  defined(__X128__)
    var.key = "vice_c128_model";
@@ -826,9 +826,10 @@ static void update_variables(void)
       else if (strcmp(var.value, "C128MODEL_C128_NTSC") == 0)modl=C128MODEL_C128_NTSC;
       else if (strcmp(var.value, "C128MODEL_C128DCR_NTSC") == 0)modl=C128MODEL_C128DCR_NTSC;
       else if (strcmp(var.value, "C128MODEL_UNKNOWN") == 0)modl=C128MODEL_UNKNOWN;
+
+      RETROC64MODL=modl;
       if(retro_ui_finalized)
         c128model_set(modl);
-      else RETROC64MODL=modl;
    }
 #elif  defined(__PET__)
    var.key = "vice_pet_model";
@@ -851,9 +852,10 @@ static void update_variables(void)
       else if (strcmp(var.value, "PETMODEL_8296") == 0)modl=PETMODEL_8296;
       else if (strcmp(var.value, "PETMODEL_SUPERPET") == 0)modl=PETMODEL_SUPERPET;
       else if (strcmp(var.value, "PETMODEL_UNKNOWN") == 0)modl=PETMODEL_UNKNOWN;
+      
+      RETROC64MODL=modl;
       if(retro_ui_finalized)
         petmodel_set(modl);
-      else RETROC64MODL=modl;
    }
 #elif  defined(__CBM2__)
    var.key = "vice_cbm2_model";
@@ -875,9 +877,10 @@ static void update_variables(void)
       else if (strcmp(var.value, "CBM2MODEL_720_NTSC") == 0)modl=CBM2MODEL_720_NTSC;
       else if (strcmp(var.value, "CBM2MODEL_720PLUS_NTSC") == 0)modl=CBM2MODEL_720PLUS_NTSC;
       else if (strcmp(var.value, "CBM2MODEL_UNKNOWN") == 0)modl=CBM2MODEL_UNKNOWN;
+
+      RETROC64MODL=modl;
       if(retro_ui_finalized)
         cbm2model_set(modl);
-      else RETROC64MODL=modl;
    }
 #else
    var.key = "vice_c64_model";
@@ -903,9 +906,9 @@ static void update_variables(void)
       else if (strcmp(var.value, "C64MODEL_ULTIMAX") == 0)modl=C64MODEL_ULTIMAX;
       else if (strcmp(var.value, "C64MODEL_UNKNOWN") == 0)modl=C64MODEL_UNKNOWN;
 
+      RETROC64MODL=modl;
       if(retro_ui_finalized)
         c64model_set(modl);
-      else RETROC64MODL=modl;
    }
 #endif
 
@@ -1649,12 +1652,26 @@ void update_geometry()
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-   /* FIXME handle PAL/NTSC */
-   struct retro_game_geometry geom = { 320, 240, retrow, retroh, 4.0 / 3.0 };
-   struct retro_system_timing timing = { 50.0, 44100.0 };
+   info->geometry.max_width = retrow;
+   info->geometry.max_height = retroh;
 
-   info->geometry = geom;
-   info->timing   = timing;
+   info->timing.sample_rate = 44100.0;
+
+   switch(retro_get_region()) {
+      case RETRO_REGION_PAL:
+         info->geometry.base_width = 384;
+         info->geometry.base_height = 272;
+         info->geometry.aspect_ratio = 4.0 / 3.0;
+         info->timing.fps = C64_PAL_RFSH_PER_SEC;
+         break;
+      
+      case RETRO_REGION_NTSC:
+         info->geometry.base_width = 384;
+         info->geometry.base_height = 247;
+         info->geometry.aspect_ratio = 4.0 / 3.0;
+         info->timing.fps = C64_NTSC_RFSH_PER_SEC;
+         break;
+   }
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb)
@@ -1802,7 +1819,39 @@ void retro_unload_game(void){
 
 unsigned retro_get_region(void)
 {
-   return RETRO_REGION_PAL;
+   switch(RETROC64MODL) {
+#if defined(__VIC20__)
+      case VIC20MODEL_VIC20_NTSC:
+#elif defined(__CBM2__)
+      case CBM2MODEL_510_NTSC:
+      case CBM2MODEL_610_NTSC:
+      case CBM2MODEL_620_NTSC:
+      case CBM2MODEL_620PLUS_NTSC:
+      case CBM2MODEL_710_NTSC:
+      case CBM2MODEL_720_NTSC:
+      case CBM2MODEL_720PLUS_NTSC:
+#elif defined(__PLUS4__)
+      case PLUS4MODEL_C16_NTSC:
+      case PLUS4MODEL_PLUS4_NTSC:
+      case PLUS4MODEL_V364_NTSC:
+      case PLUS4MODEL_232_NTSC:
+#elif defined(__X128__)
+      case C128MODEL_C128_NTSC:
+      case C128MODEL_C128DCR_NTSC:
+#else
+      case C64MODEL_C64_NTSC:
+      case C64MODEL_C64C_NTSC:
+      case C64MODEL_C64_OLD_NTSC:
+      case C64MODEL_C64SX_NTSC:
+      case C64MODEL_PET64_NTSC:
+#endif
+         return RETRO_REGION_NTSC;
+         break;
+      
+      default:
+         return RETRO_REGION_PAL;
+         break;
+   }
 }
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)

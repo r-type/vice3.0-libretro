@@ -39,6 +39,7 @@
 #include "uistatusbar.h"
 #include "videoarch.h"
 
+#include "libretro.h"
 #include "libretro-core.h"
 
 #include "joystick.h"
@@ -433,6 +434,9 @@ unsigned int color_f, color_b;
         case 0:
             x=32;
             y=236;
+            if(retro_get_region() == RETRO_REGION_NTSC) {
+                y=215;
+            }
             break;
         case 3: 
             x=0;

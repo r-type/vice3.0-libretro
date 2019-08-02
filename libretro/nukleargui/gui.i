@@ -6,7 +6,8 @@
 #include "resources.h"
 
 #define NUMB(a) (sizeof(a) / sizeof(*a))
-#define GUIRECT nk_rect(32, 35, 319, 199) 
+
+#define GUIRECT nk_rect(32, 35, 319, 199)
 
 typedef enum
 {
@@ -67,6 +68,7 @@ gui(struct nk_context *ctx)
 #endif
         else
             border_disabled = RETROBORDERS;
+
     }
 
     switch(GUISTATE)
@@ -79,7 +81,6 @@ gui(struct nk_context *ctx)
                 else
                   set_style(ctx, THEME_C64);
                 
-                #include "vkboard.i"
                 /* ensure vkbd is centered regardless of border setting */
                 if (border_disabled) {
                     offset.x = 0;
@@ -87,8 +88,15 @@ gui(struct nk_context *ctx)
                 } else {
                     offset.x = GUIRECT.x;
                     offset.y = GUIRECT.y;
+                                
+                    switch(retro_get_region()) {
+                        case RETRO_REGION_NTSC:
+                            offset.y = 23;
+                            break;
+                    }
                 }
                 nk_window_set_position(ctx, offset);
+                #include "vkboard.i"
                 nk_end(ctx);
             }
             break;

@@ -1651,7 +1651,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    /* FIXME handle PAL/NTSC */
    struct retro_game_geometry geom = { 320, 240, retrow, retroh, 4.0 / 3.0 };
-   struct retro_system_timing timing = { 50.0, 44100.0 };
+   struct retro_system_timing timing = { 50.123432124542124, 44100.0 };
 
    info->geometry = geom;
    info->timing   = timing;

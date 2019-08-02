@@ -86,6 +86,7 @@ extern int RETROSTATUS;
 extern int RETRORESET;
 extern int RETRODRVTYPE;
 extern int RETROSIDMODL;
+extern int RETRORESIDSAMPLING;
 extern int RETROC64MODL;
 extern int RETROUSERPORTJOY;
 extern int RETROEXTPAL;
@@ -487,7 +488,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_drive8_type",
-         "Drive8 Type; 1541|1542|1581|1540|1551|1570|1571|1573|2000|4000|2031|2040|3040|4040|1001|8050|8250",
+         "Drive8 type; 1541|1542|1581|1540|1551|1570|1571|1573|2000|4000|2031|2040|3040|4040|1001|8050|8250",
       },
       {
          "vice_autostart_warp",
@@ -495,32 +496,36 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_sid_model",
-         "Sid Model; 6581F|8580F|6581R|8580R|8580RD",
+         "SID model; 6581F|8580F|6581R|8580R|8580RD",
+      },
+      {
+         "vice_resid_sampling",
+         "ReSID sampling; Resampling|Fast resampling|Interpolation|Fast",
       },
 #if  defined(__VIC20__)
       {
          "vice_vic20_model",
-         "VIC20 Model; VIC20MODEL_VIC20_PAL|VIC20MODEL_VIC20_NTSC|VIC20MODEL_VIC21|VIC20MODEL_UNKNOWN",
+         "VIC20 model; VIC20MODEL_VIC20_PAL|VIC20MODEL_VIC20_NTSC|VIC20MODEL_VIC21|VIC20MODEL_UNKNOWN",
       },
 #elif  defined(__PLUS4__)
       {
          "vice_plus4_model",
-         "PLUS4 Model; PLUS4MODEL_C16_PAL|PLUS4MODEL_C16_NTSC|PLUS4MODEL_PLUS4_PAL|PLUS4MODEL_PLUS4_NTSC|PLUS4MODEL_V364_NTSC|PLUS4MODEL_232_NTSC|PLUS4MODEL_UNKNOWN",
+         "PLUS4 model; PLUS4MODEL_C16_PAL|PLUS4MODEL_C16_NTSC|PLUS4MODEL_PLUS4_PAL|PLUS4MODEL_PLUS4_NTSC|PLUS4MODEL_V364_NTSC|PLUS4MODEL_232_NTSC|PLUS4MODEL_UNKNOWN",
       },
 #elif  defined(__X128__)
       {
          "vice_c128_model",
-         "C128 Model; C128MODEL_C128_PAL|C128MODEL_C128DCR_PAL|C128MODEL_C128_NTSC|C128MODEL_C128DCR_NTSC|C128MODEL_UNKNOWN",
+         "C128 model; C128MODEL_C128_PAL|C128MODEL_C128DCR_PAL|C128MODEL_C128_NTSC|C128MODEL_C128DCR_NTSC|C128MODEL_UNKNOWN",
       },
 #elif  defined(__PET__)
       {
          "vice_pet_model",
-         "PET Model; PETMODEL_2001|PETMODEL_3008|PETMODEL_3016|PETMODEL_3032|PETMODEL_3032B|PETMODEL_4016|PETMODEL_4032|PETMODEL_4032B|PETMODEL_8032|PETMODEL_8096|PETMODEL_8296|PETMODEL_SUPERPET|PETMODEL_UNKNOWN",
+         "PET model; PETMODEL_2001|PETMODEL_3008|PETMODEL_3016|PETMODEL_3032|PETMODEL_3032B|PETMODEL_4016|PETMODEL_4032|PETMODEL_4032B|PETMODEL_8032|PETMODEL_8096|PETMODEL_8296|PETMODEL_SUPERPET|PETMODEL_UNKNOWN",
       },
 #else
       {
          "vice_c64_model",
-         "C64 Model; C64MODEL_C64_PAL|C64MODEL_C64C_PAL|C64MODEL_C64_OLD_PAL|C64MODEL_C64_NTSC|C64MODEL_C64C_NTSC|C64MODEL_C64_OLD_NTSC|C64MODEL_C64_PAL_N|C64MODEL_C64SX_PAL|C64MODEL_C64SX_NTSC|C64MODEL_C64_JAP|C64MODEL_C64_GS|C64MODEL_PET64_PAL|C64MODEL_PET64_NTSC|C64MODEL_ULTIMAX|C64MODEL_UNKNOWN",
+         "C64 model; C64MODEL_C64_PAL|C64MODEL_C64C_PAL|C64MODEL_C64_OLD_PAL|C64MODEL_C64_NTSC|C64MODEL_C64C_NTSC|C64MODEL_C64_OLD_NTSC|C64MODEL_C64_PAL_N|C64MODEL_C64SX_PAL|C64MODEL_C64SX_NTSC|C64MODEL_C64_JAP|C64MODEL_C64_GS|C64MODEL_PET64_PAL|C64MODEL_PET64_NTSC|C64MODEL_ULTIMAX|C64MODEL_UNKNOWN",
       },
 #endif
       {
@@ -774,6 +779,23 @@ static void update_variables(void)
       if(retro_ui_finalized)
         sid_set_engine_model(eng, modl);
       else RETROSIDMODL=sidmdl;
+   }
+
+   var.key = "vice_resid_sampling";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int resid=0;
+      
+      if (strcmp(var.value, "Fast") == 0){ resid=0; }
+      else if (strcmp(var.value, "Interpolation") == 0){ resid=1; }
+      else if (strcmp(var.value, "Resampling") == 0){ resid=2; }
+      else if (strcmp(var.value, "Fast resampling") == 0){ resid=3; }
+
+      if(retro_ui_finalized)
+        resources_set_int("SidResidSampling", resid);
+      else RETRORESIDSAMPLING=resid;
    }
 
 #if  defined(__VIC20__)

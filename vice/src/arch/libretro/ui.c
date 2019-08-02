@@ -30,6 +30,7 @@
 #include "uistatusbar.h"
 #include "resources.h"
 #include "sid.h"
+#include "sid-resources.h"
 #include "userport_joystick.h"
 #if defined(__VIC20__)
 #include "c64model.h"
@@ -59,6 +60,7 @@ int RETROSTATUS=0;
 int RETRORESET=0;
 int RETRODRVTYPE=1542;
 int RETROSIDMODL=0;
+int RETRORESIDSAMPLING=0;
 int RETROC64MODL=0;
 int RETROUSERPORTJOY=-1;
 int RETROEXTPAL=-1;
@@ -215,6 +217,7 @@ int ui_init_finalize(void)
    resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 
    sid_set_engine_model((RETROSIDMODL >> 8),  (RETROSIDMODL & 0xff));
+   resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
 
 #if  defined(__VIC20__) 
    vic20model_set(RETROC64MODL);

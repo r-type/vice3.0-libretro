@@ -162,7 +162,7 @@ else ifeq ($(platform), androidstc)
    TARGET := $(TARGET_NAME)_libretro_android.so
    LDFLAGS += -lstdc++ -llog -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--no-undefined
    CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
-   CFLAGS += -O2 -pipe -fstack-protector 
+   CFLAGS += -O0 -pipe -fstack-protector 
 
    CC = arm-linux-androideabi-gcc
    CXX = arm-linux-androideabi-g++
@@ -187,7 +187,7 @@ endif
 
    CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DALIGN_DWORD 
 
-   COMMONFLAGS += -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mthumb -DANDROID -DALIGN_INTS -DALIGN_SHORTS 
+   COMMONFLAGS += -O0 -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mthumb -DANDROID -DALIGN_INTS -DALIGN_SHORTS 
    COMMONFLAGS += -I$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm/usr/include -I$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include
    COMMONFLAGS += -I$(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/include
 

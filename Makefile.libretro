@@ -289,6 +289,14 @@ else
 COMMONFLAGS += -O3 -DNDEBUG
 endif
 
+ifeq ($(platform), android)
+COMMONFLAGS += -O0
+#endif
+
+ifeq ($(platform), androidstc)
+COMMONFLAGS += -O0
+#endif
+
 COMMONFLAGS += -DWANT_ZLIB
 
 CORE_DIR    := .

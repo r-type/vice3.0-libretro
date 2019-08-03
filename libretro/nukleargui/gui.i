@@ -35,22 +35,19 @@ gui(struct nk_context *ctx)
     static int border = nk_false;
     static int resize = nk_false;
     static int movable = nk_false;
-    static int no_scrollbar = nk_false;
+    static int scrollbar = nk_false;
     static int minimizable = nk_false;
     static int title = nk_false;
 
     /* window flags */
     static nk_flags window_flags = 0;
-    window_flags = 0;
 
     if (border) window_flags |= NK_WINDOW_BORDER;
     if (resize) window_flags |= NK_WINDOW_SCALABLE;
     if (movable) window_flags |= NK_WINDOW_MOVABLE;
-    if (no_scrollbar || GUISTATE==GUI_VKBD) window_flags |= NK_WINDOW_NO_SCROLLBAR;
+    if (!scrollbar) window_flags |= NK_WINDOW_NO_SCROLLBAR;
     if (minimizable) window_flags |= NK_WINDOW_MINIMIZABLE;
     if (title) window_flags |= NK_WINDOW_TITLE;
-
-    int tmpval;
 
     int border_disabled = 0;
     if(SHOWKEY==1)
@@ -89,11 +86,7 @@ gui(struct nk_context *ctx)
                     offset.x = GUIRECT.x;
                     offset.y = GUIRECT.y;
                                 
-                    switch(retro_get_region()) {
-                        case RETRO_REGION_NTSC:
-                            offset.y = 23;
-                            break;
-                    }
+                    if(retro_get_region() == RETRO_REGION_NTSC) offset.y -= 12;
                 }
                 nk_window_set_position(ctx, offset);
                 #include "vkboard.i"

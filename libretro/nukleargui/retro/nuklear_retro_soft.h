@@ -437,18 +437,33 @@ nk_retro_get_text_width(nk_handle handle, float height, const char *text, int le
     return len * font->width;
 }
 
+
+extern int retro_get_borders(void);
+
 void reset_mouse_pos(){
-	revent.gmx=178;
-	revent.gmy=164;
+	/* Starting point on F1 */
+	switch(retro_get_borders()) {
+	    case 0: /* Normal borders */
+	        revent.gmx = 178;
+	        revent.gmy = 164;
+        	break;
+        
+        case 3: /* No borders */
+	        revent.gmx = 138;
+	        revent.gmy = 134;
+            break;
+    }
+
+    /* NTSC offset */
+    if(retro_get_region() == RETRO_REGION_NTSC) revent.gmy -= 12;
 }
 
 static void retro_init_event()
 {
+	reset_mouse_pos();
 	revent.MOUSE_PAS=28;
 	revent.MOUSE_RELATIVE=1;
 	revent.JOYPAD_PRESSED=0;
-	revent.gmx=178;
-	revent.gmy=164;
 	revent.mouse_wu=0;
 	revent.mouse_wd=0;
 	revent.slowdown=0;

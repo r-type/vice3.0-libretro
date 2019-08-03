@@ -37,8 +37,6 @@ static int gui(struct nk_context *ctx)
     {
         case GUI_VKBD:
             if (nk_begin(ctx,"Vice Keyboard", GUIRECT, NK_WINDOW_NO_SCROLLBAR)) {
-
-#ifndef __ANDROID__
                 if(RETROTHEME==1)
                   set_style(ctx, THEME_C64C);
                 else
@@ -54,7 +52,6 @@ static int gui(struct nk_context *ctx)
                     if(retro_get_region() == RETRO_REGION_NTSC) offset.y -= 12;
                 }
                 nk_window_set_position(ctx, offset);
-#endif
                 #include "vkboard.i"
                 nk_end(ctx);
             }

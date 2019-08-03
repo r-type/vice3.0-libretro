@@ -7,11 +7,9 @@ ctx->style.button.padding = nk_vec2(1,0);
 ctx->style.button.border = 0;
 ctx->style.button.rounding = 1.0f;
 
-#ifndef __ANDROID__
 struct nk_style_item key_color_default = ctx->style.button.normal;
 struct nk_style_item key_color_alt = ctx->style.window.header.normal;
 struct nk_style_item key_color_hotkey = ctx->style.property.normal;
-#endif
 
 nk_layout_row_dynamic(ctx, 26, NPLGN);
 nk_button_set_behavior(ctx, NK_BUTTON_REPEATER);
@@ -22,7 +20,6 @@ for(y=0;y<NLIGN;y++)
 {
       for(x=0;x<NPLGN;x++)
       {
-#ifndef __ANDROID__
              /* Reset default color */
              ctx->style.button.normal = key_color_default;
 
@@ -37,7 +34,7 @@ for(y=0;y<NLIGN;y++)
              if(strcmp(MVk[(y*NPLGN)+x].norml, "Joy") == 0
              || strcmp(MVk[(y*NPLGN)+x].norml, "StB") == 0)
                     ctx->style.button.normal = key_color_hotkey;
-#endif             
+
              if (nk_button_text(ctx, SHIFTON == -1 ? MVk[(y*NPLGN)+x].norml : MVk[(y*NPLGN)+x].shift , \
              SHIFTON == -1 ? strlen(MVk[(y*NPLGN)+x].norml) : strlen(MVk[(y*NPLGN)+x].shift)))
              {

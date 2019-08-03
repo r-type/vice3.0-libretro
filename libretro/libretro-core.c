@@ -943,6 +943,7 @@ static void update_variables(void)
       if (strcmp(var.value, "enabled") == 0)border=0;
       else if (strcmp(var.value, "disabled") == 0)border=3;
 
+      RETROBORDERS=border;
       if(retro_ui_finalized)
 #if defined(__VIC20__)
         resources_set_int("VICBorderMode", border);
@@ -951,7 +952,6 @@ static void update_variables(void)
 #else 
         resources_set_int("VICIIBorderMode", border);
 #endif
-      else RETROBORDERS=border;
    }
 
 #if defined(__VIC20__)
@@ -1875,6 +1875,10 @@ unsigned retro_get_region(void)
          break;
    }
 }
+
+unsigned retro_get_borders(void) {
+   return RETROBORDERS;
+} 
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)
 {

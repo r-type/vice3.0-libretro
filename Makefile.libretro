@@ -291,11 +291,11 @@ endif
 
 ifeq ($(platform), android)
 COMMONFLAGS += -O0
-#endif
+endif
 
 ifeq ($(platform), androidstc)
 COMMONFLAGS += -O0
-#endif
+endif
 
 COMMONFLAGS += -DWANT_ZLIB
 

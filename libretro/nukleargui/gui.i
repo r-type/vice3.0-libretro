@@ -26,30 +26,11 @@ extern int retro_ui_finalized;
 extern void emu_reset(void);
 extern void retro_shutdown_core(void);
 
-static int
-gui(struct nk_context *ctx)
+static int gui(struct nk_context *ctx)
 {
-    struct nk_rect total_space;
-
-    /* window flags */
-    static int border = nk_false;
-    static int resize = nk_false;
-    static int movable = nk_false;
-    static int scrollbar = nk_false;
-    static int minimizable = nk_false;
-    static int title = nk_false;
-
-    /* window flags */
-    static nk_flags window_flags = 0;
-
-    if (border) window_flags |= NK_WINDOW_BORDER;
-    if (resize) window_flags |= NK_WINDOW_SCALABLE;
-    if (movable) window_flags |= NK_WINDOW_MOVABLE;
-    if (!scrollbar) window_flags |= NK_WINDOW_NO_SCROLLBAR;
-    if (minimizable) window_flags |= NK_WINDOW_MINIMIZABLE;
-    if (title) window_flags |= NK_WINDOW_TITLE;
-
     int border_disabled = 0;
+
+    GUISTATE = GUI_NONE;
     if(SHOWKEY==1)
     {
         GUISTATE = GUI_VKBD;
@@ -65,13 +46,12 @@ gui(struct nk_context *ctx)
 #endif
         else
             border_disabled = RETROBORDERS;
-
     }
 
     switch(GUISTATE)
     {
         case GUI_VKBD:
-            if (nk_begin(ctx,"Vice Keyboard", GUIRECT, window_flags)) {
+            if (nk_begin(ctx,"Vice Keyboard", GUIRECT, NK_WINDOW_NO_SCROLLBAR)) {
 
 #ifndef __ANDROID__
                 if(RETROTHEME==1)

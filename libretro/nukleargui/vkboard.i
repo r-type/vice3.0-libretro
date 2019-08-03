@@ -41,7 +41,7 @@ for(y=0;y<NLIGN;y++)
              if (nk_button_text(ctx, SHIFTON == -1 ? MVk[(y*NPLGN)+x].norml : MVk[(y*NPLGN)+x].shift , \
              SHIFTON == -1 ? strlen(MVk[(y*NPLGN)+x].norml) : strlen(MVk[(y*NPLGN)+x].shift)))
              {
-                    LOGI("(%s) pressed! (%d,%d)\n", SHIFTON == -1 ? MVk[(y*NPLGN)+x].norml : MVk[(y*NPLGN)+x].shift,x,y);
+                    //LOGI("(%s) pressed! (%d,%d)\n", SHIFTON == -1 ? MVk[(y*NPLGN)+x].norml : MVk[(y*NPLGN)+x].shift,x,y);
                     vkey_pressed=MVk[(y*NPLGN)+x].val;
              }
       }

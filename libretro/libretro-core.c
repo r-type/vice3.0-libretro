@@ -1541,9 +1541,9 @@ void retro_init(void)
 
    /* Use system directory for data files such as C64/.vpl etc. */
 #if defined(__WIN32__)
-   snprintf(retro_system_data_directory, sizeof(retro_system_directory), "%s\\vice", RETRO_DIR);
+   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s\\vice", RETRO_DIR);
 #else
-   snprintf(retro_system_data_directory, sizeof(retro_system_directory), "%s/vice", RETRO_DIR);
+   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s/vice", RETRO_DIR);
 #endif
 
    archdep_mkdir(retro_system_data_directory, 0);

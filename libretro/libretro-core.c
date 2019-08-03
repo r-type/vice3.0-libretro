@@ -1831,6 +1831,9 @@ void retro_unload_game(void){
 
 unsigned retro_get_region(void)
 {
+#if defined(__PET__)
+   return RETRO_REGION_PAL;
+#else
    switch(RETROC64MODL) {
 #if defined(__VIC20__)
       case VIC20MODEL_VIC20_NTSC:
@@ -1859,11 +1862,11 @@ unsigned retro_get_region(void)
 #endif
          return RETRO_REGION_NTSC;
          break;
-      
       default:
          return RETRO_REGION_PAL;
          break;
    }
+#endif /* __PET__ */
 }
 
 unsigned retro_get_borders(void) {

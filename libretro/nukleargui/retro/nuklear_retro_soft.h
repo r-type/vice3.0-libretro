@@ -438,7 +438,7 @@ nk_retro_get_text_width(nk_handle handle, float height, const char *text, int le
 }
 
 
-extern int retro_get_borders(void);
+extern unsigned retro_get_borders(void);
 
 void reset_mouse_pos(){
 	/* Starting point on F1 */
@@ -599,7 +599,6 @@ nk_retro_handle_event(int *evt,int poll)
 
    static int lmx=0,lmy=0;
    static int mmbL=0,mmbR=0,mmbM=0;
-   static int mbt[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
    int mouse_l,mouse_m,mouse_r;
 

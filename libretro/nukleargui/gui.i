@@ -25,28 +25,13 @@ extern int retro_ui_finalized;
 
 extern void emu_reset(void);
 extern void retro_shutdown_core(void);
+extern unsigned retro_get_borders(void);
 
 static int gui(struct nk_context *ctx)
 {
-    int border_disabled = 0;
-
     GUISTATE = GUI_NONE;
     if(SHOWKEY==1)
-    {
         GUISTATE = GUI_VKBD;
-
-        /* this code is needed because changing borders on/off causes a reset */
-        if(retro_ui_finalized)
-#if defined(__VIC20__)
-            resources_get_int("VICBorderMode", &border_disabled);
-#elif defined(__PLUS4__)
-            resources_get_int("TEDBorderMode", &border_disabled);
-#else
-            resources_get_int("VICIIBorderMode", &border_disabled);
-#endif
-        else
-            border_disabled = RETROBORDERS;
-    }
 
     switch(GUISTATE)
     {
@@ -60,13 +45,12 @@ static int gui(struct nk_context *ctx)
                   set_style(ctx, THEME_C64);
                 
                 /* ensure vkbd is centered regardless of border setting */
-                if (border_disabled) {
+                if (retro_get_borders()) {
                     offset.x = 0;
                     offset.y = 0;
                 } else {
                     offset.x = GUIRECT.x;
                     offset.y = GUIRECT.y;
-                                
                     if(retro_get_region() == RETRO_REGION_NTSC) offset.y -= 12;
                 }
                 nk_window_set_position(ctx, offset);

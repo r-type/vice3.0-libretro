@@ -146,6 +146,8 @@ static retro_environment_t environ_cb;
 #include "retro_disk_control.h"
 static dc_storage* dc;
 
+unsigned retro_get_borders(void);
+
 void retro_set_input_state(retro_input_state_t cb)
 {
    input_state_cb = cb;
@@ -1537,11 +1539,11 @@ void retro_init(void)
    else
       sprintf(RETRO_DIR, "%s", retro_system_directory);
 
-   /* Use system directory for data files such as C64/*.vpl etc. */
+   /* Use system directory for data files such as C64/.vpl etc. */
 #if defined(__WIN32__)
-   sprintf(retro_system_data_directory, "%s\\vice", RETRO_DIR);
+   snprintf(retro_system_data_directory, sizeof(retro_system_directory), "%s\\vice", RETRO_DIR);
 #else
-   sprintf(retro_system_data_directory, "%s/vice", RETRO_DIR);
+   snprintf(retro_system_data_directory, sizeof(retro_system_directory), "%s/vice", RETRO_DIR);
 #endif
 
    archdep_mkdir(retro_system_data_directory, 0);
@@ -1639,22 +1641,10 @@ void retro_get_system_info(struct retro_system_info *info)
 
 void update_geometry()
 {
-   int border_disabled = 0;
-   float no_border_aspect_ratio;
    struct retro_system_av_info system_av_info;
    system_av_info.geometry.base_width = retroW;
    system_av_info.geometry.base_height = retroH;
-   /* this code is needed because changing borders on/off causes a reset */
-   if(retro_ui_finalized)
-#if defined(__VIC20__)
-        resources_get_int("VICBorderMode", &border_disabled);
-#elif defined(__PLUS4__)
-        resources_get_int("TEDBorderMode", &border_disabled);
-#else
-        resources_get_int("VICIIBorderMode", &border_disabled);
-#endif
-      else border_disabled = RETROBORDERS;
-   if (border_disabled)
+   if (retro_get_borders())
      // When borders are disabled, each system has a different aspect ratio.
      // For example, C64 & C128 have 320 / 200 pixel resolution with a 15 / 16
      // pixel aspect ratio leading to a total aspect of 320 / 200 * 15 / 16 = 1.5

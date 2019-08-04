@@ -507,27 +507,32 @@ void retro_set_environment(retro_environment_t cb)
 #if  defined(__VIC20__)
       {
          "vice_vic20_model",
-         "VIC20 model; VIC20MODEL_VIC20_PAL|VIC20MODEL_VIC20_NTSC|VIC20MODEL_VIC21|VIC20MODEL_UNKNOWN",
+         "VIC20 model; VIC20 PAL|VIC20 NTSC|SuperVIC (+16K)",
       },
 #elif  defined(__PLUS4__)
       {
          "vice_plus4_model",
-         "PLUS4 model; PLUS4MODEL_C16_PAL|PLUS4MODEL_C16_NTSC|PLUS4MODEL_PLUS4_PAL|PLUS4MODEL_PLUS4_NTSC|PLUS4MODEL_V364_NTSC|PLUS4MODEL_232_NTSC|PLUS4MODEL_UNKNOWN",
+         "PLUS4 model; C16 PAL|C16 NTSC|PLUS4 PAL|PLUS4 NTSC|V364 NTSC|232 NTSC",
       },
 #elif  defined(__X128__)
       {
          "vice_c128_model",
-         "C128 model; C128MODEL_C128_PAL|C128MODEL_C128DCR_PAL|C128MODEL_C128_NTSC|C128MODEL_C128DCR_NTSC|C128MODEL_UNKNOWN",
+         "C128 model; C128 PAL|C128DCR PAL|C128 NTSC|C128DCR NTSC",
       },
 #elif  defined(__PET__)
       {
          "vice_pet_model",
-         "PET model; PETMODEL_2001|PETMODEL_3008|PETMODEL_3016|PETMODEL_3032|PETMODEL_3032B|PETMODEL_4016|PETMODEL_4032|PETMODEL_4032B|PETMODEL_8032|PETMODEL_8096|PETMODEL_8296|PETMODEL_SUPERPET|PETMODEL_UNKNOWN",
+         "PET model; 2001|3008|3016|3032|3032B|4016|4032|4032B|8032|8096|8296|SUPERPET",
+      },
+#elif  defined(__CBM2__)
+      {
+         "vice_cbm2_model",
+         "CBM2 model; 510 PAL|510 NTSC|610 PAL|610 NTSC|620 PAL|620 NTSC|620PLUS PAL|620PLUS NTSC|710 NTSC|720 NTSC|720PLUS NTSC",
       },
 #else
       {
          "vice_c64_model",
-         "C64 model; C64MODEL_C64_PAL|C64MODEL_C64C_PAL|C64MODEL_C64_OLD_PAL|C64MODEL_C64_NTSC|C64MODEL_C64C_NTSC|C64MODEL_C64_OLD_NTSC|C64MODEL_C64_PAL_N|C64MODEL_C64SX_PAL|C64MODEL_C64SX_NTSC|C64MODEL_C64_JAP|C64MODEL_C64_GS|C64MODEL_PET64_PAL|C64MODEL_PET64_NTSC|C64MODEL_ULTIMAX|C64MODEL_UNKNOWN",
+         "C64 model; C64 PAL|C64C PAL|C64 OLD PAL|C64 NTSC|C64C NTSC|C64 OLD NTSC|C64 PAL N|C64SX PAL|C64SX NTSC|C64 JAP|C64 GS|PET64 PAL|PET64 NTSC|ULTIMAX",
       },
 #endif
       {
@@ -557,7 +562,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_theme",
-         "Virtual keyboard theme; C64|C64C",
+         "Virtual keyboard theme; C64|C64C|Transparent",
       },
       {
          "vice_reset",
@@ -808,10 +813,9 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "VIC20MODEL_VIC20_PAL") == 0)modl=VIC20MODEL_VIC20_PAL;
-      else if (strcmp(var.value, "VIC20MODEL_VIC20_NTSC") == 0)modl=VIC20MODEL_VIC20_NTSC;
-      else if (strcmp(var.value, "VIC20MODEL_VIC21") == 0)modl=VIC20MODEL_VIC21;
-      else if (strcmp(var.value, "VIC20MODEL_UNKNOWN") == 0)modl=VIC20MODEL_UNKNOWN;
+      if (strcmp(var.value, "VIC20 PAL") == 0)modl=VIC20MODEL_VIC20_PAL;
+      else if (strcmp(var.value, "VIC20 NTSC") == 0)modl=VIC20MODEL_VIC20_NTSC;
+      else if (strcmp(var.value, "SuperVIC (+16K)") == 0)modl=VIC20MODEL_VIC21;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -825,13 +829,12 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "PLUS4MODEL_C16_PAL") == 0)modl=PLUS4MODEL_C16_PAL;
-      else if (strcmp(var.value, "PLUS4MODEL_C16_NTSC") == 0)modl=PLUS4MODEL_C16_NTSC;
-      else if (strcmp(var.value, "PLUS4MODEL_PLUS4_PAL") == 0)modl=PLUS4MODEL_PLUS4_PAL;
-      else if (strcmp(var.value, "PLUS4MODEL_PLUS4_NTSC") == 0)modl=PLUS4MODEL_PLUS4_NTSC;
-      else if (strcmp(var.value, "PLUS4MODEL_V364_NTSC") == 0)modl=PLUS4MODEL_V364_NTSC;
-      else if (strcmp(var.value, "PLUS4MODEL_232_NTSC") == 0)modl=PLUS4MODEL_232_NTSC;
-      else if (strcmp(var.value, "PLUS4MODEL_UNKNOWN") == 0)modl=PLUS4MODEL_UNKNOWN;
+      if (strcmp(var.value, "C16 PAL") == 0)modl=PLUS4MODEL_C16_PAL;
+      else if (strcmp(var.value, "C16 NTSC") == 0)modl=PLUS4MODEL_C16_NTSC;
+      else if (strcmp(var.value, "PLUS4 PAL") == 0)modl=PLUS4MODEL_PLUS4_PAL;
+      else if (strcmp(var.value, "PLUS4 NTSC") == 0)modl=PLUS4MODEL_PLUS4_NTSC;
+      else if (strcmp(var.value, "V364 NTSC") == 0)modl=PLUS4MODEL_V364_NTSC;
+      else if (strcmp(var.value, "232 NTSC") == 0)modl=PLUS4MODEL_232_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -845,11 +848,10 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C128MODEL_C128_PAL") == 0)modl=C128MODEL_C128_PAL;
-      else if (strcmp(var.value, "C128MODEL_C128DCR_PAL") == 0)modl=C128MODEL_C128DCR_PAL;
-      else if (strcmp(var.value, "C128MODEL_C128_NTSC") == 0)modl=C128MODEL_C128_NTSC;
-      else if (strcmp(var.value, "C128MODEL_C128DCR_NTSC") == 0)modl=C128MODEL_C128DCR_NTSC;
-      else if (strcmp(var.value, "C128MODEL_UNKNOWN") == 0)modl=C128MODEL_UNKNOWN;
+      if (strcmp(var.value, "C128 PAL") == 0)modl=C128MODEL_C128_PAL;
+      else if (strcmp(var.value, "C128DCR PAL") == 0)modl=C128MODEL_C128DCR_PAL;
+      else if (strcmp(var.value, "C128 NTSC") == 0)modl=C128MODEL_C128_NTSC;
+      else if (strcmp(var.value, "C128DCR NTSC") == 0)modl=C128MODEL_C128DCR_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -863,19 +865,18 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "PETMODEL_2001") == 0)modl=PETMODEL_2001;
-      else if (strcmp(var.value, "PETMODEL_3008") == 0)modl=PETMODEL_3008;
-      else if (strcmp(var.value, "PETMODEL_3016") == 0)modl=PETMODEL_3016;
-      else if (strcmp(var.value, "PETMODEL_3032") == 0)modl=PETMODEL_3032;
-      else if (strcmp(var.value, "PETMODEL_3032B") == 0)modl=PETMODEL_3032B;
-      else if (strcmp(var.value, "PETMODEL_4016") == 0)modl=PETMODEL_4016;
-      else if (strcmp(var.value, "PETMODEL_4032") == 0)modl=PETMODEL_4032;
-      else if (strcmp(var.value, "PETMODEL_4032B") == 0)modl=PETMODEL_4032B;
-      else if (strcmp(var.value, "PETMODEL_8032") == 0)modl=PETMODEL_8032;
-      else if (strcmp(var.value, "PETMODEL_8096") == 0)modl=PETMODEL_8096;
-      else if (strcmp(var.value, "PETMODEL_8296") == 0)modl=PETMODEL_8296;
-      else if (strcmp(var.value, "PETMODEL_SUPERPET") == 0)modl=PETMODEL_SUPERPET;
-      else if (strcmp(var.value, "PETMODEL_UNKNOWN") == 0)modl=PETMODEL_UNKNOWN;
+      if (strcmp(var.value, "2001") == 0)modl=PETMODEL_2001;
+      else if (strcmp(var.value, "3008") == 0)modl=PETMODEL_3008;
+      else if (strcmp(var.value, "3016") == 0)modl=PETMODEL_3016;
+      else if (strcmp(var.value, "3032") == 0)modl=PETMODEL_3032;
+      else if (strcmp(var.value, "3032B") == 0)modl=PETMODEL_3032B;
+      else if (strcmp(var.value, "4016") == 0)modl=PETMODEL_4016;
+      else if (strcmp(var.value, "4032") == 0)modl=PETMODEL_4032;
+      else if (strcmp(var.value, "4032B") == 0)modl=PETMODEL_4032B;
+      else if (strcmp(var.value, "8032") == 0)modl=PETMODEL_8032;
+      else if (strcmp(var.value, "8096") == 0)modl=PETMODEL_8096;
+      else if (strcmp(var.value, "8296") == 0)modl=PETMODEL_8296;
+      else if (strcmp(var.value, "SUPERPET") == 0)modl=PETMODEL_SUPERPET;
       
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -889,18 +890,17 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "CBM2MODEL_510_PAL") == 0)modl=CBM2MODEL_510_PAL;
-      else if (strcmp(var.value, "CBM2MODEL_510_NTSC") == 0)modl=CBM2MODEL_510_NTSC;
-      else if (strcmp(var.value, "CBM2MODEL_610_PAL") == 0)modl=CBM2MODEL_610_PAL;
-      else if (strcmp(var.value, "CBM2MODEL_610_NTSC") == 0)modl=CBM2MODEL_610_NTSC;
-      else if (strcmp(var.value, "CBM2MODEL_620_PAL") == 0)modl=CBM2MODEL_620_PAL;
-      else if (strcmp(var.value, "CBM2MODEL_620_NTSC") == 0)modl=CBM2MODEL_620_NTSC;
-      else if (strcmp(var.value, "CBM2MODEL_620PLUS_PAL") == 0)modl=CBM2MODEL_620PLUS_PAL;
-      else if (strcmp(var.value, "CBM2MODEL_620PLUS_NTSC") == 0)modl=CBM2MODEL_620PLUS_NTSC;
-      else if (strcmp(var.value, "CBM2MODEL_710_NTSC") == 0)modl=CBM2MODEL_710_NTSC;
-      else if (strcmp(var.value, "CBM2MODEL_720_NTSC") == 0)modl=CBM2MODEL_720_NTSC;
-      else if (strcmp(var.value, "CBM2MODEL_720PLUS_NTSC") == 0)modl=CBM2MODEL_720PLUS_NTSC;
-      else if (strcmp(var.value, "CBM2MODEL_UNKNOWN") == 0)modl=CBM2MODEL_UNKNOWN;
+      if (strcmp(var.value, "510 PAL") == 0)modl=CBM2MODEL_510_PAL;
+      else if (strcmp(var.value, "510 NTSC") == 0)modl=CBM2MODEL_510_NTSC;
+      else if (strcmp(var.value, "610 PAL") == 0)modl=CBM2MODEL_610_PAL;
+      else if (strcmp(var.value, "610 NTSC") == 0)modl=CBM2MODEL_610_NTSC;
+      else if (strcmp(var.value, "620 PAL") == 0)modl=CBM2MODEL_620_PAL;
+      else if (strcmp(var.value, "620 NTSC") == 0)modl=CBM2MODEL_620_NTSC;
+      else if (strcmp(var.value, "620PLUS PAL") == 0)modl=CBM2MODEL_620PLUS_PAL;
+      else if (strcmp(var.value, "620PLUS NTSC") == 0)modl=CBM2MODEL_620PLUS_NTSC;
+      else if (strcmp(var.value, "710 NTSC") == 0)modl=CBM2MODEL_710_NTSC;
+      else if (strcmp(var.value, "720 NTSC") == 0)modl=CBM2MODEL_720_NTSC;
+      else if (strcmp(var.value, "720PLUS NTSC") == 0)modl=CBM2MODEL_720PLUS_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -914,21 +914,20 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C64MODEL_C64_PAL") == 0)modl=C64MODEL_C64_PAL;
-      else if (strcmp(var.value, "C64MODEL_C64C_PAL") == 0)modl=C64MODEL_C64C_PAL;
-      else if (strcmp(var.value, "C64MODEL_C64_OLD_PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
-      else if (strcmp(var.value, "C64MODEL_C64_NTSC") == 0)modl=C64MODEL_C64_NTSC;
-      else if (strcmp(var.value, "C64MODEL_C64C_NTSC") == 0)modl=C64MODEL_C64C_NTSC;
-      else if (strcmp(var.value, "C64MODEL_C64_OLD_NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
-      else if (strcmp(var.value, "C64MODEL_C64_PAL_N") == 0)modl=C64MODEL_C64_PAL_N;
-      else if (strcmp(var.value, "C64MODEL_C64SX_PAL") == 0)modl=C64MODEL_C64SX_PAL;
-      else if (strcmp(var.value, "C64MODEL_C64SX_NTSC") == 0)modl=C64MODEL_C64SX_NTSC;
-      else if (strcmp(var.value, "C64MODEL_C64_JAP") == 0)modl=C64MODEL_C64_JAP;
-      else if (strcmp(var.value, "C64MODEL_C64_GS") == 0)modl=C64MODEL_C64_GS;
-      else if (strcmp(var.value, "C64MODEL_PET64_PAL") == 0)modl=C64MODEL_PET64_PAL;
-      else if (strcmp(var.value, "C64MODEL_PET64_NTSC") == 0)modl=C64MODEL_PET64_NTSC;
-      else if (strcmp(var.value, "C64MODEL_ULTIMAX") == 0)modl=C64MODEL_ULTIMAX;
-      else if (strcmp(var.value, "C64MODEL_UNKNOWN") == 0)modl=C64MODEL_UNKNOWN;
+      if (strcmp(var.value, "C64 PAL") == 0)modl=C64MODEL_C64_PAL;
+      else if (strcmp(var.value, "C64C PAL") == 0)modl=C64MODEL_C64C_PAL;
+      else if (strcmp(var.value, "C64 OLD PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
+      else if (strcmp(var.value, "C64 NTSC") == 0)modl=C64MODEL_C64_NTSC;
+      else if (strcmp(var.value, "C64C NTSC") == 0)modl=C64MODEL_C64C_NTSC;
+      else if (strcmp(var.value, "C64 OLD NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
+      else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
+      else if (strcmp(var.value, "C64SX PAL") == 0)modl=C64MODEL_C64SX_PAL;
+      else if (strcmp(var.value, "C64SX NTSC") == 0)modl=C64MODEL_C64SX_NTSC;
+      else if (strcmp(var.value, "C64 JAP") == 0)modl=C64MODEL_C64_JAP;
+      else if (strcmp(var.value, "C64 GS") == 0)modl=C64MODEL_C64_GS;
+      else if (strcmp(var.value, "PET64 PAL") == 0)modl=C64MODEL_PET64_PAL;
+      else if (strcmp(var.value, "PET64 NTSC") == 0)modl=C64MODEL_PET64_NTSC;
+      else if (strcmp(var.value, "ULTIMAX") == 0)modl=C64MODEL_ULTIMAX;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1130,6 +1129,8 @@ static void update_variables(void)
          RETROTHEME=0;
       else if (strcmp(var.value, "C64C") == 0)
          RETROTHEME=1;
+      else if (strcmp(var.value, "Transparent") == 0) 
+         RETROTHEME=2;
    }
 
    var.key = "vice_mapper_select";

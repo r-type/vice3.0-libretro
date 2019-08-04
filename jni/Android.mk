@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 CORE_DIR := $(LOCAL_PATH)/..
 
-COMMONFLAGS := -fPIC -DANDROID
+COMMONFLAGS :=
 INCFLAGS    :=
 
 EMUTYPE     ?= x64

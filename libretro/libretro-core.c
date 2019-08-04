@@ -24,10 +24,6 @@ retro_log_printf_t log_cb;
 
 char RETRO_DIR[512];
 
-char DISKA_NAME[512]="\0";
-char DISKB_NAME[512]="\0";
-char TAPE_NAME[512]="\0";
-
 int mapper_keys[29]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 char keys[4096];
 char buf[24][4096];
@@ -49,8 +45,6 @@ int cpuloop=1;
 
 //SOUND
 short signed int SNDBUF[1024*2];
-//FIXME: handle 50/60
-//int snd_sampler = 44100 / 50;
 
 //PATH
 char RPATH[512];
@@ -97,7 +91,6 @@ extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
 extern void set_drive_type(int drive,int val);
-extern void set_truedrive_emulation(int val);
 extern void reset_mouse_pos();
 extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
@@ -542,39 +535,39 @@ void retro_set_environment(retro_environment_t cb)
 #if defined(__VIC20__)
       {
          "vice_vic20_external_palette",
-         "External palette; none|mike-ntsc|mike-pal|colodore_vic|vice",
+         "External palette; None|Mike NTSC|Mike PAL|Colodore VIC|Vice",
       },
 #elif defined(__PLUS4__) 
       {
          "vice_plus4_external_palette",
-         "External palette; none|yape-pal|yape-ntsc|colodore_ted",
+         "External palette; None|Yape PAL|Yape NTSC|Colodore TED",
       },
 #elif defined(__PET__)
       {
          "vice_pet_external_palette",
-         "External palette; none|amber|green|white",
+         "External palette; None|Amber|Green|White",
       },
 #else
       {
          "vice_external_palette",
-         "External palette; none|pepto-pal|pepto-palold|pepto-ntsc-sony|pepto-ntsc|colodore|vice|c64hq|c64s|ccs64|frodo|godot|pc64|rgb|deekay|ptoing|community-colors",
+         "External palette; None|Pepto PAL|Pepto PAL old|Pepto NTSC Sony|Pepto NTSC|Colodore|Vice|C64HQ|C64S|CCS64|Frodo|Godot|PC64|RGB|Deekay|Ptoing|Community Colors",
       },
 #endif
       {
          "vice_theme",
-         "Virtual keyboard theme; C64|C64C|Transparent",
+         "Virtual keyboard theme; C64|C64 transparent|C64C|C64C transparent|Transparent",
       },
       {
          "vice_reset",
-         "Reset type; autostart|soft|hard",
+         "Reset type; Autostart|Soft|Hard",
       },
 	  {
          "vice_userport_joytype",
-         "4-player adapter; none|Protovision_CGA|PET|Hummer|OEM|Hit|Kingsoft|Starbyte",
+         "4-player adapter; None|Protovision CGA|PET|Hummer|OEM|Hit|Kingsoft|Starbyte",
       },
       {
          "vice_joyport",
-         "Controller0 port; port 2|port 1",
+         "Controller0 port; Port 2|Port 1",
       },
       { "vice_mapper_select", buf[0] },
       { "vice_mapper_start", buf[1] },
@@ -630,7 +623,7 @@ void retro_set_environment(retro_environment_t cb)
    snprintf(buf[1],sizeof(buf[1]),"RetroPad START; %s|%s","---", keys);
    
    snprintf(buf[2],sizeof(buf[2]), "RetroPad Y; %s|%s","RETROK_SPACE", keys);
-   snprintf(buf[3],sizeof(buf[3]), "RetroPad X; %s|%s","RETROK_TAB", keys);
+   snprintf(buf[3],sizeof(buf[3]), "RetroPad X; %s|%s","RETROK_F1", keys);
    snprintf(buf[4],sizeof(buf[4]), "RetroPad B; %s|%s","RETROK_F7", keys);
    snprintf(buf[5],sizeof(buf[5]), "RetroPad L; %s|%s","RETROK_F11", keys);
    snprintf(buf[6],sizeof(buf[6]), "RetroPad R; %s|%s","RETROK_F10", keys);
@@ -721,11 +714,11 @@ static void update_variables(void)
    {
       if(retro_ui_finalized){
          if (strcmp(var.value, "enabled") == 0){
-            set_truedrive_emulation(1);
+            resources_set_int("DriveTrueEmulation", 1);
             resources_set_int("VirtualDevices", 0);
          }
          if (strcmp(var.value, "disabled") == 0){
-            set_truedrive_emulation(0);
+            resources_set_int("DriveTrueEmulation", 0);
             resources_set_int("VirtualDevices", 1);
          }
       }
@@ -760,7 +753,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int val = atoi(var.value);
-      val = val * 40;
+      val = val * 20;
       
       if(retro_ui_finalized)
          resources_set_int("DriveSoundEmulationVolume", val);
@@ -961,23 +954,26 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int extpal=-1;
-      if (strcmp(var.value, "none") == 0)extpal=-1;
-      else if (strcmp(var.value, "mike-ntsc") == 0)extpal=0;
-      else if (strcmp(var.value, "mike-pal") == 0)extpal=1;
-      else if (strcmp(var.value, "colodore_vic") == 0)extpal=2;
-      else if (strcmp(var.value, "vice") == 0)extpal=3;
+      char extpal[20];
+      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Mike NTSC") == 0)sprintf(extpal, "%s", "mike-ntsc");
+      else if (strcmp(var.value, "Mike PAL") == 0)sprintf(extpal, "%s", "mike-pal");
+      else if (strcmp(var.value, "Colodore VIC") == 0)sprintf(extpal, "%s", "colodore_vic");
+      else if (strcmp(var.value, "Vice") == 0)sprintf(extpal, "%s", "vice");
 
       if(retro_ui_finalized){
-         if(extpal==-1)resources_set_int("VICExternalPalette", 0);
-         else {
+         if(!*extpal) {
+            resources_set_int("VICExternalPalette", 0);
+         } else {
             resources_set_int("VICExternalPalette", 1);
             resources_set_string_sprintf("%sPaletteFile", var.value, "VIC");
          }
       } else {
-         RETROEXTPAL=extpal;
-         if(extpal!=-1){
-            sprintf(RETROEXTPALNAME, "%s", var.value);
+         if(!*extpal) {
+            RETROEXTPAL=-1;
+         } else {
+            RETROEXTPAL=1;
+            sprintf(RETROEXTPALNAME, "%s", extpal);
          }
       }
    }
@@ -987,22 +983,25 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int extpal=-1;
-      if (strcmp(var.value, "none") == 0)extpal=-1;
-      else if (strcmp(var.value, "yape-pal") == 0)extpal=0;
-      else if (strcmp(var.value, "yape-ntsc") == 0)extpal=1;
-      else if (strcmp(var.value, "colodore_ted") == 0)extpal=2;
+      char extpal[20];
+      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Yape PAL") == 0)sprintf(extpal, "%s", "yape-pal");
+      else if (strcmp(var.value, "Yape NTSC") == 0)sprintf(extpal, "%s", "yape-ntsc");
+      else if (strcmp(var.value, "Colodore TED") == 0)sprintf(extpal, "%s", "colodore_ted");
 
       if(retro_ui_finalized){
-         if(extpal==-1)resources_set_int("TEDExternalPalette", 0);
-         else {
+         if(!*extpal) {
+            resources_set_int("TEDExternalPalette", 0);
+         } else {
             resources_set_int("TEDExternalPalette", 1);
             resources_set_string_sprintf("%sPaletteFile", var.value, "TED");
          }
       } else {
-         RETROEXTPAL=extpal;
-         if(extpal!=-1){
-            sprintf(RETROEXTPALNAME, "%s", var.value);
+         if(!*extpal) {
+            RETROEXTPAL=-1;
+         } else {
+            RETROEXTPAL=1;
+            sprintf(RETROEXTPALNAME, "%s", extpal);
          }
       }
    }
@@ -1012,22 +1011,25 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int extpal=-1;
-      if (strcmp(var.value, "none") == 0)extpal=-1;
-      else if (strcmp(var.value, "amber") == 0)extpal=0;
-      else if (strcmp(var.value, "green") == 0)extpal=1;
-      else if (strcmp(var.value, "white") == 0)extpal=2;
+      char extpal[20];
+      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
+      else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
+      else if (strcmp(var.value, "White") == 0)sprintf(extpal, "%s", "white");
 
       if(retro_ui_finalized){
-         if(extpal==-1)resources_set_int("CrtcExternalPalette", 0);
-         else {
+         if(!*extpal) {
+            resources_set_int("CrtcExternalPalette", 0);
+         } else {
             resources_set_int("CrtcExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", var.value, "Crtc");
+            resources_set_string_sprintf("%sPaletteFile", extpal, "Crtc");
          }
       } else {
-         RETROEXTPAL=extpal;
-         if(extpal!=-1){
-            sprintf(RETROEXTPALNAME, "%s", var.value);
+         if(!*extpal) {
+            RETROEXTPAL=-1;
+         } else {
+            RETROEXTPAL=1;
+            sprintf(RETROEXTPALNAME, "%s", extpal);
          }
       }
    }
@@ -1037,35 +1039,38 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int extpal=-1;
-      if (strcmp(var.value, "none") == 0)extpal=-1;
-      else if (strcmp(var.value, "pepto-pal") == 0)extpal=0;
-      else if (strcmp(var.value, "pepto-palold") == 0)extpal=1;
-      else if (strcmp(var.value, "pepto-ntsc-sony") == 0)extpal=2;
-      else if (strcmp(var.value, "pepto-ntsc") == 0)extpal=3;
-      else if (strcmp(var.value, "colodore") == 0)extpal=4;
-      else if (strcmp(var.value, "vice") == 0)extpal=5;
-      else if (strcmp(var.value, "c64hq") == 0)extpal=6;
-      else if (strcmp(var.value, "c64s") == 0)extpal=7;
-      else if (strcmp(var.value, "ccs64") == 0)extpal=8;
-      else if (strcmp(var.value, "frodo") == 0)extpal=9;
-      else if (strcmp(var.value, "godot") == 0)extpal=10;
-      else if (strcmp(var.value, "pc64") == 0)extpal=11;
-      else if (strcmp(var.value, "rgb") == 0)extpal=12;
-      else if (strcmp(var.value, "deekay") == 0)extpal=13;
-      else if (strcmp(var.value, "ptoing") == 0)extpal=14;
-      else if (strcmp(var.value, "community-colors") == 0)extpal=15;
+      char extpal[20]="";
+      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Pepto PAL") == 0)sprintf(extpal, "%s", "pepto-pal");
+      else if (strcmp(var.value, "Pepto PAL old") == 0)sprintf(extpal, "%s", "pepto-palold");
+      else if (strcmp(var.value, "Pepto NTSC Sony") == 0)sprintf(extpal, "%s", "pepto-ntsc-sony");
+      else if (strcmp(var.value, "Pepto NTSC") == 0)sprintf(extpal, "%s", "pepto-ntsc");
+      else if (strcmp(var.value, "Colodore") == 0)sprintf(extpal, "%s", "colodore");
+      else if (strcmp(var.value, "Vice") == 0)sprintf(extpal, "%s", "vice");
+      else if (strcmp(var.value, "C64HQ") == 0)sprintf(extpal, "%s", "c64hq");
+      else if (strcmp(var.value, "C64S") == 0)sprintf(extpal, "%s", "c64s");
+      else if (strcmp(var.value, "CCS64") == 0)sprintf(extpal, "%s", "cc64s");
+      else if (strcmp(var.value, "Frodo") == 0)sprintf(extpal, "%s", "frodo");
+      else if (strcmp(var.value, "Godot") == 0)sprintf(extpal, "%s", "godot");
+      else if (strcmp(var.value, "PC64") == 0)sprintf(extpal, "%s", "pc64");
+      else if (strcmp(var.value, "RGB") == 0)sprintf(extpal, "%s", "rgb");
+      else if (strcmp(var.value, "Deekay") == 0)sprintf(extpal, "%s", "deekay");
+      else if (strcmp(var.value, "Ptoing") == 0)sprintf(extpal, "%s", "ptoing");
+      else if (strcmp(var.value, "Community Colors") == 0)sprintf(extpal, "%s", "community-colors");
 
       if(retro_ui_finalized){
-         if(extpal==-1)resources_set_int("VICIIExternalPalette", 0);
-         else {
+         if(!*extpal) {
+            resources_set_int("VICIIExternalPalette", 0);
+         } else {
             resources_set_int("VICIIExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", var.value, "VICII");
+            resources_set_string_sprintf("%sPaletteFile", extpal, "VICII");
          }
       } else {
-         RETROEXTPAL=extpal;
-         if(extpal!=-1){
-            sprintf(RETROEXTPALNAME, "%s", var.value);
+         if(!*extpal) {
+            RETROEXTPAL=-1;
+         } else {
+            RETROEXTPAL=1;
+            sprintf(RETROEXTPALNAME, "%s", extpal);
          }
       }
    }
@@ -1079,7 +1084,7 @@ static void update_variables(void)
 
       int joyadaptertype=-1;
       if (strcmp(var.value, "none") == 0)joyadaptertype=-1;
-      else if (strcmp(var.value, "Protovision_CGA") == 0)joyadaptertype=USERPORT_JOYSTICK_CGA;
+      else if (strcmp(var.value, "Protovision CGA") == 0)joyadaptertype=USERPORT_JOYSTICK_CGA;
       else if (strcmp(var.value, "PET") == 0)joyadaptertype=USERPORT_JOYSTICK_PET;
       else if (strcmp(var.value, "Hummer") == 0)joyadaptertype=USERPORT_JOYSTICK_HUMMER;
       else if (strcmp(var.value, "OEM") == 0)joyadaptertype=USERPORT_JOYSTICK_OEM;
@@ -1103,8 +1108,8 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "port 2") == 0)cur_port=2;
-      else if (strcmp(var.value, "port 1") == 0)cur_port=1;
+      if (strcmp(var.value, "Port 2") == 0)cur_port=2;
+      else if (strcmp(var.value, "Port 1") == 0)cur_port=1;
    }
 
    var.key = "vice_reset";
@@ -1112,11 +1117,11 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "autostart") == 0)
+      if (strcmp(var.value, "Autostart") == 0)
          RETRORESET=0;
-      if (strcmp(var.value, "soft") == 0)
+      else if (strcmp(var.value, "Soft") == 0)
          RETRORESET=1;
-      if (strcmp(var.value, "hard") == 0)
+      else if (strcmp(var.value, "Hard") == 0)
          RETRORESET=2;
    }
 
@@ -1127,10 +1132,14 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "C64") == 0)
          RETROTHEME=0;
-      else if (strcmp(var.value, "C64C") == 0)
+      else if (strcmp(var.value, "C64 transparent") == 0)
          RETROTHEME=1;
-      else if (strcmp(var.value, "Transparent") == 0) 
+      else if (strcmp(var.value, "C64C") == 0)
          RETROTHEME=2;
+      else if (strcmp(var.value, "C64C transparent") == 0)
+         RETROTHEME=3;
+      else if (strcmp(var.value, "Transparent") == 0) 
+         RETROTHEME=4;
    }
 
    var.key = "vice_mapper_select";
@@ -1343,7 +1352,9 @@ void emu_reset(void)
 void retro_reset(void)
 {
    microSecCounter = 0;
-   emu_reset();
+   //emu_reset();
+   /* Retro reset should always autostart */
+   autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
 }
 
 struct DiskImage {

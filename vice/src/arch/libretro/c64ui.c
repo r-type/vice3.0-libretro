@@ -76,12 +76,6 @@ void set_drive_type(int drive,int val)
 			resources_set_int_sprintf("Drive%iType", val, drive);
 }
 
-void set_truedrive_emulation(int val)
-{
-	   if(retro_ui_finalized== 1)
-			resources_set_int("DriveTrueEmulation", val);
-}
-
 int c64ui_init(void)
 {
     machine_ui_done = 1;

@@ -50,9 +50,7 @@ static int gui(struct nk_context *ctx)
                     offset.y = GUIRECT.y;
                     if(retro_get_region() == RETRO_REGION_NTSC) offset.y -= 12;
                 }
-#ifndef __ANDROID__
                 nk_window_set_position(ctx, offset);
-#endif
                 #include "vkboard.i"
                 nk_end(ctx);
             }

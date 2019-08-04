@@ -4,8 +4,8 @@ ctx->style.window.padding = nk_vec2(10,2);
 ctx->style.window.spacing = nk_vec2(2,2);
 
 ctx->style.button.padding = nk_vec2(1,0);
-ctx->style.button.border = 0;
-ctx->style.button.rounding = 1.0f;
+ctx->style.button.border = 1;
+ctx->style.button.rounding = 1;
 
 struct nk_style_item key_color_default = ctx->style.button.normal;
 struct nk_style_item key_color_alt = ctx->style.window.header.normal;

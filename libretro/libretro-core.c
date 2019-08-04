@@ -557,7 +557,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_theme",
-         "Virtual keyboard theme; C64|C64C",
+         "Virtual keyboard theme; C64|C64C|Transparent",
       },
       {
          "vice_reset",
@@ -1124,6 +1124,8 @@ static void update_variables(void)
          RETROTHEME=0;
       else if (strcmp(var.value, "C64C") == 0)
          RETROTHEME=1;
+      else if (strcmp(var.value, "Transparent") == 0) 
+         RETROTHEME=2;
    }
 
    var.key = "vice_mapper_select";

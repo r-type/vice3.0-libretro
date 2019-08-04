@@ -36,10 +36,18 @@ static int gui(struct nk_context *ctx)
     {
         case GUI_VKBD:
             if (nk_begin(ctx,"Vice Keyboard", GUIRECT, NK_WINDOW_NO_SCROLLBAR)) {
-                if(RETROTHEME==1)
-                  set_style(ctx, THEME_C64C);
-                else
-                  set_style(ctx, THEME_C64);
+                switch(RETROTHEME) {
+                    default:
+                    case 0:
+                        set_style(ctx, THEME_C64);
+                        break;
+                    case 1:
+                        set_style(ctx, THEME_C64C);
+                        break;
+                    case 2:
+                        set_style(ctx, THEME_TRANSPARENT);
+                        break;
+                }
                 
                 /* ensure vkbd is centered regardless of border setting */
                 if (retro_get_borders()) {

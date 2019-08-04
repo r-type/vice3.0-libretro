@@ -75,7 +75,7 @@ int app_init()
 #endif
 
     RSDL_font = (nk_retro_Font*)calloc(1, sizeof(nk_retro_Font));
-    RSDL_font->width = 8;
+    RSDL_font->width = 7;
     RSDL_font->height = 8;
     if (!RSDL_font)
         return -1;
@@ -84,11 +84,8 @@ int app_init()
     ctx = nk_retro_init(RSDL_font,screen_surface,retrow,retroh);
 
     /* style.c */
-    /* THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK, THEME_C64, THEME_C64C */
-    if(RETROTHEME==1) 
-      set_style(ctx, THEME_C64C);
-    else 
-      set_style(ctx, THEME_C64);
+    /* THEME_BLACK, THEME_WHITE, THEME_RED, THEME_BLUE, THEME_DARK, THEME_C64, THEME_C64C, THEME_TRANSPARENT */
+    set_style(ctx, THEME_C64);
 
     memset(core_key_state,0,512);
     memset(core_old_key_state ,0, sizeof(core_old_key_state));
@@ -107,7 +104,7 @@ int app_free()
    nk_retro_shutdown();
 
    Retro_FreeSurface(screen_surface);
-   printf("free surfscreen\n");
+   printf("free surf screen\n");
    if (screen_surface)
       free(screen_surface);
    screen_surface = NULL;

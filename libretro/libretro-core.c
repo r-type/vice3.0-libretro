@@ -547,6 +547,11 @@ void retro_set_environment(retro_environment_t cb)
          "vice_pet_external_palette",
          "External palette; None|Amber|Green|White",
       },
+#elif defined(__CBM2__)
+      {
+         "vice_cbm2_external_palette",
+         "External palette; None|Amber|Green|White",
+      },
 #else
       {
          "vice_external_palette",
@@ -954,7 +959,7 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      char extpal[20];
+      char extpal[20] = "";
       if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Mike NTSC") == 0)sprintf(extpal, "%s", "mike-ntsc");
       else if (strcmp(var.value, "Mike PAL") == 0)sprintf(extpal, "%s", "mike-pal");
@@ -966,7 +971,7 @@ static void update_variables(void)
             resources_set_int("VICExternalPalette", 0);
          } else {
             resources_set_int("VICExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", var.value, "VIC");
+            resources_set_string_sprintf("%sPaletteFile", extpal, "VIC");
          }
       } else {
          if(!*extpal) {
@@ -983,7 +988,7 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      char extpal[20];
+      char extpal[20] = "";
       if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Yape PAL") == 0)sprintf(extpal, "%s", "yape-pal");
       else if (strcmp(var.value, "Yape NTSC") == 0)sprintf(extpal, "%s", "yape-ntsc");
@@ -994,7 +999,7 @@ static void update_variables(void)
             resources_set_int("TEDExternalPalette", 0);
          } else {
             resources_set_int("TEDExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", var.value, "TED");
+            resources_set_string_sprintf("%sPaletteFile", extpal, "TED");
          }
       } else {
          if(!*extpal) {
@@ -1011,7 +1016,35 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      char extpal[20];
+      char extpal[20] = "";
+      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
+      else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
+      else if (strcmp(var.value, "White") == 0)sprintf(extpal, "%s", "white");
+
+      if(retro_ui_finalized){
+         if(!*extpal) {
+            resources_set_int("CrtcExternalPalette", 0);
+         } else {
+            resources_set_int("CrtcExternalPalette", 1);
+            resources_set_string_sprintf("%sPaletteFile", extpal, "Crtc");
+         }
+      } else {
+         if(!*extpal) {
+            RETROEXTPAL=-1;
+         } else {
+            RETROEXTPAL=1;
+            sprintf(RETROEXTPALNAME, "%s", extpal);
+         }
+      }
+   }
+#elif defined(__CBM2__)
+   var.key = "vice_cbm2_external_palette";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      char extpal[20] = "";
       if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
       else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
@@ -1039,7 +1072,7 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      char extpal[20]="";
+      char extpal[20] = "";
       if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Pepto PAL") == 0)sprintf(extpal, "%s", "pepto-pal");
       else if (strcmp(var.value, "Pepto PAL old") == 0)sprintf(extpal, "%s", "pepto-palold");

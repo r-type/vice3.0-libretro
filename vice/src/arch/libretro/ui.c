@@ -186,6 +186,12 @@ int ui_init_finalize(void)
       resources_set_int("CrtcExternalPalette", 1);
       resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "Crtc");
    }
+#elif defined(__CBM2__)
+   if(RETROEXTPAL==-1)resources_set_int("CrtcExternalPalette", 0);
+   else {
+      resources_set_int("CrtcExternalPalette", 1);
+      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "Crtc");
+   }
 #else
    if(RETROEXTPAL==-1)resources_set_int("VICIIExternalPalette", 0);
    else {

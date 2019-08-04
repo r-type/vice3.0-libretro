@@ -507,7 +507,7 @@ void retro_set_environment(retro_environment_t cb)
 #if  defined(__VIC20__)
       {
          "vice_vic20_model",
-         "VIC20 model; VIC20 PAL|VIC20 NTSC|VIC21",
+         "VIC20 model; VIC20 PAL|VIC20 NTSC|SuperVIC (+16K)",
       },
 #elif  defined(__PLUS4__)
       {
@@ -523,6 +523,11 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_pet_model",
          "PET model; 2001|3008|3016|3032|3032B|4016|4032|4032B|8032|8096|8296|SUPERPET",
+      },
+#elif  defined(__CBM2__)
+      {
+         "vice_cbm2_model",
+         "CBM2 model; 510 PAL|510 NTSC|610 PAL|610 NTSC|620 PAL|620 NTSC|620PLUS PAL|620PLUS NTSC|710 NTSC|720 NTSC|720PLUS NTSC",
       },
 #else
       {
@@ -810,7 +815,7 @@ static void update_variables(void)
 
       if (strcmp(var.value, "VIC20 PAL") == 0)modl=VIC20MODEL_VIC20_PAL;
       else if (strcmp(var.value, "VIC20 NTSC") == 0)modl=VIC20MODEL_VIC20_NTSC;
-      else if (strcmp(var.value, "VIC21") == 0)modl=VIC20MODEL_VIC21;
+      else if (strcmp(var.value, "SuperVIC (+16K)") == 0)modl=VIC20MODEL_VIC21;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)

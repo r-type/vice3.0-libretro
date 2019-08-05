@@ -27,9 +27,6 @@ retro_log_printf_t log_cb;
 char RETRO_DIR[512];
 
 int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-char keys[4096];
-char buf[30][4096];
-
 
 // Our virtual time counter, increased by retro_run()
 long microSecCounter=0;
@@ -92,7 +89,7 @@ extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
 extern unsigned int datasette;
-extern void set_drive_type(int drive,int val);
+extern int cur_port_locked;
 extern void reset_mouse_pos();
 extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
@@ -275,31 +272,6 @@ int pre_main(const char *argv)
 	 Add_Option("-cartB");
 #endif
 
-     if (strlen(RPATH) >= strlen(".prg"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".prg")], ".prg"))
-         RETRODSE=0;
-
-     if (strlen(RPATH) >= strlen(".crt"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".crt")], ".crt"))
-         RETRODSE=0;
-
-     if (strlen(RPATH) >= strlen(".d71"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d71")], ".d71"))
-         RETRODRVTYPE=1571;
-       
-     if (strlen(RPATH) >= strlen(".d81"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d81")], ".d81"))
-         RETRODRVTYPE=1581;
-
-     if (strlen(RPATH) >= strlen("j1"))
-       if (strstr(RPATH, "_j1.") || strstr(RPATH, "(j1).") || strstr(RPATH, "_J1.") || strstr(RPATH, "(J1)."))
-         cur_port=1;
-
-     if (strlen(RPATH) >= strlen("j2"))
-       if (strstr(RPATH, "_j2.") || strstr(RPATH, "(j2).") || strstr(RPATH, "_J2.") || strstr(RPATH, "(J2)."))
-         cur_port=2;
-
-
      Add_Option(RPATH/*ARGUV[0]*/);
    }
    else
@@ -309,10 +281,12 @@ int pre_main(const char *argv)
          if(strstr(ARGUV[i], "-j1")) {
             Skip_Option=1;
             cur_port=1;
+            cur_port_locked = 1;
          }
          if(strstr(ARGUV[i], "-j2")) {
             Skip_Option=1;
             cur_port=2;
+            cur_port_locked = 1;
          }
          
          if(!Skip_Option)
@@ -470,158 +444,590 @@ void retro_set_environment(retro_environment_t cb)
       { NULL, 0 }
    };
 
-   struct retro_variable variables[] =
+   struct retro_core_option_definition core_options[] =
    {
       {
          "vice_statusbar",
-         "Statusbar; disabled|enabled",
+         "Statusbar",
+         "Display a statusbar with joystick indicators etc.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
       },
       {
          "vice_drive_true_emulation",
-         "Drive true emulation; disabled|enabled",
+         "Drive true emulation",
+         "True emulation loads much slower, but some games need it",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
       },
       {
          "vice_drive_sound_emulation",
-         "Drive sound emulation; disabled|enabled",
+         "Drive sound emulation",
+         "Emulates the iconic floppy drive sounds for nostalgia",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
       },
       {
          "vice_drive_sound_volume",
-         "Drive sound volume; 10\%|20\%|30\%|40\%|50\%|60\%|70\%|80\%|90\%|100\%",
-      },
-      {
-         "vice_drive8_type",
-         "Drive8 type; 1541|1542|1581|1540|1551|1570|1571|1573|2000|4000|2031|2040|3040|4040|1001|8050|8250",
+         "Drive sound volume",
+         "Only makes a different if drive sound emulation is on",
+         {
+            { "10\%", NULL },
+            { "20\%", NULL },
+            { "30\%", NULL },
+            { "40\%", NULL },
+            { "50\%", NULL },
+            { "60\%", NULL },
+            { "70\%", NULL },
+            { "80\%", NULL },
+            { "90\%", NULL },
+            { "100\%", NULL },
+            { NULL, NULL },
+         },
+         "10\%"
       },
       {
          "vice_autostart_warp",
-         "Autostart warp; disabled|enabled",
+         "Autostart warp",
+         "Automatically turns on warp mode between load and run for faster loading",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
       },
       {
          "vice_sid_model",
-         "SID model; 6581F|8580F|6581R|8580R|8580RD",
+         "SID model",
+         "ReSID is accurate but slower, 6581 was used in original C64",
+         {
+            { "6581F", "6581 FastSID" },
+            { "8580F", "8580 FastSID" },
+            { "6581R", "6581 ReSID" },
+            { "8580R", "8580 ReSID" },
+            { "8580RD", NULL },
+            { NULL, NULL },
+         },
+         "6581F"
       },
       {
          "vice_resid_sampling",
-         "ReSID sampling; Resampling|Fast resampling|Interpolation|Fast",
+         "ReSID sampling",
+         "Fast setting improves performance dramatically on PS Vita",
+         {
+            { "Resampling", NULL },
+            { "Fast resampling", NULL },
+            { "Interpolation", NULL },
+            { "Fast", NULL },
+            { NULL, NULL },
+         },
+         "Resampling"
       },
 #if  defined(__VIC20__)
       {
          "vice_vic20_model",
-         "VIC20 model; VIC20 PAL|VIC20 NTSC|SuperVIC (+16K)",
+         "VIC20 model",
+         "",
+         {
+            { "VIC20 PAL", NULL },
+            { "VIC20 NTSC", NULL },
+            { "SuperVIC (+16K)", NULL },
+            { NULL, NULL },
+         },
+         "VIC20 PAL"
       },
 #elif  defined(__PLUS4__)
       {
          "vice_plus4_model",
-         "PLUS4 model; C16 PAL|C16 NTSC|PLUS4 PAL|PLUS4 NTSC|V364 NTSC|232 NTSC",
+         "PLUS4 model",
+         "",
+         {
+            { "C16 PAL", NULL },
+            { "C16 NTSC", NULL },
+            { "PLUS4 PAL", NULL },
+            { "PLUS4 NTSC", NULL },
+            { "V364 NTSC", NULL },
+            { "232 NTSC", NULL },
+            { NULL, NULL }
+         },
+         "C16 PAL"
       },
 #elif  defined(__X128__)
       {
          "vice_c128_model",
-         "C128 model; C128 PAL|C128DCR PAL|C128 NTSC|C128DCR NTSC",
+         "C128 model",
+         ""
+         {
+            { "C128 PAL", NULL },
+            { "C128DCR PAL", NULL },
+            { "C128 NTSC", NULL },
+            { "C128DCR NTSC", NULL },
+            { NULL, NULL },
+         },
+         "C128 PAL"
       },
 #elif  defined(__PET__)
       {
          "vice_pet_model",
-         "PET model; 2001|3008|3016|3032|3032B|4016|4032|4032B|8032|8096|8296|SUPERPET",
+         "PET model"
+         "",
+         {
+            { "2001", NULL },
+            { "3008", NULL },
+            { "3016", NULL },
+            { "3032", NULL },
+            { "3032B", NULL },
+            { "4016", NULL },
+            { "4032", NULL },
+            { "4032B", NULL },
+            { "8032", NULL },
+            { "8096", NULL },
+            { "8096", NULL },
+            { "8296", NULL },
+            { "SUPERPET", NULL },
+            { NULL, NULL },
+         },
+         "2001"
       },
 #elif  defined(__CBM2__)
       {
          "vice_cbm2_model",
-         "CBM2 model; 510 PAL|510 NTSC|610 PAL|610 NTSC|620 PAL|620 NTSC|620PLUS PAL|620PLUS NTSC|710 NTSC|720 NTSC|720PLUS NTSC",
+         "CBM2 model",
+         "",
+         {
+            { "510 PAL", NULL },
+            { "610 PAL", NULL },
+            { "610 NTSC", NULL },
+            { "620 PAL", NULL },
+            { "620 NTSC", NULL },
+            { "620PLUS PAL", NULL },
+            { "710 NTSC", NULL },
+            { "720 NTSC", NULL },
+            { "710 NTSC", NULL },
+            { "720PLUS NTSC", NULL },
+            { NULL, NULL },
+         },
+         "510 PAL"
       },
 #else
       {
          "vice_c64_model",
-         "C64 model; C64 PAL|C64C PAL|C64 OLD PAL|C64 NTSC|C64C NTSC|C64 OLD NTSC|C64 PAL N|C64SX PAL|C64SX NTSC|C64 JAP|C64 GS|PET64 PAL|PET64 NTSC|ULTIMAX",
+         "C64 model",
+         "",
+         {
+            { "C64 PAL", NULL },
+            { "C64C PAL", NULL },
+            { "C64 OLD PAL", NULL },
+            { "C64 NTSC", NULL },
+            { "C64C NTSC", NULL },
+            { "C64 OLD NTSC", NULL },
+            { "C64 PAL N", NULL },
+            { "C64SX PAL", NULL },
+            { "C64SX NTSC", NULL },
+            { "C64 JAP", NULL },
+            { "C64 GS", NULL },
+            { "PET64 PAL", NULL },
+            { "PET64 NTSC", NULL },
+            { "ULTIMAX", NULL },
+            { NULL, NULL },
+         },
+         "C64 PAL"
       },
 #endif
 #if !defined(__PET__) && !defined(__CBM2__)
       {
          "vice_border",
-         "Display borders; enabled|disabled",
+         "Display borders",
+         "",
+         {
+            { "enabled", NULL },
+            { "disabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
       },
 #endif
 #if defined(__VIC20__)
       {
          "vice_vic20_external_palette",
-         "Color palette; Default|Mike NTSC|Mike PAL|Colodore VIC|Vice",
+         "Color palette",
+         "Colodore is recommended for the most accurate colors",
+         {
+            { "Default", NULL },
+            { "Mike NTSC", NULL },
+            { "Mike PAL", NULL },
+            { "Colodore VIC", NULL },
+            { "Vice", NULL },
+            { NULL, NULL },
+         },
+         "Default"
       },
 #elif defined(__PLUS4__) 
       {
          "vice_plus4_external_palette",
-         "Color palette; Default|Yape PAL|Yape NTSC|Colodore TED",
+         "Color palette",
+         "Colodore is recommended for the most accurate colors",
+         {
+            { "Default", NULL },
+            { "Yape PAL", NULL },
+            { "Yape NTSC", NULL },
+            { "Colodore TED", NULL },
+            { NULL, NULL },
+         },
+         "Default"
       },
 #elif defined(__PET__)
       {
          "vice_pet_external_palette",
-         "Color palette; Default|Amber|Green|White",
+         "Color palette",
+         "",
+         {
+            { "Default", NULL },
+            { "Amber", NULL },
+            { "Green", NULL },
+            { "White", NULL },
+            { NULL, NULL },
+         },
+         "Default"
       },
 #elif defined(__CBM2__)
       {
          "vice_cbm2_external_palette",
-         "Color palette; Default|Amber|Green|White",
+         "Color palette",
+         "",
+         {
+            { "Default", NULL },
+            { "Amber", NULL },
+            { "Green", NULL },
+            { "White", NULL },
+            { NULL, NULL },
+         },
+         "Default"
       },
 #else
       {
          "vice_external_palette",
-         "Color palette; Default|Pepto PAL|Pepto PAL old|Pepto NTSC Sony|Pepto NTSC|Colodore|Vice|C64HQ|C64S|CCS64|Frodo|Godot|PC64|RGB|Deekay|Ptoing|Community Colors",
+         "Color palette",
+         "Colodore is recommended for most accurate colors",
+         {
+            { "Default", NULL },
+            { "Pepto PAL", NULL },
+            { "Pepto PAL old", NULL },
+            { "Pepto NTSC Sony", NULL },
+            { "Pepto NTSC", NULL },
+            { "Colodore", NULL },
+            { "Vice", NULL },
+            { "C64HQ", NULL },
+            { "C64S", NULL },
+            { "CCS64", NULL },
+            { "Frodo", NULL },
+            { "Godot", NULL },
+            { "PC64", NULL },
+            { "RGB", NULL },
+            { "Deekay", NULL },
+            { "Ptoing", NULL },
+            { "Community Colors", NULL },
+            { NULL, NULL },
+         },
+         "Default"
       },
 #endif
       {
          "vice_theme",
-         "Virtual keyboard theme; C64|C64 transparent|C64C|C64C transparent|Transparent",
+         "Virtual keyboard theme",
+         "By default, the keyboard comes up with L button or F11 key",
+         {
+            { "C64", NULL },
+            { "C64 transparent", NULL },
+            { "C64C", NULL },
+            { "C64C transparent", NULL },
+            { "Transparent", NULL },
+            { NULL, NULL },
+         },
+         "C64"
       },
       {
          "vice_reset",
-         "Reset type; Autostart|Soft|Hard",
+         "Reset type",
+         "Soft keeps some code in memory, hard erases all memory",
+         {
+            { "Autostart", NULL },
+            { "Soft", NULL },
+            { "Hard", NULL },
+            { NULL, NULL },
+         },
+         "Autostart"
       },
-	  {
+      {
          "vice_userport_joytype",
-         "4-player adapter; None|Protovision CGA|PET|Hummer|OEM|Hit|Kingsoft|Starbyte",
+         "4-player adapter",
+         "Useful to play IK+ Gold with 3 players and more",
+         {
+            { "None", NULL },
+            { "Protovision CGA", NULL },
+            { "PET", NULL },
+            { "Hummer", NULL },
+            { "OEM", NULL },
+            { "Hit", NULL }, 
+            { "Kingsoft", NULL },
+            { "Starbyte", NULL },
+            { NULL, NULL },
+         },
+         "None"
       },
       {
          "vice_joyport",
-         "Controller 0 port; Port 2|Port 1",
+         "Controller 0 port",
+         "Some games use port 2, some use port 1",
+         {
+            { "Port 2", NULL },
+            { "Port 1", NULL },
+            { NULL, NULL },
+         },
+         "Port 2"
       },
-      { "vice_mapper_select", buf[0] },
-      { "vice_mapper_start", buf[1] },
-      { "vice_mapper_y", buf[2] },
-      { "vice_mapper_x", buf[3] },
-      { "vice_mapper_b", buf[4] },
-      { "vice_mapper_l", buf[5] },
-      { "vice_mapper_r", buf[6] },
-      { "vice_mapper_l2", buf[7] },
-      { "vice_mapper_r2", buf[8] },
-      { "vice_mapper_l3", buf[9] },
-      { "vice_mapper_r3", buf[10] },
+/* Button mappings */
+      {
+         "vice_mapper_select",
+         "RetroPad Select",
+         "",
+         CORE_OPTION_KEYS,
+         "---"
+      },
+      {
+         "vice_mapper_start",
+         "RetroPad Start",
+         "",
+         CORE_OPTION_KEYS,
+         "---"
+      },
+      {
+         "vice_mapper_y",
+         "RetroPad Y",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_SPACE"
+      },
+      {
+         "vice_mapper_x",
+         "RetroPad X",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_F1"
+      },
+      {
+         "vice_mapper_b",
+         "RetroPad B",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_F7"
+      },
 
-      { "vice_mapper_lu", buf[14] },
-      { "vice_mapper_ld", buf[13] },
-      { "vice_mapper_ll", buf[12] },
-      { "vice_mapper_lr", buf[11] },
+      {
+         "vice_mapper_l",
+         "RetroPad L",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_F11"
+      },
+      {
+         "vice_mapper_r",
+         "RetroPad R",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_F10"
+      },
+      {
+         "vice_mapper_l2",
+         "RetroPad L2",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_ESCAPE"
+      },
+      {
+         "vice_mapper_r2",
+         "RetroPad R2",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_RETURN"
+      },
+      {
+         "vice_mapper_l3",
+         "RetroPad L3",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_h"
+      },
+      {
+         "vice_mapper_r3",
+         "RetroPad R3",
+         "",
+         CORE_OPTION_KEYS,
+         "RETROK_t"
+      },
+/* Left Stick */
+      {
+         "vice_mapper_lu",
+         "RetroPad L-Up",
+         "Mapping for left analog stick up",
+         CORE_OPTION_KEYS,
+         "RETROK_UP"
+      },
+      {
+         "vice_mapper_ld",
+         "RetroPad L-Down",
+         "Mapping for left analog stick down",
+         CORE_OPTION_KEYS,
+         "RETROK_DOWN"
+      },
+      {
+         "vice_mapper_ll",
+         "RetroPad L-Left",
+         "Mapping for left analog stick left",
+         CORE_OPTION_KEYS,
+         "RETROK_LEFT"
+      },
+      {
+         "vice_mapper_lr",
+         "RetroPad L-Right",
+         "Mapping for left analog stick right",
+         CORE_OPTION_KEYS,
+         "RETROK_RIGHT"
+      },
 
-      { "vice_mapper_ru", buf[18] },
-      { "vice_mapper_rd", buf[17] },
-      { "vice_mapper_rl", buf[16] },
-      { "vice_mapper_rr", buf[15] },
-      
-      { "vice_mapper_vkbd", buf[19] },
-      { "vice_mapper_statusbar", buf[20] },
-      { "vice_mapper_joyport_switch", buf[21] },
-      { "vice_mapper_reset", buf[22] },
-      { "vice_mapper_warp_mode", buf[23] },
-      { "vice_mapper_datasette_toggle_hotkeys", buf[24] },      
+/* Right Stick */
+      {
+         "vice_mapper_ru",
+         "RetroPad R-Up",
+         "Mapping for right analog stick up",
+         CORE_OPTION_KEYS,
+         "RETROK_y"
+      },
+      {
+         "vice_mapper_rd",
+         "RetroPad R-Down",
+         "Mapping for right analog stick down",
+         CORE_OPTION_KEYS,
+         "RETROK_n"
+      },
+      {
+         "vice_mapper_rl",
+         "RetroPad R-Left",
+         "Mapping for right analog stick left",
+         CORE_OPTION_KEYS,
+         "RETROK_l"
+      },
+      {
+         "vice_mapper_rr",
+         "RetroPad R-Right",
+         "Mapping for right analog stick right",
+         CORE_OPTION_KEYS,
+         "RETROK_r"
+      },
+/* Hotkeys */
+      {
+         "vice_mapper_vkbd",
+         "Hotkey: Toggle virtual keyboard",
+         "Pressing a button mapped to this key opens the keyboard",
+         CORE_OPTION_KEYS,
+         "RETROK_F11"
+      },
+      {
+         "vice_mapper_statusbar",
+         "Hotkey: Toggle statusbar",
+         "Pressing a button mapped to this key toggles statusbar",
+         CORE_OPTION_KEYS,
+         "RETROK_F10"
+      },
+      {
+         "vice_mapper_joyport_switch",
+         "Hotkey: Switch joyports",
+         "Pressing a button mapped to this key swaps joyports",
+         CORE_OPTION_KEYS,
+         "RETROK_RCTRL"
+      },
+      {
+         "vice_mapper_reset",
+         "Hotkey: Reset",
+         "Pressing a button mapped to this key toggles reset",
+         CORE_OPTION_KEYS,
+         "RETROK_END"
+      },
+      {
+         "vice_mapper_warp_mode",
+         "Hotkey: Warp mode",
+         "Hold this key, or a button mapped to it, for warp mode",
+         CORE_OPTION_KEYS,
+         "RETROK_PAGEDOWN"
+      },
+/* Datasette controls */
+      {
+         "vice_mapper_datasette_toggle_hotkeys",
+         "Hotkey: Toggle datasette hotkeys",
+         "This key enables/disables the datasette hotkeys",
+         CORE_OPTION_KEYS,
+         "---"
+      },
       {
          "vice_datasette_hotkeys",
-         "Datasette hotkeys; disabled|enabled",
+         "Datasette hotkeys",
+         "Enable or disable all datasette hotkeys",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
       },
-      { "vice_mapper_datasette_stop", buf[25] },
-      { "vice_mapper_datasette_start", buf[26] },
-      { "vice_mapper_datasette_forward", buf[27] },
-      { "vice_mapper_datasette_rewind", buf[28] },
-      { "vice_mapper_datasette_reset", buf[29] },
-
-      { NULL, NULL },
+      {
+         "vice_mapper_datasette_stop",
+         "Hotkey: Datasette stop",
+         "Press stop on tape",
+         CORE_OPTION_KEYS,
+         "RETROK_DOWN"
+      },
+      {
+         "vice_mapper_datasette_start",
+         "Hotkey: Datasette start",
+         "Press start on tape",
+         CORE_OPTION_KEYS,
+         "RETROK_UP"
+      },
+      {
+         "vice_mapper_datasette_forward",
+         "Hotkey: Datasette forward",
+         "Tape fast forward",
+         CORE_OPTION_KEYS,
+         "RETROK_RIGHT"
+      },
+      {
+         "vice_mapper_datasette_rewind",
+         "Hotkey: Datasette rewind",
+         "Tape rewind",
+         CORE_OPTION_KEYS,
+         "RETROK_LEFT"
+      },
+      {
+         "vice_mapper_datasette_reset",
+         "Hotkey: Datasette reset",
+         "Tape reset",
+         CORE_OPTION_KEYS,
+         "---"
+      },
+      { NULL, NULL, NULL, {{0}}, NULL },
    };
 
    bool allowNoGameMode;
@@ -630,55 +1036,7 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb = cb;
 
    cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
-
-   i=0;
-   while (keyDesc[i]!=NULL)
-   {
-      if (i == 0)
-         strcpy (keys, keyDesc[i]);
-      else
-         strcat (keys, keyDesc[i]);
-      if (keyDesc[i+1]!=NULL)
-         strcat (keys, "|");
-      i++;
-   }
-
-   snprintf(buf[0],sizeof(buf[0]),"RetroPad Select; %s|%s","---", keys);
-   snprintf(buf[1],sizeof(buf[1]),"RetroPad Start; %s|%s","---", keys);
-   
-   snprintf(buf[2],sizeof(buf[2]), "RetroPad Y; %s|%s","RETROK_SPACE", keys);
-   snprintf(buf[3],sizeof(buf[3]), "RetroPad X; %s|%s","RETROK_F1", keys);
-   snprintf(buf[4],sizeof(buf[4]), "RetroPad B; %s|%s","RETROK_F7", keys);
-   snprintf(buf[5],sizeof(buf[5]), "RetroPad L; %s|%s","RETROK_F11", keys);
-   snprintf(buf[6],sizeof(buf[6]), "RetroPad R; %s|%s","RETROK_F10", keys);
-   snprintf(buf[7],sizeof(buf[7]), "RetroPad L2; %s|%s","RETROK_ESCAPE", keys);
-   snprintf(buf[8],sizeof(buf[8]), "RetroPad R2; %s|%s","RETROK_RETURN", keys);
-   snprintf(buf[9],sizeof(buf[9]), "RetroPad L3; %s|%s","RETROK_h", keys);
-   snprintf(buf[10],sizeof(buf[10]), "RetroPad R3; %s|%s","RETROK_t", keys);
-   
-   snprintf(buf[14],sizeof(buf[14]),"RetroPad L-Up; %s|%s","RETROK_UP", keys);
-   snprintf(buf[13],sizeof(buf[13]),"RetroPad L-Down; %s|%s","RETROK_DOWN", keys);
-   snprintf(buf[12],sizeof(buf[12]),"RetroPad L-Left; %s|%s","RETROK_LEFT", keys);
-   snprintf(buf[11],sizeof(buf[11]),"RetroPad L-Right; %s|%s","RETROK_RIGHT", keys);
-   snprintf(buf[18],sizeof(buf[18]),"RetroPad R-Up; %s|%s","RETROK_y", keys);
-   snprintf(buf[17],sizeof(buf[17]),"RetroPad R-Down; %s|%s","RETROK_n", keys);
-   snprintf(buf[16],sizeof(buf[16]),"RetroPad R-Left; %s|%s","RETROK_l", keys);
-   snprintf(buf[15],sizeof(buf[15]),"RetroPad R-Right; %s|%s","RETROK_r", keys);
-   
-   snprintf(buf[19],sizeof(buf[19]),"Hotkey: Toggle virtual keyboard; %s|%s","RETROK_F11", keys);
-   snprintf(buf[20],sizeof(buf[20]),"Hotkey: Toggle statusbar; %s|%s","RETROK_F10", keys);
-   snprintf(buf[21],sizeof(buf[21]),"Hotkey: Switch joyports; %s|%s","RETROK_RCTRL", keys);
-   snprintf(buf[22],sizeof(buf[22]),"Hotkey: Reset; %s|%s","RETROK_END", keys);
-   snprintf(buf[23],sizeof(buf[23]),"Hotkey: Warp mode; %s|%s","RETROK_PAGEDOWN", keys);
-   
-   snprintf(buf[24],sizeof(buf[24]),"Hotkey: Toggle datasette hotkeys; %s|%s","---", keys);
-   snprintf(buf[25],sizeof(buf[25]),"Hotkey: Datasette stop; %s|%s","RETROK_DOWN", keys);
-   snprintf(buf[26],sizeof(buf[26]),"Hotkey: Datasette start; %s|%s","RETROK_UP", keys);
-   snprintf(buf[27],sizeof(buf[27]),"Hotkey: Datasette forward; %s|%s","RETROK_RIGHT", keys);
-   snprintf(buf[28],sizeof(buf[28]),"Hotkey: Datasette rewind; %s|%s","RETROK_LEFT", keys);
-   snprintf(buf[29],sizeof(buf[29]),"Hotkey: Datasette reset; %s|%s","---", keys);
-
-   cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+   cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, core_options);
 
    allowNoGameMode = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
@@ -719,27 +1077,6 @@ static void update_variables(void)
       else {
          if (strcmp(var.value, "enabled") == 0)RETROAUTOSTARTWARP=1;
          if (strcmp(var.value, "disabled") == 0)RETROAUTOSTARTWARP=0;
-      }
-   }
-
-   var.key = "vice_drive8_type";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      char str[100];
-      int val;
-      snprintf(str, sizeof(str), "%s", var.value);
-      val = strtoul(str, NULL, 0);
-
-      if(retro_ui_finalized){
-         if(RETRODRVTYPE!=val) {
-            RETRODRVTYPE=val;
-            set_drive_type(8, val);
-         }
-      }
-      else {
-         RETRODRVTYPE=val;
       }
    }
 
@@ -1180,8 +1517,8 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "Port 2") == 0)cur_port=2;
-      else if (strcmp(var.value, "Port 1") == 0)cur_port=1;
+      if (strcmp(var.value, "Port 2") == 0 && !cur_port_locked) cur_port=2;
+      else if (strcmp(var.value, "Port 1") == 0 && !cur_port_locked) cur_port=1;
    }
 
    var.key = "vice_reset";
@@ -1865,6 +2202,7 @@ void retro_run(void)
    else if (runstate == RUNSTATE_LOADED_CONTENT)
    {
       /* Load content was called while core was already running, just do a reset with autostart */
+      resources_set_int_sprintf("Drive%iType", RETRODRVTYPE, 8);
       autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
       /* After retro_load_game, get_system_av_info is always called by the frontend */
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
@@ -1931,6 +2269,31 @@ bool retro_load_game(const struct retro_game_info *info)
    {
       RPATH[0]=0;
    }
+
+   cur_port_locked = 0;
+   RETRODRVTYPE=1541;
+
+   if (strlen(RPATH) >= strlen(".d71"))
+     if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d71")], ".d71"))
+       RETRODRVTYPE=1571;
+
+   if (strlen(RPATH) >= strlen(".d81"))
+     if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d81")], ".d81"))
+       RETRODRVTYPE=1581;
+
+   if (strlen(RPATH) >= strlen("j1"))
+     if (strstr(RPATH, "_j1.") || strstr(RPATH, "(j1).") || strstr(RPATH, "_J1.") || strstr(RPATH, "(J1)."))
+     {
+        cur_port = 1;
+        cur_port_locked = 1;
+     }
+
+   if (strlen(RPATH) >= strlen("j2"))
+     if (strstr(RPATH, "_j2.") || strstr(RPATH, "(j2).") || strstr(RPATH, "_J2.") || strstr(RPATH, "(J2)."))
+     {
+        cur_port = 2;
+        cur_port_locked = 1;
+     }
 
    update_variables();
    

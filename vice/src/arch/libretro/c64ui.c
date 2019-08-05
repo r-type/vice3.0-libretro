@@ -65,17 +65,6 @@ void write_snapshot(WORD unused_addr, void *filename)
     machine_write_snapshot((char *)filename, 1, 1, 0);
 }
 
-int get_drive_type(int drive,int val)
-{
-	return	resources_get_int_sprintf("Drive%iType",&drive);
-}
-
-void set_drive_type(int drive,int val)
-{
-	   if(retro_ui_finalized== 1)
-			resources_set_int_sprintf("Drive%iType", val, drive);
-}
-
 int c64ui_init(void)
 {
     machine_ui_done = 1;

@@ -58,7 +58,7 @@ int RETRODSE=0;
 int RETRODSEVOL=800;
 int RETROSTATUS=0;
 int RETRORESET=0;
-int RETRODRVTYPE=1542;
+int RETRODRVTYPE=1541;
 int RETROSIDMODL=0;
 int RETRORESIDSAMPLING=0;
 int RETROC64MODL=0;
@@ -69,6 +69,7 @@ int RETROBORDERS=0;
 int RETROTHEME=0;
 char RETROEXTPALNAME[512]="pepto-pal";
 int retro_ui_finalized = 0;
+int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
 
 static const cmdline_option_t cmdline_options[] = {
      { NULL }

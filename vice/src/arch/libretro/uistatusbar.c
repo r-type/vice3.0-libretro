@@ -52,15 +52,15 @@
 #endif
 
 #define MAX_STATUSBAR_LEN           128
-#define STATUSBAR_SPEED_POS         0
+#define STATUSBAR_JOY_POS           0
 #define STATUSBAR_PAUSE_POS         4
 #define STATUSBAR_DRIVE_POS         24
 #define STATUSBAR_DRIVE8_TRACK_POS  26
 #define STATUSBAR_DRIVE9_TRACK_POS  31
 #define STATUSBAR_DRIVE10_TRACK_POS 36
 #define STATUSBAR_DRIVE11_TRACK_POS 41
-#define STATUSBAR_TAPE_POS          46
-#define STATUSBAR_JOY_POS			0
+#define STATUSBAR_TAPE_POS          29
+#define STATUSBAR_SPEED_POS         35
 
 static char statusbar_text[MAX_STATUSBAR_LEN] = "                                       ";
 
@@ -117,12 +117,10 @@ static int paused = 0;
 
 static void display_speed(void)
 {
-    return;
-    
     int len;
-    char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : '/';
+    char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : 'W';
 
-    len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%3d%%%c%2dfps", per, sep, fps);
+    len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2d%c", fps, sep);
     statusbar_text[STATUSBAR_SPEED_POS + len] = ' ';
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {

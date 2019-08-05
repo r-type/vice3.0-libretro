@@ -419,7 +419,9 @@ unsigned int color_f, color_b;
     
 
     /* Statusbar location with or without borders */
-    int x, y, border;
+    int x, y;
+    int border = 0;
+#if !defined(__PET__) && !defined(__CBM2__)
 #if defined(__VIC20__)
     resources_get_int("VICBorderMode", &border);
 #elif defined(__PLUS4__)
@@ -427,7 +429,8 @@ unsigned int color_f, color_b;
 #else
     resources_get_int("VICIIBorderMode", &border);
 #endif
-    
+#endif
+
     /* 0 : normal, 1: full, 2: debug, 3: none */
     switch(border) {
         default:

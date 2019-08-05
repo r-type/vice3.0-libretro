@@ -478,15 +478,15 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_drive_true_emulation",
-         "Drive True Emulation; disabled|enabled",
+         "Drive true emulation; disabled|enabled",
       },
       {
          "vice_drive_sound_emulation",
-         "Drive Sound Emulation; disabled|enabled",
+         "Drive sound emulation; disabled|enabled",
       },
       {
          "vice_drive_sound_volume",
-         "Drive Sound Volume; 10\%|20\%|30\%|40\%|50\%|60\%|70\%|80\%|90\%|100\%",
+         "Drive sound volume; 10\%|20\%|30\%|40\%|50\%|60\%|70\%|80\%|90\%|100\%",
       },
       {
          "vice_drive8_type",
@@ -494,7 +494,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_autostart_warp",
-         "Autostart Warp; disabled|enabled",
+         "Autostart warp; disabled|enabled",
       },
       {
          "vice_sid_model",
@@ -535,34 +535,36 @@ void retro_set_environment(retro_environment_t cb)
          "C64 model; C64 PAL|C64C PAL|C64 OLD PAL|C64 NTSC|C64C NTSC|C64 OLD NTSC|C64 PAL N|C64SX PAL|C64SX NTSC|C64 JAP|C64 GS|PET64 PAL|PET64 NTSC|ULTIMAX",
       },
 #endif
+#if !defined(__PET__) && !defined(__CBM2__)
       {
          "vice_border",
          "Display borders; enabled|disabled",
       },
+#endif
 #if defined(__VIC20__)
       {
          "vice_vic20_external_palette",
-         "External palette; None|Mike NTSC|Mike PAL|Colodore VIC|Vice",
+         "Color palette; Default|Mike NTSC|Mike PAL|Colodore VIC|Vice",
       },
 #elif defined(__PLUS4__) 
       {
          "vice_plus4_external_palette",
-         "External palette; None|Yape PAL|Yape NTSC|Colodore TED",
+         "Color palette; Default|Yape PAL|Yape NTSC|Colodore TED",
       },
 #elif defined(__PET__)
       {
          "vice_pet_external_palette",
-         "External palette; None|Amber|Green|White",
+         "Color palette; Default|Amber|Green|White",
       },
 #elif defined(__CBM2__)
       {
          "vice_cbm2_external_palette",
-         "External palette; None|Amber|Green|White",
+         "Color palette; Default|Amber|Green|White",
       },
 #else
       {
          "vice_external_palette",
-         "External palette; None|Pepto PAL|Pepto PAL old|Pepto NTSC Sony|Pepto NTSC|Colodore|Vice|C64HQ|C64S|CCS64|Frodo|Godot|PC64|RGB|Deekay|Ptoing|Community Colors",
+         "Color palette; Default|Pepto PAL|Pepto PAL old|Pepto NTSC Sony|Pepto NTSC|Colodore|Vice|C64HQ|C64S|CCS64|Frodo|Godot|PC64|RGB|Deekay|Ptoing|Community Colors",
       },
 #endif
       {
@@ -579,7 +581,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_joyport",
-         "Controller0 port; Port 2|Port 1",
+         "Controller 0 port; Port 2|Port 1",
       },
       { "vice_mapper_select", buf[0] },
       { "vice_mapper_start", buf[1] },
@@ -631,8 +633,8 @@ void retro_set_environment(retro_environment_t cb)
       i++;
    }
 
-   snprintf(buf[0],sizeof(buf[0]),"RetroPad SELECT; %s|%s","---", keys);
-   snprintf(buf[1],sizeof(buf[1]),"RetroPad START; %s|%s","---", keys);
+   snprintf(buf[0],sizeof(buf[0]),"RetroPad Select; %s|%s","---", keys);
+   snprintf(buf[1],sizeof(buf[1]),"RetroPad Start; %s|%s","---", keys);
    
    snprintf(buf[2],sizeof(buf[2]), "RetroPad Y; %s|%s","RETROK_SPACE", keys);
    snprintf(buf[3],sizeof(buf[3]), "RetroPad X; %s|%s","RETROK_F1", keys);
@@ -940,6 +942,7 @@ static void update_variables(void)
    }
 #endif
 
+#if !defined(__PET__) && !defined(__CBM2__)
    var.key = "vice_border";
    var.value = NULL;
 
@@ -959,6 +962,7 @@ static void update_variables(void)
         resources_set_int("VICIIBorderMode", border);
 #endif
    }
+#endif
 
 #if defined(__VIC20__)
    var.key = "vice_vic20_external_palette";
@@ -967,7 +971,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Mike NTSC") == 0)sprintf(extpal, "%s", "mike-ntsc");
       else if (strcmp(var.value, "Mike PAL") == 0)sprintf(extpal, "%s", "mike-pal");
       else if (strcmp(var.value, "Colodore VIC") == 0)sprintf(extpal, "%s", "colodore_vic");
@@ -996,7 +1000,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Yape PAL") == 0)sprintf(extpal, "%s", "yape-pal");
       else if (strcmp(var.value, "Yape NTSC") == 0)sprintf(extpal, "%s", "yape-ntsc");
       else if (strcmp(var.value, "Colodore TED") == 0)sprintf(extpal, "%s", "colodore_ted");
@@ -1024,7 +1028,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
       else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
       else if (strcmp(var.value, "White") == 0)sprintf(extpal, "%s", "white");
@@ -1052,7 +1056,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
       else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
       else if (strcmp(var.value, "White") == 0)sprintf(extpal, "%s", "white");
@@ -1080,7 +1084,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "None") == 0)sprintf(extpal, "%s", "");
+      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
       else if (strcmp(var.value, "Pepto PAL") == 0)sprintf(extpal, "%s", "pepto-pal");
       else if (strcmp(var.value, "Pepto PAL old") == 0)sprintf(extpal, "%s", "pepto-palold");
       else if (strcmp(var.value, "Pepto NTSC Sony") == 0)sprintf(extpal, "%s", "pepto-ntsc-sony");
@@ -1123,7 +1127,7 @@ static void update_variables(void)
    {
 
       int joyadaptertype=-1;
-      if (strcmp(var.value, "none") == 0)joyadaptertype=-1;
+      if (strcmp(var.value, "None") == 0)joyadaptertype=-1;
       else if (strcmp(var.value, "Protovision CGA") == 0)joyadaptertype=USERPORT_JOYSTICK_CGA;
       else if (strcmp(var.value, "PET") == 0)joyadaptertype=USERPORT_JOYSTICK_PET;
       else if (strcmp(var.value, "Hummer") == 0)joyadaptertype=USERPORT_JOYSTICK_HUMMER;

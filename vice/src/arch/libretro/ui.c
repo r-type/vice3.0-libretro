@@ -239,12 +239,14 @@ int ui_init_finalize(void)
    c64model_set(RETROC64MODL);
 #endif
 
+#if !defined(__PET__) && !defined(__CBM2__)
 #if defined(__VIC20__)
    resources_set_int("VICBorderMode", RETROBORDERS);
 #elif defined(__PLUS4__)
    resources_set_int("TEDBorderMode", RETROBORDERS);
 #else
    resources_set_int("VICIIBorderMode", RETROBORDERS);
+#endif
 #endif
 
    retro_ui_finalized = 1;

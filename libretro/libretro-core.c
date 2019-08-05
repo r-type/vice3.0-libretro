@@ -733,12 +733,18 @@ static void update_variables(void)
    {
       if(retro_ui_finalized){
          if (strcmp(var.value, "enabled") == 0){
-            resources_set_int("DriveTrueEmulation", 1);
-            resources_set_int("VirtualDevices", 0);
+            if(RETROTDE==0){
+               RETROTDE=1;
+               resources_set_int("DriveTrueEmulation", 1);
+               resources_set_int("VirtualDevices", 0);
+            }
          }
          else if (strcmp(var.value, "disabled") == 0){
-            resources_set_int("DriveTrueEmulation", 0);
-            resources_set_int("VirtualDevices", 1);
+            if(RETROTDE==1){
+               RETROTDE=0;
+               resources_set_int("DriveTrueEmulation", 0);
+               resources_set_int("VirtualDevices", 1);
+            }
          }
       }
       else {

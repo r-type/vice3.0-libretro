@@ -26,9 +26,9 @@ retro_log_printf_t log_cb;
 
 char RETRO_DIR[512];
 
-int mapper_keys[29]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 char keys[4096];
-char buf[24][4096];
+char buf[30][4096];
 
 
 // Our virtual time counter, increased by retro_run()
@@ -74,7 +74,6 @@ int lastH=768;
 
 unsigned vice_devices[5];
 
-extern int RETROJOY;
 extern int RETROTDE;
 extern int RETRODSE;
 extern int RETRODSEVOL;
@@ -92,6 +91,7 @@ extern int RETROTHEME;
 extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
+extern unsigned int datasette;
 extern void set_drive_type(int drive,int val);
 extern void reset_mouse_pos();
 extern uint8_t mem_ram[];
@@ -610,6 +610,16 @@ void retro_set_environment(retro_environment_t cb)
       { "vice_mapper_joyport_switch", buf[21] },
       { "vice_mapper_reset", buf[22] },
       { "vice_mapper_warp_mode", buf[23] },
+      { "vice_mapper_datasette_toggle_hotkeys", buf[24] },      
+      {
+         "vice_datasette_hotkeys",
+         "Datasette hotkeys; disabled|enabled",
+      },
+      { "vice_mapper_datasette_stop", buf[25] },
+      { "vice_mapper_datasette_start", buf[26] },
+      { "vice_mapper_datasette_forward", buf[27] },
+      { "vice_mapper_datasette_rewind", buf[28] },
+      { "vice_mapper_datasette_reset", buf[29] },
 
       { NULL, NULL },
    };
@@ -655,11 +665,18 @@ void retro_set_environment(retro_environment_t cb)
    snprintf(buf[16],sizeof(buf[16]),"RetroPad R-Left; %s|%s","RETROK_l", keys);
    snprintf(buf[15],sizeof(buf[15]),"RetroPad R-Right; %s|%s","RETROK_r", keys);
    
-   snprintf(buf[19],sizeof(buf[19]),"Hotkey: Toggle Virtual Keyboard; %s|%s","RETROK_F11", keys);
-   snprintf(buf[20],sizeof(buf[20]),"Hotkey: Toggle Statusbar; %s|%s","RETROK_F10", keys);
-   snprintf(buf[21],sizeof(buf[21]),"Hotkey: Switch Joyports; %s|%s","RETROK_RCTRL", keys);
+   snprintf(buf[19],sizeof(buf[19]),"Hotkey: Toggle virtual keyboard; %s|%s","RETROK_F11", keys);
+   snprintf(buf[20],sizeof(buf[20]),"Hotkey: Toggle statusbar; %s|%s","RETROK_F10", keys);
+   snprintf(buf[21],sizeof(buf[21]),"Hotkey: Switch joyports; %s|%s","RETROK_RCTRL", keys);
    snprintf(buf[22],sizeof(buf[22]),"Hotkey: Reset; %s|%s","RETROK_END", keys);
-   snprintf(buf[23],sizeof(buf[23]),"Hotkey: Warp Mode; %s|%s","RETROK_PAGEDOWN", keys);
+   snprintf(buf[23],sizeof(buf[23]),"Hotkey: Warp mode; %s|%s","RETROK_PAGEDOWN", keys);
+   
+   snprintf(buf[24],sizeof(buf[24]),"Hotkey: Toggle datasette hotkeys; %s|%s","---", keys);
+   snprintf(buf[25],sizeof(buf[25]),"Hotkey: Datasette stop; %s|%s","RETROK_DOWN", keys);
+   snprintf(buf[26],sizeof(buf[26]),"Hotkey: Datasette start; %s|%s","RETROK_UP", keys);
+   snprintf(buf[27],sizeof(buf[27]),"Hotkey: Datasette forward; %s|%s","RETROK_RIGHT", keys);
+   snprintf(buf[28],sizeof(buf[28]),"Hotkey: Datasette rewind; %s|%s","RETROK_LEFT", keys);
+   snprintf(buf[29],sizeof(buf[29]),"Hotkey: Datasette reset; %s|%s","---", keys);
 
    cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
 
@@ -1368,6 +1385,56 @@ static void update_variables(void)
       mapper_keys[28] = keyId(var.value);
    }
 
+   var.key = "vice_datasette_hotkeys";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "enabled") == 0)datasette=1;
+      else if (strcmp(var.value, "disabled") == 0)datasette=0;
+   }
+
+   var.key = "vice_mapper_datasette_toggle_hotkeys";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[29] = keyId(var.value);
+   }
+   
+   var.key = "vice_mapper_datasette_stop";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[30] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_datasette_start";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[31] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_datasette_forward";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[32] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_datasette_rewind";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[33] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_datasette_reset";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[34] = keyId(var.value);
+   }
 }
 
 void emu_reset(void)
@@ -1399,16 +1466,21 @@ struct DiskImage {
 #include <attach.h>
 
 static bool retro_set_eject_state(bool ejected) {
-    log_cb(RETRO_LOG_INFO, "EJECT %d", (int)ejected);
-
 	if (dc)
 	{
 		dc->eject_state = ejected;
 		
 		if(dc->eject_state)
-			file_system_detach_disk(8);
+			if(strendswith(dc->files[dc->index], "tap"))
+			    tape_image_detach_internal(1);
+			else
+			    file_system_detach_disk(8);
+            
 		else
-			file_system_attach_disk(8, dc->files[dc->index]);		
+			if(strendswith(dc->files[dc->index], "tap"))
+			    tape_image_attach(1, dc->files[dc->index]);
+			else
+			    file_system_attach_disk(8, dc->files[dc->index]);		
 	}
 	
 	return true;
@@ -1448,7 +1520,10 @@ static bool retro_set_image_index(unsigned index) {
 		if ((index < dc->count) && (dc->files[index]))
 		{
 			dc->index = index;
-			log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+			if(strendswith(dc->files[dc->index], "tap"))
+			    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
+			else 
+			    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
 			return true;
 		}
 	}
@@ -1845,7 +1920,11 @@ bool retro_load_game(const struct retro_game_info *info)
 	// Init first disk
 	dc->index = 0;
 	dc->eject_state = false;
-	log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+	if(strendswith(dc->files[dc->index], "tap"))
+	    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
+    else 
+	    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+	    
 	strcpy(RPATH,dc->files[0]);
    }
    else

@@ -60,7 +60,7 @@
 #define STATUSBAR_DRIVE10_TRACK_POS 36
 #define STATUSBAR_DRIVE11_TRACK_POS 41
 #define STATUSBAR_TAPE_POS          29
-#define STATUSBAR_SPEED_POS         35
+#define STATUSBAR_SPEED_POS         37
 
 static char statusbar_text[MAX_STATUSBAR_LEN] = "                                       ";
 
@@ -118,7 +118,7 @@ static int paused = 0;
 static void display_speed(void)
 {
     int len;
-    char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : 'W';
+    char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : 'f';
 
     len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2d%c", fps, sep);
     statusbar_text[STATUSBAR_SPEED_POS + len] = ' ';

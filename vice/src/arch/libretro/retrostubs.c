@@ -356,16 +356,16 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                 else if(mapper_keys[i] == mapper_keys[28]) /* Warp Mode */
                     emu_function(EMU_WARP_ON);
                 else if(mapper_keys[i] == mapper_keys[29]) /* Datasette toggle */
-                    emu_function(EMU_DATASETTE_RESET);
-                else if(mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
+                    emu_function(EMU_DATASETTE_TOGGLE_HOTKEYS);
+                else if(datasette && mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
                     emu_function(EMU_DATASETTE_STOP);
-                else if(mapper_keys[i] == mapper_keys[31]) /* Datasette start */
+                else if(datasette && mapper_keys[i] == mapper_keys[31]) /* Datasette start */
                     emu_function(EMU_DATASETTE_START);
-                else if(mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
+                else if(datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
                     emu_function(EMU_DATASETTE_FORWARD);
-                else if(mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
+                else if(datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
                     emu_function(EMU_DATASETTE_REWIND);
-                else if(mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
+                else if(datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
                     emu_function(EMU_DATASETTE_RESET);
                 else
                     Keymap_KeyDown(mapper_keys[i]);
@@ -388,15 +388,15 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     emu_function(EMU_WARP_OFF);
                 else if(mapper_keys[i] == mapper_keys[29])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[30])
+                else if(datasette && mapper_keys[i] == mapper_keys[30])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[31])
+                else if(datasette && mapper_keys[i] == mapper_keys[31])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[32])
+                else if(datasette && mapper_keys[i] == mapper_keys[32])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[33])
+                else if(datasette && mapper_keys[i] == mapper_keys[33])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[34])
+                else if(datasette && mapper_keys[i] == mapper_keys[34])
                     ; /* nop */
                 else
                     Keymap_KeyUp(mapper_keys[i]);

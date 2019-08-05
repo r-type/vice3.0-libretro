@@ -203,6 +203,8 @@ int Core_PollEvent(int disable_physical_cursor_keys)
 
     /* Iterate hotkeys, skip datasette control if not enabled */
     int imax = (datasette) ? 11 : 6;
+    /* Skip datasette hotkeys if vkbd is on */
+    imax = (SHOWKEY==1) ? 6 : imax;
     
     for(i = 0; i < imax; i++) {
         mk = i + 24;

@@ -1466,16 +1466,21 @@ struct DiskImage {
 #include <attach.h>
 
 static bool retro_set_eject_state(bool ejected) {
-    log_cb(RETRO_LOG_INFO, "EJECT %d", (int)ejected);
-
 	if (dc)
 	{
 		dc->eject_state = ejected;
 		
 		if(dc->eject_state)
-			file_system_detach_disk(8);
+			if(strendswith(dc->files[dc->index], "tap"))
+			    tape_image_detach_internal(1);
+			else
+			    file_system_detach_disk(8);
+            
 		else
-			file_system_attach_disk(8, dc->files[dc->index]);		
+			if(strendswith(dc->files[dc->index], "tap"))
+			    tape_image_attach(1, dc->files[dc->index]);
+			else
+			    file_system_attach_disk(8, dc->files[dc->index]);		
 	}
 	
 	return true;
@@ -1515,7 +1520,10 @@ static bool retro_set_image_index(unsigned index) {
 		if ((index < dc->count) && (dc->files[index]))
 		{
 			dc->index = index;
-			log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+			if(strendswith(dc->files[dc->index], "tap"))
+			    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
+			else 
+			    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
 			return true;
 		}
 	}
@@ -1912,7 +1920,11 @@ bool retro_load_game(const struct retro_game_info *info)
 	// Init first disk
 	dc->index = 0;
 	dc->eject_state = false;
-	log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+	if(strendswith(dc->files[dc->index], "tap"))
+	    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
+    else 
+	    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+	    
 	strcpy(RPATH,dc->files[0]);
    }
    else

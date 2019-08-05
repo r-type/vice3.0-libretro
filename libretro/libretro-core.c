@@ -8,8 +8,10 @@
 #include "machine.h"
 #include "snapshot.h"
 #include "autostart.h"
-
-
+#include "tape.h"
+#ifndef __PET__
+#include "cartridge.h"
+#endif
 
 //CORE VAR
 #ifdef _WIN32
@@ -117,11 +119,6 @@ extern int g_mem_ram_size;
 #endif
 //VICE DEF END
 
-extern void emu_init(void);
-extern void emu_uninit(void);
-extern void vice_main_exit(void);
-extern void emu_reset(void);
-
 const char *retro_save_directory;
 const char *retro_system_directory;
 const char *retro_content_directory;
@@ -138,6 +135,16 @@ static retro_environment_t environ_cb;
 #include "retro_files.h"
 #include "retro_disk_control.h"
 static dc_storage* dc;
+enum {
+	RUNSTATE_FIRST_START = 0,
+	RUNSTATE_LOADED_CONTENT,
+	RUNSTATE_RUNNING,
+};
+static int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are just starting the core from scratch */
+/* runstate = RUNSTATE_FIRST_START: first time retro_run() is called after loading and starting core */
+/* runstate = RUNSTATE_LOADED_CONTENT: load content was selected while core is running, so do an autostart_reset() */
+/* runstate = RUNSTATE_RUNNING: core is running normally */
+
 
 unsigned retro_get_borders(void);
 
@@ -1348,27 +1355,8 @@ static void update_variables(void)
 
 }
 
-
-void retro_shutdown_core(void)
-{
-   environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
-}
-
-void emu_init(void)
-{
-   update_variables();
-   pre_main(RPATH);
-}
-
-void emu_uninit(void)
-{
-   vice_main_exit();
-}
-
 void emu_reset(void)
 {
-   extern int RETRORESET;
-   
    switch(RETRORESET) {
       case 0:
          autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
@@ -1385,7 +1373,6 @@ void emu_reset(void)
 void retro_reset(void)
 {
    microSecCounter = 0;
-   //emu_reset();
    /* Retro reset should always autostart */
    autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
 }
@@ -1647,12 +1634,9 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-   app_free();
-   emu_uninit();
-   
-	// Clean the disk control context
-	if(dc)
-		dc_free(dc);
+   /* Clean the disk control context */
+   if(dc)
+      dc_free(dc);
 }
 
 unsigned retro_api_version(void)
@@ -1763,7 +1747,6 @@ void retro_blit(void)
 
 void retro_run(void)
 {
-   static int mfirst=1;
    bool updated = false;
 
    if(lastW!=retroW || lastH!=retroH){
@@ -1777,17 +1760,28 @@ void retro_run(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
 
-   if(mfirst==1)
+   if(runstate == RUNSTATE_FIRST_START)
    {
-      mfirst++;
+      /* this is only done once after just loading the core from scratch and starting it */
       log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
       retro_load_ok=true;
       app_init();
       memset(SNDBUF,0,1024*2*2);
-
-      emu_init();
+      update_variables();
+      pre_main(RPATH);
+      runstate = RUNSTATE_RUNNING;
       return;
-   }
+   } 
+   else if (runstate == RUNSTATE_LOADED_CONTENT)
+   {
+      /* Load content was called while core was already running, just do a reset with autostart */
+      autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
+      /* After retro_load_game, get_system_av_info is always called by the frontend */
+      /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
+      /* current aspect ratio and screen size again here */
+      update_geometry();
+      runstate = RUNSTATE_RUNNING;
+   } 
 
    while(cpuloop==1)
       maincpu_mainloop_retro();
@@ -1801,32 +1795,10 @@ void retro_run(void)
    microSecCounter += (1000000/50);
 }
 
-/*
-   unsigned int lastdown,lastup,lastchar;
-   static void keyboard_cb(bool down, unsigned keycode,
-   {
-   <{
-
-   log_cb(RETRO_LOG_INFO, "Down: %s, Code: %d, Char: %u, Mod: %u.\n",
-   down ? "yes" : "no", keycode, character, mod);
-
-
-   if(down)lastdown=keycode;
-   else lastup=keycode;
-   lastchar=character;
-
-   }
-   */
-
 #define M3U_FILE_EXT "m3u"
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-   /*
-      struct retro_keyboard_callback cb = { keyboard_cb };
-      environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &cb);
-      */
-
    if (info)
    {
 	const char *full_path;
@@ -1867,11 +1839,25 @@ bool retro_load_game(const struct retro_game_info *info)
    }
 
    update_variables();
+   
+   if (runstate == RUNSTATE_RUNNING) {
+      /* load game was called while core is already running */
+      /* so we update runstate and do the deferred autostart_reset in retro_run */
+      /* the autostart_reset has to be deferred because a bunch of other init stuff */
+      /* is done between retro_load_game() and retro_run() at a higher level */
+      runstate = RUNSTATE_LOADED_CONTENT;
+   }
 
    return true;
 }
 
 void retro_unload_game(void){
+    file_system_detach_disk(8);
+    tape_image_detach_internal(1);
+#ifndef __PET__
+    cartridge_detach_image(-1);
+#endif
+    RPATH[0] = 0;
 }
 
 unsigned retro_get_region(void)

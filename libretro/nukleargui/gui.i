@@ -20,10 +20,7 @@ int GUISTATE = GUI_NONE;
 extern int SHIFTON;
 extern int vkey_pressed;
 extern int RETROTHEME;
-extern int retro_ui_finalized;
 
-extern void emu_reset(void);
-extern void retro_shutdown_core(void);
 extern unsigned retro_get_borders(void);
 
 static int gui(struct nk_context *ctx)

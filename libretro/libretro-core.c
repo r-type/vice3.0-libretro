@@ -669,7 +669,6 @@ void retro_set_environment(retro_environment_t cb)
 
 static void update_variables(void)
 {
-
    struct retro_variable var;
 
    var.key = "vice_statusbar";
@@ -716,9 +715,15 @@ static void update_variables(void)
       snprintf(str, sizeof(str), "%s", var.value);
       val = strtoul(str, NULL, 0);
 
-      if(retro_ui_finalized)
-         set_drive_type(8, val);
-      else RETRODRVTYPE=val;
+      if(retro_ui_finalized){
+         if(RETRODRVTYPE!=val) {
+            RETRODRVTYPE=val;
+            set_drive_type(8, val);
+         }
+      }
+      else {
+         RETRODRVTYPE=val;
+      }
    }
 
    var.key = "vice_drive_true_emulation";
@@ -731,12 +736,12 @@ static void update_variables(void)
             resources_set_int("DriveTrueEmulation", 1);
             resources_set_int("VirtualDevices", 0);
          }
-         if (strcmp(var.value, "disabled") == 0){
+         else if (strcmp(var.value, "disabled") == 0){
             resources_set_int("DriveTrueEmulation", 0);
             resources_set_int("VirtualDevices", 1);
          }
       }
-      else  {
+      else {
          if (strcmp(var.value, "enabled") == 0)RETROTDE=1;
          if (strcmp(var.value, "disabled") == 0)RETROTDE=0;
       }
@@ -749,13 +754,13 @@ static void update_variables(void)
    {
       if(retro_ui_finalized){
          if (strcmp(var.value, "enabled") == 0){
-     	    resources_set_int("DriveSoundEmulation", 1);
+            resources_set_int("DriveSoundEmulation", 1);
          }
-         if (strcmp(var.value, "disabled") == 0){
+         else if (strcmp(var.value, "disabled") == 0){
             resources_set_int("DriveSoundEmulation", 0);
     	 }
       }
-      else  {
+      else {
          if (strcmp(var.value, "enabled") == 0)RETRODSE=1;
          if (strcmp(var.value, "disabled") == 0)RETRODSE=0;
       }

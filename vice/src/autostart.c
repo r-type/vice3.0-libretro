@@ -1175,7 +1175,7 @@ int autostart_disk(const char *file_name, const char *program_name,
         autostart_disk_cook_name(&name);
         if (!(file_system_attach_disk(8, file_name) < 0)) {
 
-#if 0
+#if 1
             vdrive_t *vdrive;
             struct disk_image_s *diskimg;
 #endif
@@ -1194,7 +1194,7 @@ int autostart_disk(const char *file_name, const char *program_name,
              *
              * --compyx
              */
-#if 0
+#if 1
             /* shitty code, we really need to extend the drive API to
              * get at these sorts for things without breaking into core code
              */
@@ -1206,7 +1206,7 @@ int autostart_disk(const char *file_name, const char *program_name,
                 if (diskimg == NULL) {
                     log_error(LOG_ERR, "Failed to get disk image for unit 8.");
                 } else {
-                    printf("\nGOT IMAGE TYPE %u.\n\n", diskimg->type);
+                    log_message(autostart_log, "Autodetected image type %u.", diskimg->type);
                     if (resources_set_int("Drive8Type", diskimg->type) < 0) {
                         log_error(LOG_ERR, "Failed to set drive type.");
                     }

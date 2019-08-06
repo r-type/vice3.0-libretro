@@ -58,7 +58,6 @@ int RETRODSE=0;
 int RETRODSEVOL=800;
 int RETROSTATUS=0;
 int RETRORESET=0;
-int RETRODRVTYPE=1541;
 int RETROSIDMODL=0;
 int RETRORESIDSAMPLING=0;
 int RETROC64MODL=0;
@@ -218,8 +217,6 @@ int ui_init_finalize(void)
 
    resources_set_int("DriveSoundEmulation", RETRODSE);
    resources_set_int("DriveSoundEmulationVolume", RETRODSEVOL);
-
-   resources_set_int_sprintf("Drive%iType", RETRODRVTYPE, 8);
 
    resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 

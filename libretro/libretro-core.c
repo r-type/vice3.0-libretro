@@ -77,7 +77,6 @@ extern int RETRODSE;
 extern int RETRODSEVOL;
 extern int RETROSTATUS;
 extern int RETRORESET;
-extern int RETRODRVTYPE;
 extern int RETROSIDMODL;
 extern int RETRORESIDSAMPLING;
 extern int RETROC64MODL;
@@ -2257,7 +2256,6 @@ void retro_run(void)
    else if (runstate == RUNSTATE_LOADED_CONTENT)
    {
       /* Load content was called while core was already running, just do a reset with autostart */
-      resources_set_int_sprintf("Drive%iType", RETRODRVTYPE, 8);
       autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
       /* After retro_load_game, get_system_av_info is always called by the frontend */
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
@@ -2326,15 +2324,6 @@ bool retro_load_game(const struct retro_game_info *info)
    }
 
    cur_port_locked = 0;
-   RETRODRVTYPE=1541;
-
-   if (strlen(RPATH) >= strlen(".d71"))
-     if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d71")], ".d71"))
-       RETRODRVTYPE=1571;
-
-   if (strlen(RPATH) >= strlen(".d81"))
-     if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".d81")], ".d81"))
-       RETRODRVTYPE=1581;
 
    if (strlen(RPATH) >= strlen("j1"))
      if (strstr(RPATH, "_j1.") || strstr(RPATH, "(j1).") || strstr(RPATH, "_J1.") || strstr(RPATH, "(J1)."))

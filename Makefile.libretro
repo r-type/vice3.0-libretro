@@ -313,7 +313,8 @@ else ifeq ($(platform), win)
    SOURCES_C += \
       $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c \
       $(LIBRETRO_COMM_DIR)/file/file_path.c \
-      $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
+      $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
+      $(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c
 else ifeq ($(platform), androidstc)
    SOURCES_C += \
       $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c \
@@ -328,7 +329,6 @@ else ifeq ($(platform), theos_ios)
    SOURCES_C += \
       $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c \
       $(LIBRETRO_COMM_DIR)/file/file_path.c \
-      $(LIBRETRO_COMM_DIR)/file/retro_dirent.c \
       $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
 else ifeq ($(platform), osx)
    SOURCES_C += \

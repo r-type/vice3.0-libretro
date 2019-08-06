@@ -422,7 +422,9 @@ void retro_poll_event()
     else
         Core_PollEvent(0); /* Process all inputs */
 
-    if(SHOWKEY==-1) /* retro joypad take control over keyboard joy */
+    //if(SHOWKEY==-1) /* retro joypad take control over keyboard joy */
+    /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
+    /* keyup allowing most likely not needed on actual keyboard presses even though they get stuck also */
     {
         int retro_port;
         for (retro_port = 0; retro_port <= 4; retro_port++)
@@ -452,7 +454,7 @@ void retro_poll_event()
                     (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP9)) ||
                     (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP8)) 			
                 )
-                    j |= 0x01;
+                    j |= (SHOWKEY==-1) ? 0x01 : j;
                 else
                     j &= ~0x01;
 
@@ -460,7 +462,7 @@ void retro_poll_event()
                     (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP3)) ||
                     (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP2)) 			
                 )
-                    j |= 0x02;
+                    j |= (SHOWKEY==-1) ? 0x02 : j;
                 else
                     j &= ~0x02;
 
@@ -468,7 +470,7 @@ void retro_poll_event()
                     (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP7)) ||
                     (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP4)) 
                 )
-                    j |= 0x04;
+                    j |= (SHOWKEY==-1) ? 0x04 : j;
                 else
                     j &=~ 0x04;
 
@@ -476,7 +478,7 @@ void retro_poll_event()
                     (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP1)) ||
                     (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP6)) 			    
                 )
-                    j |= 0x08;
+                    j |= (SHOWKEY==-1) ? 0x08 : j;
                 else
                     j &= ~0x08;
                     
@@ -484,7 +486,7 @@ void retro_poll_event()
                     (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP0)) ||
                     (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP5)) 
                 )
-                    j |= 0x10;
+                    j |= (SHOWKEY==-1) ? 0x10 : j;
                 else
                     j &= ~0x10;
 

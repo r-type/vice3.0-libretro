@@ -583,7 +583,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__PET__)
       {
          "vice_pet_model",
-         "PET model"
+         "PET model",
          "",
          {
             { "2001", NULL },

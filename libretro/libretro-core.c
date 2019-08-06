@@ -570,7 +570,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c128_model",
          "C128 model",
-         ""
+         "",
          {
             { "C128 PAL", NULL },
             { "C128DCR PAL", NULL },

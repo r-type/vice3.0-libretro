@@ -51,7 +51,7 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-#define MAX_STATUSBAR_LEN           128
+#define MAX_STATUSBAR_LEN           54
 #define STATUSBAR_JOY_POS           0
 #define STATUSBAR_PAUSE_POS         4
 #define STATUSBAR_DRIVE_POS         24
@@ -60,9 +60,9 @@
 #define STATUSBAR_DRIVE10_TRACK_POS 36
 #define STATUSBAR_DRIVE11_TRACK_POS 41
 #define STATUSBAR_TAPE_POS          29
-#define STATUSBAR_SPEED_POS         37
+#define STATUSBAR_SPEED_POS         50
 
-static char statusbar_text[MAX_STATUSBAR_LEN] = "                                       ";
+static char statusbar_text[MAX_STATUSBAR_LEN] = "                                                      ";
 
 
 static int pitch;
@@ -121,7 +121,7 @@ static void display_speed(void)
     char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : 'f';
 
     len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2d%c", fps, sep);
-    statusbar_text[STATUSBAR_SPEED_POS + len] = ' ';
+    //statusbar_text[STATUSBAR_SPEED_POS + len] = ' '; /* No end separator for last element */
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -392,13 +392,15 @@ void uistatusbar_draw(void)
 #ifdef M16B
 unsigned short int color_f, color_b;
     color_f = 0xffff;
-    color_b = 0;
+    color_b = 0x0001;
 #else
 unsigned int color_f, color_b;
     color_f = 0xffffffff;
-    color_b = 0;
+    color_b = 0x00000000;
 #endif
     unsigned int line;
+    unsigned int char_width;
+    unsigned int char_offset;
 
   //  color_f = 0xff;
   //  color_b = 0;
@@ -414,7 +416,6 @@ unsigned int color_f, color_b;
     fake.clip_rect.w=retrow;
     fake.clip_rect.x=0;
     fake.clip_rect.y=0;
-    
 
     /* Statusbar location with or without borders */
     int x, y;
@@ -430,11 +431,12 @@ unsigned int color_f, color_b;
 #endif
 
     /* 0 : normal, 1: full, 2: debug, 3: none */
+    /* Placement on bottom + inside VIC */
     switch(border) {
         default:
         case 0:
             x=32;
-            y=236;
+            y=227;/* Below VIC: 236 */
             if(retro_get_region() == RETRO_REGION_NTSC) {
                 y=215;
             }
@@ -453,16 +455,19 @@ unsigned int color_f, color_b;
         if (c == 0) {
             break;
         }
+        
+        /* Trickery to balance uneven character width with VIC area width */
+        char_width = 6;
+        char_offset = (MAX_STATUSBAR_LEN - i == 2) ? 1 : 0;
 
         if (c & 0x80) {
-		sprintf(tmpstr,"%c",c&0x7f);
-		Retro_Draw_string(&fake, x+i*8, y, tmpstr,2,1,1, color_b, color_f);
+		    sprintf(tmpstr,"%c",c&0x7f);
+		    Retro_Draw_string(&fake, x+i*char_width+char_offset, y, tmpstr,1,1,1, color_b, color_f);
 	        //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
         } else {
+         	sprintf(tmpstr,"%c",c);
+         	Retro_Draw_string(&fake, x+i*char_width+char_offset, y, tmpstr,1,1,1, color_f, color_b);
          	//  uistatusbar_putchar(c, i, 0, color_f, color_b);
-		sprintf(tmpstr,"%c",c);
-		Retro_Draw_string(&fake, x+i*8, y, tmpstr,2,1,1, color_f, color_b);
-
         }
     }
 }

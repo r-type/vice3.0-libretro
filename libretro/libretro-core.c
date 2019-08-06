@@ -27,6 +27,7 @@ retro_log_printf_t log_cb;
 char RETRO_DIR[512];
 
 int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+static char buf[64][4096] = { 0 };
 
 // Our virtual time counter, increased by retro_run()
 long microSecCounter=0;
@@ -482,7 +483,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_volume",
          "Drive sound volume",
-         "Only makes a different if drive sound emulation is on",
+         "Only makes a difference if drive sound emulation is on",
          {
             { "10\%", NULL },
             { "20\%", NULL },
@@ -804,35 +805,35 @@ void retro_set_environment(retro_environment_t cb)
          "vice_mapper_select",
          "RetroPad Select",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_start",
          "RetroPad Start",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_y",
          "RetroPad Y",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_SPACE"
       },
       {
          "vice_mapper_x",
          "RetroPad X",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_F1"
       },
       {
          "vice_mapper_b",
          "RetroPad B",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_F7"
       },
 
@@ -840,42 +841,42 @@ void retro_set_environment(retro_environment_t cb)
          "vice_mapper_l",
          "RetroPad L",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_F11"
       },
       {
          "vice_mapper_r",
          "RetroPad R",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_F10"
       },
       {
          "vice_mapper_l2",
          "RetroPad L2",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_ESCAPE"
       },
       {
          "vice_mapper_r2",
          "RetroPad R2",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_RETURN"
       },
       {
          "vice_mapper_l3",
          "RetroPad L3",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_h"
       },
       {
          "vice_mapper_r3",
          "RetroPad R3",
          "",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_t"
       },
 /* Left Stick */
@@ -883,28 +884,28 @@ void retro_set_environment(retro_environment_t cb)
          "vice_mapper_lu",
          "RetroPad L-Up",
          "Mapping for left analog stick up",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_UP"
       },
       {
          "vice_mapper_ld",
          "RetroPad L-Down",
          "Mapping for left analog stick down",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_DOWN"
       },
       {
          "vice_mapper_ll",
          "RetroPad L-Left",
          "Mapping for left analog stick left",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_LEFT"
       },
       {
          "vice_mapper_lr",
          "RetroPad L-Right",
          "Mapping for left analog stick right",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_RIGHT"
       },
 
@@ -913,28 +914,28 @@ void retro_set_environment(retro_environment_t cb)
          "vice_mapper_ru",
          "RetroPad R-Up",
          "Mapping for right analog stick up",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_y"
       },
       {
          "vice_mapper_rd",
          "RetroPad R-Down",
          "Mapping for right analog stick down",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_n"
       },
       {
          "vice_mapper_rl",
          "RetroPad R-Left",
          "Mapping for right analog stick left",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_l"
       },
       {
          "vice_mapper_rr",
          "RetroPad R-Right",
          "Mapping for right analog stick right",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_r"
       },
 /* Hotkeys */
@@ -942,35 +943,35 @@ void retro_set_environment(retro_environment_t cb)
          "vice_mapper_vkbd",
          "Hotkey: Toggle virtual keyboard",
          "Pressing a button mapped to this key opens the keyboard",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_F11"
       },
       {
          "vice_mapper_statusbar",
          "Hotkey: Toggle statusbar",
          "Pressing a button mapped to this key toggles statusbar",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_F10"
       },
       {
          "vice_mapper_joyport_switch",
          "Hotkey: Switch joyports",
          "Pressing a button mapped to this key swaps joyports",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_RCTRL"
       },
       {
          "vice_mapper_reset",
          "Hotkey: Reset",
          "Pressing a button mapped to this key toggles reset",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_END"
       },
       {
          "vice_mapper_warp_mode",
          "Hotkey: Warp mode",
          "Hold this key, or a button mapped to it, for warp mode",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
       },
 /* Datasette controls */
@@ -978,7 +979,7 @@ void retro_set_environment(retro_environment_t cb)
          "vice_mapper_datasette_toggle_hotkeys",
          "Hotkey: Toggle datasette hotkeys",
          "This key enables/disables the datasette hotkeys",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "---"
       },
       {
@@ -996,47 +997,101 @@ void retro_set_environment(retro_environment_t cb)
          "vice_mapper_datasette_stop",
          "Hotkey: Datasette stop",
          "Press stop on tape",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_DOWN"
       },
       {
          "vice_mapper_datasette_start",
          "Hotkey: Datasette start",
          "Press start on tape",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_UP"
       },
       {
          "vice_mapper_datasette_forward",
          "Hotkey: Datasette forward",
          "Tape fast forward",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_RIGHT"
       },
       {
          "vice_mapper_datasette_rewind",
          "Hotkey: Datasette rewind",
          "Tape rewind",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "RETROK_LEFT"
       },
       {
          "vice_mapper_datasette_reset",
          "Hotkey: Datasette reset",
          "Tape reset",
-         CORE_OPTION_KEYS,
+         {{ NULL, NULL }},
          "---"
       },
       { NULL, NULL, NULL, {{0}}, NULL },
    };
 
+   /* fill in the values for all the mappers */
+   int i = 0;
+   int j = 0;
+   while(core_options[i].key) 
+   {
+      if (strstr(core_options[i].key, "vice_mapper_"))
+      {
+         j = 0;
+         while(keyDesc[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+         {
+            core_options[i].values[j].value = keyDesc[j];
+            core_options[i].values[j].label = NULL;
+            ++j;
+         };
+         core_options[i].values[j].value = NULL;
+         core_options[i].values[j].label = NULL;
+      };
+      ++i;
+   }
+
    bool allowNoGameMode;
-   int i;
 
    environ_cb = cb;
 
    cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
-   cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, core_options);
+
+   unsigned version = 0;
+   if (cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && (version == 1))
+      cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, core_options);
+   else
+   {
+      /* Fallback for older API */
+      struct retro_variable variables[64] = { 0 };
+      i = 0;
+      while(core_options[i].key) 
+      {
+         buf[i][0] = 0;
+         variables[i].key = core_options[i].key;
+         strcpy(buf[i], core_options[i].desc);
+         strcat(buf[i], "; ");
+         j = 0;
+         while(core_options[i].values[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX)
+         {
+            if (j == 0)
+            {
+               strcat(buf[i], core_options[i].default_value);
+            }
+            else
+            {
+               strcat(buf[i], "|");
+               strcat(buf[i], core_options[i].values[j].value);
+            }
+            ++j;
+         };
+         variables[i].value = buf[i];
+         ++i;
+      };
+      variables[i].key = NULL;
+      variables[i].value = NULL;      
+      cb( RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+   }
 
    allowNoGameMode = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);

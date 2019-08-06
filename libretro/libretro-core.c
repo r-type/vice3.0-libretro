@@ -445,7 +445,7 @@ void retro_set_environment(retro_environment_t cb)
       { NULL, 0 }
    };
 
-   struct retro_core_option_definition core_options[] =
+   static struct retro_core_option_definition core_options[] =
    {
       {
          "vice_statusbar",
@@ -1051,7 +1051,7 @@ void retro_set_environment(retro_environment_t cb)
       ++i;
    }
 
-   bool allowNoGameMode;
+   static bool allowNoGameMode;
 
    environ_cb = cb;
 
@@ -1063,7 +1063,7 @@ void retro_set_environment(retro_environment_t cb)
    else
    {
       /* Fallback for older API */
-      struct retro_variable variables[64] = { 0 };
+      static struct retro_variable variables[64] = { 0 };
       i = 0;
       while(core_options[i].key) 
       {

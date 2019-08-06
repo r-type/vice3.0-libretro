@@ -1175,7 +1175,7 @@ int autostart_disk(const char *file_name, const char *program_name,
         autostart_disk_cook_name(&name);
         if (!(file_system_attach_disk(8, file_name) < 0)) {
 
-#if 1
+#if __LIBRETRO__
             vdrive_t *vdrive;
             struct disk_image_s *diskimg;
 #endif
@@ -1194,7 +1194,7 @@ int autostart_disk(const char *file_name, const char *program_name,
              *
              * --compyx
              */
-#if 1
+#if __LIBRETRO__
             /* shitty code, we really need to extend the drive API to
              * get at these sorts for things without breaking into core code
              */

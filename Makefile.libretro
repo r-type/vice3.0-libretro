@@ -309,16 +309,16 @@ CXXFLAGS    += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 CFLAGS      += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS) 
 LDFLAGS     += -lm $(fpic)
 
-ifeq($(platform), theos_ios)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
+ifeq ($(platform), theos_ios)
+   SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
 else ifneq (,$(findstring ios,$(platform)))
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
+   SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
 else ifeq ($(platform), theos_ios)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
+   SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
 else ifeq ($(platform), osx)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
+   SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
 else ifeq ($(platform), classic_armv7_a7)
-	SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
+   SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
 endif
 
 ifeq ($(platform), theos_ios)

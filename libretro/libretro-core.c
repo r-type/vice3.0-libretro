@@ -471,7 +471,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_emulation",
          "Drive sound emulation",
-         "Emulates the iconic floppy drive sounds for nostalgia",
+         "Emulates the iconic floppy drive sounds for nostalgia. D64 & true drive emulation required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -526,7 +526,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_sampling",
          "ReSID sampling",
-         "Fast setting improves performance dramatically on PS Vita",
+         "Resampling for best quality. Fast setting improves performance dramatically on PS Vita",
          {
             { "Resampling", NULL },
             { "Fast resampling", NULL },
@@ -790,8 +790,8 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_joyport",
-         "Controller 0 port",
-         "Some games use port 2, some use port 1",
+         "RetroPad port",
+         "Most games use port 2, some use port 1",
          {
             { "Port 2", NULL },
             { "Port 1", NULL },
@@ -962,7 +962,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_reset",
          "Hotkey: Reset",
-         "Pressing a button mapped to this key toggles reset",
+         "Pressing a button mapped to this key triggers reset",
          {{ NULL, NULL }},
          "RETROK_END"
       },

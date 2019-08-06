@@ -16,8 +16,6 @@ COREFLAGS := -DCORE_NAME=\"$(EMUTYPE)\" \
   -DHAVE_INET_ATON \
   -DWANT_ZLIB
 
-SOURCES_C += $(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c $(LIBRETRO_COMM_DIR)/file/file_path.c $(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c
-
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
 ifneq ($(GIT_VERSION)," unknown")
   COREFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"

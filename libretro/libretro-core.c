@@ -516,10 +516,10 @@ void retro_set_environment(retro_environment_t cb)
          "ReSID is accurate but slower, 6581 was used in original C64",
          {
             { "6581F", "6581 FastSID" },
-            { "8580F", "8580 FastSID" },
             { "6581R", "6581 ReSID" },
+            { "8580F", "8580 FastSID" },
             { "8580R", "8580 ReSID" },
-            { "8580RD", NULL },
+            { "8580RD", "8580 ReSID + digi boost" },
             { NULL, NULL },
          },
          "6581F"
@@ -631,18 +631,17 @@ void retro_set_environment(retro_environment_t cb)
          {
             { "C64 PAL", NULL },
             { "C64C PAL", NULL },
-            { "C64 OLD PAL", NULL },
+            //{ "C64 OLD PAL", NULL },
             { "C64 NTSC", NULL },
             { "C64C NTSC", NULL },
-            { "C64 OLD NTSC", NULL },
-            { "C64 PAL N", NULL },
+            //{ "C64 OLD NTSC", NULL },
+            //{ "C64 PAL N", NULL },
             { "C64SX PAL", NULL },
             { "C64SX NTSC", NULL },
             { "C64 JAP", NULL },
             { "C64 GS", NULL },
             { "PET64 PAL", NULL },
             { "PET64 NTSC", NULL },
-            { "ULTIMAX", NULL },
             { NULL, NULL },
          },
          "C64 PAL"
@@ -668,9 +667,9 @@ void retro_set_environment(retro_environment_t cb)
          "Colodore is recommended for the most accurate colors",
          {
             { "Default", NULL },
+            { "Colodore VIC", NULL },
             { "Mike NTSC", NULL },
             { "Mike PAL", NULL },
-            { "Colodore VIC", NULL },
             { "Vice", NULL },
             { NULL, NULL },
          },
@@ -683,9 +682,9 @@ void retro_set_environment(retro_environment_t cb)
          "Colodore is recommended for the most accurate colors",
          {
             { "Default", NULL },
+            { "Colodore TED", NULL },
             { "Yape PAL", NULL },
             { "Yape NTSC", NULL },
-            { "Colodore TED", NULL },
             { NULL, NULL },
          },
          "Default"
@@ -725,22 +724,22 @@ void retro_set_environment(retro_environment_t cb)
          "Colodore is recommended for most accurate colors",
          {
             { "Default", NULL },
+            { "Colodore", NULL },
+            { "Community Colors", NULL },
             { "Pepto PAL", NULL },
             { "Pepto PAL old", NULL },
             { "Pepto NTSC Sony", NULL },
             { "Pepto NTSC", NULL },
-            { "Colodore", NULL },
-            { "Vice", NULL },
             { "C64HQ", NULL },
             { "C64S", NULL },
             { "CCS64", NULL },
+            { "Deekay", NULL },
             { "Frodo", NULL },
             { "Godot", NULL },
             { "PC64", NULL },
-            { "RGB", NULL },
-            { "Deekay", NULL },
             { "Ptoing", NULL },
-            { "Community Colors", NULL },
+            { "RGB", NULL },
+            { "Vice", NULL },
             { NULL, NULL },
          },
          "Default"
@@ -1357,18 +1356,17 @@ static void update_variables(void)
 
       if (strcmp(var.value, "C64 PAL") == 0)modl=C64MODEL_C64_PAL;
       else if (strcmp(var.value, "C64C PAL") == 0)modl=C64MODEL_C64C_PAL;
-      else if (strcmp(var.value, "C64 OLD PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
+      //else if (strcmp(var.value, "C64 OLD PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
       else if (strcmp(var.value, "C64 NTSC") == 0)modl=C64MODEL_C64_NTSC;
       else if (strcmp(var.value, "C64C NTSC") == 0)modl=C64MODEL_C64C_NTSC;
-      else if (strcmp(var.value, "C64 OLD NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
-      else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
+      //else if (strcmp(var.value, "C64 OLD NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
+      //else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
       else if (strcmp(var.value, "C64SX PAL") == 0)modl=C64MODEL_C64SX_PAL;
       else if (strcmp(var.value, "C64SX NTSC") == 0)modl=C64MODEL_C64SX_NTSC;
       else if (strcmp(var.value, "C64 JAP") == 0)modl=C64MODEL_C64_JAP;
       else if (strcmp(var.value, "C64 GS") == 0)modl=C64MODEL_C64_GS;
       else if (strcmp(var.value, "PET64 PAL") == 0)modl=C64MODEL_PET64_PAL;
       else if (strcmp(var.value, "PET64 NTSC") == 0)modl=C64MODEL_PET64_NTSC;
-      else if (strcmp(var.value, "ULTIMAX") == 0)modl=C64MODEL_ULTIMAX;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)

@@ -26,12 +26,13 @@ retro_log_printf_t log_cb;
 
 char RETRO_DIR[512];
 
-int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int mapper_keys[37]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 static char buf[64][4096] = { 0 };
 
 // Our virtual time counter, increased by retro_run()
 long microSecCounter=0;
 int cpuloop=1;
+int cpupaused=0;
 
 #ifdef FRONTEND_SUPPORTS_RGB565
 	uint16_t *Retro_Screen;
@@ -973,6 +974,20 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
       },
+      {
+         "vice_mapper_snapshot_save",
+         "Hotkey: Snapshot save",
+         "Vice snapshot save, temporary",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_snapshot_load",
+         "Hotkey: Snapshot load",
+         "Vice snapshot load, temporary",
+         {{ NULL, NULL }},
+         "---"
+      },
 /* Datasette controls */
       {
          "vice_mapper_datasette_toggle_hotkeys",
@@ -1776,6 +1791,20 @@ static void update_variables(void)
       mapper_keys[28] = keyId(var.value);
    }
 
+   var.key = "vice_mapper_snapshot_save";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[29] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_snapshot_load";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[30] = keyId(var.value);
+   }
+
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
 
@@ -1789,43 +1818,44 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[29] = keyId(var.value);
+      mapper_keys[31] = keyId(var.value);
    }
    
    var.key = "vice_mapper_datasette_stop";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[30] = keyId(var.value);
+      mapper_keys[32] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[31] = keyId(var.value);
+      mapper_keys[33] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_forward";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[32] = keyId(var.value);
+      mapper_keys[34] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_rewind";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[33] = keyId(var.value);
+      mapper_keys[35] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[34] = keyId(var.value);
+      mapper_keys[36] = keyId(var.value);
    }
+   
 }
 
 void emu_reset(void)
@@ -2264,7 +2294,7 @@ void retro_run(void)
       runstate = RUNSTATE_RUNNING;
    } 
 
-   while(cpuloop==1)
+   while(cpuloop==1 && !cpupaused)
       maincpu_mainloop_retro();
    cpuloop=1;
 
@@ -2273,7 +2303,8 @@ void retro_run(void)
 
    video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
-   microSecCounter += (1000000/50);
+  if(!cpupaused)
+      microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
 #define M3U_FILE_EXT "m3u"

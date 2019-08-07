@@ -1,5 +1,7 @@
 #include "libretro.h"
 #include "libretro-core.h"
+#include "file/file_path.h"
+#include "log.h"
 
 #include "archdep.h"
 #include "c64.h"
@@ -25,6 +27,8 @@ bool retro_load_ok = false;
 retro_log_printf_t log_cb;
 
 char RETRO_DIR[512];
+char RPATH_basename[512];
+char save_file[512];
 
 int mapper_keys[37]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 static char buf[64][4096] = { 0 };
@@ -32,7 +36,6 @@ static char buf[64][4096] = { 0 };
 // Our virtual time counter, increased by retro_run()
 long microSecCounter=0;
 int cpuloop=1;
-int cpupaused=0;
 
 #ifdef FRONTEND_SUPPORTS_RGB565
 	uint16_t *Retro_Screen;
@@ -51,6 +54,8 @@ short signed int SNDBUF[1024*2];
 char RPATH[512];
 
 extern int SHOWKEY;
+extern int REQUEST_SNAPSHOT_SAVE;
+extern int REQUEST_SNAPSHOT_LOAD;
 
 extern int app_init(void);
 extern int app_free(void);
@@ -2254,6 +2259,9 @@ void retro_blit(void)
    memcpy(Retro_Screen,bmp,PITCH*WINDOW_SIZE);
 }
 
+
+
+
 void retro_run(void)
 {
    bool updated = false;
@@ -2292,7 +2300,7 @@ void retro_run(void)
       runstate = RUNSTATE_RUNNING;
    } 
 
-   while(cpuloop==1 && !cpupaused)
+   while(cpuloop==1)
       maincpu_mainloop_retro();
    cpuloop=1;
 
@@ -2301,8 +2309,28 @@ void retro_run(void)
 
    video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
-  if(!cpupaused)
-      microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
+   microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
+   
+   if (REQUEST_SNAPSHOT_SAVE)
+   {
+      snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", path_basename(RPATH));
+      snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
+      log_message(LOG_DEFAULT, "Saving snapshot: %s", save_file);
+      if (machine_write_snapshot(save_file, 0, 1, 0) < 0) { /* filename, save_roms, save_disks, event_mode */
+          snapshot_display_error();
+      }
+      REQUEST_SNAPSHOT_SAVE=0;
+   }
+   else if (REQUEST_SNAPSHOT_LOAD)
+   {
+      snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", path_basename(RPATH));
+      snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
+      log_message(LOG_DEFAULT, "Loading snapshot: %s", save_file);
+      if (machine_read_snapshot(save_file, 0) < 0) {
+          snapshot_display_error();
+      }
+      REQUEST_SNAPSHOT_LOAD=0;
+   }
 }
 
 #define M3U_FILE_EXT "m3u"

@@ -26,7 +26,7 @@ extern int cpupaused;
 int SHOWKEY=-1;
 int SHIFTON=-1;
 int SND=1;
-int vkey_pressed;
+int vkey_pressed=-1;
 char core_key_state[512];
 char core_old_key_state[512];
 int PAS=4;
@@ -37,14 +37,9 @@ bool num_locked = false;
 
 extern bool retro_load_ok;
 extern int mapper_keys[37];
-int statusbar;
-
-#include "log.h"
-#include <libgen.h>
-extern int retro_save_directory;
-extern char RPATH[512];
-char RPATH_basename[512];
-char save_file[512];
+int REQUEST_SNAPSHOT_SAVE=0;
+int REQUEST_SNAPSHOT_LOAD=0;
+int statusbar=0;
 
 #define EMU_VKBD 1
 #define EMU_STATUSBAR 2
@@ -87,24 +82,10 @@ void emu_function(int function) {
             break;
 
         case EMU_SNAPSHOT_SAVE:
-            snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", basename(RPATH));
-            snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
-            log_message(LOG_DEFAULT, "Saving snapshot: %s", save_file);
-            cpupaused=1;
-            if (machine_write_snapshot(save_file, 0, 1, 0) < 0) { /* filename, save_roms, save_disks, event_mode */
-                snapshot_display_error();
-            }
-            cpupaused=0;
+            REQUEST_SNAPSHOT_SAVE=1;
             break;
         case EMU_SNAPSHOT_LOAD:
-            snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", basename(RPATH));
-            snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
-            log_message(LOG_DEFAULT, "Loading snapshot: %s", save_file);
-            cpupaused=1;
-            if (machine_read_snapshot(save_file, 0) < 0) {
-                snapshot_display_error();
-            }
-            cpupaused=0;
+            REQUEST_SNAPSHOT_LOAD=1;
             break;
         
         case EMU_DATASETTE_TOGGLE_HOTKEYS:

@@ -51,19 +51,18 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-#define MAX_STATUSBAR_LEN           54
+#define MAX_STATUSBAR_LEN           47
 #define STATUSBAR_JOY_POS           0
 #define STATUSBAR_PAUSE_POS         4
-#define STATUSBAR_DRIVE_POS         24
-#define STATUSBAR_DRIVE8_TRACK_POS  26
-#define STATUSBAR_DRIVE9_TRACK_POS  31
-#define STATUSBAR_DRIVE10_TRACK_POS 36
-#define STATUSBAR_DRIVE11_TRACK_POS 41
-#define STATUSBAR_TAPE_POS          29
-#define STATUSBAR_SPEED_POS         50
+#define STATUSBAR_DRIVE_POS         37
+#define STATUSBAR_DRIVE8_TRACK_POS  39
+#define STATUSBAR_DRIVE9_TRACK_POS  39
+#define STATUSBAR_DRIVE10_TRACK_POS 39
+#define STATUSBAR_DRIVE11_TRACK_POS 39
+#define STATUSBAR_TAPE_POS          31
+#define STATUSBAR_SPEED_POS         43
 
-static char statusbar_text[MAX_STATUSBAR_LEN] = "                                                      ";
-
+static char statusbar_text[MAX_STATUSBAR_LEN] = "                                               ";
 
 static int pitch;
 static int draw_offset;
@@ -91,15 +90,61 @@ static void display_tape(void)
     }
 }
 
+char* joystick_value_human(char val)
+{
+    static char str[3];
+    switch(val) {
+        default:
+            sprintf(str, "%3s", "   ");
+            break;
+        case 1:
+        case 17:
+            sprintf(str, "%3s", " ^ ");
+            break;
+        case 2:
+        case 18:
+            sprintf(str, "%3s", " v ");
+            break;
+        case 4:
+        case 20:
+            sprintf(str, "%3s", "<  ");
+            break;
+        case 5:
+        case 21:
+            sprintf(str, "%3s", "<^ ");
+            break;
+        case 6:
+        case 22:
+            sprintf(str, "%3s", "<v ");
+            break;
+        case 8:
+        case 24:
+            sprintf(str, "%3s", "  >");
+            break;
+        case 9:
+        case 25:
+            sprintf(str, "%3s", " ^>");
+            break;
+        case 10:
+        case 26:
+            sprintf(str, "%3s", " v>");
+            break;
+    }
+
+    str[1] = (val >= 16 ) ? (str[1] | 0x80) : str[1];
+    return str;
+}
+
+
 static void display_joyport(void)
 {
     int len;
     char tmpstr[25];
     
-    sprintf(tmpstr, "J%d:%2d ", 1, joystick_value[1]);
-    sprintf(tmpstr + strlen(tmpstr), "J%d:%2d ", 2, joystick_value[2]);
-    sprintf(tmpstr + strlen(tmpstr), "J%d:%2d ", 3, joystick_value[3]);
-    sprintf(tmpstr + strlen(tmpstr), "J%d:%2d", 4, joystick_value[4]);
+    sprintf(tmpstr, "J%d%3s ", 1, joystick_value_human(joystick_value[1]));
+    sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 2, joystick_value_human(joystick_value[2]));
+    sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3]));
+    sprintf(tmpstr + strlen(tmpstr), "J%d%3s", 4, joystick_value_human(joystick_value[4]));
 
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
@@ -457,17 +502,17 @@ unsigned int color_f, color_b;
         }
         
         /* Trickery to balance uneven character width with VIC area width */
-        char_width = 6;
-        char_offset = (MAX_STATUSBAR_LEN - i == 2) ? 1 : 0;
+        char_width = 7;
+        char_offset = (MAX_STATUSBAR_LEN - i <= 4) ? -2 : 0;
 
         if (c & 0x80) {
-		    sprintf(tmpstr,"%c",c&0x7f);
-		    Retro_Draw_string(&fake, x+i*char_width+char_offset, y, tmpstr,1,1,1, color_b, color_f);
-	        //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
+            sprintf(tmpstr,"%c",c&0x7f);
+            Retro_Draw_string(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b, color_f);
+            //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
         } else {
-         	sprintf(tmpstr,"%c",c);
-         	Retro_Draw_string(&fake, x+i*char_width+char_offset, y, tmpstr,1,1,1, color_f, color_b);
-         	//  uistatusbar_putchar(c, i, 0, color_f, color_b);
+            sprintf(tmpstr,"%c",c);
+            Retro_Draw_string(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f, color_b);
+            //  uistatusbar_putchar(c, i, 0, color_f, color_b);
         }
     }
 }

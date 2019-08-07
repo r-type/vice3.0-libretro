@@ -53,6 +53,11 @@ NK_API struct nk_retro_event* nk_retro_event_ptr();
 
 #include "libretro.h"
 
+/* VKBD_MIN_HOLDING_TIME: Hold a direction longer than this and automatic movement sets in */
+/* VKBD_MOVE_DELAY: Delay between automatic movement from button to button */
+#define VKBD_MIN_HOLDING_TIME 200
+#define VKBD_MOVE_DELAY 50
+
 extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
 extern struct nk_vec2 offset; /* needed for correct wraparound in vkbd */
@@ -69,7 +74,9 @@ struct nk_retro_event {
 	int gmy; // mouse
 	int mouse_wu;
 	int mouse_wd;
-	int slowdown;
+	int let_go_of_direction;
+	long last_move_time;
+	long last_press_time;
 	int showpointer;
 };
 
@@ -466,7 +473,9 @@ static void retro_init_event()
 	revent.JOYPAD_PRESSED=0;
 	revent.mouse_wu=0;
 	revent.mouse_wd=0;
-	revent.slowdown=0;
+	revent.let_go_of_direction=1;
+	revent.last_move_time=0;
+	revent.last_press_time=0;
 	memset(revent.key_state,0,512);
 	memset(revent.old_key_state ,0, sizeof(revent.old_key_state));
 	revent.LSHIFTON=-1;
@@ -620,70 +629,87 @@ nk_retro_handle_event(int *evt,int poll)
        mouse_l = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
        mouse_r = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
        mouse_m = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE); 
-   }
+    }
 
-	//relative
-	if(revent.MOUSE_RELATIVE){
+    //relative
+    if(revent.MOUSE_RELATIVE){
 
-      		// Joypad
-      		if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)) {
-      		    mouse_x += revent.MOUSE_PAS;
-      		    revent.JOYPAD_PRESSED = 1;
+        // Joypad
+        revent.JOYPAD_PRESSED = 0;
+        if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)) {
+            mouse_x += revent.MOUSE_PAS;
+            revent.JOYPAD_PRESSED = 1;
+        }
+        else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)) {
+            mouse_x -= revent.MOUSE_PAS;
+            revent.JOYPAD_PRESSED = 1;
+        }
+        if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)) {
+            mouse_y += revent.MOUSE_PAS;
+            revent.JOYPAD_PRESSED = 1;
+        }
+        else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)) {
+            mouse_y -= revent.MOUSE_PAS;
+            revent.JOYPAD_PRESSED = 1;
+        }
+
+        if(revent.JOYPAD_PRESSED)
+        {
+            long now = GetTicks() / 1000;
+            if (revent.let_go_of_direction)
+               /* just pressing down */
+               revent.last_press_time = now;
+            if ((now-revent.last_press_time>VKBD_MIN_HOLDING_TIME
+                 && now-revent.last_move_time>VKBD_MOVE_DELAY)
+                || revent.let_go_of_direction)
+            {
+                revent.last_move_time = now;
+
+                revent.showpointer = 0;
+
+                revent.gmx+=mouse_x;
+                revent.gmy+=mouse_y;
+
+                // Joypad wraparound
+                // Offset changes depending on whether borders are on or off
+                if(revent.gmx<offset.x+12)
+                    revent.gmx=offset.x+319-20-12;
+                if(revent.gmx>offset.x+319-12)
+                    revent.gmx=offset.x+18+12;
+                if(revent.gmy<offset.y+4)
+                    revent.gmy=offset.y+199-12;
+                if(revent.gmy>offset.y+199-4)
+                    revent.gmy=offset.y+20;
             }
-      		else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)) {
-      		    mouse_x -= revent.MOUSE_PAS;
-      		    revent.JOYPAD_PRESSED = 1;
-            } 
-      		else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)) {
-      		    mouse_y += revent.MOUSE_PAS;
-      		    revent.JOYPAD_PRESSED = 1;
+            revent.let_go_of_direction = 0;
+        }
+        else
+        {
+            revent.let_go_of_direction = 1;
+
+            // Mouse
+            mouse_x = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+            mouse_y = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+
+            if(mouse_x || mouse_y) {
+                revent.showpointer = 1;
             }
-      		else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)) {
-      		    mouse_y -= revent.MOUSE_PAS;
-      		    revent.JOYPAD_PRESSED = 1;
-            } else {
-                revent.JOYPAD_PRESSED = 0;
 
-                // Mouse
-                mouse_x = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-                mouse_y = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
-                
-                if(mouse_x || mouse_y) {
-                    revent.showpointer = 1;
-                }
-            }
-            
-   		if(revent.JOYPAD_PRESSED == 0) {
-   		    revent.slowdown = 0;
-   		}
+            revent.gmx+=mouse_x;
+            revent.gmy+=mouse_y;
 
-   		if(revent.slowdown>0) return;
-
-   		if(revent.JOYPAD_PRESSED > 0) {
-   		    revent.showpointer = 0;
-   		    revent.slowdown = 1;
-   		}
-
-   		revent.gmx+=mouse_x;
-   		revent.gmy+=mouse_y;
-   		
-   		if(revent.JOYPAD_PRESSED > 0) {
-   	    	// Joypad wraparound
-            // Offset changes depending on whether borders are on or off
-            if(revent.gmx<offset.x+12) 	revent.gmx=offset.x+319-20-12;
-            if(revent.gmx>offset.x+319-12) revent.gmx=offset.x+18+12;
-            if(revent.gmy<offset.y+4) 	revent.gmy=offset.y+199-12;
-            if(revent.gmy>offset.y+199-4) revent.gmy=offset.y+20;
-   		} else {
-       		// Mouse corners
-       		if(revent.gmx<0)		revent.gmx=0;
-       		if(revent.gmx>retroW-1)	revent.gmx=retroW-1;
-       		if(revent.gmy<0)		revent.gmy=0;
-       		if(revent.gmy>retroH-1)	revent.gmy=retroH-1;
-       	}	
-
-	}
-   else{
+            // Mouse corners
+            if(revent.gmx<0)
+                revent.gmx=0;
+            if(revent.gmx>retroW-1)
+                revent.gmx=retroW-1;
+            if(revent.gmy<0)
+                revent.gmy=0;
+            if(revent.gmy>retroH-1)
+                revent.gmy=retroH-1;
+        }
+    }
+    else{
 
       //absolute
       //FIXME FULLSCREEN no pointer

@@ -2128,7 +2128,7 @@ void retro_init(void)
    { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Right Stick X" },			   \
    { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Right Stick Y" }
    
-   struct retro_input_descriptor inputDescriptors[] =
+   static struct retro_input_descriptor inputDescriptors[] =
    {
       RETRO_DESCRIPTOR_BLOCK( 0 ),
       RETRO_DESCRIPTOR_BLOCK( 1 ),
@@ -2143,6 +2143,10 @@ void retro_init(void)
 
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
    environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &diskControl);
+
+   static uint32_t quirks = RETRO_SERIALIZATION_QUIRK_INCOMPLETE | RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE | RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE;
+   environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);
+
    microSecCounter = 0;
 }
 
@@ -2258,9 +2262,6 @@ void retro_blit(void)
 {
    memcpy(Retro_Screen,bmp,PITCH*WINDOW_SIZE);
 }
-
-
-
 
 void retro_run(void)
 {
@@ -2472,16 +2473,65 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 size_t retro_serialize_size(void)
 {
+   if (retro_ui_finalized)
+   {
+      size_t size = 0;
+      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
+      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      {
+         FILE *file = fopen(save_file, "rb");
+         if (file)
+         {
+            fseek(file, 0L, SEEK_END);
+            size = ftell(file);
+            fclose(file);
+            return size;
+         }
+      }
+   }
    return 0;
 }
 
 bool retro_serialize(void *data_, size_t size)
 {
+   if (retro_ui_finalized)
+   {
+      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vfs", retro_save_directory, FSDEV_DIR_SEP_STR);
+      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      {
+         FILE *file = fopen(save_file, "rb");
+         if (file)
+         {
+            if (fread(data_, size, 1, file) == 1)
+            {
+               fclose(file);
+               return true;
+            }
+            fclose(file);
+         }
+      }
+   }
    return false;
 }
 
 bool retro_unserialize(const void *data_, size_t size)
 {
+   if (retro_ui_finalized)
+   {
+      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vfs", retro_save_directory, FSDEV_DIR_SEP_STR);
+      FILE *file = fopen(save_file, "wb");
+      if (file)
+      {
+         if (fwrite(data_, size, 1, file) == 1)
+         {
+            fclose(file);
+            if (machine_read_snapshot(save_file, 0) >= 0)
+               return true;
+         }
+         else
+            fclose(file);
+      }
+   }
    return false;
 }
 

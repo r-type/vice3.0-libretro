@@ -73,8 +73,6 @@ int maincpu_stretch;
 #endif
 
 #include "../shared/archdep_atexit.c"
-//#include "../shared/archdep_program_name.c"
-#include "../shared/archdep_program_path.c"
 #include "../shared/archdep_extra_title_text.c"
 
 

@@ -1,5 +1,7 @@
 #include "libretro.h"
 #include "libretro-core.h"
+#include "file/file_path.h"
+#include "log.h"
 
 #include "archdep.h"
 #include "c64.h"
@@ -25,8 +27,10 @@ bool retro_load_ok = false;
 retro_log_printf_t log_cb;
 
 char RETRO_DIR[512];
+char RPATH_basename[512];
+char save_file[512];
 
-int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int mapper_keys[37]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 static char buf[64][4096] = { 0 };
 
 // Our virtual time counter, increased by retro_run()
@@ -50,6 +54,8 @@ short signed int SNDBUF[1024*2];
 char RPATH[512];
 
 extern int SHOWKEY;
+extern int REQUEST_SNAPSHOT_SAVE;
+extern int REQUEST_SNAPSHOT_LOAD;
 
 extern int app_init(void);
 extern int app_free(void);
@@ -515,10 +521,10 @@ void retro_set_environment(retro_environment_t cb)
          "ReSID is accurate but slower, 6581 was used in original C64",
          {
             { "6581F", "6581 FastSID" },
-            { "8580F", "8580 FastSID" },
             { "6581R", "6581 ReSID" },
+            { "8580F", "8580 FastSID" },
             { "8580R", "8580 ReSID" },
-            { "8580RD", NULL },
+            { "8580RD", "8580 ReSID + digi boost" },
             { NULL, NULL },
          },
          "6581F"
@@ -630,18 +636,17 @@ void retro_set_environment(retro_environment_t cb)
          {
             { "C64 PAL", NULL },
             { "C64C PAL", NULL },
-            { "C64 OLD PAL", NULL },
+            //{ "C64 OLD PAL", NULL },
             { "C64 NTSC", NULL },
             { "C64C NTSC", NULL },
-            { "C64 OLD NTSC", NULL },
-            { "C64 PAL N", NULL },
+            //{ "C64 OLD NTSC", NULL },
+            //{ "C64 PAL N", NULL },
             { "C64SX PAL", NULL },
             { "C64SX NTSC", NULL },
             { "C64 JAP", NULL },
             { "C64 GS", NULL },
             { "PET64 PAL", NULL },
             { "PET64 NTSC", NULL },
-            { "ULTIMAX", NULL },
             { NULL, NULL },
          },
          "C64 PAL"
@@ -667,9 +672,9 @@ void retro_set_environment(retro_environment_t cb)
          "Colodore is recommended for the most accurate colors",
          {
             { "Default", NULL },
+            { "Colodore VIC", NULL },
             { "Mike NTSC", NULL },
             { "Mike PAL", NULL },
-            { "Colodore VIC", NULL },
             { "Vice", NULL },
             { NULL, NULL },
          },
@@ -682,9 +687,9 @@ void retro_set_environment(retro_environment_t cb)
          "Colodore is recommended for the most accurate colors",
          {
             { "Default", NULL },
+            { "Colodore TED", NULL },
             { "Yape PAL", NULL },
             { "Yape NTSC", NULL },
-            { "Colodore TED", NULL },
             { NULL, NULL },
          },
          "Default"
@@ -724,22 +729,22 @@ void retro_set_environment(retro_environment_t cb)
          "Colodore is recommended for most accurate colors",
          {
             { "Default", NULL },
+            { "Colodore", NULL },
+            { "Community Colors", NULL },
             { "Pepto PAL", NULL },
             { "Pepto PAL old", NULL },
             { "Pepto NTSC Sony", NULL },
             { "Pepto NTSC", NULL },
-            { "Colodore", NULL },
-            { "Vice", NULL },
             { "C64HQ", NULL },
             { "C64S", NULL },
             { "CCS64", NULL },
+            { "Deekay", NULL },
             { "Frodo", NULL },
             { "Godot", NULL },
             { "PC64", NULL },
-            { "RGB", NULL },
-            { "Deekay", NULL },
             { "Ptoing", NULL },
-            { "Community Colors", NULL },
+            { "RGB", NULL },
+            { "Vice", NULL },
             { NULL, NULL },
          },
          "Default"
@@ -972,6 +977,20 @@ void retro_set_environment(retro_environment_t cb)
          "Hold this key, or a button mapped to it, for warp mode",
          {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
+      },
+      {
+         "vice_mapper_snapshot_save",
+         "Hotkey: Snapshot save",
+         "Vice snapshot save, temporary",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_snapshot_load",
+         "Hotkey: Snapshot load",
+         "Vice snapshot load, temporary",
+         {{ NULL, NULL }},
+         "---"
       },
 /* Datasette controls */
       {
@@ -1342,18 +1361,17 @@ static void update_variables(void)
 
       if (strcmp(var.value, "C64 PAL") == 0)modl=C64MODEL_C64_PAL;
       else if (strcmp(var.value, "C64C PAL") == 0)modl=C64MODEL_C64C_PAL;
-      else if (strcmp(var.value, "C64 OLD PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
+      //else if (strcmp(var.value, "C64 OLD PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
       else if (strcmp(var.value, "C64 NTSC") == 0)modl=C64MODEL_C64_NTSC;
       else if (strcmp(var.value, "C64C NTSC") == 0)modl=C64MODEL_C64C_NTSC;
-      else if (strcmp(var.value, "C64 OLD NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
-      else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
+      //else if (strcmp(var.value, "C64 OLD NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
+      //else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
       else if (strcmp(var.value, "C64SX PAL") == 0)modl=C64MODEL_C64SX_PAL;
       else if (strcmp(var.value, "C64SX NTSC") == 0)modl=C64MODEL_C64SX_NTSC;
       else if (strcmp(var.value, "C64 JAP") == 0)modl=C64MODEL_C64_JAP;
       else if (strcmp(var.value, "C64 GS") == 0)modl=C64MODEL_C64_GS;
       else if (strcmp(var.value, "PET64 PAL") == 0)modl=C64MODEL_PET64_PAL;
       else if (strcmp(var.value, "PET64 NTSC") == 0)modl=C64MODEL_PET64_NTSC;
-      else if (strcmp(var.value, "ULTIMAX") == 0)modl=C64MODEL_ULTIMAX;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1776,6 +1794,20 @@ static void update_variables(void)
       mapper_keys[28] = keyId(var.value);
    }
 
+   var.key = "vice_mapper_snapshot_save";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[29] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_snapshot_load";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[30] = keyId(var.value);
+   }
+
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
 
@@ -1789,43 +1821,44 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[29] = keyId(var.value);
+      mapper_keys[31] = keyId(var.value);
    }
    
    var.key = "vice_mapper_datasette_stop";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[30] = keyId(var.value);
+      mapper_keys[32] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[31] = keyId(var.value);
+      mapper_keys[33] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_forward";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[32] = keyId(var.value);
+      mapper_keys[34] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_rewind";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[33] = keyId(var.value);
+      mapper_keys[35] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[34] = keyId(var.value);
+      mapper_keys[36] = keyId(var.value);
    }
+   
 }
 
 void emu_reset(void)
@@ -2226,6 +2259,9 @@ void retro_blit(void)
    memcpy(Retro_Screen,bmp,PITCH*WINDOW_SIZE);
 }
 
+
+
+
 void retro_run(void)
 {
    bool updated = false;
@@ -2273,7 +2309,28 @@ void retro_run(void)
 
    video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
-   microSecCounter += (1000000/50);
+   microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
+   
+   if (REQUEST_SNAPSHOT_SAVE)
+   {
+      snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", path_basename(RPATH));
+      snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
+      log_message(LOG_DEFAULT, "Saving snapshot: %s", save_file);
+      if (machine_write_snapshot(save_file, 0, 1, 0) < 0) { /* filename, save_roms, save_disks, event_mode */
+          snapshot_display_error();
+      }
+      REQUEST_SNAPSHOT_SAVE=0;
+   }
+   else if (REQUEST_SNAPSHOT_LOAD)
+   {
+      snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", path_basename(RPATH));
+      snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
+      log_message(LOG_DEFAULT, "Loading snapshot: %s", save_file);
+      if (machine_read_snapshot(save_file, 0) < 0) {
+          snapshot_display_error();
+      }
+      REQUEST_SNAPSHOT_LOAD=0;
+   }
 }
 
 #define M3U_FILE_EXT "m3u"

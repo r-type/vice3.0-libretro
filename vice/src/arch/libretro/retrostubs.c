@@ -6,10 +6,12 @@
 #include "resources.h"
 #include "autostart.h"
 #include "datasette.h"
+#include "snapshot.h"
 
 #include "kbd.h"
 #include "mousedrv.h"
 #include "libretro-core.h"
+#include "archdep.h"
 
 extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
@@ -18,12 +20,13 @@ extern void emu_reset(void);
 extern void save_bkg();
 extern void Screen_SetFullUpdate(int scr);
 extern unsigned vice_devices[5];
+extern int cpupaused;
 
 //EMU FLAGS
 int SHOWKEY=-1;
 int SHIFTON=-1;
 int SND=1;
-int vkey_pressed;
+int vkey_pressed=-1;
 char core_key_state[512];
 char core_old_key_state[512];
 int PAS=4;
@@ -33,8 +36,10 @@ unsigned int datasette=0;
 bool num_locked = false;
 
 extern bool retro_load_ok;
-extern int mapper_keys[35];
-int statusbar;
+extern int mapper_keys[37];
+int REQUEST_SNAPSHOT_SAVE=0;
+int REQUEST_SNAPSHOT_LOAD=0;
+int statusbar=0;
 
 #define EMU_VKBD 1
 #define EMU_STATUSBAR 2
@@ -42,12 +47,14 @@ int statusbar;
 #define EMU_RESET 4
 #define EMU_WARP_ON 5
 #define EMU_WARP_OFF 6
-#define EMU_DATASETTE_TOGGLE_HOTKEYS 7
-#define EMU_DATASETTE_STOP 8
-#define EMU_DATASETTE_START 9
-#define EMU_DATASETTE_FORWARD 10
-#define EMU_DATASETTE_REWIND 11
-#define EMU_DATASETTE_RESET 12
+#define EMU_SNAPSHOT_SAVE 7
+#define EMU_SNAPSHOT_LOAD 8
+#define EMU_DATASETTE_TOGGLE_HOTKEYS 9
+#define EMU_DATASETTE_STOP 10
+#define EMU_DATASETTE_START 11
+#define EMU_DATASETTE_FORWARD 12
+#define EMU_DATASETTE_REWIND 13
+#define EMU_DATASETTE_RESET 14
 
 void emu_function(int function) {
     switch (function)
@@ -72,6 +79,13 @@ void emu_function(int function) {
             break;
         case EMU_WARP_OFF:
             resources_set_int("WarpMode", 0);
+            break;
+
+        case EMU_SNAPSHOT_SAVE:
+            REQUEST_SNAPSHOT_SAVE=1;
+            break;
+        case EMU_SNAPSHOT_LOAD:
+            REQUEST_SNAPSHOT_LOAD=1;
             break;
         
         case EMU_DATASETTE_TOGGLE_HOTKEYS:
@@ -202,9 +216,9 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     int threshold=20000;
 
     /* Iterate hotkeys, skip datasette control if not enabled */
-    int imax = (datasette) ? 11 : 6;
+    int imax = (datasette) ? 13 : 8;
     /* Skip datasette hotkeys if vkbd is on */
-    imax = (SHOWKEY==1) ? 6 : imax;
+    imax = (SHOWKEY==1) ? 8 : imax;
     
     for(i = 0; i < imax; i++) {
         mk = i + 24;
@@ -228,22 +242,23 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                 case 28:
                     emu_function(EMU_WARP_ON);
                     break;
-                case 29:
+
+                case 31:
                     emu_function(EMU_DATASETTE_TOGGLE_HOTKEYS);
                     break;
-                case 30:
+                case 32:
                     emu_function(EMU_DATASETTE_STOP);
                     break;
-                case 31:
+                case 33:
                     emu_function(EMU_DATASETTE_START);
                     break;
-                case 32:
+                case 34:
                     emu_function(EMU_DATASETTE_FORWARD);
                     break;
-                case 33:
+                case 35:
                     emu_function(EMU_DATASETTE_REWIND);
                     break;
-                case 34:
+                case 36:
                     emu_function(EMU_DATASETTE_RESET);
                     break;
             }
@@ -254,6 +269,13 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             switch(mk) {
                 case 28:
                     emu_function(EMU_WARP_OFF);
+                    break;
+
+                case 29:
+                    emu_function(EMU_SNAPSHOT_SAVE);
+                    break;
+                case 30:
+                    emu_function(EMU_SNAPSHOT_LOAD);
                     break;
             }
         }
@@ -345,27 +367,31 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                 if(mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
                     continue;
 
-                if(mapper_keys[i] == mapper_keys[24]) /* Virtual Keyborad */
+                if(mapper_keys[i] == mapper_keys[24]) /* Virtual keyboard */
                     emu_function(EMU_VKBD);
                 else if(mapper_keys[i] == mapper_keys[25]) /* Statusbar */
                     emu_function(EMU_STATUSBAR);
-                else if(mapper_keys[i] == mapper_keys[26]) /* Switch Joyport */
+                else if(mapper_keys[i] == mapper_keys[26]) /* Switch joyport */
                     emu_function(EMU_JOYPORT);
                 else if(mapper_keys[i] == mapper_keys[27]) /* Reset */
                     emu_function(EMU_RESET);
-                else if(mapper_keys[i] == mapper_keys[28]) /* Warp Mode */
+                else if(mapper_keys[i] == mapper_keys[28]) /* Warp mode */
                     emu_function(EMU_WARP_ON);
-                else if(mapper_keys[i] == mapper_keys[29]) /* Datasette toggle */
+                else if(mapper_keys[i] == mapper_keys[29]) /* Snapshot save */
+                    ; /* nop */
+                else if(mapper_keys[i] == mapper_keys[30]) /* Snapshot load */
+                    ; /* nop */
+                else if(mapper_keys[i] == mapper_keys[31]) /* Datasette toggle */
                     emu_function(EMU_DATASETTE_TOGGLE_HOTKEYS);
-                else if(datasette && mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
+                else if(datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette stop */
                     emu_function(EMU_DATASETTE_STOP);
-                else if(datasette && mapper_keys[i] == mapper_keys[31]) /* Datasette start */
+                else if(datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette start */
                     emu_function(EMU_DATASETTE_START);
-                else if(datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
+                else if(datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette forward */
                     emu_function(EMU_DATASETTE_FORWARD);
-                else if(datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
+                else if(datasette && mapper_keys[i] == mapper_keys[35]) /* Datasette rewind */
                     emu_function(EMU_DATASETTE_REWIND);
-                else if(datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
+                else if(datasette && mapper_keys[i] == mapper_keys[36]) /* Datasette reset */
                     emu_function(EMU_DATASETTE_RESET);
                 else
                     Keymap_KeyDown(mapper_keys[i]);
@@ -387,16 +413,20 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                 else if(mapper_keys[i] == mapper_keys[28])
                     emu_function(EMU_WARP_OFF);
                 else if(mapper_keys[i] == mapper_keys[29])
-                    ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[30])
-                    ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[31])
+                    emu_function(EMU_SNAPSHOT_SAVE);
+                else if(mapper_keys[i] == mapper_keys[30])
+                    emu_function(EMU_SNAPSHOT_LOAD);
+                else if(mapper_keys[i] == mapper_keys[31])
                     ; /* nop */
                 else if(datasette && mapper_keys[i] == mapper_keys[32])
                     ; /* nop */
                 else if(datasette && mapper_keys[i] == mapper_keys[33])
                     ; /* nop */
                 else if(datasette && mapper_keys[i] == mapper_keys[34])
+                    ; /* nop */
+                else if(datasette && mapper_keys[i] == mapper_keys[35])
+                    ; /* nop */
+                else if(datasette && mapper_keys[i] == mapper_keys[36])
                     ; /* nop */
                 else
                     Keymap_KeyUp(mapper_keys[i]);

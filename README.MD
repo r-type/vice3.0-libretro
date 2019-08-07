@@ -11,17 +11,17 @@ https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
 
 - Vice 3.3 update
 - x64sc / xpet
-- Virtual keyboard revamped
+- Virtual keyboard revamped: more responsive, cleaner design, much easier to control
 - Other GUI removed
 - Autostart PRG mode to inject
 - System-subdir renamed to vice and created automatically
 - Keyrah joystick maps 
-- Retrojoy disabled while using virtual keyboard
-- Cursor keys disabled while using Retrojoy
+- C64 joystick disabled while using virtual keyboard
+- Cursor keys disabled while using C64 joystick
 - New settings:
   - Drive Sound Emulation + Volume
   - Reset type (autostart, soft, hard)
-  - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset)
+  - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset, datasette controls)
   - Analog sticks mappable
   - Virtual keyboard themes
 
@@ -32,8 +32,8 @@ https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
 ## Joyport control via Filename
 
 C64 games sometimes use joystick port 1 and sometimes joystick port 2 for player 1. There are several ways to switch ports in this core:
-- Use the core option for it: `Quickmenu->Options->Controller0` 
-- Bring up the virtual keyboard and press the key labeled `Joy` 
+- Use the core option for it: `Quickmenu->Options->Controller 0` 
+- Bring up the virtual keyboard with L shoulder button, and press the key labeled `Joy` there 
 - Re-name your games, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2. Note this only works with extracted files (`.PRG`, `.D64` etc.) not with zip files. 
 
 ## M3U Support and Disk control
@@ -85,12 +85,8 @@ make -f Makefile.libretro platform=androidstc -j4
 ```
 ### Android ndk Build
 ```
-export path to ANDROID_NDK_ARM and ANDROID_NDK_ROOT like
-
-export ANDROID_NDK_ROOT=/opt/ndk
-export ANDROID_NDK_ARM=/opt/ndk/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64
-
-make -f Makefile.libretro -j10 WANT_RGB565=1 platform=android
+cd jni
+ndk-build
 ```
 ## Original readme
 

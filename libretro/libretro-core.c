@@ -16,11 +16,7 @@
 #endif
 
 //CORE VAR
-#ifdef _WIN32
-char slash = '\\';
-#else
-char slash = '/';
-#endif
+char slash = FSDEV_DIR_SEP_CHR;
 
 bool retro_load_ok = false;
 
@@ -2070,12 +2066,7 @@ void retro_init(void)
       sprintf(RETRO_DIR, "%s", retro_system_directory);
 
    /* Use system directory for data files such as C64/.vpl etc. */
-#if defined(__WIN32__)
-   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s\\vice", RETRO_DIR);
-#else
-   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s/vice", RETRO_DIR);
-#endif
-
+   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%svice", RETRO_DIR, FSDEV_DIR_SEP_STR);
    archdep_mkdir(retro_system_data_directory, 0);
 
 #ifdef FRONTEND_SUPPORTS_RGB565

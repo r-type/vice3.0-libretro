@@ -46,8 +46,11 @@
 #include <strings.h>
 #endif
 
-#if defined(VITA)
+#if defined(PSP) || defined(VITA)
 #include <sys/time.h>
+#endif
+
+#if defined(VITA)
 #include <psp2/io/stat.h>
 #endif
 
@@ -125,7 +128,7 @@ int archdep_rtc_get_centisecond(void)
 {
     struct timespec dtm;
     int status;
-#if defined(VITA)
+#if defined(PSP) || defined(VITA)
     struct timeval tm;
     status = gettimeofday(&tm, NULL);
     if(status==0)

@@ -30,7 +30,7 @@ char RETRO_DIR[512];
 char RPATH_basename[512];
 char save_file[512];
 
-int mapper_keys[37]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 static char buf[64][4096] = { 0 };
 
 // Our virtual time counter, increased by retro_run()
@@ -54,8 +54,6 @@ short signed int SNDBUF[1024*2];
 char RPATH[512];
 
 extern int SHOWKEY;
-extern int REQUEST_SNAPSHOT_SAVE;
-extern int REQUEST_SNAPSHOT_LOAD;
 
 extern int app_init(void);
 extern int app_free(void);
@@ -977,20 +975,6 @@ void retro_set_environment(retro_environment_t cb)
          "Hold this key, or a button mapped to it, for warp mode",
          {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
-      },
-      {
-         "vice_mapper_snapshot_save",
-         "Hotkey: Snapshot save",
-         "Vice snapshot save, temporary",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_snapshot_load",
-         "Hotkey: Snapshot load",
-         "Vice snapshot load, temporary",
-         {{ NULL, NULL }},
-         "---"
       },
 /* Datasette controls */
       {
@@ -2311,27 +2295,6 @@ void retro_run(void)
    video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
-   
-   if (REQUEST_SNAPSHOT_SAVE)
-   {
-      snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", path_basename(RPATH));
-      snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
-      log_message(LOG_DEFAULT, "Saving snapshot: %s", save_file);
-      if (machine_write_snapshot(save_file, 0, 1, 0) < 0) { /* filename, save_roms, save_disks, event_mode */
-          snapshot_display_error();
-      }
-      REQUEST_SNAPSHOT_SAVE=0;
-   }
-   else if (REQUEST_SNAPSHOT_LOAD)
-   {
-      snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", path_basename(RPATH));
-      snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
-      log_message(LOG_DEFAULT, "Loading snapshot: %s", save_file);
-      if (machine_read_snapshot(save_file, 0) < 0) {
-          snapshot_display_error();
-      }
-      REQUEST_SNAPSHOT_LOAD=0;
-   }
 }
 
 #define M3U_FILE_EXT "m3u"
@@ -2496,7 +2459,7 @@ bool retro_serialize(void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
-      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vfs", retro_save_directory, FSDEV_DIR_SEP_STR);
+      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
       if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
       {
          FILE *file = fopen(save_file, "rb");
@@ -2518,7 +2481,7 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
-      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vfs", retro_save_directory, FSDEV_DIR_SEP_STR);
+      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
       FILE *file = fopen(save_file, "wb");
       if (file)
       {

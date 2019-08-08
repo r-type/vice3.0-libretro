@@ -90,6 +90,10 @@ extern int retro_ui_finalized;
 extern unsigned int cur_port;
 extern unsigned int datasette;
 extern int cur_port_locked;
+
+extern int turbo_fire_button;
+extern unsigned int turbo_pulse;
+
 extern void reset_mouse_pos();
 extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
@@ -797,6 +801,36 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "Port 2"
+      },
+      {
+         "vice_turbo_fire_button",
+         "RetroPad turbo fire",
+         "Replaces mapped key with a turbo fire button",
+         {
+            { "None", NULL },
+            { "B", NULL },
+            { "X", NULL },
+            { "Y", NULL },
+            { "L", NULL },
+            { "R", NULL },
+            { "L2", NULL },
+            { "R2", NULL },
+         },
+         "None"
+      },
+      {
+         "vice_turbo_pulse",
+         "Retropad turbo pulse",
+         "Frames in a button cycle, 2 equals button press on every other frame",
+         {
+            { "2", NULL },
+            { "4", NULL },
+            { "6", NULL },
+            { "8", NULL },
+            { "10", NULL },
+            { "12", NULL },
+         },
+         "2"
       },
 /* Button mappings */
       {
@@ -1571,6 +1605,36 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "Port 2") == 0 && !cur_port_locked) cur_port=2;
       else if (strcmp(var.value, "Port 1") == 0 && !cur_port_locked) cur_port=1;
+   }
+
+   var.key = "vice_turbo_fire_button";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "None") == 0) turbo_fire_button=-1;
+      else if (strcmp(var.value, "B") == 0) turbo_fire_button=0;
+      else if (strcmp(var.value, "X") == 0) turbo_fire_button=9;
+      else if (strcmp(var.value, "Y") == 0) turbo_fire_button=1;
+      else if (strcmp(var.value, "L") == 0) turbo_fire_button=10;
+      else if (strcmp(var.value, "R") == 0) turbo_fire_button=11;
+      else if (strcmp(var.value, "L2") == 0) turbo_fire_button=12;
+      else if (strcmp(var.value, "R2") == 0) turbo_fire_button=13;
+      else if (strcmp(var.value, "L3") == 0) turbo_fire_button=14;
+      else if (strcmp(var.value, "R3") == 0) turbo_fire_button=15;
+   }
+
+   var.key = "vice_turbo_pulse";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "2") == 0) turbo_pulse=2;
+      else if (strcmp(var.value, "4") == 0) turbo_pulse=4;
+      else if (strcmp(var.value, "6") == 0) turbo_pulse=6;
+      else if (strcmp(var.value, "8") == 0) turbo_pulse=8;
+      else if (strcmp(var.value, "10") == 0) turbo_pulse=10;
+      else if (strcmp(var.value, "12") == 0) turbo_pulse=12;
    }
 
    var.key = "vice_reset";

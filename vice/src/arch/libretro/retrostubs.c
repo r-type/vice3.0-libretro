@@ -37,6 +37,11 @@ extern bool retro_load_ok;
 extern int mapper_keys[35];
 int statusbar=0;
 
+int turbo_fire_button=-1;
+unsigned int turbo_pulse=2;
+unsigned int turbo_state[5]={0,0,0,0,0};
+unsigned int turbo_toggle[5]={0,0,0,0,0};
+
 #define EMU_VKBD 1
 #define EMU_STATUSBAR 2
 #define EMU_JOYPORT 3
@@ -279,7 +284,7 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             int just_released = 0;
             if((i<4 || i>8) && i < 16) /* remappable retropad buttons (all apart from DPAD and A) */
             {
-                if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0)
+                if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 && i!=turbo_fire_button)
                     just_pressed = 1;
                 else if (jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i))
                     just_released = 1;
@@ -492,7 +497,34 @@ void retro_poll_event()
                 else
                     j &= ~0x10;
 
+                /* Turbo fire */
+                if(turbo_fire_button != -1) {
+                    if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, turbo_fire_button))
+                    {
+                        if(turbo_state[vice_port]) {
+                            if (turbo_toggle[vice_port] > turbo_pulse) {
+                                if((turbo_toggle[vice_port] / 2) == turbo_pulse)
+                                    turbo_toggle[vice_port] = 0;
+                                j &= ~0x10;
+                            } else {
+                                j |= (SHOWKEY==-1) ? 0x10 : j;
+                            }
+                            turbo_toggle[vice_port]++;
+                        } else {
+                            turbo_state[vice_port] = 1;
+                            j |= (SHOWKEY==-1) ? 0x10 : j;
+                        }
+                    } else {
+                        turbo_state[vice_port] = 0;
+                        turbo_toggle[vice_port] = 0;
+                    }
+                }
+                    
                 joystick_value[vice_port] = j;
+                    
+                //if(vice_port == 2) {
+                //    printf("Joy %d: Button %d, %2d %d %d\n", vice_port, turbo_fire_button, j, turbo_state[vice_port], turbo_toggle[vice_port]);
+                //}
             }
         }
     }

@@ -2440,7 +2440,7 @@ size_t retro_serialize_size(void)
    {
       size_t size = 0;
       snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
-      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
       {
          FILE *file = fopen(save_file, "rb");
          if (file)
@@ -2460,7 +2460,7 @@ bool retro_serialize(void *data_, size_t size)
    if (retro_ui_finalized)
    {
       snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
-      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
       {
          FILE *file = fopen(save_file, "rb");
          if (file)

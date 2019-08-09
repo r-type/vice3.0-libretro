@@ -150,18 +150,16 @@ int ui_init_finish(void)
 
 int ui_init_finalize(void)
 {
-   //FIXME
-
+   /* Sensible defaults */
    resources_set_int("Mouse", 0);
-   resources_set_int("Mousetype", 0);
-   resources_set_int("Mouseport", 1);
-
-   resources_set_int("CrtcFilter", 0);
-   resources_set_int("CrtcStretchVertical", 0);
-   
    resources_set_int("AutostartPrgMode", 1);
 
-   //RETRO CORE OPT
+#if defined(__CBM2__) || defined(__PET__)
+   resources_set_int("CrtcFilter", 0);
+   resources_set_int("CrtcStretchVertical", 0);
+#endif
+
+   /* Core options */
    if(RETROSTATUS==1) {
       resources_set_int("SDLStatusbar", 1);
    } else if(RETROSTATUS==0) {

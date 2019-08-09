@@ -177,6 +177,7 @@ extern int sound_cmdline_options_init(void);
 
 
 /* device initialization prototypes */
+#ifndef __LIBRETRO__
 extern int sound_init_aix_device(void);
 extern int sound_init_allegro_device(void);
 extern int sound_init_alsa_device(void);
@@ -211,7 +212,7 @@ extern int sound_init_mp3_device(void);
 extern int sound_init_flac_device(void);
 extern int sound_init_vorbis_device(void);
 extern int sound_init_pulse_device(void);
-#ifdef __LIBRETRO__
+#else
 extern int sound_init_retro_device(void);
 #endif
 

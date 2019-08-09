@@ -153,8 +153,7 @@ static sound_register_devices_t sound_register_devices[] = {
 #endif
 #ifdef __LIBRETRO__
     { "retro", sound_init_retro_device, SOUND_PLAYBACK_DEVICE },
-#endif
-
+#else
     /* the dummy device acts as a "guard" against the drivers that create files,
        since the list will be searched top-down, and the dummy driver always
        works, no files will be created accidently */
@@ -166,6 +165,9 @@ static sound_register_devices_t sound_register_devices[] = {
     { "voc", sound_init_voc_device, SOUND_RECORD_DEVICE },
     { "iff", sound_init_iff_device, SOUND_RECORD_DEVICE },
     { "aiff", sound_init_aiff_device, SOUND_RECORD_DEVICE },
+    { "soundmovie", sound_init_movie_device, SOUND_RECORD_DEVICE },
+#endif
+
 
 #ifdef USE_LAMEMP3
     { "mp3", sound_init_mp3_device, SOUND_RECORD_DEVICE },
@@ -179,7 +181,6 @@ static sound_register_devices_t sound_register_devices[] = {
     { "ogg", sound_init_vorbis_device, SOUND_RECORD_DEVICE },
 #endif
 
-    { "soundmovie", sound_init_movie_device, SOUND_RECORD_DEVICE },
     { NULL, NULL, 0 }
 };
 

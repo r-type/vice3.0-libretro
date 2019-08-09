@@ -508,8 +508,10 @@ int drv_mps803_init(void)
     }
 
     if (palette_load("mps803" FSDEV_EXT_SEP_STR "vpl", palette) < 0) {
+#ifndef __LIBRETRO__
         log_error(drv803_log, "Cannot load palette file `%s'.",
                   "mps803" FSDEV_EXT_SEP_STR "vpl");
+#endif
         return -1;
     }
 

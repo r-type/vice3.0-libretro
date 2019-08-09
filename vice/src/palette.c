@@ -237,7 +237,9 @@ int palette_load(const char *file_name, palette_t *palette_return)
         lib_free(tmp);
 
         if (f == NULL) {
+#ifndef __LIBRETRO__
             log_error(palette_log, "Palette not found: `%s'.", file_name);
+#endif
             return -1;
         }
     }

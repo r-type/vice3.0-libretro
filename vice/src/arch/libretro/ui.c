@@ -221,7 +221,7 @@ int ui_init_finalize(void)
    sid_set_engine_model((RETROSIDMODL >> 8),  (RETROSIDMODL & 0xff));
    resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
 
-#if  defined(__VIC20__) 
+#if defined(__VIC20__) 
    vic20model_set(RETROC64MODL);
 #elif defined(__PLUS4__)
    plus4model_set(RETROC64MODL);
@@ -231,6 +231,8 @@ int ui_init_finalize(void)
    petmodel_set(RETROC64MODL);
 #elif defined(__CBM2__)
    cbm2model_set(RETROC64MODL);
+#elif defined(__XSCPU64__)
+   ;
 #else
    c64model_set(RETROC64MODL);
 #endif
@@ -263,6 +265,11 @@ int c64scui_init_early(void)
 }
 #elif defined(__X128__)
 int c128ui_init_early(void)
+{
+    return 0;
+}
+#elif defined(__XSCPU64__)
+int scpu64ui_init_early(void)
 {
     return 0;
 }

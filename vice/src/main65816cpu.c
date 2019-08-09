@@ -237,6 +237,129 @@ void maincpu_resync_limits(void) {
     }
 }
 
+#ifdef __LIBRETRO__
+void maincpu_mainloop_retro(void)
+{
+    /* Notice that using a struct for these would make it a lot slower (at
+       least, on gcc 2.7.2.x).  */
+ union regs {
+     uint16_t reg_s;
+     uint8_t reg_q[2];
+ } regs65802;
+
+#define reg_c regs65802.reg_s
+#ifndef WORDS_BIGENDIAN
+#define reg_a regs65802.reg_q[0]
+#define reg_b regs65802.reg_q[1]
+#else
+#define reg_a regs65802.reg_q[1]
+#define reg_b regs65802.reg_q[0]
+#endif
+
+static    uint16_t reg_x = 0;
+static    uint16_t reg_y = 0;
+static    uint8_t reg_pbr = 0;
+static    uint8_t reg_dbr = 0;
+static    uint16_t reg_dpr = 0;
+static    uint8_t reg_p = 0;
+static    uint16_t reg_sp = 0x100;
+static    uint8_t flag_n = 0;
+static    uint8_t flag_z = 0;
+static    uint8_t reg_emul = 1;
+static    int interrupt65816 = IK_RESET;
+#ifndef NEED_REG_PC
+static    unsigned int reg_pc;
+#endif
+static    uint8_t *bank_base;
+static    int bank_start = 0;
+static    int bank_limit = 0;
+static    uint8_t bank_bank = 0;
+
+static int first1=0;
+if(first1==0){
+    first1++;
+    o_bank_base = &bank_base;
+    o_bank_start = &bank_start;
+    o_bank_limit = &bank_limit;
+    o_bank_bank = &bank_bank;
+
+    reg_c = 0;
+
+    machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
+}
+
+    /*while (1)*/ {
+
+#define CLK maincpu_clk
+#define LAST_OPCODE_INFO last_opcode_info
+#define LAST_OPCODE_ADDR last_opcode_addr
+#define TRACEFLG debug.maincpu_traceflg
+
+#define CPU_INT_STATUS maincpu_int_status
+
+#define ALARM_CONTEXT maincpu_alarm_context
+
+#define CHECK_PENDING_ALARM() \
+   (clk >= next_alarm_clk(maincpu_int_status))
+
+#define CHECK_PENDING_INTERRUPT() \
+   check_pending_interrupt(maincpu_int_status)
+
+#define TRAP(addr) \
+   maincpu_int_status->trap_func(addr);
+
+#define ROM_TRAP_HANDLER() \
+   traps_handler()
+
+#define JAM()                                                         \
+    do {                                                              \
+        unsigned int tmp;                                             \
+                                                                      \
+        EXPORT_REGISTERS();                                           \
+        tmp = machine_jam("   " CPU_STR ": JAM at $%02x%04X   ", reg_pbr, reg_pc); \
+        switch (tmp) {                                                \
+            case JAM_RESET:                                           \
+                DO_INTERRUPT(IK_RESET);                               \
+                break;                                                \
+            case JAM_HARD_RESET:                                      \
+                mem_powerup();                                        \
+                DO_INTERRUPT(IK_RESET);                               \
+                break;                                                \
+            case JAM_MONITOR:                                         \
+                monitor_startup(e_comp_space);                        \
+                IMPORT_REGISTERS();                                   \
+                break;                                                \
+            default:                                                  \
+                STP();                                                \
+        }                                                             \
+    } while (0)
+
+#define STP_65816() JAM()
+#define WAI_65816() WAI()
+#define COP_65816(value) COP()
+
+#define CALLER e_comp_space
+
+#define ROM_TRAP_ALLOWED() mem_rom_trap_allowed((uint16_t)reg_pc)
+
+#define GLOBAL_REGS maincpu_regs
+
+#include "65816core.c"
+
+        maincpu_int_status->num_dma_per_opcode = 0;
+
+        if (maincpu_clk_limit && (maincpu_clk > maincpu_clk_limit)) {
+            log_error(LOG_DEFAULT, "cycle limit reached.");
+            archdep_vice_exit(EXIT_FAILURE);
+        }
+#if 0
+        if (CLK > 246171754)
+            debug.maincpu_traceflg = 1;
+#endif
+    }
+}
+#endif
+
 void maincpu_mainloop(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at

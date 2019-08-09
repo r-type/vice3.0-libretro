@@ -11,6 +11,7 @@
 #include "snapshot.h"
 #include "autostart.h"
 #include "tape.h"
+
 #ifndef __PET__
 #include "cartridge.h"
 #endif
@@ -626,6 +627,8 @@ void retro_set_environment(retro_environment_t cb)
          },
          "510 PAL"
       },
+#elif defined(__XSCPU64__)
+ 
 #else
       {
          "vice_c64_model",
@@ -1940,7 +1943,7 @@ static bool retro_set_eject_state(bool ejected) {
 		
 		if(dc->eject_state)
 			if(strendswith(dc->files[dc->index], "tap"))
-			    tape_image_detach_internal(1);
+			    tape_image_detach(1);
 			else
 			    file_system_detach_disk(8);
             
@@ -2430,7 +2433,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
 void retro_unload_game(void){
     file_system_detach_disk(8);
-    tape_image_detach_internal(1);
+    tape_image_detach(1);
 #ifndef __PET__
     cartridge_detach_image(-1);
 #endif
@@ -2439,7 +2442,7 @@ void retro_unload_game(void){
 
 unsigned retro_get_region(void)
 {
-#if defined(__PET__)
+#if defined(__PET__) || defined(__XSCPU64__)
    return RETRO_REGION_PAL;
 #else
    switch(RETROC64MODL) {

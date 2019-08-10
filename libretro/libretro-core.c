@@ -2480,32 +2480,25 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
    return false;
 }
 
-/* ensure we are always saving snapshots and loading them at an appropriate time
-   by setting cpu traps. Without this, savestate corruption occurs */
+/* CPU traps ensure we are never saving snapshots or loading them in the middle of a cpu instruction.
+   Without this, savestate corruption occurs.
+*/
 
 static void save_trap(uint16_t addr, void *success)
 {
       if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
-      {
          *((int *)success) = 1;
-      }
       else
-      {
          *((int *)success) = 0;
-      }
       save_trap_happened = 1;
 }
 
 static void load_trap(uint16_t addr, void *success)
 {
       if (machine_read_snapshot(save_file, 0) >= 0)
-      {
          *((int *)success) = 1;
-      }
       else
-      {
          *((int *)success) = 0;
-      }
       load_trap_happened = 1;
 }
 

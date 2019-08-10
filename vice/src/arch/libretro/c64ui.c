@@ -60,100 +60,102 @@ ui_jam_action_t ui_jam_dialog(const char *format, ...)
   return UI_JAM_NONE;
 }
 
-void write_snapshot(WORD unused_addr, void *filename)
-{
-    machine_write_snapshot((char *)filename, 1, 1, 0);
-}
-
 int c64ui_init(void)
 {
-    machine_ui_done = 1;
-    // retro_ui_finalized = 1;
+    return 0;
+}
+int c64ui_shutdown(void)
+{
     return 0;
 }
 
-void c64ui_shutdown(void)
-{
-}
 
 int c128ui_init(void)
 {
-     return 0;
+    return 0;
+}
+int c128ui_shutdown(void)
+{
+    return 0;
 }
 
-void c128ui_shutdown(void)
-{
-}
-
-void c64dtvui_shutdown(void)
-{
-}
 
 int c64dtvui_init(void)
 {
-     return 0;
+    return 0;
+}
+int c64dtvui_shutdown(void)
+{
+    return 0;
 }
 
-void c64scui_shutdown(void)
-{
-}
 
 int c64scui_init(void)
 {
-     return 0;
+    return 0;
 }
+int c64scui_shutdown(void)
+{
+    return 0;
+}
+
 
 int scpu64ui_init(void)
 {
-     return 0;
+    return 0;
 }
+int scpu64ui_shutdown(void)
+{
+    return 0;
+}
+
 
 int plus4ui_init(void)
 {
-     return 0;
+    return 0;
 }
-
 int plus4ui_shutdown(void)
 {
-     return 0;
+    return 0;
 }
+
 
 int vic20ui_init(void)
 {
-     return 0;
+    return 0;
 }
-  
 int vic20ui_shutdown(void)
 {
-     return 0;
+    return 0;
 }
+
 
 int cbm5x0ui_init(void)
 {
-     return 0;
+    return 0;
 }
-
 int cbm5x0ui_shutdown(void)
 {
-     return 0;
+    return 0;
 }
+
 
 int cbm2ui_init(void)
 {
-     return 0;
+    return 0;
 }
-
 int cbm2ui_shutdown(void)
 {
-     return 0;
+    return 0;
 }
+
 
 int petui_init(void)
 {
-     return 0;
+    return 0;
 }
-
 int petui_shutdown(void)
 {
-     return 0;
+    return 0;
 }
+

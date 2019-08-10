@@ -1127,8 +1127,10 @@ int drv_1520_init(void)
     }
 
     if (palette_load("1520" FSDEV_EXT_SEP_STR "vpl", palette) < 0) {
+#ifndef __LIBRETRO__
         log_error(drv1520_log, "Cannot load palette file `%s'.",
                   "1520" FSDEV_EXT_SEP_STR "vpl");
+#endif
         return -1;
     }
 

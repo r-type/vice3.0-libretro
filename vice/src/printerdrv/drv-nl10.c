@@ -2009,8 +2009,10 @@ int drv_nl10_init(void)
     }
 
     if (palette_load("nl10" FSDEV_EXT_SEP_STR "vpl", palette) < 0) {
+#ifndef __LIBRETRO__
         log_error(drvnl10_log, "Cannot load palette file `%s'.",
                   "nl10" FSDEV_EXT_SEP_STR "vpl");
+#endif
         return -1;
     }
 

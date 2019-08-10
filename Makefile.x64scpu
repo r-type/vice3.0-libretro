@@ -1,4 +1,4 @@
-COMMONFLAGS += -D__X64SC__ 
+COMMONFLAGS += -D__XSCPU64__ 
 
 INCFLAGS += \
         -I$(EMU)/sid \
@@ -24,6 +24,7 @@ INCFLAGS += \
         -I$(EMU)/resid \
         -I$(EMU)/rtc \
         -I$(EMU)/samplerdrv \
+        -I$(EMU)/scpu64 \
         -I$(EMU)/socketdrv \
         -I$(EMU)/tape \
         -I$(EMU)/tapeport \
@@ -50,34 +51,19 @@ SOURCES_C += \
         $(EMU)/attach.c \
         $(EMU)/autostart-prg.c \
         $(EMU)/autostart.c \
-        $(EMU)/c64/c64-cmdline-options.c \
-        $(EMU)/c64/c64-memory-hacks.c \
-        $(EMU)/c64/c64-resources.c \
-        $(EMU)/c64/c64-snapshot.c \
-        $(EMU)/c64/c64.c \
         $(EMU)/c64/c64bus.c \
         $(EMU)/c64/c64cia1.c \
         $(EMU)/c64/c64cia2.c \
-        $(EMU)/c64/c64cpusc.c \
-        $(EMU)/c64/c64datasette.c \
         $(EMU)/c64/c64drive.c \
         $(EMU)/c64/c64embedded.c \
         $(EMU)/c64/c64export.c \
         $(EMU)/c64/c64fastiec.c \
-        $(EMU)/c64/c64gluelogic.c \
         $(EMU)/c64/c64iec.c \
         $(EMU)/c64/c64io.c \
         $(EMU)/c64/c64keyboard.c \
-        $(EMU)/c64/c64memsc.c \
-        $(EMU)/c64/c64meminit.c \
         $(EMU)/c64/c64memlimit.c \
-        $(EMU)/c64/c64memrom.c \
-        $(EMU)/c64/c64memsnapshot.c \
-        $(EMU)/c64/c64scmodel.c \
         $(EMU)/c64/c64parallel.c \
-        $(EMU)/c64/c64pla.c \
         $(EMU)/c64/c64printer.c \
-        $(EMU)/c64/c64rom.c \
         $(EMU)/c64/c64romset.c \
         $(EMU)/c64/c64rsuser.c \
         $(EMU)/c64/c64sound.c \
@@ -169,10 +155,7 @@ SOURCES_C += \
         $(EMU)/c64/cart/warpspeed.c \
         $(EMU)/c64/cart/westermann.c \
         $(EMU)/c64/cart/zaxxon.c \
-        $(EMU)/c64/patchrom.c \
-        $(EMU)/c64/plus60k.c \
         $(EMU)/c64/plus256k.c \
-        $(EMU)/c64/psid.c \
         $(EMU)/c64/reloc65.c \
         $(EMU)/cbmdos.c \
         $(EMU)/cbmimage.c \
@@ -198,7 +181,6 @@ SOURCES_C += \
         $(EMU)/crc32.c \
         $(EMU)/datasette.c \
         $(EMU)/debug.c \
-        $(EMU)/diag/c64_diag_586220_harness.c \
         $(EMU)/diskimage/diskimage.c \
         $(EMU)/diskimage/fsimage-check.c \
         $(EMU)/diskimage/fsimage-create.c \
@@ -419,6 +401,18 @@ SOURCES_C += \
         $(EMU)/samplerdrv/file_drv.c \
         $(EMU)/samplerdrv/portaudio_drv.c \
         $(EMU)/samplerdrv/sampler.c \
+        $(EMU)/scpu64/scpu64.c \
+        $(EMU)/scpu64/scpu64-cmdline-options.c \
+        $(EMU)/scpu64/scpu64cpu.c \
+        $(EMU)/scpu64/scpu64gluelogic.c \
+        $(EMU)/scpu64/scpu64mem.c \
+        $(EMU)/scpu64/scpu64meminit.c \
+        $(EMU)/scpu64/scpu64memsnapshot.c \
+        $(EMU)/scpu64/scpu64model.c \
+        $(EMU)/scpu64/scpu64-resources.c \
+        $(EMU)/scpu64/scpu64rom.c \
+        $(EMU)/scpu64/scpu64-snapshot.c \
+        $(EMU)/scpu64/scpu64stubs.c \
         $(EMU)/screenshot.c \
         $(EMU)/serial/fsdrive.c \
         $(EMU)/serial/realdevice.c \
@@ -446,24 +440,14 @@ SOURCES_C += \
         $(EMU)/sounddrv/soundretro.c \
         $(EMU)/sysfile.c \
         $(EMU)/tape/t64.c \
-        $(EMU)/tape/tap.c \
-        $(EMU)/tape/tape-internal.c \
-        $(EMU)/tape/tape-snapshot.c \
-        $(EMU)/tape/tape.c \
-        $(EMU)/tape/tapeimage.c \
         $(EMU)/tapeport/cp-clockf83.c \
         $(EMU)/tapeport/dtl-basic-dongle.c \
         $(EMU)/tapeport/sense-dongle.c \
-        $(EMU)/tapeport/tapecart.c \
-        $(EMU)/tapeport/tapelog.c \
-        $(EMU)/tapeport/tapeport.c \
-        $(EMU)/tapeport/tape_diag_586220_harness.c \
         $(EMU)/traps.c \
         $(EMU)/userport/userport.c \
         $(EMU)/userport/userport_4bit_sampler.c \
         $(EMU)/userport/userport_8bss.c \
         $(EMU)/userport/userport_dac.c \
-        $(EMU)/userport/userport_diag_586220_harness.c \
         $(EMU)/userport/userport_digimax.c \
         $(EMU)/userport/userport_joystick.c \
         $(EMU)/userport/userport_rtc_58321a.c \

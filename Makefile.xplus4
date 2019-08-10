@@ -365,19 +365,7 @@ SOURCES_C += \
 		$(EMU)/socket.c \
         $(EMU)/socketdrv/socketdrv.c \
 		$(EMU)/sound.c \
-		$(EMU)/sounddrv/soundaiff.c \
-		$(EMU)/sounddrv/soundalsa.c \
-		$(EMU)/sounddrv/sounddummy.c \
-		$(EMU)/sounddrv/sounddump.c \
-		$(EMU)/sounddrv/soundfs.c \
-		$(EMU)/sounddrv/soundiff.c \
-		$(EMU)/sounddrv/soundmovie.c \
-		$(EMU)/sounddrv/soundpulse.c \
 		$(EMU)/sounddrv/soundretro.c \
-		$(EMU)/sounddrv/soundsdl.c \
-		$(EMU)/sounddrv/sounduss.c \
-		$(EMU)/sounddrv/soundvoc.c \
-		$(EMU)/sounddrv/soundwav.c \
 		$(EMU)/sysfile.c \
 		$(EMU)/tape/t64.c \
 		$(EMU)/tape/tap.c \

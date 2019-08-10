@@ -11,16 +11,13 @@
 #include "snapshot.h"
 #include "autostart.h"
 #include "tape.h"
+
 #ifndef __PET__
 #include "cartridge.h"
 #endif
 
 //CORE VAR
-#ifdef _WIN32
-char slash = '\\';
-#else
-char slash = '/';
-#endif
+char slash = FSDEV_DIR_SEP_CHR;
 
 bool retro_load_ok = false;
 
@@ -30,7 +27,7 @@ char RETRO_DIR[512];
 char RPATH_basename[512];
 char save_file[512];
 
-int mapper_keys[37]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 static char buf[64][4096] = { 0 };
 
 // Our virtual time counter, increased by retro_run()
@@ -54,8 +51,6 @@ short signed int SNDBUF[1024*2];
 char RPATH[512];
 
 extern int SHOWKEY;
-extern int REQUEST_SNAPSHOT_SAVE;
-extern int REQUEST_SNAPSHOT_LOAD;
 
 extern int app_init(void);
 extern int app_free(void);
@@ -96,6 +91,10 @@ extern int retro_ui_finalized;
 extern unsigned int cur_port;
 extern unsigned int datasette;
 extern int cur_port_locked;
+
+extern int turbo_fire_button;
+extern unsigned int turbo_pulse;
+
 extern void reset_mouse_pos();
 extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
@@ -628,6 +627,8 @@ void retro_set_environment(retro_environment_t cb)
          },
          "510 PAL"
       },
+#elif defined(__XSCPU64__)
+ 
 #else
       {
          "vice_c64_model",
@@ -804,6 +805,36 @@ void retro_set_environment(retro_environment_t cb)
          },
          "Port 2"
       },
+      {
+         "vice_turbo_fire_button",
+         "RetroPad turbo fire",
+         "Replaces mapped key with a turbo fire button",
+         {
+            { "None", NULL },
+            { "B", NULL },
+            { "X", NULL },
+            { "Y", NULL },
+            { "L", NULL },
+            { "R", NULL },
+            { "L2", NULL },
+            { "R2", NULL },
+         },
+         "None"
+      },
+      {
+         "vice_turbo_pulse",
+         "Retropad turbo pulse",
+         "Frames in a button cycle, 2 equals button press on every other frame",
+         {
+            { "2", NULL },
+            { "4", NULL },
+            { "6", NULL },
+            { "8", NULL },
+            { "10", NULL },
+            { "12", NULL },
+         },
+         "2"
+      },
 /* Button mappings */
       {
          "vice_mapper_select",
@@ -977,20 +1008,6 @@ void retro_set_environment(retro_environment_t cb)
          "Hold this key, or a button mapped to it, for warp mode",
          {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
-      },
-      {
-         "vice_mapper_snapshot_save",
-         "Hotkey: Snapshot save",
-         "Vice snapshot save, temporary",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_snapshot_load",
-         "Hotkey: Snapshot load",
-         "Vice snapshot load, temporary",
-         {{ NULL, NULL }},
-         "---"
       },
 /* Datasette controls */
       {
@@ -1593,6 +1610,36 @@ static void update_variables(void)
       else if (strcmp(var.value, "Port 1") == 0 && !cur_port_locked) cur_port=1;
    }
 
+   var.key = "vice_turbo_fire_button";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "None") == 0) turbo_fire_button=-1;
+      else if (strcmp(var.value, "B") == 0) turbo_fire_button=0;
+      else if (strcmp(var.value, "X") == 0) turbo_fire_button=9;
+      else if (strcmp(var.value, "Y") == 0) turbo_fire_button=1;
+      else if (strcmp(var.value, "L") == 0) turbo_fire_button=10;
+      else if (strcmp(var.value, "R") == 0) turbo_fire_button=11;
+      else if (strcmp(var.value, "L2") == 0) turbo_fire_button=12;
+      else if (strcmp(var.value, "R2") == 0) turbo_fire_button=13;
+      else if (strcmp(var.value, "L3") == 0) turbo_fire_button=14;
+      else if (strcmp(var.value, "R3") == 0) turbo_fire_button=15;
+   }
+
+   var.key = "vice_turbo_pulse";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "2") == 0) turbo_pulse=2;
+      else if (strcmp(var.value, "4") == 0) turbo_pulse=4;
+      else if (strcmp(var.value, "6") == 0) turbo_pulse=6;
+      else if (strcmp(var.value, "8") == 0) turbo_pulse=8;
+      else if (strcmp(var.value, "10") == 0) turbo_pulse=10;
+      else if (strcmp(var.value, "12") == 0) turbo_pulse=12;
+   }
+
    var.key = "vice_reset";
    var.value = NULL;
 
@@ -1794,20 +1841,6 @@ static void update_variables(void)
       mapper_keys[28] = keyId(var.value);
    }
 
-   var.key = "vice_mapper_snapshot_save";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      mapper_keys[29] = keyId(var.value);
-   }
-
-   var.key = "vice_mapper_snapshot_load";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      mapper_keys[30] = keyId(var.value);
-   }
-
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
 
@@ -1821,42 +1854,42 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[31] = keyId(var.value);
+      mapper_keys[29] = keyId(var.value);
    }
    
    var.key = "vice_mapper_datasette_stop";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[32] = keyId(var.value);
+      mapper_keys[30] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[33] = keyId(var.value);
+      mapper_keys[31] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_forward";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[34] = keyId(var.value);
+      mapper_keys[32] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_rewind";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[35] = keyId(var.value);
+      mapper_keys[33] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[36] = keyId(var.value);
+      mapper_keys[34] = keyId(var.value);
    }
    
 }
@@ -1896,7 +1929,7 @@ static bool retro_set_eject_state(bool ejected) {
 		
 		if(dc->eject_state)
 			if(strendswith(dc->files[dc->index], "tap"))
-			    tape_image_detach_internal(1);
+			    tape_image_detach(1);
 			else
 			    file_system_detach_disk(8);
             
@@ -2086,12 +2119,7 @@ void retro_init(void)
       sprintf(RETRO_DIR, "%s", retro_system_directory);
 
    /* Use system directory for data files such as C64/.vpl etc. */
-#if defined(__WIN32__)
-   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s\\vice", RETRO_DIR);
-#else
-   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s/vice", RETRO_DIR);
-#endif
-
+   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%svice", RETRO_DIR, FSDEV_DIR_SEP_STR);
    archdep_mkdir(retro_system_data_directory, 0);
 
 #ifdef FRONTEND_SUPPORTS_RGB565
@@ -2311,27 +2339,6 @@ void retro_run(void)
    video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
-   
-   if (REQUEST_SNAPSHOT_SAVE)
-   {
-      snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", path_basename(RPATH));
-      snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
-      log_message(LOG_DEFAULT, "Saving snapshot: %s", save_file);
-      if (machine_write_snapshot(save_file, 0, 1, 0) < 0) { /* filename, save_roms, save_disks, event_mode */
-          snapshot_display_error();
-      }
-      REQUEST_SNAPSHOT_SAVE=0;
-   }
-   else if (REQUEST_SNAPSHOT_LOAD)
-   {
-      snprintf(RPATH_basename, sizeof(RPATH_basename), "%s", path_basename(RPATH));
-      snprintf(save_file, sizeof(save_file), "%s%s%s.vsf", retro_save_directory, FSDEV_DIR_SEP_STR, RPATH_basename);
-      log_message(LOG_DEFAULT, "Loading snapshot: %s", save_file);
-      if (machine_read_snapshot(save_file, 0) < 0) {
-          snapshot_display_error();
-      }
-      REQUEST_SNAPSHOT_LOAD=0;
-   }
 }
 
 #define M3U_FILE_EXT "m3u"
@@ -2412,7 +2419,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
 void retro_unload_game(void){
     file_system_detach_disk(8);
-    tape_image_detach_internal(1);
+    tape_image_detach(1);
 #ifndef __PET__
     cartridge_detach_image(-1);
 #endif
@@ -2421,7 +2428,7 @@ void retro_unload_game(void){
 
 unsigned retro_get_region(void)
 {
-#if defined(__PET__)
+#if defined(__PET__) || defined(__XSCPU64__)
    return RETRO_REGION_PAL;
 #else
    switch(RETROC64MODL) {
@@ -2477,7 +2484,7 @@ size_t retro_serialize_size(void)
    {
       size_t size = 0;
       snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
-      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
       {
          FILE *file = fopen(save_file, "rb");
          if (file)
@@ -2496,8 +2503,8 @@ bool retro_serialize(void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
-      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vfs", retro_save_directory, FSDEV_DIR_SEP_STR);
-      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
+      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
       {
          FILE *file = fopen(save_file, "rb");
          if (file)
@@ -2518,7 +2525,7 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
-      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vfs", retro_save_directory, FSDEV_DIR_SEP_STR);
+      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
       FILE *file = fopen(save_file, "wb");
       if (file)
       {

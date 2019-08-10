@@ -6,7 +6,6 @@
 #include "resources.h"
 #include "autostart.h"
 #include "datasette.h"
-#include "snapshot.h"
 
 #include "kbd.h"
 #include "mousedrv.h"
@@ -20,7 +19,6 @@ extern void emu_reset(void);
 extern void save_bkg();
 extern void Screen_SetFullUpdate(int scr);
 extern unsigned vice_devices[5];
-extern int cpupaused;
 
 //EMU FLAGS
 int SHOWKEY=-1;
@@ -36,10 +34,13 @@ unsigned int datasette=0;
 bool num_locked = false;
 
 extern bool retro_load_ok;
-extern int mapper_keys[37];
-int REQUEST_SNAPSHOT_SAVE=0;
-int REQUEST_SNAPSHOT_LOAD=0;
+extern int mapper_keys[35];
 int statusbar=0;
+
+int turbo_fire_button=-1;
+unsigned int turbo_pulse=2;
+unsigned int turbo_state[5]={0,0,0,0,0};
+unsigned int turbo_toggle[5]={0,0,0,0,0};
 
 #define EMU_VKBD 1
 #define EMU_STATUSBAR 2
@@ -47,14 +48,12 @@ int statusbar=0;
 #define EMU_RESET 4
 #define EMU_WARP_ON 5
 #define EMU_WARP_OFF 6
-#define EMU_SNAPSHOT_SAVE 7
-#define EMU_SNAPSHOT_LOAD 8
-#define EMU_DATASETTE_TOGGLE_HOTKEYS 9
-#define EMU_DATASETTE_STOP 10
-#define EMU_DATASETTE_START 11
-#define EMU_DATASETTE_FORWARD 12
-#define EMU_DATASETTE_REWIND 13
-#define EMU_DATASETTE_RESET 14
+#define EMU_DATASETTE_TOGGLE_HOTKEYS 7
+#define EMU_DATASETTE_STOP 8
+#define EMU_DATASETTE_START 9
+#define EMU_DATASETTE_FORWARD 10
+#define EMU_DATASETTE_REWIND 11
+#define EMU_DATASETTE_RESET 12
 
 void emu_function(int function) {
     switch (function)
@@ -81,13 +80,6 @@ void emu_function(int function) {
             resources_set_int("WarpMode", 0);
             break;
 
-        case EMU_SNAPSHOT_SAVE:
-            REQUEST_SNAPSHOT_SAVE=1;
-            break;
-        case EMU_SNAPSHOT_LOAD:
-            REQUEST_SNAPSHOT_LOAD=1;
-            break;
-        
         case EMU_DATASETTE_TOGGLE_HOTKEYS:
             datasette = (datasette) ? 0 : 1;
             break;
@@ -243,22 +235,22 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     emu_function(EMU_WARP_ON);
                     break;
 
-                case 31:
+                case 29:
                     emu_function(EMU_DATASETTE_TOGGLE_HOTKEYS);
                     break;
-                case 32:
+                case 30:
                     emu_function(EMU_DATASETTE_STOP);
                     break;
-                case 33:
+                case 31:
                     emu_function(EMU_DATASETTE_START);
                     break;
-                case 34:
+                case 32:
                     emu_function(EMU_DATASETTE_FORWARD);
                     break;
-                case 35:
+                case 33:
                     emu_function(EMU_DATASETTE_REWIND);
                     break;
-                case 36:
+                case 34:
                     emu_function(EMU_DATASETTE_RESET);
                     break;
             }
@@ -269,13 +261,6 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             switch(mk) {
                 case 28:
                     emu_function(EMU_WARP_OFF);
-                    break;
-
-                case 29:
-                    emu_function(EMU_SNAPSHOT_SAVE);
-                    break;
-                case 30:
-                    emu_function(EMU_SNAPSHOT_LOAD);
                     break;
             }
         }
@@ -299,7 +284,7 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             int just_released = 0;
             if((i<4 || i>8) && i < 16) /* remappable retropad buttons (all apart from DPAD and A) */
             {
-                if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0)
+                if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 && i!=turbo_fire_button)
                     just_pressed = 1;
                 else if (jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i))
                     just_released = 1;
@@ -377,21 +362,17 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     emu_function(EMU_RESET);
                 else if(mapper_keys[i] == mapper_keys[28]) /* Warp mode */
                     emu_function(EMU_WARP_ON);
-                else if(mapper_keys[i] == mapper_keys[29]) /* Snapshot save */
-                    ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[30]) /* Snapshot load */
-                    ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[31]) /* Datasette toggle */
+                else if(mapper_keys[i] == mapper_keys[29]) /* Datasette toggle */
                     emu_function(EMU_DATASETTE_TOGGLE_HOTKEYS);
-                else if(datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette stop */
+                else if(datasette && mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
                     emu_function(EMU_DATASETTE_STOP);
-                else if(datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette start */
+                else if(datasette && mapper_keys[i] == mapper_keys[31]) /* Datasette start */
                     emu_function(EMU_DATASETTE_START);
-                else if(datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette forward */
+                else if(datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
                     emu_function(EMU_DATASETTE_FORWARD);
-                else if(datasette && mapper_keys[i] == mapper_keys[35]) /* Datasette rewind */
+                else if(datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
                     emu_function(EMU_DATASETTE_REWIND);
-                else if(datasette && mapper_keys[i] == mapper_keys[36]) /* Datasette reset */
+                else if(datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
                     emu_function(EMU_DATASETTE_RESET);
                 else
                     Keymap_KeyDown(mapper_keys[i]);
@@ -413,20 +394,16 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                 else if(mapper_keys[i] == mapper_keys[28])
                     emu_function(EMU_WARP_OFF);
                 else if(mapper_keys[i] == mapper_keys[29])
-                    emu_function(EMU_SNAPSHOT_SAVE);
-                else if(mapper_keys[i] == mapper_keys[30])
-                    emu_function(EMU_SNAPSHOT_LOAD);
-                else if(mapper_keys[i] == mapper_keys[31])
+                    ; /* nop */
+                else if(datasette && mapper_keys[i] == mapper_keys[30])
+                    ; /* nop */
+                else if(datasette && mapper_keys[i] == mapper_keys[31])
                     ; /* nop */
                 else if(datasette && mapper_keys[i] == mapper_keys[32])
                     ; /* nop */
                 else if(datasette && mapper_keys[i] == mapper_keys[33])
                     ; /* nop */
                 else if(datasette && mapper_keys[i] == mapper_keys[34])
-                    ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[35])
-                    ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[36])
                     ; /* nop */
                 else
                     Keymap_KeyUp(mapper_keys[i]);
@@ -520,7 +497,34 @@ void retro_poll_event()
                 else
                     j &= ~0x10;
 
+                /* Turbo fire */
+                if(turbo_fire_button != -1) {
+                    if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, turbo_fire_button))
+                    {
+                        if(turbo_state[vice_port]) {
+                            if (turbo_toggle[vice_port] > turbo_pulse) {
+                                if((turbo_toggle[vice_port] / 2) == turbo_pulse)
+                                    turbo_toggle[vice_port] = 0;
+                                j &= ~0x10;
+                            } else {
+                                j |= (SHOWKEY==-1) ? 0x10 : j;
+                            }
+                            turbo_toggle[vice_port]++;
+                        } else {
+                            turbo_state[vice_port] = 1;
+                            j |= (SHOWKEY==-1) ? 0x10 : j;
+                        }
+                    } else {
+                        turbo_state[vice_port] = 0;
+                        turbo_toggle[vice_port] = 0;
+                    }
+                }
+                    
                 joystick_value[vice_port] = j;
+                    
+                //if(vice_port == 2) {
+                //    printf("Joy %d: Button %d, %2d %d %d\n", vice_port, turbo_fire_button, j, turbo_state[vice_port], turbo_toggle[vice_port]);
+                //}
             }
         }
     }

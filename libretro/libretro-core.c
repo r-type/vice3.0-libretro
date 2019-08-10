@@ -2486,7 +2486,7 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 static void save_trap(uint16_t addr, void *success)
 {
-      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
          *((int *)success) = 1;
       else
          *((int *)success) = 0;

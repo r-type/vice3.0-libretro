@@ -762,7 +762,8 @@ void retro_set_environment(retro_environment_t cb)
             { "C64 transparent", NULL },
             { "C64C", NULL },
             { "C64C transparent", NULL },
-            { "Transparent", NULL },
+            { "Dark transparent", NULL },
+            { "Light transparent", NULL },
             { NULL, NULL },
          },
          "C64"
@@ -1668,8 +1669,10 @@ static void update_variables(void)
          RETROTHEME=2;
       else if (strcmp(var.value, "C64C transparent") == 0)
          RETROTHEME=3;
-      else if (strcmp(var.value, "Transparent") == 0) 
+      else if (strcmp(var.value, "Dark transparent") == 0) 
          RETROTHEME=4;
+      else if (strcmp(var.value, "Light transparent") == 0) 
+         RETROTHEME=5;
    }
 
    var.key = "vice_mapper_select";
@@ -2486,7 +2489,7 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 static void save_trap(uint16_t addr, void *success)
 {
-      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
          *((int *)success) = 1;
       else
          *((int *)success) = 0;

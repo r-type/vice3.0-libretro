@@ -48,7 +48,10 @@ static int gui(struct nk_context *ctx)
                         set_style(ctx, THEME_C64C_TRANSPARENT);
                         break;
                     case 4:
-                        set_style(ctx, THEME_TRANSPARENT);
+                        set_style(ctx, THEME_DARK_TRANSPARENT);
+                        break;
+                    case 5:
+                        set_style(ctx, THEME_LIGHT_TRANSPARENT);
                         break;
                 }
                 

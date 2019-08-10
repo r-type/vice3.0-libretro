@@ -11,7 +11,7 @@
 #include "snapshot.h"
 #include "autostart.h"
 #include "tape.h"
-
+#include "interrupt.h"
 #ifndef __PET__
 #include "cartridge.h"
 #endif
@@ -26,6 +26,8 @@ retro_log_printf_t log_cb;
 char RETRO_DIR[512];
 char RPATH_basename[512];
 char save_file[512];
+static int load_trap_happened = 0;
+static int save_trap_happened = 0;
 
 int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 static char buf[64][4096] = { 0 };
@@ -2478,17 +2480,51 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
    return false;
 }
 
+/* ensure we are always saving snapshots and loading them at an appropriate time
+   by setting cpu traps. Without this, savestate corruption occurs */
+
+static void save_trap(uint16_t addr, void *success)
+{
+      if (machine_write_snapshot(save_file, 0, 1, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      {
+         *((int *)success) = 1;
+      }
+      else
+      {
+         *((int *)success) = 0;
+      }
+      save_trap_happened = 1;
+}
+
+static void load_trap(uint16_t addr, void *success)
+{
+      if (machine_read_snapshot(save_file, 0) >= 0)
+      {
+         *((int *)success) = 1;
+      }
+      else
+      {
+         *((int *)success) = 0;
+      }
+      load_trap_happened = 1;
+}
+
 size_t retro_serialize_size(void)
 {
    if (retro_ui_finalized)
    {
-      size_t size = 0;
       snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
-      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      int success = 0;
+      interrupt_maincpu_trigger_trap(save_trap, (void *)&success);
+      save_trap_happened = 0;
+      while (!save_trap_happened)
+         maincpu_mainloop_retro();
+      if (success)
       {
          FILE *file = fopen(save_file, "rb");
          if (file)
          {
+            size_t size = 0;
             fseek(file, 0L, SEEK_END);
             size = ftell(file);
             fclose(file);
@@ -2504,7 +2540,12 @@ bool retro_serialize(void *data_, size_t size)
    if (retro_ui_finalized)
    {
       snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
-      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
+      int success = 0;
+      interrupt_maincpu_trigger_trap(save_trap, (void *)&success);
+      save_trap_happened = 0;
+      while (!save_trap_happened)
+         maincpu_mainloop_retro();
+      if (success)
       {
          FILE *file = fopen(save_file, "rb");
          if (file)
@@ -2532,7 +2573,12 @@ bool retro_unserialize(const void *data_, size_t size)
          if (fwrite(data_, size, 1, file) == 1)
          {
             fclose(file);
-            if (machine_read_snapshot(save_file, 0) >= 0)
+            int success = 0;
+            interrupt_maincpu_trigger_trap(load_trap, (void *)&success);
+            load_trap_happened = 0;
+            while (!load_trap_happened)
+               maincpu_mainloop_retro();
+            if (success)
                return true;
          }
          else

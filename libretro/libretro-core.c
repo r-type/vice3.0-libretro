@@ -24,7 +24,6 @@ bool retro_load_ok = false;
 retro_log_printf_t log_cb;
 
 char RETRO_DIR[512];
-char RPATH_basename[512];
 char save_file[512];
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;

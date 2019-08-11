@@ -446,6 +446,7 @@ nk_retro_get_text_width(nk_handle handle, float height, const char *text, int le
 
 
 extern unsigned retro_get_borders(void);
+extern unsigned vice_devices[5];
 
 void reset_mouse_pos(){
 	/* Starting point on F1 */
@@ -575,28 +576,24 @@ static void Process_key()
 	 	for(i=0;i<320;i++)
 			if(revent.key_state[i] && revent.key_state[i]!=revent.old_key_state[i]  )
         	{
-	
 				if(i==RETROK_LSHIFT){
 					revent.LSHIFTON=-revent.LSHIFTON;
-					printf("Modifier shift pressed %d \n",revent.LSHIFTON); 
+					//printf("Modifier shift pressed %d \n",revent.LSHIFTON); 
 					continue;
 				}
 				retro_key(i,1);
-	
         	}	
         	else if ( !revent.key_state[i] && revent.key_state[i]!=revent.old_key_state[i]  )
         	{
 				if(i==RETROK_LSHIFT){
 					revent.LSHIFTON=-revent.LSHIFTON;
-					printf("Modifier shift released %d \n",revent.LSHIFTON); 
+					//printf("Modifier shift released %d \n",revent.LSHIFTON); 
 					continue;
 				}
 				retro_key(i,0);
-	
         	}	
 
 	memcpy(revent.old_key_state,revent.key_state , sizeof(revent.key_state) );
-
 }
 
 NK_API void
@@ -624,6 +621,12 @@ nk_retro_handle_event(int *evt,int poll)
     mouse_r = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
     mouse_m = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
        
+    // Keyboard buttons only for keyboard device, but why not allow for all, since vkbd hijacks keypress anyway
+    if(!mouse_l && !mouse_r && !mouse_m) {
+        if(vice_devices[0] == RETRO_DEVICE_VICE_KEYBOARD)
+            mouse_l = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN);
+    }
+
     if(!mouse_l && !mouse_r && !mouse_m) {
        // Mouse buttons
        mouse_l = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);

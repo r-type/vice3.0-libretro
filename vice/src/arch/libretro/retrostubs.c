@@ -23,6 +23,7 @@ extern unsigned vice_devices[5];
 //EMU FLAGS
 int SHOWKEY=-1;
 int SHIFTON=-1;
+int CTRLON=-1;
 int SND=1;
 int vkey_pressed=-1;
 char core_key_state[512];
@@ -103,23 +104,47 @@ void emu_function(int function) {
 
 void Keymap_KeyUp(int symkey)
 {
+    /* Num lock ..? */
     if (symkey == RETROK_NUMLOCK)
         num_locked = false;
+    /* Prevent LShift keyup if ShiftLock is on */
+    else if (symkey == RETROK_LSHIFT)
+    {
+        if(SHIFTON == -1)
+            kbd_handle_keyup(symkey);
+    }
     else 
         kbd_handle_keyup(symkey);
 }
 
 void Keymap_KeyDown(int symkey)
 {
+    /* Num lock ..? */
     if (symkey == RETROK_NUMLOCK)
         num_locked = true;
+    /* CapsLock / ShiftLock */
+    else if (symkey == RETROK_CAPSLOCK)
+    {
+        if(SHIFTON == 1)
+            kbd_handle_keyup(RETROK_LSHIFT);
+        else
+            kbd_handle_keydown(RETROK_LSHIFT);
+        SHIFTON=-SHIFTON;
+    }
+    /* Cursor keys */
+    else if (symkey == RETROK_UP || symkey == RETROK_DOWN || symkey == RETROK_LEFT || symkey == RETROK_RIGHT)
+    {
+        /* Cursors will not move if CTRL actually is pressed, so we need to fake keyup */
+        if(CTRLON == 1)
+            kbd_handle_keyup(RETROK_TAB);
+            kbd_handle_keydown(symkey);
+    }
     else
         kbd_handle_keydown(symkey);
 }
 
 void app_vkb_handle(void)
 {
-
     static int last_vkey_pressed = -1;
 
     /* key up */
@@ -138,11 +163,8 @@ void app_vkb_handle(void)
                 emu_function(EMU_STATUSBAR);
                 break;
             case -10: /* sticky shift */
-                if(SHIFTON == 1)
-                    kbd_handle_keyup(RETROK_LSHIFT);
-                else
-                    kbd_handle_keydown(RETROK_LSHIFT);
-                SHIFTON=-SHIFTON;
+                Keymap_KeyDown(RETROK_CAPSLOCK);
+                Keymap_KeyUp(RETROK_CAPSLOCK);
                 break;
             default:
                 kbd_handle_keydown(vkey_pressed);
@@ -160,7 +182,7 @@ void Core_Processkey(int disable_physical_cursor_keys)
    for(i=0; i<320; i++)
       core_key_state[i]=input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0,i) ? 0x80: 0;
 
-   if (memcmp(core_key_state, core_old_key_state, sizeof(core_key_state)))
+   if(memcmp(core_key_state, core_old_key_state, sizeof(core_key_state)))
    {
       for(i=0; i<320; i++)
       {
@@ -168,18 +190,29 @@ void Core_Processkey(int disable_physical_cursor_keys)
          {	
             if(i==RETROK_LALT)
                continue;
-            if (disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
+            else if(i==RETROK_TAB) /* CTRL acts as a cursor enabler */
+               CTRLON=1;
+            else if(i==RETROK_CAPSLOCK) /* Allow CapsLock while SHOWKEY */
+               ;
+            else if(disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
+               continue;
+            else if(SHOWKEY==1)
                continue;
             Keymap_KeyDown(i);
          }
-         else if (!core_key_state[i] && core_key_state[i] != core_old_key_state[i])
+         else if(!core_key_state[i] && core_key_state[i] != core_old_key_state[i])
          {
             if(i==RETROK_LALT)
                continue;
-            if (disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
+            else if(i==RETROK_TAB)
+               CTRLON=-1;
+            else if(i==RETROK_CAPSLOCK)
+               ;
+            else if(disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
+               continue;
+            else if(SHOWKEY==1)
                continue;
             Keymap_KeyUp(i);
-
          }
       }
    }
@@ -194,7 +227,7 @@ int Core_PollEvent(int disable_physical_cursor_keys)
 
     int i, mk;
     static int jbt[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    static int kbt[11]={0,0,0,0,0,0,0,0,0,0};
+    static int kbt[11]={0,0,0,0,0,0,0,0,0,0,0};
     
     if(!retro_load_ok)return 1;
     input_poll_cb();
@@ -207,14 +240,13 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     int LX, LY, RX, RY;
     int threshold=20000;
 
-    /* Iterate hotkeys, skip datasette control if not enabled */
-    int imax = (datasette) ? 13 : 8;
-    /* Skip datasette hotkeys if vkbd is on */
-    imax = (SHOWKEY==1) ? 8 : imax;
+    /* Iterate hotkeys, skip datasette control if disabled or if vkbd is on */
+    int imax = (datasette && SHOWKEY==-1) ? 11 : 6;
     
     for(i = 0; i < imax; i++) {
         mk = i + 24;
         
+        /* Key down */
         if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[mk]) && kbt[i]==0 && mapper_keys[mk]!=0)
         {
             kbt[i]=1;
@@ -255,6 +287,7 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     break;
             }
         }
+        /* Key up */
         else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[mk]) && mapper_keys[mk]!=0)
         {
             kbt[i]=0;
@@ -267,7 +300,18 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     }
 
     /* The check for kbt[i] here prevents the hotkey from generating C64 key events */
-    if(SHOWKEY==-1 && kbt[0] == 0 && kbt[1] == 0 && kbt[2] == 0 && kbt[3] == 0 && kbt[4] == 0)
+    /* SHOWKEY check is now in Core_Processkey to allow certain keys while SHOWKEY */
+    int processkey=1;
+    for(i = 0; i < (sizeof(kbt)/sizeof(kbt[0])); i++) {
+        if(processkey)
+            if(kbt[i] == 1)
+            {
+                processkey=0;
+                break;
+            }
+    }
+
+    if (processkey)
         Core_Processkey(disable_physical_cursor_keys);
 
     if (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD)
@@ -419,7 +463,7 @@ void retro_poll_event()
     /* if user plays with cursor keys, then prevent up/down/left/right from generating */
     /* keyboard key presses, this prevent cursor up from becoming a run/stop input */
     if (
-        (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) &&
+        (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
         (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
@@ -432,7 +476,7 @@ void retro_poll_event()
     //if(SHOWKEY==-1) /* retro joypad take control over keyboard joy */
     /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
     /* keyup allowing most likely not needed on actual keyboard presses even though they get stuck also */
-    {
+    if (CTRLON==-1) {
         int retro_port;
         for (retro_port = 0; retro_port <= 4; retro_port++)
         {

@@ -1,6 +1,6 @@
 static void retro_defaultkeyboard(){
 
-	log_message(keyboard_log, "loading default retro keymap start:");
+	//log_message(keyboard_log, "Loading default retro keymap:");
 
     if (keyconvmap != NULL) {
         keyboard_keyconvmap_free();
@@ -285,6 +285,6 @@ keyboard_parse_set_neg_row(271, -5, 18);              /* NumPad Enter -> keypad 
 keyboard_parse_set_neg_row(270, -5, 19);              /*     NumPad + -> keypad +     */
 #endif
 
-	log_message(keyboard_log, "done!");
+	//log_message(keyboard_log, "Done!");
 }
 

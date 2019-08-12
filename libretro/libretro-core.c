@@ -237,7 +237,7 @@ int pre_main(const char *argv)
    if(i==1)
    {
       parse_cmdline(CMDFILE);
-      LOGI("Starting game from command line :%s\n",CMDFILE);
+      log_cb(RETRO_LOG_INFO, "Starting game from command line :%s\n",CMDFILE);
    }
    else
       parse_cmdline(argv);
@@ -303,7 +303,7 @@ int pre_main(const char *argv)
    for (i = 0; i < PARAMCOUNT; i++)
    {
       xargv_cmd[i] = (char*)(XARGV[i]);
-      LOGI("%2d  %s\n",i,XARGV[i]);
+      log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
    }
 
    skel_main(PARAMCOUNT,( char **)xargv_cmd);

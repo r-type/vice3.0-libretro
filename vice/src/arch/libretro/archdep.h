@@ -189,10 +189,10 @@ extern const char *archdep_pref_path;
 #endif
 
 #else
-extern  char retro_system_data_directory[512];
-#define RETRO_DEBUG 1
 
+extern  char retro_system_data_directory[512];
 #define LIBDIR retro_system_data_directory
+//#define RETRO_DEBUG 1
 
 #endif //__LIBRETRO__
 

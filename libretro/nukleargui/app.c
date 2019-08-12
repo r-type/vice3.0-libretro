@@ -85,8 +85,9 @@ int app_init()
     memset(core_key_state,0,512);
     memset(core_old_key_state ,0, sizeof(core_old_key_state));
 
+#ifdef RETRO_DEBUG
     printf("Init nuklear\n");
-
+#endif
     return 0;
 }
 
@@ -99,7 +100,9 @@ int app_free()
    nk_retro_shutdown();
 
    Retro_FreeSurface(screen_surface);
+#ifdef RETRO_DEBUG
    printf("free surf screen\n");
+#endif
    if (screen_surface)
       free(screen_surface);
    screen_surface = NULL;

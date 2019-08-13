@@ -37,6 +37,7 @@ bool num_locked = false;
 extern bool retro_load_ok;
 extern int mapper_keys[35];
 int statusbar=0;
+extern int RETROKEYRAHKEYPAD;
 
 int turbo_fire_button=-1;
 unsigned int turbo_pulse=2;
@@ -502,40 +503,40 @@ void retro_poll_event()
                 j = joystick_value[vice_port];
 
                 if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
-                    (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP9)) ||
-                    (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP8)) 			
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP9)) ||
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP8))
                 )
                     j |= (SHOWKEY==-1) ? 0x01 : j;
                 else
                     j &= ~0x01;
 
                 if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) || 
-                    (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP3)) ||
-                    (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP2)) 			
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP3)) ||
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP2))
                 )
                     j |= (SHOWKEY==-1) ? 0x02 : j;
                 else
                     j &= ~0x02;
 
                 if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) || 
-                    (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP7)) ||
-                    (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP4)) 
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP7)) ||
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP4))
                 )
                     j |= (SHOWKEY==-1) ? 0x04 : j;
                 else
                     j &=~ 0x04;
 
                 if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT) || 
-                    (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP1)) ||
-                    (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP6)) 			    
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP1)) ||
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP6))
                 )
                     j |= (SHOWKEY==-1) ? 0x08 : j;
                 else
                     j &= ~0x08;
                     
                 if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) || 
-                    (vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP0)) ||
-                    (vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP5)) 
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP0)) ||
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP5))
                 )
                     j |= (SHOWKEY==-1) ? 0x10 : j;
                 else

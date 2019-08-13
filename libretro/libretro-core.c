@@ -87,6 +87,7 @@ extern int RETROEXTPAL;
 extern int RETROAUTOSTARTWARP;
 extern int RETROBORDERS;
 extern int RETROTHEME;
+extern int RETROKEYRAHKEYPAD;
 extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
@@ -836,6 +837,17 @@ void retro_set_environment(retro_environment_t cb)
             { "12", NULL },
          },
          "2"
+      },
+      {
+         "vice_keyrah_keypad_mappings",
+         "Keyrah keypad mappings",
+         "Hardcoded keypad to joy mappings for Keyrah hardware",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
       },
 /* Button mappings */
       {
@@ -1610,6 +1622,15 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "Port 2") == 0 && !cur_port_locked) cur_port=2;
       else if (strcmp(var.value, "Port 1") == 0 && !cur_port_locked) cur_port=1;
+   }
+
+   var.key = "vice_keyrah_keypad_mappings";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) RETROKEYRAHKEYPAD=0;
+      else if (strcmp(var.value, "enabled") == 0) RETROKEYRAHKEYPAD=1;
    }
 
    var.key = "vice_turbo_fire_button";

@@ -934,28 +934,28 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad L-Up",
          "Mapping for left analog stick up",
          {{ NULL, NULL }},
-         "RETROK_UP"
+         "---"
       },
       {
          "vice_mapper_ld",
          "RetroPad L-Down",
          "Mapping for left analog stick down",
          {{ NULL, NULL }},
-         "RETROK_DOWN"
+         "---"
       },
       {
          "vice_mapper_ll",
          "RetroPad L-Left",
          "Mapping for left analog stick left",
          {{ NULL, NULL }},
-         "RETROK_LEFT"
+         "---"
       },
       {
          "vice_mapper_lr",
          "RetroPad L-Right",
          "Mapping for left analog stick right",
          {{ NULL, NULL }},
-         "RETROK_RIGHT"
+         "---"
       },
 
 /* Right Stick */
@@ -964,28 +964,28 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad R-Up",
          "Mapping for right analog stick up",
          {{ NULL, NULL }},
-         "RETROK_y"
+         "---"
       },
       {
          "vice_mapper_rd",
          "RetroPad R-Down",
          "Mapping for right analog stick down",
          {{ NULL, NULL }},
-         "RETROK_n"
+         "---"
       },
       {
          "vice_mapper_rl",
          "RetroPad R-Left",
          "Mapping for right analog stick left",
          {{ NULL, NULL }},
-         "RETROK_l"
+         "---"
       },
       {
          "vice_mapper_rr",
          "RetroPad R-Right",
          "Mapping for right analog stick right",
          {{ NULL, NULL }},
-         "RETROK_r"
+         "---"
       },
 /* Hotkeys */
       {
@@ -1120,18 +1120,12 @@ void retro_set_environment(retro_environment_t cb)
          variables[i].key = core_options[i].key;
          strcpy(buf[i], core_options[i].desc);
          strcat(buf[i], "; ");
+         strcat(buf[i], core_options[i].default_value);
          j = 0;
          while(core_options[i].values[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX)
          {
-            if (j == 0)
-            {
-               strcat(buf[i], core_options[i].default_value);
-            }
-            else
-            {
-               strcat(buf[i], "|");
-               strcat(buf[i], core_options[i].values[j].value);
-            }
+            strcat(buf[i], "|");
+            strcat(buf[i], core_options[i].values[j].value);
             ++j;
          };
          variables[i].value = buf[i];

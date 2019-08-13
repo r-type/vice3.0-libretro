@@ -20,7 +20,6 @@ extern char core_key_state[512];
 extern char core_old_key_state[512];
 extern char RPATH[512];
 extern int SHOWKEY;
-extern int want_quit;
 extern int RETROTHEME;
 
 #define NK_INCLUDE_FIXED_TYPES
@@ -35,25 +34,19 @@ extern int RETROTHEME;
 #include "nuklear_retro_soft.h"
 
 static RSDL_Surface *screen_surface;
-
-extern void restore_bgk();
-extern void save_bkg();
 struct nk_vec2 offset = {0, 0};
 
 /* macros */
-
 #define UNUSED(a) (void)a
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #define LEN(a) (sizeof(a)/sizeof(a)[0])
 
 /* Platform */
-
 float bg[4];
 struct nk_color background;
 /* GUI */
 struct nk_context *ctx;
-
 static nk_retro_Font *RSDL_font;
 
 #include "style.c"
@@ -121,26 +114,23 @@ int app_event(int poll)
 	return 0;
 }
 
-int app_render(int poll)
+int app_render()
 {
-    static int prevpoll=0,prevstate=0,reset_state=0;
-    if(prevpoll!=poll || reset_state){nk_clear(ctx);reset_state=0;}
+    static int state_prev=0,state_reset=0;
+    if(state_reset)
+    {
+        nk_clear(ctx);
+        state_reset=0;
+    }
 
-    if(poll==0)
-	app_vkb_handle();
-    else 
-	restore_bgk();
-
-    app_event(poll);
+    app_vkb_handle();
+    app_event(0);
 
     int state=gui(ctx);
-    if(state==1 && prevstate!=1)reset_state=1;
+    if(state==1 && state_prev!=1) state_reset=1;
+    state_prev=state;
 
     nk_retro_render(nk_rgba(0,0,0,0));
-
-    prevpoll=poll;
-    prevstate=state;
-
     return 0;
 }
 

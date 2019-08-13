@@ -446,7 +446,6 @@ nk_retro_get_text_width(nk_handle handle, float height, const char *text, int le
 
 
 extern unsigned retro_get_borders(void);
-extern unsigned vice_devices[5];
 
 void reset_mouse_pos(){
 	/* Starting point on F1 */
@@ -621,10 +620,9 @@ nk_retro_handle_event(int *evt,int poll)
     mouse_r = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
     mouse_m = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
        
-    // Keyboard buttons only for keyboard device, but why not allow for all, since vkbd hijacks keypress anyway
     if(!mouse_l && !mouse_r && !mouse_m) {
-        if(vice_devices[0] == RETRO_DEVICE_VICE_KEYBOARD)
-            mouse_l = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN);
+        // Keyboard buttons
+        mouse_l = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN);
     }
 
     if(!mouse_l && !mouse_r && !mouse_m) {
@@ -702,14 +700,14 @@ nk_retro_handle_event(int *evt,int poll)
             revent.gmy+=mouse_y;
 
             // Mouse corners
-            if(revent.gmx<0)
-                revent.gmx=0;
-            if(revent.gmx>retroW-1)
-                revent.gmx=retroW-1;
-            if(revent.gmy<0)
-                revent.gmy=0;
-            if(revent.gmy>retroH-1)
-                revent.gmy=retroH-1;
+            if(revent.gmx<offset.x)
+                revent.gmx=offset.x;
+            if(revent.gmx>retroW-offset.x-1)
+                revent.gmx=retroW-offset.x-1;
+            if(revent.gmy<offset.y)
+                revent.gmy=offset.y;
+            if(revent.gmy>retroH-offset.y-3)
+                revent.gmy=retroH-offset.y-3;
         }
     }
     else{

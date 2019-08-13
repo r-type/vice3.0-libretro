@@ -16,7 +16,6 @@ extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
 
 extern void emu_reset(void);
-extern void save_bkg();
 extern void Screen_SetFullUpdate(int scr);
 extern unsigned vice_devices[5];
 
@@ -304,12 +303,11 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     /* SHOWKEY check is now in Core_Processkey to allow certain keys while SHOWKEY */
     int processkey=1;
     for(i = 0; i < (sizeof(kbt)/sizeof(kbt[0])); i++) {
-        if(processkey)
-            if(kbt[i] == 1)
-            {
-                processkey=0;
-                break;
-            }
+        if(kbt[i] == 1)
+        {
+            processkey=0;
+            break;
+        }
     }
 
     if (processkey)

@@ -45,9 +45,6 @@ int cpuloop=1;
 	unsigned int save_Screen[WINDOW_SIZE];
 #endif
 
-//SOUND
-short signed int SNDBUF[1024*2];
-
 //PATH
 char RPATH[512];
 
@@ -55,7 +52,7 @@ extern int SHOWKEY;
 
 extern int app_init(void);
 extern int app_free(void);
-extern int app_render(int poll);
+extern int app_render(void);
 
 int CROP_WIDTH;
 int CROP_HEIGHT;
@@ -149,8 +146,9 @@ static int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are jus
 /* runstate = RUNSTATE_LOADED_CONTENT: load content was selected while core is running, so do an autostart_reset() */
 /* runstate = RUNSTATE_RUNNING: core is running normally */
 
-
-unsigned retro_get_borders(void);
+unsigned retro_get_borders(void) {
+   return RETROBORDERS;
+} 
 
 void retro_set_input_state(retro_input_state_t cb)
 {
@@ -384,16 +382,6 @@ long GetTicks(void) {
    return microSecCounter;
 }
 
-void save_bkg(void)
-{
-   memcpy(save_Screen,Retro_Screen,PITCH*WINDOW_SIZE);
-}
-
-void restore_bgk(void)
-{
-   memcpy(Retro_Screen,save_Screen,PITCH*WINDOW_SIZE);
-}
-
 void Screen_SetFullUpdate(int scr)
 {
    if(scr==0 ||scr>1)
@@ -456,7 +444,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_statusbar",
          "Statusbar",
-         "Display a statusbar with joystick indicators etc.",
+         "Display a statusbar with joystick, drive, tape and speed indicators",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -478,7 +466,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_emulation",
          "Drive sound emulation",
-         "Emulates the iconic floppy drive sounds for nostalgia. D64 & true drive emulation required.",
+         "Emulates the iconic floppy drive sounds. D64 & true drive emulation required",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -489,7 +477,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_volume",
          "Drive sound volume",
-         "Only makes a difference if drive sound emulation is on",
+         "",
          {
             { "10\%", NULL },
             { "20\%", NULL },
@@ -783,7 +771,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_userport_joytype",
          "4-player adapter",
-         "Useful to play IK+ Gold with 3 players and more",
+         "Essential when 2 joysticks are not enough, for example IK+ Gold with 3 players",
          {
             { "None", NULL },
             { "Protovision CGA", NULL },
@@ -827,7 +815,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_turbo_pulse",
          "Retropad turbo pulse",
-         "Frames in a button cycle, 2 equals button press on every other frame",
+         "Frames in a button cycle, 2 equals button press and release on every other frame",
          {
             { "2", NULL },
             { "4", NULL },
@@ -1019,7 +1007,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_warp_mode",
          "Hotkey: Warp mode",
-         "Hold this key, or a button mapped to it, for warp mode",
+         "Hold a button mapped to this key for warp mode",
          {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
       },
@@ -1633,15 +1621,15 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "None") == 0) turbo_fire_button=-1;
-      else if (strcmp(var.value, "B") == 0) turbo_fire_button=0;
-      else if (strcmp(var.value, "X") == 0) turbo_fire_button=9;
-      else if (strcmp(var.value, "Y") == 0) turbo_fire_button=1;
-      else if (strcmp(var.value, "L") == 0) turbo_fire_button=10;
-      else if (strcmp(var.value, "R") == 0) turbo_fire_button=11;
-      else if (strcmp(var.value, "L2") == 0) turbo_fire_button=12;
-      else if (strcmp(var.value, "R2") == 0) turbo_fire_button=13;
-      else if (strcmp(var.value, "L3") == 0) turbo_fire_button=14;
-      else if (strcmp(var.value, "R3") == 0) turbo_fire_button=15;
+      else if (strcmp(var.value, "B") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_B;
+      else if (strcmp(var.value, "X") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_X;
+      else if (strcmp(var.value, "Y") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_Y;
+      else if (strcmp(var.value, "L") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_L;
+      else if (strcmp(var.value, "R") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_R;
+      else if (strcmp(var.value, "L2") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_L2;
+      else if (strcmp(var.value, "R2") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_R2;
+      else if (strcmp(var.value, "L3") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_L3;
+      else if (strcmp(var.value, "R3") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_R3;
    }
 
    var.key = "vice_turbo_pulse";
@@ -2316,7 +2304,9 @@ void retro_run(void)
 
    if(lastW!=retroW || lastH!=retroH){
       update_geometry();
-      log_cb(RETRO_LOG_INFO, "Update Geometry Old(%d,%d) New(%d,%d)\n",lastW,lastH,retroW,retroH);
+#ifdef RETRO_DEBUG
+      log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n",lastW,lastH,retroW,retroH);
+#endif
       lastW=retroW;
       lastH=retroH;
       reset_mouse_pos();
@@ -2328,10 +2318,11 @@ void retro_run(void)
    if(runstate == RUNSTATE_FIRST_START)
    {
       /* this is only done once after just loading the core from scratch and starting it */
+#ifdef RETRO_DEBUG
       log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
+#endif
       retro_load_ok=true;
       app_init();
-      memset(SNDBUF,0,1024*2*2);
       update_variables();
       pre_main(RPATH);
       runstate = RUNSTATE_RUNNING;
@@ -2353,7 +2344,7 @@ void retro_run(void)
    cpuloop=1;
 
    retro_blit();
-   if(SHOWKEY==1)app_render(0);
+   if(SHOWKEY==1)app_render();
 
    video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
 
@@ -2485,9 +2476,6 @@ unsigned retro_get_region(void)
 #endif /* __PET__ */
 }
 
-unsigned retro_get_borders(void) {
-   return RETROBORDERS;
-} 
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)
 {

@@ -56,7 +56,6 @@
 int RETROTDE=0;
 int RETRODRIVELED=0;
 int RETRODSE=0;
-int RETRODSEVOL=800;
 int RETROSTATUS=0;
 int RETRORESET=0;
 int RETROSIDMODL=0;
@@ -207,16 +206,19 @@ int ui_init_finalize(void)
    }
 
    if(RETROTDE==1){
-	resources_set_int("DriveTrueEmulation", 1);
-	resources_set_int("VirtualDevices", 0);
+      resources_set_int("DriveTrueEmulation", 1);
+      resources_set_int("VirtualDevices", 0);
    }
    else if(RETROTDE==0){
-	resources_set_int("DriveTrueEmulation", 0);
-	resources_set_int("VirtualDevices", 1);
+      resources_set_int("DriveTrueEmulation", 0);
+      resources_set_int("VirtualDevices", 1);
    }
 
-   resources_set_int("DriveSoundEmulation", RETRODSE);
-   resources_set_int("DriveSoundEmulationVolume", RETRODSEVOL);
+   if(RETRODSE>0) {
+      resources_set_int("DriveSoundEmulation", 1);
+      resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+   } else
+      resources_set_int("DriveSoundEmulation", 0);
 
    resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 

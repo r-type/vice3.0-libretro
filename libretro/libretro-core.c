@@ -12,6 +12,7 @@
 #include "autostart.h"
 #include "tape.h"
 #include "interrupt.h"
+#include "datasette.h"
 #ifndef __PET__
 #include "cartridge.h"
 #endif
@@ -2331,6 +2332,7 @@ void retro_run(void)
    else if (runstate == RUNSTATE_LOADED_CONTENT)
    {
       /* Load content was called while core was already running, just do a reset with autostart */
+      datasette_control(DATASETTE_CONTROL_STOP);
       autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
       /* After retro_load_game, get_system_av_info is always called by the frontend */
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */

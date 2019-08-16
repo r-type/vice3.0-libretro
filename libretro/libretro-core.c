@@ -35,6 +35,50 @@ static char buf[64][4096] = { 0 };
 long microSecCounter=0;
 int cpuloop=1;
 
+#ifdef __WIN32__
+int numlock_original_state=0;
+
+#ifdef __WIN32__
+#include <windows.h>
+#else 
+#include <X11/Xlib.h>
+#endif
+
+void SetNumLock(BOOL bState)
+{
+#ifdef __WIN32__
+    BYTE keyState[256];
+
+    GetKeyboardState((LPBYTE)&keyState);
+    if( (bState && !(keyState[VK_NUMLOCK] & 1)) ||
+        (!bState && (keyState[VK_NUMLOCK] & 1)) )
+    {
+        // Simulate a key press
+        keybd_event(VK_NUMLOCK, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+
+        // Simulate a key release
+        keybd_event(VK_NUMLOCK, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    }
+#endif
+}
+
+bool GetNumLock (void)
+{
+#ifdef __WIN32__
+    short status = GetKeyState(VK_NUMLOCK);
+    return status == 1;
+#else
+    Display *dpy = XOpenDisplay(":0");
+    XKeyboardState x;
+    XGetKeyboardControl(dpy, &x);
+    XCloseDisplay(dpy);
+    return x.led_mask & 2;
+#endif
+}
+
+#endif //__WIN32__
+
+
 #ifdef FRONTEND_SUPPORTS_RGB565
 	uint16_t *Retro_Screen;
 	uint16_t bmp[WINDOW_SIZE];
@@ -72,6 +116,7 @@ int lastH=768;
 unsigned vice_devices[5];
 
 extern int RETROTDE;
+extern int RETRODRIVELED;
 extern int RETRODSE;
 extern int RETRODSEVOL;
 extern int RETROSTATUS;
@@ -149,6 +194,10 @@ static int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are jus
 unsigned retro_get_borders(void) {
    return RETROBORDERS;
 } 
+
+unsigned retro_get_drive_led(void) {
+   return (RETROTDE) ? RETRODRIVELED : 0;
+}
 
 void retro_set_input_state(retro_input_state_t cb)
 {
@@ -463,6 +512,19 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#ifdef __WIN32__
+      {
+         "vice_drive_led",
+         "Drive LED",
+         "Drive loading indicator. True drive emulation required",
+         {
+            { "disabled", NULL },
+            { "NumLock", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
       {
          "vice_drive_sound_emulation",
          "Drive sound emulation",
@@ -1192,6 +1254,17 @@ static void update_variables(void)
          if (strcmp(var.value, "disabled") == 0)RETROTDE=0;
       }
    }
+
+#ifdef __WIN32__
+   var.key = "vice_drive_led";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "NumLock") == 0) RETRODRIVELED=1;
+      else if (strcmp(var.value, "disabled") == 0) RETRODRIVELED=0;
+   }
+#endif
 
    var.key = "vice_drive_sound_emulation";
    var.value = NULL;
@@ -2190,6 +2263,11 @@ void retro_deinit(void)
    /* Clean the disk control context */
    if(dc)
       dc_free(dc);
+      
+#ifdef __WIN32__
+   /* Restore NumLock state*/
+   SetNumLock(numlock_original_state);
+#endif
 }
 
 unsigned retro_api_version(void)
@@ -2326,6 +2404,11 @@ void retro_run(void)
       update_variables();
       pre_main(RPATH);
       runstate = RUNSTATE_RUNNING;
+
+#ifdef __WIN32__
+      /* Remember NumLock state */
+      numlock_original_state=GetNumLock();
+#endif
       return;
    } 
    else if (runstate == RUNSTATE_LOADED_CONTENT)

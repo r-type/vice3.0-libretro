@@ -54,7 +54,6 @@
 #include <stdarg.h>
 
 int RETROTDE=0;
-int RETRODRIVELED=0;
 int RETRODSE=0;
 int RETROSTATUS=0;
 int RETRORESET=0;

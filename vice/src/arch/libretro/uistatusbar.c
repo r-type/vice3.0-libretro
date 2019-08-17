@@ -44,12 +44,6 @@
 
 #include "joystick.h"
 
-
-#ifdef __WIN32__
-extern void SetNumLock(bool);
-extern unsigned retro_get_drive_led(void);
-#endif
-
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
 
@@ -172,7 +166,8 @@ static void display_speed(void)
     //char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';
     char fps_str[2];
     sprintf(fps_str, "%2d", fps);
-    if (warp) {
+    if (warp)
+    {
         fps_str[0] = (fps_str[0] | 0x80);
         fps_str[1] = (fps_str[1] | 0x80);
     }
@@ -288,16 +283,6 @@ void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_
     c = "8901"[drive_number] | ((pwm1 > 500) ? 0x80 : 0);
     statusbar_text[STATUSBAR_DRIVE_POS + (drive_number * 5)] = c;
     statusbar_text[STATUSBAR_DRIVE_POS + (drive_number * 5) + 1] = 'T';
-
-#ifdef __WIN32__
-    /* Use NumLock as drive LED */
-    if(retro_get_drive_led()==1) {
-        if (pwm1 > 500)
-            SetNumLock(true);
-        else
-            SetNumLock(false);
-    }
-#endif
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;

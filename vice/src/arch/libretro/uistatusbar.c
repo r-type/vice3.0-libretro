@@ -53,16 +53,16 @@
 
 #define MAX_STATUSBAR_LEN           47
 #define STATUSBAR_JOY_POS           0
-#define STATUSBAR_PAUSE_POS         4
-#define STATUSBAR_DRIVE_POS         37
-#define STATUSBAR_DRIVE8_TRACK_POS  39
-#define STATUSBAR_DRIVE9_TRACK_POS  39
-#define STATUSBAR_DRIVE10_TRACK_POS 39
-#define STATUSBAR_DRIVE11_TRACK_POS 39
-#define STATUSBAR_TAPE_POS          31
-#define STATUSBAR_SPEED_POS         43
+#define STATUSBAR_DRIVE_POS         38
+#define STATUSBAR_DRIVE8_TRACK_POS  40
+#define STATUSBAR_DRIVE9_TRACK_POS  40
+#define STATUSBAR_DRIVE10_TRACK_POS 40
+#define STATUSBAR_DRIVE11_TRACK_POS 40
+#define STATUSBAR_TAPE_POS          32
+#define STATUSBAR_PAUSE_POS         43
+#define STATUSBAR_SPEED_POS         44
 
-static char statusbar_text[MAX_STATUSBAR_LEN] = "                                               ";
+static char statusbar_text[MAX_STATUSBAR_LEN] = "                                              ";
 
 static int pitch;
 static int draw_offset;
@@ -163,9 +163,16 @@ static int paused = 0;
 static void display_speed(void)
 {
     int len;
-    char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : 'f';
+    //char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';
+    char fps_str[2];
+    sprintf(fps_str, "%2d", fps);
+    if (warp)
+    {
+        fps_str[0] = (fps_str[0] | 0x80);
+        fps_str[1] = (fps_str[1] | 0x80);
+    }
 
-    len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2d%c", fps, sep);
+    len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2s", fps_str);
     //statusbar_text[STATUSBAR_SPEED_POS + len] = ' '; /* No end separator for last element */
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {

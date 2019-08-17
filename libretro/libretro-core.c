@@ -74,7 +74,6 @@ unsigned vice_devices[5];
 
 extern int RETROTDE;
 extern int RETRODSE;
-extern int RETRODSEVOL;
 extern int RETROSTATUS;
 extern int RETRORESET;
 extern int RETROSIDMODL;
@@ -470,29 +469,19 @@ void retro_set_environment(retro_environment_t cb)
          "Emulates the iconic floppy drive sounds. D64 & true drive emulation required",
          {
             { "disabled", NULL },
-            { "enabled", NULL },
+            { "10\%", "10\% volume" },
+            { "20\%", "20\% volume" },
+            { "30\%", "30\% volume" },
+            { "40\%", "40\% volume" },
+            { "50\%", "50\% volume" },
+            { "60\%", "60\% volume" },
+            { "70\%", "70\% volume" },
+            { "80\%", "80\% volume" },
+            { "90\%", "90\% volume" },
+            { "100\%", "100\% volume" },
             { NULL, NULL },
          },
          "disabled"
-      },
-      {
-         "vice_drive_sound_volume",
-         "Drive sound volume",
-         "",
-         {
-            { "10\%", NULL },
-            { "20\%", NULL },
-            { "30\%", NULL },
-            { "40\%", NULL },
-            { "50\%", NULL },
-            { "60\%", NULL },
-            { "70\%", NULL },
-            { "80\%", NULL },
-            { "90\%", NULL },
-            { "100\%", NULL },
-            { NULL, NULL },
-         },
-         "10\%"
       },
       {
          "vice_autostart_warp",
@@ -1199,33 +1188,23 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if(retro_ui_finalized){
-         if (strcmp(var.value, "enabled") == 0){
-            resources_set_int("DriveSoundEmulation", 1);
-         }
-         else if (strcmp(var.value, "disabled") == 0){
-            resources_set_int("DriveSoundEmulation", 0);
-    	 }
-      }
-      else {
-         if (strcmp(var.value, "enabled") == 0)RETRODSE=1;
-         if (strcmp(var.value, "disabled") == 0)RETRODSE=0;
-      }
-   }
-
-   var.key = "vice_drive_sound_volume";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
       int val = atoi(var.value);
       val = val * 20;
-      
-      if(retro_ui_finalized)
-         resources_set_int("DriveSoundEmulationVolume", val);
-      else RETRODSEVOL=val;
-   }
 
+      if(retro_ui_finalized){
+         if (strcmp(var.value, "disabled") == 0){
+            resources_set_int("DriveSoundEmulation", 0);
+    	 }
+         else {
+            resources_set_int("DriveSoundEmulation", 1);
+            resources_set_int("DriveSoundEmulationVolume", val);
+         }
+      }
+      else {
+         if (strcmp(var.value, "disabled") == 0)RETRODSE=0;
+         else RETRODSE=val;
+      }
+   }
 
    var.key = "vice_sid_model";
    var.value = NULL;

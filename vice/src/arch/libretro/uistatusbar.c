@@ -164,7 +164,7 @@ static void display_speed(void)
 {
     int len;
     //char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';
-    char fps_str[2];
+    char fps_str[3];
     sprintf(fps_str, "%2d", fps);
     if (warp)
     {

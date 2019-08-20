@@ -714,8 +714,8 @@ void retro_set_environment(retro_environment_t cb)
             { "Community Colors", NULL },
             { "Pepto PAL", NULL },
             { "Pepto PAL old", NULL },
-            { "Pepto NTSC Sony", NULL },
             { "Pepto NTSC", NULL },
+            { "Pepto NTSC Sony", NULL },
             { "C64HQ", NULL },
             { "C64S", NULL },
             { "CCS64", NULL },
@@ -1523,7 +1523,7 @@ static void update_variables(void)
       else if (strcmp(var.value, "Vice") == 0)sprintf(extpal, "%s", "vice");
       else if (strcmp(var.value, "C64HQ") == 0)sprintf(extpal, "%s", "c64hq");
       else if (strcmp(var.value, "C64S") == 0)sprintf(extpal, "%s", "c64s");
-      else if (strcmp(var.value, "CCS64") == 0)sprintf(extpal, "%s", "cc64s");
+      else if (strcmp(var.value, "CCS64") == 0)sprintf(extpal, "%s", "ccs64");
       else if (strcmp(var.value, "Frodo") == 0)sprintf(extpal, "%s", "frodo");
       else if (strcmp(var.value, "Godot") == 0)sprintf(extpal, "%s", "godot");
       else if (strcmp(var.value, "PC64") == 0)sprintf(extpal, "%s", "pc64");

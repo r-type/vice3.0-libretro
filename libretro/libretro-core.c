@@ -405,29 +405,29 @@ int keyId(const char *val)
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_controller_description p1_controllers[] = {
-      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "Disconnected", RETRO_DEVICE_NONE },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p2_controllers[] = {
-      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "Disconnected", RETRO_DEVICE_NONE },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p3_controllers[] = {
-      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "Disconnected", RETRO_DEVICE_NONE },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p4_controllers[] = {
-      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "Disconnected", RETRO_DEVICE_NONE },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p5_controllers[] = {
-      { "Vice Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Vice Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "Disconnected", RETRO_DEVICE_NONE },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "None", RETRO_DEVICE_NONE },
    };
 
    static const struct retro_controller_info ports[] = {
@@ -2138,10 +2138,10 @@ void retro_init(void)
    { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "L2" },             \
    { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "R3" },             \
    { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "L3" },			   \
-   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Left Stick X" },			   \
-   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Left Stick Y" },			   \
-   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Right Stick X" },			   \
-   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Right Stick Y" }
+   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Left Analog X" },			   \
+   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Left Analog Y" },			   \
+   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Right Analog X" },			   \
+   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Right Analog Y" }
    
    static struct retro_input_descriptor inputDescriptors[] =
    {

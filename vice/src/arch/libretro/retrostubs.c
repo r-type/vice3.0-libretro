@@ -210,8 +210,8 @@ void Core_Processkey(int disable_physical_cursor_keys)
                ;
             else if(disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
                continue;
-            else if(SHOWKEY==1)
-               continue;
+            //else if(SHOWKEY==1) /* We need to allow keyup while SHOWKEY to prevent the summoning key from staying down, if keyboard is used as a RetroPad */
+            //   continue;
             Keymap_KeyUp(i);
          }
       }

@@ -17,7 +17,7 @@ extern retro_input_state_t input_state_cb;
 
 extern void emu_reset(void);
 extern void Screen_SetFullUpdate(int scr);
-extern unsigned vice_devices[5];
+extern unsigned int vice_devices[5];
 
 //EMU FLAGS
 int SHOWKEY=-1;
@@ -313,7 +313,8 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     if (processkey)
         Core_Processkey(disable_physical_cursor_keys);
 
-    if (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD)
+    /* RetroPad extra mappings */
+    if (vice_devices[0] == RETRO_DEVICE_JOYPAD)
     {
         LX = input_state_cb(0, RETRO_DEVICE_ANALOG, 0, 0);
         LY = input_state_cb(0, RETRO_DEVICE_ANALOG, 0, 1);
@@ -325,8 +326,12 @@ int Core_PollEvent(int disable_physical_cursor_keys)
         {
             int just_pressed = 0;
             int just_released = 0;
-            if((i<4 || i>8) && i < 16) /* remappable retropad buttons (all apart from DPAD and A) */
+            if(i > 0 && (i<4 || i>7) && i < 16) /* remappable retropad buttons (all apart from DPAD and B) */
             {
+                /* Skip the transparency toggle button if vkbd is visible */
+                if(SHOWKEY==1 && i==RETRO_DEVICE_ID_JOYPAD_A)
+                    continue;
+
                 if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 && i!=turbo_fire_button)
                     just_pressed = 1;
                 else if (jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i))
@@ -452,7 +457,7 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     Keymap_KeyUp(mapper_keys[i]);
             }
         } /* for i */
-    } /* if vice_devices[0]==joypad or joystick */
+    } /* if vice_devices[0]==joypad */
 
     return 1;
 }
@@ -532,7 +537,7 @@ void retro_poll_event()
                 else
                     j &= ~0x08;
                     
-                if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) || 
+                if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ||
                     (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP0)) ||
                     (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP5))
                 )

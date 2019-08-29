@@ -20,7 +20,6 @@ extern char core_key_state[512];
 extern char core_old_key_state[512];
 extern char RPATH[512];
 extern int SHOWKEY;
-extern int RETROTHEME;
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO

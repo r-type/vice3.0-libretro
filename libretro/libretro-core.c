@@ -70,7 +70,8 @@ int lastH=768;
 
 #include "vkbd.i"
 
-unsigned vice_devices[5];
+unsigned int vice_devices[5];
+unsigned int opt_theme;
 
 extern int RETROTDE;
 extern int RETRODSE;
@@ -148,7 +149,10 @@ static int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are jus
 
 unsigned retro_get_borders(void) {
    return RETROBORDERS;
-} 
+}
+unsigned retro_toggle_theme(void) {
+   opt_theme = (opt_theme % 2) ? opt_theme-1 : opt_theme+1;
+}
 
 void retro_set_input_state(retro_input_state_t cb)
 {
@@ -792,13 +796,13 @@ void retro_set_environment(retro_environment_t cb)
          "Replaces mapped key with a turbo fire button",
          {
             { "None", NULL },
-            { "B", NULL },
-            { "X", NULL },
-            { "Y", NULL },
-            { "L", NULL },
-            { "R", NULL },
-            { "L2", NULL },
-            { "R2", NULL },
+            { "A", "RetroPad A" },
+            { "Y", "RetroPad Y" },
+            { "X", "RetroPad X" },
+            { "L", "RetroPad L" },
+            { "R", "RetroPad R" },
+            { "L2", "RetroPad L2" },
+            { "R2", "RetroPad R2" },
          },
          "None"
       },
@@ -843,27 +847,26 @@ void retro_set_environment(retro_environment_t cb)
          "---"
       },
       {
+         "vice_mapper_a",
+         "RetroPad A",
+         "",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
          "vice_mapper_y",
          "RetroPad Y",
          "",
          {{ NULL, NULL }},
-         "RETROK_SPACE"
+         "---"
       },
       {
          "vice_mapper_x",
          "RetroPad X",
          "",
          {{ NULL, NULL }},
-         "RETROK_F1"
+         "---"
       },
-      {
-         "vice_mapper_b",
-         "RetroPad B",
-         "",
-         {{ NULL, NULL }},
-         "RETROK_F7"
-      },
-
       {
          "vice_mapper_l",
          "RetroPad L",
@@ -1601,9 +1604,9 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "None") == 0) turbo_fire_button=-1;
-      else if (strcmp(var.value, "B") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_B;
-      else if (strcmp(var.value, "X") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_X;
+      else if (strcmp(var.value, "A") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_A;
       else if (strcmp(var.value, "Y") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_Y;
+      else if (strcmp(var.value, "X") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_X;
       else if (strcmp(var.value, "L") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_L;
       else if (strcmp(var.value, "R") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_R;
       else if (strcmp(var.value, "L2") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_L2;
@@ -1655,83 +1658,85 @@ static void update_variables(void)
          RETROTHEME=4;
       else if (strcmp(var.value, "Light transparent") == 0) 
          RETROTHEME=5;
+
+      opt_theme=RETROTHEME;
    }
 
    var.key = "vice_mapper_select";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[2] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_SELECT] = keyId(var.value);
    }
 
    var.key = "vice_mapper_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[3] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_START] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_a";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_A] = keyId(var.value);
    }
 
    var.key = "vice_mapper_y";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[1] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_Y] = keyId(var.value);
    }
 
    var.key = "vice_mapper_x";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[9] = keyId(var.value);
-   }
-
-   var.key = "vice_mapper_b";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      mapper_keys[0] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_X] = keyId(var.value);
    }
 
    var.key = "vice_mapper_l";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[10] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L] = keyId(var.value);
    }
 
    var.key = "vice_mapper_r";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[11] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R] = keyId(var.value);
    }
 
    var.key = "vice_mapper_l2";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[12] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L2] = keyId(var.value);
    }
 
    var.key = "vice_mapper_r2";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[13] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R2] = keyId(var.value);
    }
 
    var.key = "vice_mapper_l3";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[14] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L3] = keyId(var.value);
    }
 
    var.key = "vice_mapper_r3";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[15] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3] = keyId(var.value);
    }
 
 
@@ -2123,7 +2128,7 @@ void retro_init(void)
 
 #define RETRO_DESCRIPTOR_BLOCK( _user )                                            \
    { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "A" },               \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "B" },               \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "B / Fire" },        \
    { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "X" },               \
    { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Y" },               \
    { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },     \

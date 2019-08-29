@@ -446,6 +446,7 @@ nk_retro_get_text_width(nk_handle handle, float height, const char *text, int le
 
 
 extern unsigned retro_get_borders(void);
+extern unsigned retro_toggle_theme(void);
 
 void reset_mouse_pos(){
 	/* Starting point on F1 */
@@ -559,7 +560,8 @@ static void mousebut(int but,int down,int x,int y){
 	struct nk_context *ctx = &retro.ctx;
 
  	if(but==1)nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
- 	else if(but==2)nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
+ 	//else if(but==2)nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
+ 	else if(but==2 && down)retro_toggle_theme();
  	else if(but==3)nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
 	else if(but==4)nk_input_scroll(ctx,(float)down);
 }
@@ -616,9 +618,9 @@ nk_retro_handle_event(int *evt,int poll)
    if(revent.mouse_wu || revent.mouse_wd)mousebut(4,revent.mouse_wd?-1:1,0,0);
 
     // Joypad buttons
-    mouse_l = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
-    mouse_r = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
-    mouse_m = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
+    mouse_l = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
+    mouse_r = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
+    //mouse_m = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
        
     if(!mouse_l && !mouse_r && !mouse_m) {
         // Keyboard buttons
@@ -629,7 +631,7 @@ nk_retro_handle_event(int *evt,int poll)
        // Mouse buttons
        mouse_l = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
        mouse_r = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
-       mouse_m = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE); 
+       //mouse_m = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE);
     }
 
     //relative

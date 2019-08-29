@@ -19,7 +19,7 @@ int GUISTATE = GUI_NONE;
 
 extern int SHIFTON;
 extern int vkey_pressed;
-extern int RETROTHEME;
+extern int opt_theme;
 
 extern unsigned retro_get_borders(void);
 
@@ -33,7 +33,7 @@ static int gui(struct nk_context *ctx)
     {
         case GUI_VKBD:
             if (nk_begin(ctx,"Vice Keyboard", GUIRECT, NK_WINDOW_NO_SCROLLBAR)) {
-                switch(RETROTHEME) {
+                switch(opt_theme) {
                     default:
                     case 0:
                         set_style(ctx, THEME_C64);

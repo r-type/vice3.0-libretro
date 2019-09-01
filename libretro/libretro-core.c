@@ -808,8 +808,8 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_turbo_pulse",
-         "Retropad turbo pulse",
-         "Frames in a button cycle, 2 equals button press and release on every other frame",
+         "RetroPad turbo pulse",
+         "Frames in a button cycle. 2 equals button press and release on every other frame",
          {
             { "2", NULL },
             { "4", NULL },

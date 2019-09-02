@@ -791,36 +791,6 @@ void retro_set_environment(retro_environment_t cb)
          "Port 2"
       },
       {
-         "vice_turbo_fire_button",
-         "RetroPad turbo fire",
-         "Replaces mapped key with a turbo fire button",
-         {
-            { "None", NULL },
-            { "A", "RetroPad A" },
-            { "Y", "RetroPad Y" },
-            { "X", "RetroPad X" },
-            { "L", "RetroPad L" },
-            { "R", "RetroPad R" },
-            { "L2", "RetroPad L2" },
-            { "R2", "RetroPad R2" },
-         },
-         "None"
-      },
-      {
-         "vice_turbo_pulse",
-         "Retropad turbo pulse",
-         "Frames in a button cycle, 2 equals button press and release on every other frame",
-         {
-            { "2", NULL },
-            { "4", NULL },
-            { "6", NULL },
-            { "8", NULL },
-            { "10", NULL },
-            { "12", NULL },
-         },
-         "2"
-      },
-      {
          "vice_keyrah_keypad_mappings",
          "Keyrah keypad mappings",
          "Hardcoded keypad to joy mappings for Keyrah hardware",
@@ -1058,6 +1028,37 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "---"
       },
+      {
+         "vice_turbo_fire_button",
+         "RetroPad turbo fire",
+         "Replaces mapped key with a turbo fire button",
+         {
+            { "disabled", NULL },
+            { "A", "RetroPad A" },
+            { "Y", "RetroPad Y" },
+            { "X", "RetroPad X" },
+            { "L", "RetroPad L" },
+            { "R", "RetroPad R" },
+            { "L2", "RetroPad L2" },
+            { "R2", "RetroPad R2" },
+         },
+         "disabled"
+      },
+      {
+         "vice_turbo_pulse",
+         "RetroPad turbo pulse",
+         "Frames in a button cycle. 2 equals button press and release on every other frame",
+         {
+            { "2", NULL },
+            { "4", NULL },
+            { "6", NULL },
+            { "8", NULL },
+            { "10", NULL },
+            { "12", NULL },
+         },
+         "4"
+      },
+
       { NULL, NULL, NULL, {{0}}, NULL },
    };
 
@@ -1603,7 +1604,7 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "None") == 0) turbo_fire_button=-1;
+      if (strcmp(var.value, "disabled") == 0) turbo_fire_button=-1;
       else if (strcmp(var.value, "A") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_A;
       else if (strcmp(var.value, "Y") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_Y;
       else if (strcmp(var.value, "X") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_X;

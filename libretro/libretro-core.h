@@ -54,7 +54,7 @@
 
 
 //VKBD
-#define NPLGN 10
+#define NPLGN 11
 #define NLIGN 7
 #define NLETT 5
 

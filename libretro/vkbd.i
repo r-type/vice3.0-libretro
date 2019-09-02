@@ -12,8 +12,9 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "8"  ,"("   ,RETROK_8},
 	{ "9"  ,")"   ,RETROK_9},
 	{ "0"  ," "   ,RETROK_0},
+	{ "F1" ,"F2"  ,RETROK_F1},
 
-	// 10
+	// 11
 	{ "q"  ,"Q"   ,RETROK_q},
 	{ "w"  ,"W"   ,RETROK_w},
 	{ "e"  ,"E"   ,RETROK_e},
@@ -24,8 +25,9 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "i"  ,"I"   ,RETROK_i},
 	{ "o"  ,"O"   ,RETROK_o},
 	{ "p"  ,"P"   ,RETROK_p},
+	{ "F3" ,"F4"  ,RETROK_F3},
 
-	// 20 
+	// 22
 	{ "a"  ,"A"   ,RETROK_a},
 	{ "s"  ,"S"   ,RETROK_s},
 	{ "d"  ,"D"   ,RETROK_d},
@@ -36,8 +38,9 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "k"  ,"K"   ,RETROK_k},	
 	{ "l"  ,"L"   ,RETROK_l},
 	{ "Pnd","Pnd" ,RETROK_INSERT},
+	{ "F5" ,"F6"  ,RETROK_F5},
 
-	// 30
+	// 33
 	{ "z"  ,"Z"   ,RETROK_z},
 	{ "x"  ,"X"   ,RETROK_x},
 	{ "c"  ,"C"   ,RETROK_c},
@@ -48,42 +51,46 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ ","  ,"<"   ,RETROK_COMMA},
 	{ "."  ,">"   ,RETROK_PERIOD},
 	{ "/"  ,"/"   ,RETROK_SLASH},
+	{ "F7" ,"F8"  ,RETROK_F7},
 
-	// 40
-	{ "<-" ,"<-"  ,RETROK_BACKQUOTE},
-	{ "CTR","CTR" ,RETROK_TAB},
+	// 44
 	{ "+"  ,"+"   ,RETROK_MINUS},
 	{ "-"  ,"-"   ,RETROK_EQUALS},
-	{ "F1" ,"F2"  ,RETROK_F1},
-	{ "F3" ,"F4"  ,RETROK_F3},
-	{ "RST","RST" ,RETROK_PAGEUP},
+	{ "@"  ,"@"   ,RETROK_LEFTBRACKET},
+	{ "*"  ,"*"   ,RETROK_RIGHTBRACKET},
+	{ "^"  ,"^"   ,RETROK_DELETE},
 	{ ":"  ,"["   ,RETROK_SEMICOLON},
 	{ ";"  ,"]"   ,RETROK_QUOTE},
 	{ "="  ,"="   ,RETROK_BACKSLASH},
+	{ "DRe","DRe" ,-11},
+	{ "DFw","DFw" ,-10},
+	{ "Stb","Stb" ,-3},
 
-	// 50
+	// 55
+	{ "<-" ,"<-"  ,RETROK_BACKQUOTE},
 	{ "R/S","R/S" ,RETROK_ESCAPE},	
-	{ "@"  ,"@"   ,RETROK_LEFTBRACKET},
-	{ "*"  ,"*"   ,RETROK_RIGHTBRACKET},	
-	{ "^"  ,"^"   ,RETROK_DELETE},	
-	{ "F5" ,"F6"  ,RETROK_F5},
-	{ "F7" ,"F8"  ,RETROK_F7},
+	{ "ShL","ShL" ,-5},
+	{ "RST","RST" ,RETROK_PAGEUP},
 	{ "CLR","CLR" ,RETROK_HOME},
 	{ "DEL","DEL" ,RETROK_BACKSPACE},
-	{ "CrU","CrU" ,RETROK_UP},
+	{ "Cr^","Cr^" ,RETROK_UP},
 	{ "RET","RET" ,RETROK_RETURN},
+	{ "DSt","DSt" ,-8},
+	{ "DPl","DPl" ,-9},
+	{ "Joy","Joy" ,-4},
 
-	// 60
+	// 66
+	{ "CTR","CTR" ,RETROK_TAB},
 	{ "C=" ,"C="  ,RETROK_LCTRL},
-	{ "ShL","ShL" ,-10},
 	{ "LSh","LSh" ,RETROK_LSHIFT},
 	{ "Spc","Spc" ,RETROK_SPACE},
-	{ "Joy","Joy" ,-4},
-	{ "StB","StB" ,-5},
 	{ "RSh","RSh" ,RETROK_RSHIFT},
-	{ "CrL","CrL" ,RETROK_LEFT},
-	{ "CrD","CrD" ,RETROK_DOWN}, 
-	{ "CrR","CrR" ,RETROK_RIGHT},
+	{ "Cr<","Cr<" ,RETROK_LEFT},
+	{ "Crv","Crv" ,RETROK_DOWN},
+	{ "Cr>","Cr>" ,RETROK_RIGHT},
+	{ "DRs","DRs" ,-12},
+	{ "Rst", "Rst",-2},
+	{ "Ttf","Ttf" ,-20},
 };
 
 const char* keyDesc[] = {

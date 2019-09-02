@@ -63,8 +63,8 @@ int app_init()
 #endif
 
     RSDL_font = (nk_retro_Font*)calloc(1, sizeof(nk_retro_Font));
-    RSDL_font->width = 7;
-    RSDL_font->height = 8;
+    RSDL_font->width = 6;
+    RSDL_font->height = 7;
     if (!RSDL_font)
         return -1;
 

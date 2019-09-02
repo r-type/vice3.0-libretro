@@ -26,8 +26,8 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_SELECT_ACTIVE] = nk_rgba(48, 83, 111, 255);
         table[NK_COLOR_SLIDER] = nk_rgba(50, 58, 61, 255);
         table[NK_COLOR_SLIDER_CURSOR] = nk_rgba(48, 83, 111, 245);
-        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(53, 88, 116, 255);
-        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(58, 93, 121, 255);
+        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(89, 79, 78, 255); // datasette
+        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(128, 0, 0, 255); // reset
         table[NK_COLOR_PROPERTY] = nk_rgba(144, 141, 129, 255); // hotkeys
         table[NK_COLOR_EDIT] = nk_rgba(50, 58, 61, 225);
         table[NK_COLOR_EDIT_CURSOR] = nk_rgba(210, 210, 210, 255);
@@ -56,8 +56,8 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_SELECT_ACTIVE] = nk_rgba(48, 83, 111, 255);
         table[NK_COLOR_SLIDER] = nk_rgba(50, 58, 61, 255);
         table[NK_COLOR_SLIDER_CURSOR] = nk_rgba(48, 83, 111, 245);
-        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(53, 88, 116, 255);
-        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(58, 93, 121, 255);
+        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(109, 99, 98, 255); // datasette
+        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(128, 0, 0, 255); // reset
         table[NK_COLOR_PROPERTY] = nk_rgba(144, 141, 124, 255); // hotkeys
         table[NK_COLOR_EDIT] = nk_rgba(50, 58, 61, 225);
         table[NK_COLOR_EDIT_CURSOR] = nk_rgba(210, 210, 210, 255);
@@ -86,8 +86,8 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_SELECT_ACTIVE] = nk_rgba(48, 83, 111, 255);
         table[NK_COLOR_SLIDER] = nk_rgba(50, 58, 61, 255);
         table[NK_COLOR_SLIDER_CURSOR] = nk_rgba(48, 83, 111, 245);
-        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(53, 88, 116, 255);
-        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(58, 93, 121, 255);
+        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(89, 79, 78, 192); // datasette
+        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(128, 0, 0, 192); // reset
         table[NK_COLOR_PROPERTY] = nk_rgba(144, 141, 129, 192); // hotkeys
         table[NK_COLOR_EDIT] = nk_rgba(50, 58, 61, 225);
         table[NK_COLOR_EDIT_CURSOR] = nk_rgba(210, 210, 210, 255);
@@ -116,8 +116,8 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_SELECT_ACTIVE] = nk_rgba(48, 83, 111, 255);
         table[NK_COLOR_SLIDER] = nk_rgba(50, 58, 61, 255);
         table[NK_COLOR_SLIDER_CURSOR] = nk_rgba(48, 83, 111, 245);
-        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(53, 88, 116, 255);
-        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(58, 93, 121, 255);
+        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(109, 99, 98, 192); // datasette
+        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(128, 0, 0, 192); // reset
         table[NK_COLOR_PROPERTY] = nk_rgba(144, 141, 124, 192); // hotkeys
         table[NK_COLOR_EDIT] = nk_rgba(50, 58, 61, 225);
         table[NK_COLOR_EDIT_CURSOR] = nk_rgba(210, 210, 210, 255);
@@ -138,7 +138,7 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_BORDER] = nk_rgba(0, 0, 0, 1); 
         table[NK_COLOR_BUTTON] = nk_rgba(32, 32, 32, 128); // regular keys
         table[NK_COLOR_BUTTON_HOVER] = nk_rgba(144, 144, 144, 192);
-        table[NK_COLOR_BUTTON_ACTIVE] = nk_rgba(80, 80, 80, 192);
+        table[NK_COLOR_BUTTON_ACTIVE] = nk_rgba(64, 64, 64, 224);
         table[NK_COLOR_TOGGLE] = nk_rgba(50, 58, 61, 255);
         table[NK_COLOR_TOGGLE_HOVER] = nk_rgba(45, 53, 56, 255);
         table[NK_COLOR_TOGGLE_CURSOR] = nk_rgba(48, 83, 111, 255);
@@ -146,8 +146,8 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_SELECT_ACTIVE] = nk_rgba(48, 83, 111, 255);
         table[NK_COLOR_SLIDER] = nk_rgba(50, 58, 61, 255);
         table[NK_COLOR_SLIDER_CURSOR] = nk_rgba(48, 83, 111, 245);
-        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(53, 88, 116, 255);
-        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(58, 93, 121, 255);
+        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(64, 64, 64, 128); // datasette
+        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(128, 0, 0, 128); // reset
         table[NK_COLOR_PROPERTY] = nk_rgba(8, 8, 8, 128); // hotkeys
         table[NK_COLOR_EDIT] = nk_rgba(50, 58, 61, 225);
         table[NK_COLOR_EDIT_CURSOR] = nk_rgba(210, 210, 210, 255);
@@ -168,7 +168,7 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_BORDER] = nk_rgba(0, 0, 0, 1); 
         table[NK_COLOR_BUTTON] = nk_rgba(255, 255, 255, 128); // regular keys
         table[NK_COLOR_BUTTON_HOVER] = nk_rgba(240, 240, 240, 192);
-        table[NK_COLOR_BUTTON_ACTIVE] = nk_rgba(255, 255, 255, 192);
+        table[NK_COLOR_BUTTON_ACTIVE] = nk_rgba(255, 255, 255, 224);
         table[NK_COLOR_TOGGLE] = nk_rgba(50, 58, 61, 255);
         table[NK_COLOR_TOGGLE_HOVER] = nk_rgba(45, 53, 56, 255);
         table[NK_COLOR_TOGGLE_CURSOR] = nk_rgba(48, 83, 111, 255);
@@ -176,8 +176,8 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_SELECT_ACTIVE] = nk_rgba(48, 83, 111, 255);
         table[NK_COLOR_SLIDER] = nk_rgba(50, 58, 61, 255);
         table[NK_COLOR_SLIDER_CURSOR] = nk_rgba(48, 83, 111, 245);
-        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(53, 88, 116, 255);
-        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(58, 93, 121, 255);
+        table[NK_COLOR_SLIDER_CURSOR_HOVER] = nk_rgba(200, 200, 200, 128); // datasette
+        table[NK_COLOR_SLIDER_CURSOR_ACTIVE] = nk_rgba(128, 0, 0, 128); // reset
         table[NK_COLOR_PROPERTY] = nk_rgba(160, 160, 160, 128); // hotkeys
         table[NK_COLOR_EDIT] = nk_rgba(50, 58, 61, 225);
         table[NK_COLOR_EDIT_CURSOR] = nk_rgba(210, 210, 210, 255);

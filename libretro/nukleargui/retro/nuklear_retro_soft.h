@@ -247,7 +247,7 @@ nk_retro_draw_text(RSDL_Surface *surface, short x, short y, unsigned short w, un
     const char *text, int len, nk_retro_Font *font, struct nk_color cbg, struct nk_color cfg)
 {
     int i;
-    nk_retro_fill_rect(surface, x, y, len * font->width, font->height, 0, cbg);
+    //nk_retro_fill_rect(surface, x, y, len * font->width, font->height, 0, cbg);
 
     for (i = 0; i < len; i++) {
         //characterRGBA(surface, x, y, text[i], cfg.r, cfg.g, cfg.b, cfg.a);
@@ -422,7 +422,6 @@ nk_retrofont_create(const char *name, int size)
     font->height = 8; /* Default in  the RSDL_gfx library */
     if (!font)
         return NULL;
-   //font->handle
 
     return font;
 }
@@ -452,13 +451,13 @@ void reset_mouse_pos(){
 	/* Starting point on F1 */
 	switch(retro_get_borders()) {
 	    case 0: /* Normal borders */
-	        revent.gmx = 178;
-	        revent.gmy = 164;
+	        revent.gmx = 324;
+	        revent.gmy = 138;
         	break;
         
         case 3: /* No borders */
-	        revent.gmx = 138;
-	        revent.gmy = 134;
+	        revent.gmx = 288;
+	        revent.gmy = 100;
             break;
     }
 
@@ -675,12 +674,12 @@ nk_retro_handle_event(int *evt,int poll)
 
                 // Joypad wraparound
                 // Offset changes depending on whether borders are on or off
-                if(revent.gmx<offset.x+12)
-                    revent.gmx=offset.x+319-20-12;
-                if(revent.gmx>offset.x+319-12)
-                    revent.gmx=offset.x+18+12;
+                if(revent.gmx<offset.x+10)
+                    revent.gmx=offset.x+319-20;
+                if(revent.gmx>offset.x+319-10)
+                    revent.gmx=offset.x+20;
                 if(revent.gmy<offset.y+4)
-                    revent.gmy=offset.y+199-12;
+                    revent.gmy=offset.y+199-20;
                 if(revent.gmy>offset.y+199-4)
                     revent.gmy=offset.y+20;
             }

@@ -135,14 +135,23 @@ char* joystick_value_human(char val)
     return str;
 }
 
+extern unsigned int cur_port;
 
 static void display_joyport(void)
 {
     int len;
     char tmpstr[25];
+    char joy1[2];
+    char joy2[2];
+    sprintf(joy1, "%s", "1");
+    sprintf(joy2, "%s", "2");
+    if(cur_port == 1)
+        joy1[0] = (joy1[0] | 0x80);
+    else if(cur_port == 2)
+        joy2[0] = (joy2[0] | 0x80);
     
-    sprintf(tmpstr, "J%d%3s ", 1, joystick_value_human(joystick_value[1]));
-    sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 2, joystick_value_human(joystick_value[2]));
+    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
+    sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2]));
     sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3]));
     sprintf(tmpstr + strlen(tmpstr), "J%d%3s", 4, joystick_value_human(joystick_value[4]));
 

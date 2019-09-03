@@ -801,6 +801,96 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+/* Hotkeys */
+      {
+         "vice_mapper_vkbd",
+         "Hotkey: Toggle virtual keyboard",
+         "Pressing a button mapped to this key opens the keyboard",
+         {{ NULL, NULL }},
+         "RETROK_F11"
+      },
+      {
+         "vice_mapper_statusbar",
+         "Hotkey: Toggle statusbar",
+         "Pressing a button mapped to this key toggles statusbar",
+         {{ NULL, NULL }},
+         "RETROK_F10"
+      },
+      {
+         "vice_mapper_joyport_switch",
+         "Hotkey: Switch joyports",
+         "Pressing a button mapped to this key swaps joyports",
+         {{ NULL, NULL }},
+         "RETROK_RCTRL"
+      },
+      {
+         "vice_mapper_reset",
+         "Hotkey: Reset",
+         "Pressing a button mapped to this key triggers reset",
+         {{ NULL, NULL }},
+         "RETROK_END"
+      },
+      {
+         "vice_mapper_warp_mode",
+         "Hotkey: Warp mode",
+         "Hold a button mapped to this key for warp mode",
+         {{ NULL, NULL }},
+         "RETROK_PAGEDOWN"
+      },
+/* Datasette controls */
+      {
+         "vice_mapper_datasette_toggle_hotkeys",
+         "Hotkey: Toggle datasette hotkeys",
+         "This key enables/disables the datasette hotkeys",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_datasette_hotkeys",
+         "Datasette hotkeys",
+         "Enable or disable all datasette hotkeys",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_mapper_datasette_stop",
+         "Hotkey: Datasette stop",
+         "Press stop on tape",
+         {{ NULL, NULL }},
+         "RETROK_DOWN"
+      },
+      {
+         "vice_mapper_datasette_start",
+         "Hotkey: Datasette start",
+         "Press start on tape",
+         {{ NULL, NULL }},
+         "RETROK_UP"
+      },
+      {
+         "vice_mapper_datasette_forward",
+         "Hotkey: Datasette forward",
+         "Tape fast forward",
+         {{ NULL, NULL }},
+         "RETROK_RIGHT"
+      },
+      {
+         "vice_mapper_datasette_rewind",
+         "Hotkey: Datasette rewind",
+         "Tape rewind",
+         {{ NULL, NULL }},
+         "RETROK_LEFT"
+      },
+      {
+         "vice_mapper_datasette_reset",
+         "Hotkey: Datasette reset",
+         "Tape reset",
+         {{ NULL, NULL }},
+         "---"
+      },
 /* Button mappings */
       {
          "vice_mapper_select",
@@ -908,7 +998,6 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "---"
       },
-
 /* Right Stick */
       {
          "vice_mapper_ru",
@@ -935,96 +1024,6 @@ void retro_set_environment(retro_environment_t cb)
          "vice_mapper_rr",
          "RetroPad R-Right",
          "Mapping for right analog stick right",
-         {{ NULL, NULL }},
-         "---"
-      },
-/* Hotkeys */
-      {
-         "vice_mapper_vkbd",
-         "Hotkey: Toggle virtual keyboard",
-         "Pressing a button mapped to this key opens the keyboard",
-         {{ NULL, NULL }},
-         "RETROK_F11"
-      },
-      {
-         "vice_mapper_statusbar",
-         "Hotkey: Toggle statusbar",
-         "Pressing a button mapped to this key toggles statusbar",
-         {{ NULL, NULL }},
-         "RETROK_F10"
-      },
-      {
-         "vice_mapper_joyport_switch",
-         "Hotkey: Switch joyports",
-         "Pressing a button mapped to this key swaps joyports",
-         {{ NULL, NULL }},
-         "RETROK_RCTRL"
-      },
-      {
-         "vice_mapper_reset",
-         "Hotkey: Reset",
-         "Pressing a button mapped to this key triggers reset",
-         {{ NULL, NULL }},
-         "RETROK_END"
-      },
-      {
-         "vice_mapper_warp_mode",
-         "Hotkey: Warp mode",
-         "Hold a button mapped to this key for warp mode",
-         {{ NULL, NULL }},
-         "RETROK_PAGEDOWN"
-      },
-/* Datasette controls */
-      {
-         "vice_mapper_datasette_toggle_hotkeys",
-         "Hotkey: Toggle datasette hotkeys",
-         "This key enables/disables the datasette hotkeys",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_datasette_hotkeys",
-         "Datasette hotkeys",
-         "Enable or disable all datasette hotkeys",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_mapper_datasette_stop",
-         "Hotkey: Datasette stop",
-         "Press stop on tape",
-         {{ NULL, NULL }},
-         "RETROK_DOWN"
-      },
-      {
-         "vice_mapper_datasette_start",
-         "Hotkey: Datasette start",
-         "Press start on tape",
-         {{ NULL, NULL }},
-         "RETROK_UP"
-      },
-      {
-         "vice_mapper_datasette_forward",
-         "Hotkey: Datasette forward",
-         "Tape fast forward",
-         {{ NULL, NULL }},
-         "RETROK_RIGHT"
-      },
-      {
-         "vice_mapper_datasette_rewind",
-         "Hotkey: Datasette rewind",
-         "Tape rewind",
-         {{ NULL, NULL }},
-         "RETROK_LEFT"
-      },
-      {
-         "vice_mapper_datasette_reset",
-         "Hotkey: Datasette reset",
-         "Tape reset",
          {{ NULL, NULL }},
          "---"
       },

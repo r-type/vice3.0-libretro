@@ -38,6 +38,7 @@ extern int mapper_keys[35];
 int statusbar=0;
 extern int RETROKEYRAHKEYPAD;
 
+int turbo_fire_button_disabled=-1;
 int turbo_fire_button=-1;
 unsigned int turbo_pulse=2;
 unsigned int turbo_state[5]={0,0,0,0,0};
@@ -156,16 +157,50 @@ void app_vkb_handle(void)
     {
         switch (vkey_pressed)
         {
+            case -2:
+                emu_function(EMU_RESET);
+                break;
+            case -3:
+                emu_function(EMU_STATUSBAR);
+                break;
             case -4:
                 emu_function(EMU_JOYPORT);
                 break;
-            case -5:
-                emu_function(EMU_STATUSBAR);
-                break;
-            case -10: /* sticky shift */
+            case -5: /* sticky shift */
                 Keymap_KeyDown(RETROK_CAPSLOCK);
                 Keymap_KeyUp(RETROK_CAPSLOCK);
                 break;
+            case -20:
+                if(turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
+                    break;
+                else if(turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
+                    turbo_fire_button_disabled = -1;
+
+                if(turbo_fire_button_disabled != -1) {
+                    turbo_fire_button=turbo_fire_button_disabled;
+                    turbo_fire_button_disabled=-1;
+                } else {
+                    turbo_fire_button_disabled=turbo_fire_button;
+                    turbo_fire_button=-1;
+                }
+                break;
+
+            case -EMU_DATASETTE_STOP:
+                emu_function(EMU_DATASETTE_STOP);
+                break;
+            case -EMU_DATASETTE_START:
+                emu_function(EMU_DATASETTE_START);
+                break;
+            case -EMU_DATASETTE_FORWARD:
+                emu_function(EMU_DATASETTE_FORWARD);
+                break;
+            case -EMU_DATASETTE_REWIND:
+                emu_function(EMU_DATASETTE_REWIND);
+                break;
+            case -EMU_DATASETTE_RESET:
+                emu_function(EMU_DATASETTE_RESET);
+                break;
+
             default:
                 kbd_handle_keydown(vkey_pressed);
                 break;

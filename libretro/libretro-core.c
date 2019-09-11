@@ -241,6 +241,7 @@ int pre_main(const char *argv)
    {
       parse_cmdline(CMDFILE);
       log_cb(RETRO_LOG_INFO, "Starting game from command line :%s\n",CMDFILE);
+      RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
    }
    else
       parse_cmdline(argv);

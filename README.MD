@@ -62,6 +62,21 @@ When a game ask for it, you can change the current disk in the RetroArch 'Disk C
 
 Note : zip support is provided by RetroArch and is done before passing the game to the core. So, when using a m3u file, the specified disk image must be uncompressed (.d64 file formats).
 
+## Command file operation
+
+Vice command line options are supported with Retroarch by by placing the desired command line in a text file with a .cmd file extension. The command line format is as documented in the Vice documentation (see http://vice-emu.sourceforge.net/vice_6.html).
+
+Using this you can overcome limitations of the gui and set advanced configurations required for running problematic files. Here are a couple of examples for the xvic core  ...
+
+Vic20 megacart support:
+```
+xvic -cartmega /path/to/rom/mega-cart-name.rom
+```
+Vic20 games which require specific memory configs such as 8k expansion:
+```
+xvic -memory 1 /path/to/rom/some-8k-game.d64
+```
+
 ## Build instructions
 
 LIBDIR set to retro_system_dir

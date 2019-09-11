@@ -72,6 +72,7 @@ int lastH=768;
 
 unsigned int vice_devices[5];
 unsigned int opt_theme;
+unsigned int retro_region;
 
 extern int RETROTDE;
 extern int RETRODSE;
@@ -2212,6 +2213,14 @@ void update_geometry()
    struct retro_system_av_info system_av_info;
    system_av_info.geometry.base_width = retroW;
    system_av_info.geometry.base_height = retroH;
+
+   // Update av_info only when PAL/NTSC change occurs
+   if(retro_region != retro_get_region()) {
+      retro_region = retro_get_region();
+      retro_get_system_av_info(&system_av_info);
+      environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
+   }
+
    if (retro_get_borders())
      // When borders are disabled, each system has a different aspect ratio.
      // For example, C64 & C128 have 320 / 200 pixel resolution with a 15 / 16
@@ -2234,24 +2243,25 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    info->geometry.max_width = retrow;
    info->geometry.max_height = retroh;
+   info->geometry.base_width = 384;
+   info->geometry.aspect_ratio = 4.0 / 3.0;
 
    info->timing.sample_rate = 44100.0;
 
    switch(retro_get_region()) {
       case RETRO_REGION_PAL:
-         info->geometry.base_width = 384;
          info->geometry.base_height = 272;
-         info->geometry.aspect_ratio = 4.0 / 3.0;
          info->timing.fps = C64_PAL_RFSH_PER_SEC;
          break;
       
       case RETRO_REGION_NTSC:
-         info->geometry.base_width = 384;
          info->geometry.base_height = 247;
-         info->geometry.aspect_ratio = 4.0 / 3.0;
          info->timing.fps = C64_NTSC_RFSH_PER_SEC;
          break;
    }
+
+   // Remember region for av_info update
+   retro_region = retro_get_region();
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb)

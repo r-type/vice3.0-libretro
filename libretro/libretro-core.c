@@ -1227,8 +1227,10 @@ static void update_variables(void)
       sidmdl=((eng << 8) | modl) ;
 
       if(retro_ui_finalized)
-        sid_set_engine_model(eng, modl);
-      else RETROSIDMODL=sidmdl;
+         if(RETROSIDMODL!=sidmdl)
+            sid_set_engine_model(eng, modl);
+
+      RETROSIDMODL=sidmdl;
    }
 
    var.key = "vice_resid_sampling";
@@ -1244,8 +1246,10 @@ static void update_variables(void)
       else if (strcmp(var.value, "Fast resampling") == 0){ resid=3; }
 
       if(retro_ui_finalized)
-        resources_set_int("SidResidSampling", resid);
-      else RETRORESIDSAMPLING=resid;
+         if(RETRORESIDSAMPLING!=resid)
+            resources_set_int("SidResidSampling", resid);
+
+      RETRORESIDSAMPLING=resid;
    }
 
 #if  defined(__VIC20__)

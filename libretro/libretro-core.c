@@ -1924,22 +1924,39 @@ struct DiskImage {
 
 #include <attach.h>
 
+static int get_image_unit() {
+    int unit = dc->unit;
+    if (unit == 0)
+    {
+	if (strendswith(dc->files[dc->index], "tap") || strendswith(dc->files[dc->index], "t64"))
+	    unit = 1;
+	else
+	    unit = 8;
+    }
+    return unit;
+}
+
 static bool retro_set_eject_state(bool ejected) {
 	if (dc)
 	{
+	    	int unit = get_image_unit();
+
 		dc->eject_state = ejected;
 		
 		if(dc->eject_state)
-			if(strendswith(dc->files[dc->index], "tap"))
-			    tape_image_detach(1);
+		{
+			if (unit == 1)
+			    tape_image_detach(unit);
 			else
-			    file_system_detach_disk(8);
-            
+			    file_system_detach_disk(unit);
+		}
 		else
-			if(strendswith(dc->files[dc->index], "tap"))
-			    tape_image_attach(1, dc->files[dc->index]);
+		{
+			if (unit == 1)
+			    tape_image_attach(unit, dc->files[dc->index]);
 			else
-			    file_system_attach_disk(8, dc->files[dc->index]);		
+			    file_system_attach_disk(unit, dc->files[dc->index]);
+		}
 	}
 	
 	return true;
@@ -1978,11 +1995,13 @@ static bool retro_set_image_index(unsigned index) {
 		
 		if ((index < dc->count) && (dc->files[index]))
 		{
+		    	int unit;
 			dc->index = index;
-			if(strendswith(dc->files[dc->index], "tap"))
+			unit = get_image_unit();
+			if (unit == 1)
 			    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
 			else 
-			    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+			    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive %d: %s\n", dc->index+1, unit, dc->files[dc->index]);
 			return true;
 		}
 	}
@@ -2207,9 +2226,9 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.3" GIT_VERSION;
 #if defined(__VIC20__)
-   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u";
+   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl";
 #else
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl";
 #endif
    info->need_fullpath    = true;
    info->block_extract    = false;
@@ -2356,13 +2375,14 @@ void retro_run(void)
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
-#define M3U_FILE_EXT "m3u"
+#define M3U_FILE_EXT ".m3u"
 
 bool retro_load_game(const struct retro_game_info *info)
 {
    if (info)
    {
 	const char *full_path;
+	bool is_fliplist = false;
 
 	(void)info;
 
@@ -2373,7 +2393,17 @@ bool retro_load_game(const struct retro_game_info *info)
 	{
 		// Parse the m3u file
 		dc_parse_m3u(dc, full_path);
+		is_fliplist = true;
+	}
+	else if (strendswith(full_path, ".vfl"))
+	{
+		// Parse the vfl file
+		dc_parse_vfl(dc, full_path);
+		is_fliplist = true;
+	}
 
+	if (is_fliplist)
+	{
 		// Some debugging
 		log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
 		for(unsigned i = 0; i < dc->count; i++)
@@ -2393,15 +2423,16 @@ bool retro_load_game(const struct retro_game_info *info)
 	dc->eject_state = false;
 	if (dc->count != 0)
 	{
-	    if(strendswith(dc->files[dc->index], "tap"))
+	    int unit = get_image_unit();
+	    if (unit == 1)
 		log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
-	else 
-		log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+	    else 
+		log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive %d: %s\n", dc->index+1, unit, dc->files[dc->index]);
 	    strcpy(RPATH,dc->files[0]);
 	}
 	else
 	{
-	    log_cb(RETRO_LOG_WARN, "No images found in m3u file %s\n", full_path);
+	    log_cb(RETRO_LOG_WARN, "No images found in list file %s\n", full_path);
 	    RPATH[0]=0;
 	}
    }

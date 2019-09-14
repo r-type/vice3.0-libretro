@@ -311,7 +311,11 @@ int pre_main(const char *argv)
       log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
    }
 
-   skel_main(PARAMCOUNT,( char **)xargv_cmd);
+   if (skel_main(PARAMCOUNT,( char **)xargv_cmd) < 0)
+   {
+      log_cb(RETRO_LOG_ERROR, "Core startup failed\n");
+      exit(1);
+   }
 
    xargv_cmd[PARAMCOUNT - 2] = NULL;
 
@@ -2387,12 +2391,19 @@ bool retro_load_game(const struct retro_game_info *info)
 	// Init first disk
 	dc->index = 0;
 	dc->eject_state = false;
-	if(strendswith(dc->files[dc->index], "tap"))
-	    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
-    else 
-	    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
-	    
-	strcpy(RPATH,dc->files[0]);
+	if (dc->count != 0)
+	{
+	    if(strendswith(dc->files[dc->index], "tap"))
+		log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
+	else 
+		log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 8: %s\n", dc->index+1, dc->files[dc->index]);
+	    strcpy(RPATH,dc->files[0]);
+	}
+	else
+	{
+	    log_cb(RETRO_LOG_WARN, "No images found in m3u file %s\n", full_path);
+	    RPATH[0]=0;
+	}
    }
    else
    {

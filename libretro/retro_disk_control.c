@@ -174,6 +174,23 @@ bool dc_add_file(dc_storage* dc, const char* filename)
 	return dc_add_file_int(dc, filename_int);
 }
 
+bool dc_remove_file(dc_storage* dc, int index)
+{
+    if (dc == NULL)
+        return false;
+
+    if (index >= dc->count)
+        return false;
+
+    // Shift entries after index up
+    if (index != dc->count - 1)
+        memmove(dc->files + index, dc->files + index + 1, (dc->count - 1 - index) * sizeof(dc->files[0]));
+
+    dc->count--;
+
+    return true;
+}
+
 void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
 {
 	// Verify

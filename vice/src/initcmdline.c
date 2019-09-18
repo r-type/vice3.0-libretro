@@ -65,6 +65,11 @@ int cmdline_get_autostart_mode(void)
     return autostart_mode;
 }
 
+const char* cmdline_get_autostart_string(void)
+{
+    return autostart_string;
+}
+
 static void cmdline_free_autostart_string(void)
 {
     lib_free(autostart_string);
@@ -373,5 +378,8 @@ void initcmdline_check_attach(void)
         }
     }
 
+    // Keep autostart string for libretro-core
+#ifndef __LIBRETRO__
     cmdline_free_autostart_string();
+#endif
 }

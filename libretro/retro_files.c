@@ -38,4 +38,16 @@ bool file_exists(const char *filename)
 void path_join(char* out, const char* basedir, const char* filename)
 {
 	snprintf(out, RETRO_PATH_MAX, "%s%s%s", basedir, RETRO_PATH_SEPARATOR, filename);
-}	
+}
+
+char* path_join_dup(const char* basedir, const char* filename)
+{
+    size_t dirlen = strlen(basedir);
+    size_t seplen = strlen(RETRO_PATH_SEPARATOR);
+    size_t filelen = strlen(filename);
+    char* result = (char*)malloc(dirlen + seplen + filelen + 1);
+    strcpy(result, basedir);
+    strcpy(result + dirlen, RETRO_PATH_SEPARATOR);
+    strcpy(result + dirlen + seplen, filename);
+    return result;
+}

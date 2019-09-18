@@ -11,11 +11,15 @@
 #include "snapshot.h"
 #include "autostart.h"
 #include "tape.h"
+#include "attach.h"
 #include "interrupt.h"
 #include "datasette.h"
 #ifndef __PET__
 #include "cartridge.h"
 #endif
+#include "initcmdline.h"
+
+#include "compat/strcasestr.h"
 
 //CORE VAR
 char slash = FSDEV_DIR_SEP_CHR;
@@ -29,7 +33,7 @@ char save_file[512];
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
-int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int mapper_keys[35] = { 0 };
 static char buf[64][4096] = { 0 };
 
 // Our virtual time counter, increased by retro_run()
@@ -47,7 +51,7 @@ int cpuloop=1;
 #endif
 
 //PATH
-char RPATH[512];
+static const char* autostartString = NULL;
 
 extern int SHOWKEY;
 
@@ -148,11 +152,21 @@ static int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are jus
 /* runstate = RUNSTATE_LOADED_CONTENT: load content was selected while core is running, so do an autostart_reset() */
 /* runstate = RUNSTATE_RUNNING: core is running normally */
 
-unsigned retro_get_borders(void) {
+/* Display disk name and label instead of "Changing disk in tray"- maybe make it configurable */
+bool display_disk_name = true;
+/* See which looks best in most cases and tweak (or make configurable) */
+int disk_label_mode = DISK_LABEL_MODE_ASCII_OR_CAMELCASE;
+
+unsigned retro_get_borders(void)
+{
    return RETROBORDERS;
 }
-unsigned retro_toggle_theme(void) {
+
+unsigned retro_toggle_theme(void)
+{
    opt_theme = (opt_theme % 2) ? opt_theme-1 : opt_theme+1;
+   // unused return value
+   return opt_theme;
 }
 
 void retro_set_input_state(retro_input_state_t cb)
@@ -167,36 +181,21 @@ void retro_set_input_poll(retro_input_poll_t cb)
 
 static char CMDFILE[512];
 
-int loadcmdfile(char *argv)
+int loadcmdfile(const char *argv)
 {
    int res=0;
 
    FILE *fp = fopen(argv,"r");
 
-   if( fp != NULL )
+   CMDFILE[0] = '\0';
+   if (fp != NULL)
    {
-      if ( fgets (CMDFILE , 512 , fp) != NULL )
+      if (fgets(CMDFILE , 512 , fp) != NULL)
          res=1;
       fclose (fp);
    }
 
    return res;
-}
-
-int HandleExtension(char *path,char *ext)
-{
-   int len = strlen(path);
-
-   if (len >= 4 &&
-         path[len-4] == '.' &&
-         path[len-3] == ext[0] &&
-         path[len-2] == ext[1] &&
-         path[len-1] == ext[2])
-   {
-      return 1;
-   }
-
-   return 0;
 }
 
 #include <ctype.h>
@@ -210,120 +209,27 @@ static char XARGV[64][1024];
 static const char* xargv_cmd[64];
 int PARAMCOUNT=0;
 
-extern int  skel_main(int argc, char *argv[]);
-void parse_cmdline( const char *argv );
+// Display message on next retro_run
+static char queued_msg[1024];
+static int show_queued_msg = 0;
 
-void Add_Option(const char* option)
+extern int skel_main(int argc, char *argv[]);
+
+static void log_disk_in_tray(bool display);
+
+static void Add_Option(const char* option)
 {
-   static int first=0;
-
-   if(first==0)
-   {
-      PARAMCOUNT=0;
-      first++;
-   }
-
    sprintf(XARGV[PARAMCOUNT++],"%s",option);
 }
 
-int pre_main(const char *argv)
-{
-   int i=0;
-   bool Only1Arg;
-   bool Skip_Option=0;
-
-   if (strlen(argv) > strlen("cmd"))
-   {
-      if( HandleExtension((char*)argv,"cmd") || HandleExtension((char*)argv,"CMD"))
-         i=loadcmdfile((char*)argv);
-   }
-
-   if(i==1)
-   {
-      parse_cmdline(CMDFILE);
-      log_cb(RETRO_LOG_INFO, "Starting game from command line :%s\n",CMDFILE);
-      RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
-   }
-   else
-      parse_cmdline(argv);
-
-   Only1Arg = (strcmp(ARGUV[0],CORE_NAME) == 0) ? 0 : 1;
-
-   for (i = 0; i<64; i++)
-      xargv_cmd[i] = NULL;
-
-
-   if(Only1Arg)
-   {  Add_Option(CORE_NAME);
-      /*
-         if (strlen(RPATH) >= strlen("crt"))
-         if(!strcasecmp(&RPATH[strlen(RPATH)-strlen("crt")], "crt"))
-         Add_Option("-cartcrt");
-         */
-
-#if defined(__VIC20__)
-     if (strlen(RPATH) >= strlen(".20"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".20")], ".20"))
-	 Add_Option("-cart2");
-
-     if (strlen(RPATH) >= strlen(".40"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".40")], ".40"))
-	 Add_Option("-cart4");
-
-     if (strlen(RPATH) >= strlen(".60"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".60")], ".60"))
-	 Add_Option("-cart6");
-
-     if (strlen(RPATH) >= strlen(".a0"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".a0")], ".a0"))
-	 Add_Option("-cartA");
-
-     if (strlen(RPATH) >= strlen(".b0"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".b0")], ".b0"))
-	 Add_Option("-cartB");
-#endif
-
-     Add_Option(RPATH/*ARGUV[0]*/);
-   }
-   else
-   { // Pass all cmdline args
-      for(i = 0; i < ARGUC; i++) {
-         Skip_Option=0;
-         if(strstr(ARGUV[i], "-j1")) {
-            Skip_Option=1;
-            cur_port=1;
-            cur_port_locked = 1;
-         }
-         if(strstr(ARGUV[i], "-j2")) {
-            Skip_Option=1;
-            cur_port=2;
-            cur_port_locked = 1;
-         }
-         
-         if(!Skip_Option)
-            Add_Option(ARGUV[i]);
-      }
-   }
-
-   for (i = 0; i < PARAMCOUNT; i++)
-   {
-      xargv_cmd[i] = (char*)(XARGV[i]);
-      log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
-   }
-
-   skel_main(PARAMCOUNT,( char **)xargv_cmd);
-
-   xargv_cmd[PARAMCOUNT - 2] = NULL;
-
-   return 0;
-}
-
-void parse_cmdline(const char *argv)
+static void parse_cmdline(const char *argv)
 {
    char *p,*p2,*start_of_word;
    int c,c2;
    static char buffer[512*4];
    enum states { DULL, IN_WORD, IN_STRING } state = DULL;
+
+   ARGUC = 0;
 
    strcpy(buffer,argv);
    strcat(buffer," \0");
@@ -374,6 +280,316 @@ void parse_cmdline(const char *argv)
             continue; /* either still IN_WORD or we handled the end above */
       }
    }
+}
+
+static int check_joystick_control(const char* filename)
+{
+    int port = 0;
+    if (filename != NULL)
+    {
+        if (strcasestr(filename, "_j1.") || strcasestr(filename, "(j1)."))
+        {
+            port = 1;
+        }
+        else if (strcasestr(filename, "_j2.") || strcasestr(filename, "(j2)."))
+        {
+            port = 2;
+        }
+    }
+    return port;
+}
+
+static int get_image_unit()
+{
+    int unit = dc->unit;
+    if (unit == 0 && dc->index < dc->count)
+    {
+        if (strendswith(dc->files[dc->index], "tap") || strendswith(dc->files[dc->index], "t64"))
+           unit = 1;
+        else
+           unit = 8;
+    }
+    return unit;
+}
+
+// If we display the message now, it wold be immediatelly overwritten
+// by "changed disk in drive", so queue it to display on next retro_run.
+// The side effect is that if disk is changed from menu, the message will be displayed
+// only after emulation is unpaused.
+static void log_disk_in_tray(bool display)
+{
+    if (dc->index < dc->count)
+    {
+        int unit = get_image_unit();
+        size_t pos = 0;
+        const char* label;
+        // Build message do display
+        if (unit == 1)
+            snprintf(queued_msg, sizeof(queued_msg), "Tape: ");
+        else
+            snprintf(queued_msg, sizeof(queued_msg), "Drive %d: ", unit);
+        pos = strlen(queued_msg);
+        snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "%d/%d: %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
+        pos += strlen(queued_msg + pos);
+        label = dc->labels[dc->index];
+        if (label && label[0])
+        {
+            snprintf(queued_msg + pos, sizeof(queued_msg) - pos, " (%s)", label);
+        }
+        log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
+        if (display)
+            show_queued_msg = 180;
+    }
+}
+
+static int process_cmdline(const char* argv)
+{
+    int i=0;
+    bool is_fliplist = false;
+    int joystick_control = 0;
+
+    PARAMCOUNT = 0;
+    dc_reset(dc);
+
+    cur_port_locked = 0;
+    autostartString = NULL;
+
+    // Load command line arguments from cmd file
+    if (strendswith(argv, ".cmd"))
+    {
+        if (loadcmdfile(argv))
+        {
+            argv = trimwhitespace(CMDFILE);
+            log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", argv);
+            RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
+        }
+        else
+        {
+            log_cb(RETRO_LOG_ERROR, "Failed to load command line from %s\n", argv);
+            argv = CMDFILE;
+        }
+    }
+    parse_cmdline(argv);
+
+    // Core command line is now parsed to ARGUV, ARGUC.
+    // Build command file for VICE in XARGV, PARAMCOUNT.
+
+    bool single_image = strcmp(ARGUV[0], CORE_NAME) != 0;
+
+    // If first command line argument is "x64", it's and extended command line
+    // otherwise it's just image filename
+    if (single_image)
+    {
+        Add_Option(CORE_NAME);
+
+        // Ignore parsed arguments, read filename directly from argv
+
+        // Check original filename for joystick control,
+        // not the first name from M3U or VFL
+        joystick_control = check_joystick_control(argv);
+        if (joystick_control)
+        {
+            cur_port = joystick_control;
+            cur_port_locked = 1;
+        }
+
+#if defined(__VIC20__)
+        if (strendswith(argv, ".20"))
+            Add_Option("-cart2");
+        else if (strendswith(argv, ".40"))
+            Add_Option("-cart4");
+        else if (strendswith(argv, ".60"))
+            Add_Option("-cart6");
+        else if (strendswith(argv, ".a0"))
+            Add_Option("-cartA");
+        else if (strendswith(argv, ".b0"))
+            Add_Option("-cartB");
+#endif
+
+        if (strendswith(argv, ".m3u"))
+        {
+            // Parse the m3u file
+            dc_parse_m3u(dc, argv);
+            is_fliplist = true;
+        }
+        else if (strendswith(argv, ".vfl"))
+        {
+            // Parse the vfl file
+            dc_parse_vfl(dc, argv);
+            is_fliplist = true;
+        }
+
+        if (!is_fliplist)
+        {
+            // Add image name as autostart parameter
+            Add_Option(argv);
+        }
+        else
+        {
+            // Some debugging
+            log_cb(RETRO_LOG_INFO, "m3u/vfl file parsed, %d file(s) found\n", dc->count);
+
+            if (!dc->command)
+            {
+                // Add first disk from list as autostart parameter
+                if (dc->count != 0)
+                    Add_Option(dc->files[dc->index]);
+            }
+            else
+            {
+                // Re-parse command line from M3U #COMMAND:
+                log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", dc->command);
+                RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
+                parse_cmdline(dc->command);
+                // Reset parameters list for Vice
+                PARAMCOUNT = 0;
+                single_image = false;
+            }
+        }
+    }
+
+    // It might be single_image initially, but changed by M3U file #COMMAND line
+    if (!single_image)
+    {
+        if (ARGUC == 0 || strcmp(ARGUV[0], CORE_NAME) != 0)
+        {
+            // Command doesn't start with core name, so add it first
+            Add_Option(CORE_NAME);
+        }
+
+        bool is_flipname_param = false;
+        // Scan vice arguments for special processing
+        for (i = 0; i < ARGUC; i++)
+        {
+            const char* arg = ARGUV[i];
+
+            // Previous arg was '-flipname'
+            if (is_flipname_param)
+            {
+                is_flipname_param = false;
+                // Parse the vfl file, pass to vice
+                dc_parse_vfl(dc, arg);
+                Add_Option(arg);
+                is_fliplist = true;
+            }
+            // Was strstr, but I don't see the point
+            else if (strcmp(arg, "-j1") == 0)
+            {
+                cur_port = 1;
+                cur_port_locked = 1;
+            }
+            else if (strcmp(arg, "-j2") == 0)
+            {
+                cur_port = 2;
+                cur_port_locked = 1;
+            }
+            else if (strendswith(arg, ".m3u"))
+            {
+                // Parse the m3u file, don't pass to vice
+                dc_parse_m3u(dc, arg);
+                is_fliplist = true;
+            }
+            else if (strcmp(arg, "-flipname") == 0)
+            {
+                // Set flag for next arg
+                is_flipname_param = true;
+                Add_Option(arg);
+            }
+            else
+            {
+                Add_Option(arg);
+            }
+        }
+
+        if (is_fliplist)
+        {
+            // Some debugging
+            log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
+        }
+    }
+
+    return 0;
+}
+
+int pre_main()
+{
+
+    int i;
+
+    if (PARAMCOUNT == 0)
+    {
+        // No game loaded - set command line to 'x64'
+        Add_Option(CORE_NAME);
+    }
+
+    for (i = 0; i < PARAMCOUNT; i++)
+    {
+        xargv_cmd[i] = (char*)(XARGV[i]);
+        log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
+    }
+
+    xargv_cmd[PARAMCOUNT] = NULL;
+
+    if (skel_main(PARAMCOUNT, (char**)xargv_cmd) < 0)
+    {
+        log_cb(RETRO_LOG_ERROR, "Core startup failed\n");
+        environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+    }
+
+    // Get autostart string from vice
+    autostartString = cmdline_get_autostart_string();
+    if (autostartString)
+    {
+        log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
+    }
+    else
+    {
+        log_cb(RETRO_LOG_INFO, "No image for autostart\n");
+    }
+
+    // If flip list is empty, get current tape or floppy image name and add to the list
+    if (dc->count == 0)
+    {
+        const char* attachedImage;
+        if ((attachedImage = tape_get_file_name()) != NULL)
+        {
+            dc->unit = 1;
+            dc_add_file(dc, attachedImage);
+        }
+        else
+        {
+            int unit;
+            for (unit = 8; unit <= 11; ++unit)
+            {
+                if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
+                {
+                    dc->unit = unit;
+                    dc_add_file(dc, attachedImage);
+                }
+            }
+        }
+    }
+
+    if (dc->unit == 1)
+    {
+        log_cb(RETRO_LOG_INFO, "image list is active for tape\n");
+    }
+    else if (dc->unit != 0)
+    {
+        log_cb(RETRO_LOG_INFO, "image list is active for drive #%d\n", dc->unit);
+    }
+    log_cb(RETRO_LOG_INFO, "image list has %d file(s)\n", dc->count);
+    for(unsigned i = 0; i < dc->count; i++)
+    {
+        log_cb(RETRO_LOG_INFO, "file %d: %s\n", i+1, dc->files[i]);
+    }
+
+    dc->index = 0;
+    // If vice has image attached to drive, tell libretro that the 'tray' is closed
+    if (dc->count != 0)
+        dc->eject_state = false;
+
+    return 0;
 }
 
 long GetTicks(void) {
@@ -1896,7 +2112,10 @@ void emu_reset(void)
 {
    switch(RETRORESET) {
       case 0:
-         autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
+         if (autostartString != NULL && autostartString[0] != '\0')
+            autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+         else
+            machine_trigger_reset(MACHINE_RESET_MODE_HARD);
          break;
       case 1:
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
@@ -1911,106 +2130,102 @@ void retro_reset(void)
 {
    microSecCounter = 0;
    /* Retro reset should always autostart */
-   autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
+   if (autostartString != NULL && autostartString[0] != '\0')
+      autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+   else
+      machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 }
 
 struct DiskImage {
     char* fname;
 };
 
-#include <attach.h>
-
-static int get_image_unit() {
-    int unit = dc->unit;
-    if (unit == 0)
+static bool retro_set_eject_state(bool ejected)
+{
+    if (dc)
     {
-	if (strendswith(dc->files[dc->index], "tap") || strendswith(dc->files[dc->index], "t64"))
-	    unit = 1;
-	else
-	    unit = 8;
+        int unit = get_image_unit();
+
+        if (dc->eject_state != ejected)
+        {
+            if (ejected && dc->index <= dc->count)
+            {
+                dc->eject_state = ejected;
+                if (unit == 1)
+                    tape_image_detach(unit);
+                else
+                    file_system_detach_disk(unit);
+
+                return true;
+            }
+            else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
+            {
+                dc->eject_state = ejected;
+                if (unit == 1)
+                    tape_image_attach(unit, dc->files[dc->index]);
+                else
+                    file_system_attach_disk(unit, dc->files[dc->index]);
+
+                return true;
+            }
+        }
     }
-    return unit;
-}
 
-static bool retro_set_eject_state(bool ejected) {
-	if (dc)
-	{
-	    	int unit = get_image_unit();
-
-		dc->eject_state = ejected;
-		
-		if(dc->eject_state)
-		{
-			if (unit == 1)
-			    tape_image_detach(unit);
-			else
-			    file_system_detach_disk(unit);
-		}
-		else
-		{
-			if (unit == 1)
-			    tape_image_attach(unit, dc->files[dc->index]);
-			else
-			    file_system_attach_disk(unit, dc->files[dc->index]);
-		}
-	}
-	
-	return true;
+    return false;
 }
 
 /* Gets current eject state. The initial state is 'not ejected'. */
-static bool retro_get_eject_state(void) {
-	if (dc)
-		return dc->eject_state;
-	
-	return true;
+static bool retro_get_eject_state(void)
+{
+    if (dc)
+        return dc->eject_state;
+
+    return true;
 }
 
 /* Gets current disk index. First disk is index 0.
  * If return value is >= get_num_images(), no disk is currently inserted.
  */
-static unsigned retro_get_image_index(void) {
-	if (dc)
-		return dc->index;
-	
-	return 0;
+static unsigned retro_get_image_index(void)
+{
+    if (dc)
+        return dc->index;
+
+    return 0;
 }
 
 /* Sets image index. Can only be called when disk is ejected.
  * The implementation supports setting "no disk" by using an
  * index >= get_num_images().
  */
-static bool retro_set_image_index(unsigned index) {
-	// Insert disk
-	if (dc)
-	{
-		// Same disk...
-		// This can mess things in the emu
-		if(index == dc->index)
-			return true;
-		
-		if ((index < dc->count) && (dc->files[index]))
-		{
-		    	int unit;
-			dc->index = index;
-			unit = get_image_unit();
-			if (unit == 1)
-			    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
-			else 
-			    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive %d: %s\n", dc->index+1, unit, dc->files[dc->index]);
-			return true;
-		}
-	}
-	
-	return false;
+static bool retro_set_image_index(unsigned index)
+{
+    // Switch disk in drive
+    if (dc)
+    {
+        if (index <= dc->count)
+        {
+            dc->index = index;
+
+            if ((index < dc->count) && (dc->files[index]))
+            {
+                log_disk_in_tray(display_disk_name);
+            }
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /* Gets total number of images which are available to use. */
-static unsigned retro_get_num_images(void) {
-	if (dc)
-		return dc->count;
+static unsigned retro_get_num_images(void)
+{
+    if (dc)
+        return dc->count;
 
-	return 0;
+    return 0;
 }
 
 
@@ -2027,25 +2242,20 @@ static unsigned retro_get_num_images(void) {
  * Index 1 will be removed, and the new index is 3.
  */
 static bool retro_replace_image_index(unsigned index,
-      const struct retro_game_info *info) {
-	if (dc)
-	{
-		if(dc->files[index])
-		{
-			free(dc->files[index]);
-			dc->files[index] = NULL;
-		}
-		
-		if(info != NULL)
-		{
-			dc->files[index] = strdup(info->path);
-		}
-		else
-		{
-			dc_remove_file(dc, index);
-		}
-	}
-	
+      const struct retro_game_info *info)
+{
+    if (dc)
+    {
+        if (info != NULL)
+        {
+            dc_replace_file(dc, index, info->path);
+        }
+        else
+        {
+            dc_remove_file(dc, index);
+        }
+    }
+
     return false;	
 }
 
@@ -2053,17 +2263,19 @@ static bool retro_replace_image_index(unsigned index,
  * This will increment subsequent return values from get_num_images() by 1.
  * This image index cannot be used until a disk image has been set
  * with replace_image_index. */
-static bool retro_add_image_index(void) {
-	if (dc)
-	{
-		if(dc->count <= DC_MAX_SIZE)
-		{
-			dc->files[dc->count] = NULL;
-			dc->count++;
-			return true;
-		}
-	}
-	
+static bool retro_add_image_index(void)
+{
+    if (dc)
+    {
+        if (dc->count <= DC_MAX_SIZE)
+        {
+            dc->files[dc->count] = NULL;
+            dc->labels[dc->count] = NULL;
+            dc->count++;
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -2151,7 +2363,8 @@ void retro_init(void)
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
       log_cb(RETRO_LOG_ERROR, "PIXEL FORMAT is not supported.\n");
-      exit(0);
+      environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+      return;
    }
 
 #define RETRO_DESCRIPTOR_BLOCK( _user )                                            \
@@ -2337,6 +2550,15 @@ void retro_run(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
 
+   if (show_queued_msg != 0)
+   {
+      struct retro_message rmsg;
+      rmsg.msg = queued_msg;
+      rmsg.frames = show_queued_msg;
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &rmsg);
+      show_queued_msg = 0;
+   }
+
    if(runstate == RUNSTATE_FIRST_START)
    {
       /* this is only done once after just loading the core from scratch and starting it */
@@ -2346,7 +2568,7 @@ void retro_run(void)
       retro_load_ok=true;
       app_init();
       update_variables();
-      pre_main(RPATH);
+      pre_main();
       runstate = RUNSTATE_RUNNING;
       return;
    } 
@@ -2354,7 +2576,7 @@ void retro_run(void)
    {
       /* Load content was called while core was already running, just do a reset with autostart */
       datasette_control(DATASETTE_CONTROL_STOP);
-      autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
+      autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
       /* After retro_load_game, get_system_av_info is always called by the frontend */
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
       /* current aspect ratio and screen size again here */
@@ -2374,87 +2596,12 @@ void retro_run(void)
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
-#define M3U_FILE_EXT ".m3u"
-
 bool retro_load_game(const struct retro_game_info *info)
 {
    if (info)
    {
-	const char *full_path;
-	bool is_fliplist = false;
-
-	(void)info;
-
-	full_path = info->path;
-
-	// If it's a m3u file
-	if(strendswith(full_path, M3U_FILE_EXT))
-	{
-		// Parse the m3u file
-		dc_parse_m3u(dc, full_path);
-		is_fliplist = true;
-	}
-	else if (strendswith(full_path, ".vfl"))
-	{
-		// Parse the vfl file
-		dc_parse_vfl(dc, full_path);
-		is_fliplist = true;
-	}
-
-	if (is_fliplist)
-	{
-		// Some debugging
-		log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
-		for(unsigned i = 0; i < dc->count; i++)
-		{
-			log_cb(RETRO_LOG_INFO, "file %d: %s\n", i+1, dc->files[i]);
-		}	
-	}
-	else
-	{
-		// Add the file to disk control context
-		// Maybe, in a later version of retroarch, we could add disk on the fly (didn't find how to do this)
-		dc_add_file(dc, full_path);
-	}
-
-	// Init first disk
-	dc->index = 0;
-	dc->eject_state = false;
-	if (dc->count != 0)
-	{
-	    int unit = get_image_unit();
-	    if (unit == 1)
-		log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
-	    else 
-		log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive %d: %s\n", dc->index+1, unit, dc->files[dc->index]);
-	    strcpy(RPATH,dc->files[0]);
-	}
-	else
-	{
-	    log_cb(RETRO_LOG_WARN, "No images found in list file %s\n", full_path);
-	    RPATH[0]=0;
-	}
+      process_cmdline(info->path);
    }
-   else
-   {
-      RPATH[0]=0;
-   }
-
-   cur_port_locked = 0;
-
-   if (strlen(RPATH) >= strlen("j1"))
-     if (strstr(RPATH, "_j1.") || strstr(RPATH, "(j1).") || strstr(RPATH, "_J1.") || strstr(RPATH, "(J1)."))
-     {
-        cur_port = 1;
-        cur_port_locked = 1;
-     }
-
-   if (strlen(RPATH) >= strlen("j2"))
-     if (strstr(RPATH, "_j2.") || strstr(RPATH, "(j2).") || strstr(RPATH, "_J2.") || strstr(RPATH, "(J2)."))
-     {
-        cur_port = 2;
-        cur_port_locked = 1;
-     }
 
    update_variables();
    
@@ -2475,7 +2622,9 @@ void retro_unload_game(void){
 #ifndef __PET__
     cartridge_detach_image(-1);
 #endif
-    RPATH[0] = 0;
+    dc_reset(dc);
+    autostartString
+ = NULL;
 }
 
 unsigned retro_get_region(void)
@@ -2573,6 +2722,7 @@ size_t retro_serialize_size(void)
          }
       }
    }
+   log_cb(RETRO_LOG_INFO, "Failed to save pre-snapshot to %s\n", save_file);
    return 0;
 }
 
@@ -2601,6 +2751,7 @@ bool retro_serialize(void *data_, size_t size)
             remove(save_file);
          }
       }
+      log_cb(RETRO_LOG_INFO, "Failed to save temp snapshot to %s\n", save_file);
    }
    return false;
 }
@@ -2622,13 +2773,16 @@ bool retro_unserialize(const void *data_, size_t size)
             while (!load_trap_happened)
                maincpu_mainloop_retro();
             if (success)
+            {
                remove(save_file);
                return true;
+            }
          }
          else
             fclose(file);
          remove(save_file);
       }
+      log_cb(RETRO_LOG_INFO, "Failed to write temp snapshot to %s\n", save_file);
    }
    return false;
 }

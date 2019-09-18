@@ -2036,10 +2036,13 @@ static bool retro_replace_image_index(unsigned index,
 			dc->files[index] = NULL;
 		}
 		
-		// TODO : Handling removing of a disk image when info = NULL
-		
-		if(info != NULL) {
+		if(info != NULL)
+		{
 			dc->files[index] = strdup(info->path);
+		}
+		else
+		{
+			dc_remove_file(dc, index);
 		}
 	}
 	
@@ -2565,6 +2568,7 @@ size_t retro_serialize_size(void)
             fseek(file, 0L, SEEK_END);
             size = ftell(file);
             fclose(file);
+            remove(save_file);
             return size;
          }
       }
@@ -2590,9 +2594,11 @@ bool retro_serialize(void *data_, size_t size)
             if (fread(data_, size, 1, file) == 1)
             {
                fclose(file);
+               remove(save_file);
                return true;
             }
             fclose(file);
+            remove(save_file);
          }
       }
    }
@@ -2616,10 +2622,12 @@ bool retro_unserialize(const void *data_, size_t size)
             while (!load_trap_happened)
                maincpu_mainloop_retro();
             if (success)
+               remove(save_file);
                return true;
          }
          else
             fclose(file);
+         remove(save_file);
       }
    }
    return false;

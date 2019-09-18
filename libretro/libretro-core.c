@@ -311,11 +311,7 @@ int pre_main(const char *argv)
       log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
    }
 
-   if (skel_main(PARAMCOUNT,( char **)xargv_cmd) < 0)
-   {
-      log_cb(RETRO_LOG_ERROR, "Core startup failed\n");
-      exit(1);
-   }
+   skel_main(PARAMCOUNT,( char **)xargv_cmd);
 
    xargv_cmd[PARAMCOUNT - 2] = NULL;
 

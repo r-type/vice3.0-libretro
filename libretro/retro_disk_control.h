@@ -40,6 +40,5 @@ void dc_parse_m3u(dc_storage* dc, const char* m3u_file);
 void dc_parse_vfl(dc_storage* dc, const char* vfl_file);
 bool dc_add_file(dc_storage* dc, const char* filename);
 void dc_free(dc_storage* dc);
-void dc_reset(dc_storage* dc);
 
 #endif

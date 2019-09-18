@@ -3,6 +3,3 @@
 *.so
 *.dll
 *.a
-GPATH
-GTAGS
-GRTAGS

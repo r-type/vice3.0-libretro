@@ -288,7 +288,7 @@ static int get_image_unit()
     {
         if (strendswith(dc->files[dc->index], "tap") || strendswith(dc->files[dc->index], "t64"))
            unit = 1;
-        else
+    else
            unit = 8;
     }
     return unit;
@@ -309,19 +309,11 @@ static int process_cmdline(const char* argv)
     imageName = NULL;
 
     // Load command line arguments from cmd file
-    if (strendswith(argv, ".cmd"))
+    if (strendswith(argv, ".cmd") && loadcmdfile(argv))
     {
-        if (loadcmdfile(argv))
-        {
-            parse_cmdline(CMDFILE);
-            log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", CMDFILE);
-            RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
-        }
-        else
-        {
-            log_cb(RETRO_LOG_ERROR, "Failed to load command line from %s\n", argv);
-            parse_cmdline("");
-        }
+        parse_cmdline(CMDFILE);
+        log_cb(RETRO_LOG_INFO, "Starting game from command line :%s\n",CMDFILE);
+        RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
     }
     else
     {
@@ -337,7 +329,7 @@ static int process_cmdline(const char* argv)
     {
         Add_Option(CORE_NAME);
 
-        // Ignore parsed arguments, read filename directly from argv
+        // Ignore parser arguments, read filename directly from argv
 
 #if defined(__VIC20__)
         if (strendswith(argv, ".20"))
@@ -2059,31 +2051,30 @@ struct DiskImage {
 
 #include <attach.h>
 
-static bool retro_set_eject_state(bool ejected)
-{
-    if (dc)
-    {
-        int unit = get_image_unit();
+static bool retro_set_eject_state(bool ejected) {
+	if (dc)
+	{
+	    	int unit = get_image_unit();
 
-        dc->eject_state = ejected;
-
-        if(dc->eject_state)
-        {
-            if (unit == 1)
-                tape_image_detach(unit);
-            else
-                file_system_detach_disk(unit);
-        }
-        else
-        {
-            if (unit == 1)
-                tape_image_attach(unit, dc->files[dc->index]);
-            else
-                file_system_attach_disk(unit, dc->files[dc->index]);
-        }
-    }
-
-    return true;
+		dc->eject_state = ejected;
+		
+		if(dc->eject_state)
+		{
+			if (unit == 1)
+			    tape_image_detach(unit);
+			else
+			    file_system_detach_disk(unit);
+		}
+		else
+		{
+			if (unit == 1)
+			    tape_image_attach(unit, dc->files[dc->index]);
+			else
+			    file_system_attach_disk(unit, dc->files[dc->index]);
+		}
+	}
+	
+	return true;
 }
 
 /* Gets current eject state. The initial state is 'not ejected'. */
@@ -2108,30 +2099,29 @@ static unsigned retro_get_image_index(void) {
  * The implementation supports setting "no disk" by using an
  * index >= get_num_images().
  */
-static bool retro_set_image_index(unsigned index)
-{
-    // Insert disk
-    if (dc)
-    {
-        // Same disk...
-        // This can mess things in the emu
-        if(index == dc->index)
-            return true;
-
-        if ((index < dc->count) && (dc->files[index]))
-        {
-            int unit;
-            dc->index = index;
-            unit = get_image_unit();
-            if (unit == 1)
-                log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
-            else 
-                log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive %d: %s\n", dc->index+1, unit, dc->files[dc->index]);
-            return true;
-        }
-    }
-
-    return false;
+static bool retro_set_image_index(unsigned index) {
+	// Insert disk
+	if (dc)
+	{
+		// Same disk...
+		// This can mess things in the emu
+		if(index == dc->index)
+			return true;
+		
+		if ((index < dc->count) && (dc->files[index]))
+		{
+		    	int unit;
+			dc->index = index;
+			unit = get_image_unit();
+			if (unit == 1)
+			    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
+			else 
+			    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive %d: %s\n", dc->index+1, unit, dc->files[dc->index]);
+			return true;
+		}
+	}
+	
+	return false;
 }
 
 /* Gets total number of images which are available to use. */
@@ -2156,26 +2146,22 @@ static unsigned retro_get_num_images(void) {
  * Index 1 will be removed, and the new index is 3.
  */
 static bool retro_replace_image_index(unsigned index,
-      const struct retro_game_info *info)
-{
-    if (dc)
-    {
-        if (dc->files[index])
-        {
-            free(dc->files[index]);
-            dc->files[index] = NULL;
-        }
-
-        if (info != NULL)
-        {
-            dc->files[index] = strdup(info->path);
-        }
-        else
-        {
-            dc_remove_file(dc, index);
-        }
-    }
-
+      const struct retro_game_info *info) {
+	if (dc)
+	{
+		if(dc->files[index])
+		{
+			free(dc->files[index]);
+			dc->files[index] = NULL;
+		}
+		
+		// TODO : Handling removing of a disk image when info = NULL
+		
+		if(info != NULL) {
+			dc->files[index] = strdup(info->path);
+		}
+	}
+	
     return false;	
 }
 
@@ -2183,18 +2169,17 @@ static bool retro_replace_image_index(unsigned index,
  * This will increment subsequent return values from get_num_images() by 1.
  * This image index cannot be used until a disk image has been set
  * with replace_image_index. */
-static bool retro_add_image_index(void)
-{
-    if (dc)
-    {
-        if(dc->count <= DC_MAX_SIZE)
-        {
-            dc->files[dc->count] = NULL;
-            dc->count++;
-            return true;
-        }
-    }
-
+static bool retro_add_image_index(void) {
+	if (dc)
+	{
+		if(dc->count <= DC_MAX_SIZE)
+		{
+			dc->files[dc->count] = NULL;
+			dc->count++;
+			return true;
+		}
+	}
+	
     return false;
 }
 
@@ -2629,12 +2614,10 @@ size_t retro_serialize_size(void)
             fseek(file, 0L, SEEK_END);
             size = ftell(file);
             fclose(file);
-            remove(save_file);
             return size;
          }
       }
    }
-   log_cb(RETRO_LOG_INFO, "Failed to save pre-snapshot to %s\n", save_file);
    return 0;
 }
 
@@ -2656,14 +2639,11 @@ bool retro_serialize(void *data_, size_t size)
             if (fread(data_, size, 1, file) == 1)
             {
                fclose(file);
-               remove(save_file);
                return true;
             }
-            remove(save_file);
             fclose(file);
          }
       }
-      log_cb(RETRO_LOG_INFO, "Failed to save temp snapshot to %s\n", save_file);
    }
    return false;
 }
@@ -2685,16 +2665,11 @@ bool retro_unserialize(const void *data_, size_t size)
             while (!load_trap_happened)
                maincpu_mainloop_retro();
             if (success)
-            {
-               remove(save_file);
                return true;
-            }
          }
          else
             fclose(file);
-         remove(save_file);
       }
-      log_cb(RETRO_LOG_INFO, "Failed to write temp snapshot to %s\n", save_file);
    }
    return false;
 }

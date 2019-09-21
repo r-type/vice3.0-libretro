@@ -40,6 +40,10 @@ static char buf[64][4096] = { 0 };
 long microSecCounter=0;
 int cpuloop=1;
 
+// If this parameter is set, we always initialize vice core without parameters
+// and pass params later
+#define START_WITHOUT_PARAMS
+
 #ifdef FRONTEND_SUPPORTS_RGB565
 	uint16_t *Retro_Screen;
 	uint16_t bmp[WINDOW_SIZE];
@@ -467,9 +471,10 @@ static int process_cmdline(const char* argv)
             if (is_flipname_param)
             {
                 is_flipname_param = false;
-                // Parse the vfl file, pass to vice
+                // Parse the vfl file, don't pass to vice
                 dc_parse_vfl(dc, arg);
-                Add_Option(arg);
+                // Don't pass -flipname argument to vice - it has no use of it
+                // and we won't have to take care of cleaning it up
                 is_fliplist = true;
             }
             // Was strstr, but I don't see the point
@@ -493,7 +498,6 @@ static int process_cmdline(const char* argv)
             {
                 // Set flag for next arg
                 is_flipname_param = true;
-                Add_Option(arg);
             }
             else
             {
@@ -511,31 +515,9 @@ static int process_cmdline(const char* argv)
     return 0;
 }
 
-int pre_main()
+// Update autostart image from vice and add disk in drive to fliplist
+void update_from_vice()
 {
-
-    int i;
-
-    if (PARAMCOUNT == 0)
-    {
-        // No game loaded - set command line to 'x64'
-        Add_Option(CORE_NAME);
-    }
-
-    for (i = 0; i < PARAMCOUNT; i++)
-    {
-        xargv_cmd[i] = (char*)(XARGV[i]);
-        log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
-    }
-
-    xargv_cmd[PARAMCOUNT] = NULL;
-
-    if (skel_main(PARAMCOUNT, (char**)xargv_cmd) < 0)
-    {
-        log_cb(RETRO_LOG_ERROR, "Core startup failed\n");
-        environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
-    }
-
     // Get autostart string from vice
     autostartString = cmdline_get_autostart_string();
     if (autostartString)
@@ -588,8 +570,69 @@ int pre_main()
     // If vice has image attached to drive, tell libretro that the 'tray' is closed
     if (dc->count != 0)
         dc->eject_state = false;
+    else
+        dc->eject_state = true;
+}
+
+int build_params()
+{
+    int i;
+
+    if (PARAMCOUNT == 0)
+    {
+        // No game loaded - set command line to 'x64'
+        Add_Option(CORE_NAME);
+    }
+
+    for (i = 0; i < PARAMCOUNT; i++)
+    {
+        xargv_cmd[i] = (char*)(XARGV[i]);
+        log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
+    }
+
+    xargv_cmd[PARAMCOUNT] = NULL;
+}
+
+int pre_main()
+{
+    int argc = PARAMCOUNT;
+
+#ifndef START_WITHOUT_PARAMS
+    build_params();
+#else
+    /* start core with empty params */
+    xargv_cmd[0] = CORE_NAME;
+    xargv_cmd[1] = NULL;
+    argc = 1;
+#endif
+
+    if (skel_main(argc, (char**)xargv_cmd) < 0)
+    {
+        log_cb(RETRO_LOG_ERROR, "Core startup failed\n");
+        environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+    }
+
+#ifndef START_WITHOUT_PARAMS
+    update_from_vice();
+#endif
 
     return 0;
+}
+
+void reload_restart()
+{
+    /* Load content was called while core was already running, pass command line to core for restart */
+    datasette_control(DATASETTE_CONTROL_STOP);
+
+    build_params();
+
+    if (initcmdline_restart(PARAMCOUNT, (char**)xargv_cmd) < 0)
+    {
+        log_cb(RETRO_LOG_ERROR, "Restart failed\n");
+        // Nevermind, the core is already running
+    }
+
+    update_from_vice();
 }
 
 long GetTicks(void) {
@@ -1339,6 +1382,18 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
 }
 
+static int log_resources_set_int(const char *name, int value)
+{
+    log_cb(RETRO_LOG_INFO, "Resource %s = %d\n", name, value);
+    resources_set_int(name, value);
+}
+
+static int log_resources_set_string(const char *name, const char* value)
+{
+    log_cb(RETRO_LOG_INFO, "Resource %s = \"%s\"\n", name, value);
+    resources_set_string(name, value);
+}
+
 static void update_variables(void)
 {
    struct retro_variable var;
@@ -1346,17 +1401,19 @@ static void update_variables(void)
    var.key = "vice_statusbar";
    var.value = NULL;
 
+   log_cb(RETRO_LOG_INFO, "Updating variables, ui finalized = %d\n", retro_ui_finalized);
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if(retro_ui_finalized){
+      if (retro_ui_finalized) {
          if (strcmp(var.value, "enabled") == 0)
-            resources_set_int("SDLStatusbar", 1);
+            log_resources_set_int("SDLStatusbar", 1);
          if (strcmp(var.value, "disabled") == 0)
-            resources_set_int("SDLStatusbar", 0);
+            log_resources_set_int("SDLStatusbar", 0);
       }
       else {
-         if (strcmp(var.value, "enabled") == 0)RETROSTATUS=1;
-         if (strcmp(var.value, "disabled") == 0)RETROSTATUS=0;
+         if (strcmp(var.value, "enabled") == 0) RETROSTATUS=1;
+         if (strcmp(var.value, "disabled") == 0) RETROSTATUS=0;
       }
    }
 
@@ -1365,15 +1422,15 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if(retro_ui_finalized){
+      if (retro_ui_finalized) {
          if (strcmp(var.value, "enabled") == 0)
-            resources_set_int("AutostartWarp", 1);
+            log_resources_set_int("AutostartWarp", 1);
          if (strcmp(var.value, "disabled") == 0)
-            resources_set_int("AutostartWarp", 0);
+            log_resources_set_int("AutostartWarp", 0);
       }
       else {
-         if (strcmp(var.value, "enabled") == 0)RETROAUTOSTARTWARP=1;
-         if (strcmp(var.value, "disabled") == 0)RETROAUTOSTARTWARP=0;
+         if (strcmp(var.value, "enabled") == 0) RETROAUTOSTARTWARP=1;
+         if (strcmp(var.value, "disabled") == 0) RETROAUTOSTARTWARP=0;
       }
    }
 
@@ -1382,25 +1439,25 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if(retro_ui_finalized){
-         if (strcmp(var.value, "enabled") == 0){
-            if(RETROTDE==0){
+      if (retro_ui_finalized) {
+         if (strcmp(var.value, "enabled") == 0) {
+            if (RETROTDE==0) {
                RETROTDE=1;
-               resources_set_int("DriveTrueEmulation", 1);
-               resources_set_int("VirtualDevices", 0);
+               log_resources_set_int("DriveTrueEmulation", 1);
+               log_resources_set_int("VirtualDevices", 0);
             }
          }
-         else if (strcmp(var.value, "disabled") == 0){
-            if(RETROTDE==1){
+         else if (strcmp(var.value, "disabled") == 0) {
+            if (RETROTDE==1) {
                RETROTDE=0;
-               resources_set_int("DriveTrueEmulation", 0);
-               resources_set_int("VirtualDevices", 1);
+               log_resources_set_int("DriveTrueEmulation", 0);
+               log_resources_set_int("VirtualDevices", 1);
             }
          }
       }
       else {
-         if (strcmp(var.value, "enabled") == 0)RETROTDE=1;
-         if (strcmp(var.value, "disabled") == 0)RETROTDE=0;
+         if (strcmp(var.value, "enabled") == 0) RETROTDE=1;
+         if (strcmp(var.value, "disabled") == 0) RETROTDE=0;
       }
    }
 
@@ -1412,17 +1469,17 @@ static void update_variables(void)
       int val = atoi(var.value);
       val = val * 20;
 
-      if(retro_ui_finalized){
-         if (strcmp(var.value, "disabled") == 0){
-            resources_set_int("DriveSoundEmulation", 0);
+      if (retro_ui_finalized) {
+         if (strcmp(var.value, "disabled") == 0) {
+            log_resources_set_int("DriveSoundEmulation", 0);
     	 }
          else {
-            resources_set_int("DriveSoundEmulation", 1);
-            resources_set_int("DriveSoundEmulationVolume", val);
+            log_resources_set_int("DriveSoundEmulation", 1);
+            log_resources_set_int("DriveSoundEmulationVolume", val);
          }
       }
       else {
-         if (strcmp(var.value, "disabled") == 0)RETRODSE=0;
+         if (strcmp(var.value, "disabled") == 0) RETRODSE=0;
          else RETRODSE=val;
       }
    }
@@ -1434,16 +1491,16 @@ static void update_variables(void)
    {
       int eng=0,modl=0,sidmdl=0;
 
-      if (strcmp(var.value, "6581F") == 0){eng=0;modl=0;}
-      else if (strcmp(var.value, "8580F") == 0){eng=0;modl=1;}
-      else if (strcmp(var.value, "6581R") == 0){eng=1;modl=0;}
-      else if (strcmp(var.value, "8580R") == 0){eng=1;modl=1;}
-      else if (strcmp(var.value, "8580RD") == 0){eng=1;modl=2;}
+      if (strcmp(var.value, "6581F") == 0) {eng=0; modl=0;}
+      else if (strcmp(var.value, "8580F") == 0) {eng=0; modl=1;}
+      else if (strcmp(var.value, "6581R") == 0) {eng=1; modl=0;}
+      else if (strcmp(var.value, "8580R") == 0) {eng=1; modl=1;}
+      else if (strcmp(var.value, "8580RD") == 0) {eng=1; modl=2;}
 
       sidmdl=((eng << 8) | modl) ;
 
-      if(retro_ui_finalized)
-         if(RETROSIDMODL!=sidmdl)
+      if (retro_ui_finalized)
+         if (RETROSIDMODL!=sidmdl)
             sid_set_engine_model(eng, modl);
 
       RETROSIDMODL=sidmdl;
@@ -1456,14 +1513,14 @@ static void update_variables(void)
    {
       int resid=0;
       
-      if (strcmp(var.value, "Fast") == 0){ resid=0; }
-      else if (strcmp(var.value, "Interpolation") == 0){ resid=1; }
-      else if (strcmp(var.value, "Resampling") == 0){ resid=2; }
-      else if (strcmp(var.value, "Fast resampling") == 0){ resid=3; }
+      if (strcmp(var.value, "Fast") == 0) { resid=0; }
+      else if (strcmp(var.value, "Interpolation") == 0) { resid=1; }
+      else if (strcmp(var.value, "Resampling") == 0) { resid=2; }
+      else if (strcmp(var.value, "Fast resampling") == 0) { resid=3; }
 
-      if(retro_ui_finalized)
-         if(RETRORESIDSAMPLING!=resid)
-            resources_set_int("SidResidSampling", resid);
+      if (retro_ui_finalized)
+         if (RETRORESIDSAMPLING!=resid)
+            log_resources_set_int("SidResidSampling", resid);
 
       RETRORESIDSAMPLING=resid;
    }
@@ -1476,12 +1533,12 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "VIC20 PAL") == 0)modl=VIC20MODEL_VIC20_PAL;
-      else if (strcmp(var.value, "VIC20 NTSC") == 0)modl=VIC20MODEL_VIC20_NTSC;
-      else if (strcmp(var.value, "SuperVIC (+16K)") == 0)modl=VIC20MODEL_VIC21;
+      if (strcmp(var.value, "VIC20 PAL") == 0) modl=VIC20MODEL_VIC20_PAL;
+      else if (strcmp(var.value, "VIC20 NTSC") == 0) modl=VIC20MODEL_VIC20_NTSC;
+      else if (strcmp(var.value, "SuperVIC (+16K)") == 0) modl=VIC20MODEL_VIC21;
 
       RETROC64MODL=modl;
-      if(retro_ui_finalized)
+      if (retro_ui_finalized)
         vic20model_set(modl);
    }
 #elif  defined(__PLUS4__)
@@ -1492,12 +1549,12 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C16 PAL") == 0)modl=PLUS4MODEL_C16_PAL;
-      else if (strcmp(var.value, "C16 NTSC") == 0)modl=PLUS4MODEL_C16_NTSC;
-      else if (strcmp(var.value, "PLUS4 PAL") == 0)modl=PLUS4MODEL_PLUS4_PAL;
-      else if (strcmp(var.value, "PLUS4 NTSC") == 0)modl=PLUS4MODEL_PLUS4_NTSC;
-      else if (strcmp(var.value, "V364 NTSC") == 0)modl=PLUS4MODEL_V364_NTSC;
-      else if (strcmp(var.value, "232 NTSC") == 0)modl=PLUS4MODEL_232_NTSC;
+      if (strcmp(var.value, "C16 PAL") == 0) modl=PLUS4MODEL_C16_PAL;
+      else if (strcmp(var.value, "C16 NTSC") == 0) modl=PLUS4MODEL_C16_NTSC;
+      else if (strcmp(var.value, "PLUS4 PAL") == 0) modl=PLUS4MODEL_PLUS4_PAL;
+      else if (strcmp(var.value, "PLUS4 NTSC") == 0) modl=PLUS4MODEL_PLUS4_NTSC;
+      else if (strcmp(var.value, "V364 NTSC") == 0) modl=PLUS4MODEL_V364_NTSC;
+      else if (strcmp(var.value, "232 NTSC") == 0) modl=PLUS4MODEL_232_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1511,10 +1568,10 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C128 PAL") == 0)modl=C128MODEL_C128_PAL;
-      else if (strcmp(var.value, "C128DCR PAL") == 0)modl=C128MODEL_C128DCR_PAL;
-      else if (strcmp(var.value, "C128 NTSC") == 0)modl=C128MODEL_C128_NTSC;
-      else if (strcmp(var.value, "C128DCR NTSC") == 0)modl=C128MODEL_C128DCR_NTSC;
+      if (strcmp(var.value, "C128 PAL") == 0) modl=C128MODEL_C128_PAL;
+      else if (strcmp(var.value, "C128DCR PAL") == 0) modl=C128MODEL_C128DCR_PAL;
+      else if (strcmp(var.value, "C128 NTSC") == 0) modl=C128MODEL_C128_NTSC;
+      else if (strcmp(var.value, "C128DCR NTSC") == 0) modl=C128MODEL_C128DCR_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1528,18 +1585,18 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "2001") == 0)modl=PETMODEL_2001;
-      else if (strcmp(var.value, "3008") == 0)modl=PETMODEL_3008;
-      else if (strcmp(var.value, "3016") == 0)modl=PETMODEL_3016;
-      else if (strcmp(var.value, "3032") == 0)modl=PETMODEL_3032;
-      else if (strcmp(var.value, "3032B") == 0)modl=PETMODEL_3032B;
-      else if (strcmp(var.value, "4016") == 0)modl=PETMODEL_4016;
-      else if (strcmp(var.value, "4032") == 0)modl=PETMODEL_4032;
-      else if (strcmp(var.value, "4032B") == 0)modl=PETMODEL_4032B;
-      else if (strcmp(var.value, "8032") == 0)modl=PETMODEL_8032;
-      else if (strcmp(var.value, "8096") == 0)modl=PETMODEL_8096;
-      else if (strcmp(var.value, "8296") == 0)modl=PETMODEL_8296;
-      else if (strcmp(var.value, "SUPERPET") == 0)modl=PETMODEL_SUPERPET;
+      if (strcmp(var.value, "2001") == 0) modl=PETMODEL_2001;
+      else if (strcmp(var.value, "3008") == 0) modl=PETMODEL_3008;
+      else if (strcmp(var.value, "3016") == 0) modl=PETMODEL_3016;
+      else if (strcmp(var.value, "3032") == 0) modl=PETMODEL_3032;
+      else if (strcmp(var.value, "3032B") == 0) modl=PETMODEL_3032B;
+      else if (strcmp(var.value, "4016") == 0) modl=PETMODEL_4016;
+      else if (strcmp(var.value, "4032") == 0) modl=PETMODEL_4032;
+      else if (strcmp(var.value, "4032B") == 0) modl=PETMODEL_4032B;
+      else if (strcmp(var.value, "8032") == 0) modl=PETMODEL_8032;
+      else if (strcmp(var.value, "8096") == 0) modl=PETMODEL_8096;
+      else if (strcmp(var.value, "8296") == 0) modl=PETMODEL_8296;
+      else if (strcmp(var.value, "SUPERPET") == 0) modl=PETMODEL_SUPERPET;
       
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1553,17 +1610,17 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "510 PAL") == 0)modl=CBM2MODEL_510_PAL;
-      else if (strcmp(var.value, "510 NTSC") == 0)modl=CBM2MODEL_510_NTSC;
-      else if (strcmp(var.value, "610 PAL") == 0)modl=CBM2MODEL_610_PAL;
-      else if (strcmp(var.value, "610 NTSC") == 0)modl=CBM2MODEL_610_NTSC;
-      else if (strcmp(var.value, "620 PAL") == 0)modl=CBM2MODEL_620_PAL;
-      else if (strcmp(var.value, "620 NTSC") == 0)modl=CBM2MODEL_620_NTSC;
-      else if (strcmp(var.value, "620PLUS PAL") == 0)modl=CBM2MODEL_620PLUS_PAL;
-      else if (strcmp(var.value, "620PLUS NTSC") == 0)modl=CBM2MODEL_620PLUS_NTSC;
-      else if (strcmp(var.value, "710 NTSC") == 0)modl=CBM2MODEL_710_NTSC;
-      else if (strcmp(var.value, "720 NTSC") == 0)modl=CBM2MODEL_720_NTSC;
-      else if (strcmp(var.value, "720PLUS NTSC") == 0)modl=CBM2MODEL_720PLUS_NTSC;
+      if (strcmp(var.value, "510 PAL") == 0) modl=CBM2MODEL_510_PAL;
+      else if (strcmp(var.value, "510 NTSC") == 0) modl=CBM2MODEL_510_NTSC;
+      else if (strcmp(var.value, "610 PAL") == 0) modl=CBM2MODEL_610_PAL;
+      else if (strcmp(var.value, "610 NTSC") == 0) modl=CBM2MODEL_610_NTSC;
+      else if (strcmp(var.value, "620 PAL") == 0) modl=CBM2MODEL_620_PAL;
+      else if (strcmp(var.value, "620 NTSC") == 0) modl=CBM2MODEL_620_NTSC;
+      else if (strcmp(var.value, "620PLUS PAL") == 0) modl=CBM2MODEL_620PLUS_PAL;
+      else if (strcmp(var.value, "620PLUS NTSC") == 0) modl=CBM2MODEL_620PLUS_NTSC;
+      else if (strcmp(var.value, "710 NTSC") == 0) modl=CBM2MODEL_710_NTSC;
+      else if (strcmp(var.value, "720 NTSC") == 0) modl=CBM2MODEL_720_NTSC;
+      else if (strcmp(var.value, "720PLUS NTSC") == 0) modl=CBM2MODEL_720PLUS_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1577,19 +1634,19 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C64 PAL") == 0)modl=C64MODEL_C64_PAL;
-      else if (strcmp(var.value, "C64C PAL") == 0)modl=C64MODEL_C64C_PAL;
-      //else if (strcmp(var.value, "C64 OLD PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
-      else if (strcmp(var.value, "C64 NTSC") == 0)modl=C64MODEL_C64_NTSC;
-      else if (strcmp(var.value, "C64C NTSC") == 0)modl=C64MODEL_C64C_NTSC;
+      if (strcmp(var.value, "C64 PAL") == 0) modl=C64MODEL_C64_PAL;
+      else if (strcmp(var.value, "C64C PAL") == 0) modl=C64MODEL_C64C_PAL;
+      //else if (strcmp(var.value, "C64 OLD PAL") == 0) modl=C64MODEL_C64_OLD_PAL;
+      else if (strcmp(var.value, "C64 NTSC") == 0) modl=C64MODEL_C64_NTSC;
+      else if (strcmp(var.value, "C64C NTSC") == 0) modl=C64MODEL_C64C_NTSC;
       //else if (strcmp(var.value, "C64 OLD NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
       //else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
-      else if (strcmp(var.value, "C64SX PAL") == 0)modl=C64MODEL_C64SX_PAL;
-      else if (strcmp(var.value, "C64SX NTSC") == 0)modl=C64MODEL_C64SX_NTSC;
-      else if (strcmp(var.value, "C64 JAP") == 0)modl=C64MODEL_C64_JAP;
-      else if (strcmp(var.value, "C64 GS") == 0)modl=C64MODEL_C64_GS;
-      else if (strcmp(var.value, "PET64 PAL") == 0)modl=C64MODEL_PET64_PAL;
-      else if (strcmp(var.value, "PET64 NTSC") == 0)modl=C64MODEL_PET64_NTSC;
+      else if (strcmp(var.value, "C64SX PAL") == 0) modl=C64MODEL_C64SX_PAL;
+      else if (strcmp(var.value, "C64SX NTSC") == 0) modl=C64MODEL_C64SX_NTSC;
+      else if (strcmp(var.value, "C64 JAP") == 0) modl=C64MODEL_C64_JAP;
+      else if (strcmp(var.value, "C64 GS") == 0) modl=C64MODEL_C64_GS;
+      else if (strcmp(var.value, "PET64 PAL") == 0) modl=C64MODEL_PET64_PAL;
+      else if (strcmp(var.value, "PET64 NTSC") == 0) modl=C64MODEL_PET64_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1604,17 +1661,17 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int border=0; /* 0 : normal, 1: full, 2: debug, 3: none */
-      if (strcmp(var.value, "enabled") == 0)border=0;
-      else if (strcmp(var.value, "disabled") == 0)border=3;
+      if (strcmp(var.value, "enabled") == 0) border=0;
+      else if (strcmp(var.value, "disabled") == 0) border=3;
 
       RETROBORDERS=border;
-      if(retro_ui_finalized)
+      if (retro_ui_finalized)
 #if defined(__VIC20__)
-        resources_set_int("VICBorderMode", border);
+        log_resources_set_int("VICBorderMode", border);
 #elif defined(__PLUS4__)
-        resources_set_int("TEDBorderMode", border);
+        log_resources_set_int("TEDBorderMode", border);
 #else 
-        resources_set_int("VICIIBorderMode", border);
+        log_resources_set_int("VICIIBorderMode", border);
 #endif
    }
 #endif
@@ -1626,21 +1683,21 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Mike NTSC") == 0)sprintf(extpal, "%s", "mike-ntsc");
-      else if (strcmp(var.value, "Mike PAL") == 0)sprintf(extpal, "%s", "mike-pal");
-      else if (strcmp(var.value, "Colodore VIC") == 0)sprintf(extpal, "%s", "colodore_vic");
-      else if (strcmp(var.value, "Vice") == 0)sprintf(extpal, "%s", "vice");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Mike NTSC") == 0) sprintf(extpal, "%s", "mike-ntsc");
+      else if (strcmp(var.value, "Mike PAL") == 0) sprintf(extpal, "%s", "mike-pal");
+      else if (strcmp(var.value, "Colodore VIC") == 0) sprintf(extpal, "%s", "colodore_vic");
+      else if (strcmp(var.value, "Vice") == 0) sprintf(extpal, "%s", "vice");
 
-      if(retro_ui_finalized){
-         if(!*extpal) {
-            resources_set_int("VICExternalPalette", 0);
+      if (retro_ui_finalized) {
+         if (!*extpal) {
+            log_resources_set_int("VICExternalPalette", 0);
          } else {
-            resources_set_int("VICExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "VIC");
+            log_resources_set_int("VICExternalPalette", 1);
+            log_resources_set_string("VICPaletteFile", extpal);
          }
       } else {
-         if(!*extpal) {
+         if (!*extpal) {
             RETROEXTPAL=-1;
          } else {
             RETROEXTPAL=1;
@@ -1655,20 +1712,20 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Yape PAL") == 0)sprintf(extpal, "%s", "yape-pal");
-      else if (strcmp(var.value, "Yape NTSC") == 0)sprintf(extpal, "%s", "yape-ntsc");
-      else if (strcmp(var.value, "Colodore TED") == 0)sprintf(extpal, "%s", "colodore_ted");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Yape PAL") == 0) sprintf(extpal, "%s", "yape-pal");
+      else if (strcmp(var.value, "Yape NTSC") == 0) sprintf(extpal, "%s", "yape-ntsc");
+      else if (strcmp(var.value, "Colodore TED") == 0) sprintf(extpal, "%s", "colodore_ted");
 
-      if(retro_ui_finalized){
-         if(!*extpal) {
-            resources_set_int("TEDExternalPalette", 0);
+      if (retro_ui_finalized) {
+         if (!*extpal) {
+            log_resources_set_int("TEDExternalPalette", 0);
          } else {
-            resources_set_int("TEDExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "TED");
+            log_resources_set_int("TEDExternalPalette", 1);
+            log_resources_set_string("TEDPaletteFile", extpal);
          }
       } else {
-         if(!*extpal) {
+         if (!*extpal) {
             RETROEXTPAL=-1;
          } else {
             RETROEXTPAL=1;
@@ -1683,17 +1740,17 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
-      else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
-      else if (strcmp(var.value, "White") == 0)sprintf(extpal, "%s", "white");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Amber") == 0) sprintf(extpal, "%s", "amber");
+      else if (strcmp(var.value, "Green") == 0) sprintf(extpal, "%s", "green");
+      else if (strcmp(var.value, "White") == 0) sprintf(extpal, "%s", "white");
 
-      if(retro_ui_finalized){
-         if(!*extpal) {
-            resources_set_int("CrtcExternalPalette", 0);
+      if (retro_ui_finalized) {
+         if (!*extpal) {
+            log_resources_set_int("CrtcExternalPalette", 0);
          } else {
-            resources_set_int("CrtcExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "Crtc");
+            log_resources_set_int("CrtcExternalPalette", 1);
+            log_resources_set_string("CrtcPaletteFile", extpal);
          }
       } else {
          if(!*extpal) {
@@ -1711,20 +1768,20 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
-      else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
-      else if (strcmp(var.value, "White") == 0)sprintf(extpal, "%s", "white");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Amber") == 0) sprintf(extpal, "%s", "amber");
+      else if (strcmp(var.value, "Green") == 0) sprintf(extpal, "%s", "green");
+      else if (strcmp(var.value, "White") == 0) sprintf(extpal, "%s", "white");
 
       if(retro_ui_finalized){
-         if(!*extpal) {
-            resources_set_int("CrtcExternalPalette", 0);
+         if (!*extpal) {
+            log_resources_set_int("CrtcExternalPalette", 0);
          } else {
-            resources_set_int("CrtcExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "Crtc");
+            log_resources_set_int("CrtcExternalPalette", 1);
+            log_resources_set_string("CrtcPaletteFile", extpal);
          }
       } else {
-         if(!*extpal) {
+         if (!*extpal) {
             RETROEXTPAL=-1;
          } else {
             RETROEXTPAL=1;
@@ -1739,33 +1796,33 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Pepto PAL") == 0)sprintf(extpal, "%s", "pepto-pal");
-      else if (strcmp(var.value, "Pepto PAL old") == 0)sprintf(extpal, "%s", "pepto-palold");
-      else if (strcmp(var.value, "Pepto NTSC Sony") == 0)sprintf(extpal, "%s", "pepto-ntsc-sony");
-      else if (strcmp(var.value, "Pepto NTSC") == 0)sprintf(extpal, "%s", "pepto-ntsc");
-      else if (strcmp(var.value, "Colodore") == 0)sprintf(extpal, "%s", "colodore");
-      else if (strcmp(var.value, "Vice") == 0)sprintf(extpal, "%s", "vice");
-      else if (strcmp(var.value, "C64HQ") == 0)sprintf(extpal, "%s", "c64hq");
-      else if (strcmp(var.value, "C64S") == 0)sprintf(extpal, "%s", "c64s");
-      else if (strcmp(var.value, "CCS64") == 0)sprintf(extpal, "%s", "ccs64");
-      else if (strcmp(var.value, "Frodo") == 0)sprintf(extpal, "%s", "frodo");
-      else if (strcmp(var.value, "Godot") == 0)sprintf(extpal, "%s", "godot");
-      else if (strcmp(var.value, "PC64") == 0)sprintf(extpal, "%s", "pc64");
-      else if (strcmp(var.value, "RGB") == 0)sprintf(extpal, "%s", "rgb");
-      else if (strcmp(var.value, "Deekay") == 0)sprintf(extpal, "%s", "deekay");
-      else if (strcmp(var.value, "Ptoing") == 0)sprintf(extpal, "%s", "ptoing");
-      else if (strcmp(var.value, "Community Colors") == 0)sprintf(extpal, "%s", "community-colors");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Pepto PAL") == 0) sprintf(extpal, "%s", "pepto-pal");
+      else if (strcmp(var.value, "Pepto PAL old") == 0) sprintf(extpal, "%s", "pepto-palold");
+      else if (strcmp(var.value, "Pepto NTSC Sony") == 0) sprintf(extpal, "%s", "pepto-ntsc-sony");
+      else if (strcmp(var.value, "Pepto NTSC") == 0) sprintf(extpal, "%s", "pepto-ntsc");
+      else if (strcmp(var.value, "Colodore") == 0) sprintf(extpal, "%s", "colodore");
+      else if (strcmp(var.value, "Vice") == 0) sprintf(extpal, "%s", "vice");
+      else if (strcmp(var.value, "C64HQ") == 0) sprintf(extpal, "%s", "c64hq");
+      else if (strcmp(var.value, "C64S") == 0) sprintf(extpal, "%s", "c64s");
+      else if (strcmp(var.value, "CCS64") == 0) sprintf(extpal, "%s", "ccs64");
+      else if (strcmp(var.value, "Frodo") == 0) sprintf(extpal, "%s", "frodo");
+      else if (strcmp(var.value, "Godot") == 0) sprintf(extpal, "%s", "godot");
+      else if (strcmp(var.value, "PC64") == 0) sprintf(extpal, "%s", "pc64");
+      else if (strcmp(var.value, "RGB") == 0) sprintf(extpal, "%s", "rgb");
+      else if (strcmp(var.value, "Deekay") == 0) sprintf(extpal, "%s", "deekay");
+      else if (strcmp(var.value, "Ptoing") == 0) sprintf(extpal, "%s", "ptoing");
+      else if (strcmp(var.value, "Community Colors") == 0) sprintf(extpal, "%s", "community-colors");
 
-      if(retro_ui_finalized){
+      if (retro_ui_finalized) {
          if(!*extpal) {
-            resources_set_int("VICIIExternalPalette", 0);
+            log_resources_set_int("VICIIExternalPalette", 0);
          } else {
-            resources_set_int("VICIIExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "VICII");
+            log_resources_set_int("VICIIExternalPalette", 1);
+            log_resources_set_string("VICIIPaletteFile", extpal);
          }
       } else {
-         if(!*extpal) {
+         if (!*extpal) {
             RETROEXTPAL=-1;
          } else {
             RETROEXTPAL=1;
@@ -1782,20 +1839,20 @@ static void update_variables(void)
    {
 
       int joyadaptertype=-1;
-      if (strcmp(var.value, "None") == 0)joyadaptertype=-1;
-      else if (strcmp(var.value, "Protovision CGA") == 0)joyadaptertype=USERPORT_JOYSTICK_CGA;
-      else if (strcmp(var.value, "PET") == 0)joyadaptertype=USERPORT_JOYSTICK_PET;
-      else if (strcmp(var.value, "Hummer") == 0)joyadaptertype=USERPORT_JOYSTICK_HUMMER;
-      else if (strcmp(var.value, "OEM") == 0)joyadaptertype=USERPORT_JOYSTICK_OEM;
-      else if (strcmp(var.value, "Hit") == 0)joyadaptertype=USERPORT_JOYSTICK_HIT;
-      else if (strcmp(var.value, "Kingsoft") == 0)joyadaptertype=USERPORT_JOYSTICK_KINGSOFT;
-      else if (strcmp(var.value, "Starbyte") == 0)joyadaptertype=USERPORT_JOYSTICK_STARBYTE;
+      if (strcmp(var.value, "None") == 0) joyadaptertype=-1;
+      else if (strcmp(var.value, "Protovision CGA") == 0) joyadaptertype=USERPORT_JOYSTICK_CGA;
+      else if (strcmp(var.value, "PET") == 0) joyadaptertype=USERPORT_JOYSTICK_PET;
+      else if (strcmp(var.value, "Hummer") == 0) joyadaptertype=USERPORT_JOYSTICK_HUMMER;
+      else if (strcmp(var.value, "OEM") == 0) joyadaptertype=USERPORT_JOYSTICK_OEM;
+      else if (strcmp(var.value, "Hit") == 0) joyadaptertype=USERPORT_JOYSTICK_HIT;
+      else if (strcmp(var.value, "Kingsoft") == 0) joyadaptertype=USERPORT_JOYSTICK_KINGSOFT;
+      else if (strcmp(var.value, "Starbyte") == 0) joyadaptertype=USERPORT_JOYSTICK_STARBYTE;
 
       if(retro_ui_finalized){
-           if(joyadaptertype==-1)resources_set_int("UserportJoy", 0);
+           if(joyadaptertype==-1) log_resources_set_int("UserportJoy", 0);
            else {
-             resources_set_int("UserportJoy", 1);
-             resources_set_int("UserportJoyType", joyadaptertype);
+             log_resources_set_int("UserportJoy", 1);
+             log_resources_set_int("UserportJoyType", joyadaptertype);
            }
       } else {
         RETROUSERPORTJOY=joyadaptertype;
@@ -2110,6 +2167,9 @@ static void update_variables(void)
 
 void emu_reset(void)
 {
+   // Always stop datasette or autostart from tape will fail
+   datasette_control(DATASETTE_CONTROL_STOP);
+
    switch(RETRORESET) {
       case 0:
          if (autostartString != NULL && autostartString[0] != '\0')
@@ -2129,6 +2189,10 @@ void emu_reset(void)
 void retro_reset(void)
 {
    microSecCounter = 0;
+
+   // Always stop datasette, or autostart from tape will fail
+   datasette_control(DATASETTE_CONTROL_STOP);
+
    /* Retro reset should always autostart */
    if (autostartString != NULL && autostartString[0] != '\0')
       autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
@@ -2533,11 +2597,13 @@ void retro_blit(void)
    memcpy(Retro_Screen,bmp,PITCH*WINDOW_SIZE);
 }
 
+static int prev_ui_finalized = 0;
+
 void retro_run(void)
 {
    bool updated = false;
 
-   if(lastW!=retroW || lastH!=retroH){
+   if (lastW!=retroW || lastH!=retroH) {
       update_geometry();
 #ifdef RETRO_DEBUG
       log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n",lastW,lastH,retroW,retroH);
@@ -2549,6 +2615,12 @@ void retro_run(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
+
+   if (retro_ui_finalized && !prev_ui_finalized)
+   {
+       log_cb(RETRO_LOG_INFO, "UI finalized now\n");
+       prev_ui_finalized = 1;
+   }
 
    if (show_queued_msg != 0)
    {
@@ -2565,18 +2637,20 @@ void retro_run(void)
 #ifdef RETRO_DEBUG
       log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
 #endif
-      retro_load_ok=true;
+      retro_load_ok = true;
       app_init();
-      update_variables();
       pre_main();
+      update_variables();
+#ifdef START_WITHOUT_PARAMS
+      reload_restart();
+#endif
       runstate = RUNSTATE_RUNNING;
       return;
    } 
    else if (runstate == RUNSTATE_LOADED_CONTENT)
    {
       /* Load content was called while core was already running, just do a reset with autostart */
-      datasette_control(DATASETTE_CONTROL_STOP);
-      autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+      reload_restart();
       /* After retro_load_game, get_system_av_info is always called by the frontend */
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
       /* current aspect ratio and screen size again here */
@@ -2623,8 +2697,7 @@ void retro_unload_game(void){
     cartridge_detach_image(-1);
 #endif
     dc_reset(dc);
-    autostartString
- = NULL;
+    autostartString = NULL;
 }
 
 unsigned retro_get_region(void)

@@ -33,5 +33,6 @@ extern int initcmdline_check_args(int argc, char **argv);
 extern void initcmdline_check_attach(void);
 extern int cmdline_get_autostart_mode(void);
 extern const char* cmdline_get_autostart_string(void);
+extern int initcmdline_restart(int argc, char **argv);
 
 #endif

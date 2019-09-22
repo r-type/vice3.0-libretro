@@ -55,7 +55,7 @@ int cpuloop=1;
 #endif
 
 //PATH
-static const char* autostartString = NULL;
+static char* autostartString = NULL;
 
 extern int SHOWKEY;
 
@@ -141,6 +141,7 @@ static retro_video_refresh_t video_cb;
 static retro_audio_sample_t audio_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
+static bool noautostart = false;
 
 #include "retro_strings.h"
 #include "retro_files.h"
@@ -160,6 +161,11 @@ static int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are jus
 bool display_disk_name = true;
 /* See which looks best in most cases and tweak (or make configurable) */
 int disk_label_mode = DISK_LABEL_MODE_ASCII_OR_CAMELCASE;
+
+static char* x_strdup(const char* str)
+{
+    return str ? strdup(str) : NULL;
+}
 
 unsigned retro_get_borders(void)
 {
@@ -352,10 +358,12 @@ static int process_cmdline(const char* argv)
     bool is_fliplist = false;
     int joystick_control = 0;
 
+    noautostart = false;
     PARAMCOUNT = 0;
     dc_reset(dc);
 
     cur_port_locked = 0;
+    free(autostartString);
     autostartString = NULL;
 
     // Load command line arguments from cmd file
@@ -437,7 +445,7 @@ static int process_cmdline(const char* argv)
             {
                 // Add first disk from list as autostart parameter
                 if (dc->count != 0)
-                    Add_Option(dc->files[dc->index]);
+                    Add_Option(dc->files[0]);
             }
             else
             {
@@ -499,6 +507,11 @@ static int process_cmdline(const char* argv)
                 // Set flag for next arg
                 is_flipname_param = true;
             }
+            else if (strcmp(arg, "-noautostart") == 0)
+            {
+                // User ask to not automatically start image in drive
+                noautostart = true;
+            }
             else
             {
                 Add_Option(arg);
@@ -518,8 +531,11 @@ static int process_cmdline(const char* argv)
 // Update autostart image from vice and add disk in drive to fliplist
 void update_from_vice()
 {
+    const char* attachedImage = NULL;
+
     // Get autostart string from vice
-    autostartString = cmdline_get_autostart_string();
+    free(autostartString);
+    autostartString = x_strdup(cmdline_get_autostart_string());
     if (autostartString)
     {
         log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
@@ -532,7 +548,6 @@ void update_from_vice()
     // If flip list is empty, get current tape or floppy image name and add to the list
     if (dc->count == 0)
     {
-        const char* attachedImage;
         if ((attachedImage = tape_get_file_name()) != NULL)
         {
             dc->unit = 1;
@@ -547,6 +562,7 @@ void update_from_vice()
                 {
                     dc->unit = unit;
                     dc_add_file(dc, attachedImage);
+                    break;
                 }
             }
         }
@@ -554,21 +570,61 @@ void update_from_vice()
 
     if (dc->unit == 1)
     {
-        log_cb(RETRO_LOG_INFO, "image list is active for tape\n");
+        log_cb(RETRO_LOG_INFO, "Image list is active for tape\n");
     }
     else if (dc->unit != 0)
     {
-        log_cb(RETRO_LOG_INFO, "image list is active for drive #%d\n", dc->unit);
+        log_cb(RETRO_LOG_INFO, "Image list is active for drive #%d\n", dc->unit);
     }
-    log_cb(RETRO_LOG_INFO, "image list has %d file(s)\n", dc->count);
+    log_cb(RETRO_LOG_INFO, "Image list has %d file(s)\n", dc->count);
     for(unsigned i = 0; i < dc->count; i++)
     {
-        log_cb(RETRO_LOG_INFO, "file %d: %s\n", i+1, dc->files[i]);
+        log_cb(RETRO_LOG_INFO, "File %d: %s\n", i+1, dc->files[i]);
+    }
+
+    // If flip list is not empty, but there is no image attached to drive, attach the first one from list.
+    // This can only happen if flip list was loaded via cmd file or from m3u with #COMMAND
+    if (dc->count != 0)
+    {
+        if (dc->unit == 1)
+        {
+            if ((attachedImage = tape_get_file_name()) == NULL)
+            {
+                attachedImage = dc->files[0];
+                // Don't attach if we will autostart from it just in a moment
+                if (autostartString != NULL || noautostart)
+                {
+                    log_cb(RETRO_LOG_INFO, "Attaching first tape %s\n", attachedImage);
+                    tape_image_attach(1, attachedImage);
+                }
+            }
+        }
+        else if (dc->unit != 0)
+        {
+            if ((attachedImage = file_system_get_disk_name(dc->unit)) == NULL)
+            {
+                attachedImage = dc->files[0];
+                // Don't attach if we will autostart from it just in a moment
+                if (autostartString != NULL || noautostart)
+                {
+                    log_cb(RETRO_LOG_INFO, "Attaching first disk %s to drive #%d\n", attachedImage, dc->unit);
+                    file_system_attach_disk(dc->unit, attachedImage);
+                }
+            }
+        }
+    }
+
+    // If there an image attached, but autostart is empty, autostart from the image
+    if (autostartString == NULL && attachedImage != NULL && !noautostart)
+    {
+        log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image %s\n", attachedImage);
+        autostartString = x_strdup(attachedImage);
+        autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
     }
 
     dc->index = 0;
     // If vice has image attached to drive, tell libretro that the 'tray' is closed
-    if (dc->count != 0)
+    if (attachedImage != NULL)
         dc->eject_state = false;
     else
         dc->eject_state = true;
@@ -2712,6 +2768,7 @@ void retro_unload_game(void){
     cartridge_detach_image(-1);
 #endif
     dc_reset(dc);
+    free(autostartString);
     autostartString = NULL;
 }
 

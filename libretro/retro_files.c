@@ -21,6 +21,7 @@
 #include <sys/stat.h> 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 // Verify if file exists
 bool file_exists(const char *filename)

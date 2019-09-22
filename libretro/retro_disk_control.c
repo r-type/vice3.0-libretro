@@ -336,6 +336,19 @@ bool dc_add_file(dc_storage* dc, const char* filename)
     if (dc == NULL || filename == NULL)
         return false;
 
+    // Determine if tape or disk fliplist from first entry
+    if (dc->unit == 0)
+    {
+        if (strendswith(filename, "tap") || strendswith(filename, "t64"))
+        {
+            dc->unit = 1;
+        }
+        else
+        {
+            dc->unit = 8;
+        }
+    }
+
     // Copy and return
     return dc_add_file_int(dc, strdup(filename), get_label(filename));
 }
@@ -359,6 +372,12 @@ bool dc_remove_file(dc_storage* dc, int index)
         memmove(dc->files + index, dc->files + index + 1, (dc->count - 1 - index) * sizeof(dc->files[0]));
 
     dc->count--;
+
+    // Reset fliplist unit after removing last entry
+    if (dc->count == 0)
+    {
+        dc->unit = 0;
+    }
 
     return true;
 }
@@ -526,6 +545,20 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
 
     // Close the file 
     fclose(fp);
+
+    // M3U - Determine if tape or disk fliplist from first entry
+    if (dc->unit == 0 && dc->count !=0)
+    {
+        if (strendswith(dc->files[0], "tap") || strendswith(dc->files[0], "t64"))
+        {
+            dc->unit = 1;
+        }
+        else
+        {
+            dc->unit = 8;
+        }
+    }
+
 }
 
 void dc_parse_m3u(dc_storage* dc, const char* m3u_file)

@@ -619,19 +619,33 @@ int pre_main()
     return 0;
 }
 
+static void update_variables(void);
+
+extern int ui_init_finalize(void);
+
 void reload_restart()
 {
     /* Load content was called while core was already running, pass command line to core for restart */
     datasette_control(DATASETTE_CONTROL_STOP);
 
-    build_params();
+    /* Reset resources to defaults */
+    resources_set_defaults();
+    resources_load(NULL);
 
+    /* Update resources from environment */
+    update_variables();
+    /* Some resources are not set until we call this */
+    ui_init_finalize();
+
+    /* And process command line */
+    build_params();
     if (initcmdline_restart(PARAMCOUNT, (char**)xargv_cmd) < 0)
     {
         log_cb(RETRO_LOG_ERROR, "Restart failed\n");
         // Nevermind, the core is already running
     }
 
+    /* Now read disk image and autostart file (may be the same or not) from vice */
     update_from_vice();
 }
 
@@ -1382,13 +1396,13 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
 }
 
-static int log_resources_set_int(const char *name, int value)
+int log_resources_set_int(const char *name, int value)
 {
     log_cb(RETRO_LOG_INFO, "Resource %s = %d\n", name, value);
     resources_set_int(name, value);
 }
 
-static int log_resources_set_string(const char *name, const char* value)
+int log_resources_set_string(const char *name, const char* value)
 {
     log_cb(RETRO_LOG_INFO, "Resource %s = \"%s\"\n", name, value);
     resources_set_string(name, value);
@@ -2640,9 +2654,10 @@ void retro_run(void)
       retro_load_ok = true;
       app_init();
       pre_main();
-      update_variables();
 #ifdef START_WITHOUT_PARAMS
       reload_restart();
+#else
+      update_variables();
 #endif
       runstate = RUNSTATE_RUNNING;
       return;

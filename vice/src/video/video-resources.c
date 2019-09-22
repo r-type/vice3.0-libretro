@@ -99,6 +99,8 @@ typedef struct video_resource_chip_mode_s video_resource_chip_mode_t;
 
 static int set_double_size_enabled(int value, void *param)
 {
+    // Don't allow double size mode - it won't work
+#ifndef __LIBRETRO__
     cap_render_t *cap_render;
     video_canvas_t *canvas = (video_canvas_t *)param;
     int old_scalex, old_scaley;
@@ -149,6 +151,7 @@ static int set_double_size_enabled(int value, void *param)
     }
 
     canvas->videoconfig->double_size_enabled = val;
+#endif
     return 0;
 }
 

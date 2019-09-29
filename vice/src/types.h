@@ -41,6 +41,9 @@
 #  endif
 #endif
 
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
 
 #ifdef __LIBRETRO__
 

@@ -11,11 +11,15 @@
 #include "snapshot.h"
 #include "autostart.h"
 #include "tape.h"
+#include "attach.h"
 #include "interrupt.h"
 #include "datasette.h"
 #ifndef __PET__
 #include "cartridge.h"
 #endif
+#include "initcmdline.h"
+
+#include "compat/strcasestr.h"
 
 //CORE VAR
 char slash = FSDEV_DIR_SEP_CHR;
@@ -29,12 +33,16 @@ char save_file[512];
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
-int mapper_keys[35]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int mapper_keys[35] = { 0 };
 static char buf[64][4096] = { 0 };
 
 // Our virtual time counter, increased by retro_run()
 long microSecCounter=0;
 int cpuloop=1;
+
+// If this parameter is set, we always initialize vice core without parameters
+// and pass params later
+#define START_WITHOUT_PARAMS
 
 #ifdef FRONTEND_SUPPORTS_RGB565
 	uint16_t *Retro_Screen;
@@ -47,7 +55,7 @@ int cpuloop=1;
 #endif
 
 //PATH
-char RPATH[512];
+static char* autostartString = NULL;
 
 extern int SHOWKEY;
 
@@ -133,6 +141,7 @@ static retro_video_refresh_t video_cb;
 static retro_audio_sample_t audio_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
+static bool noautostart = false;
 
 #include "retro_strings.h"
 #include "retro_files.h"
@@ -148,11 +157,26 @@ static int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are jus
 /* runstate = RUNSTATE_LOADED_CONTENT: load content was selected while core is running, so do an autostart_reset() */
 /* runstate = RUNSTATE_RUNNING: core is running normally */
 
-unsigned retro_get_borders(void) {
+/* Display disk name and label instead of "Changing disk in tray"- maybe make it configurable */
+bool display_disk_name = true;
+/* See which looks best in most cases and tweak (or make configurable) */
+int disk_label_mode = DISK_LABEL_MODE_ASCII_OR_CAMELCASE;
+
+static char* x_strdup(const char* str)
+{
+    return str ? strdup(str) : NULL;
+}
+
+unsigned retro_get_borders(void)
+{
    return RETROBORDERS;
 }
-unsigned retro_toggle_theme(void) {
+
+unsigned retro_toggle_theme(void)
+{
    opt_theme = (opt_theme % 2) ? opt_theme-1 : opt_theme+1;
+   // unused return value
+   return opt_theme;
 }
 
 void retro_set_input_state(retro_input_state_t cb)
@@ -167,36 +191,21 @@ void retro_set_input_poll(retro_input_poll_t cb)
 
 static char CMDFILE[512];
 
-int loadcmdfile(char *argv)
+int loadcmdfile(const char *argv)
 {
    int res=0;
 
    FILE *fp = fopen(argv,"r");
 
-   if( fp != NULL )
+   CMDFILE[0] = '\0';
+   if (fp != NULL)
    {
-      if ( fgets (CMDFILE , 512 , fp) != NULL )
+      if (fgets(CMDFILE , 512 , fp) != NULL)
          res=1;
       fclose (fp);
    }
 
    return res;
-}
-
-int HandleExtension(char *path,char *ext)
-{
-   int len = strlen(path);
-
-   if (len >= 4 &&
-         path[len-4] == '.' &&
-         path[len-3] == ext[0] &&
-         path[len-2] == ext[1] &&
-         path[len-1] == ext[2])
-   {
-      return 1;
-   }
-
-   return 0;
 }
 
 #include <ctype.h>
@@ -210,120 +219,27 @@ static char XARGV[64][1024];
 static const char* xargv_cmd[64];
 int PARAMCOUNT=0;
 
-extern int  skel_main(int argc, char *argv[]);
-void parse_cmdline( const char *argv );
+// Display message on next retro_run
+static char queued_msg[1024];
+static int show_queued_msg = 0;
 
-void Add_Option(const char* option)
+extern int skel_main(int argc, char *argv[]);
+
+static void log_disk_in_tray(bool display);
+
+static void Add_Option(const char* option)
 {
-   static int first=0;
-
-   if(first==0)
-   {
-      PARAMCOUNT=0;
-      first++;
-   }
-
    sprintf(XARGV[PARAMCOUNT++],"%s",option);
 }
 
-int pre_main(const char *argv)
-{
-   int i=0;
-   bool Only1Arg;
-   bool Skip_Option=0;
-
-   if (strlen(argv) > strlen("cmd"))
-   {
-      if( HandleExtension((char*)argv,"cmd") || HandleExtension((char*)argv,"CMD"))
-         i=loadcmdfile((char*)argv);
-   }
-
-   if(i==1)
-   {
-      parse_cmdline(CMDFILE);
-      log_cb(RETRO_LOG_INFO, "Starting game from command line :%s\n",CMDFILE);
-      RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
-   }
-   else
-      parse_cmdline(argv);
-
-   Only1Arg = (strcmp(ARGUV[0],CORE_NAME) == 0) ? 0 : 1;
-
-   for (i = 0; i<64; i++)
-      xargv_cmd[i] = NULL;
-
-
-   if(Only1Arg)
-   {  Add_Option(CORE_NAME);
-      /*
-         if (strlen(RPATH) >= strlen("crt"))
-         if(!strcasecmp(&RPATH[strlen(RPATH)-strlen("crt")], "crt"))
-         Add_Option("-cartcrt");
-         */
-
-#if defined(__VIC20__)
-     if (strlen(RPATH) >= strlen(".20"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".20")], ".20"))
-	 Add_Option("-cart2");
-
-     if (strlen(RPATH) >= strlen(".40"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".40")], ".40"))
-	 Add_Option("-cart4");
-
-     if (strlen(RPATH) >= strlen(".60"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".60")], ".60"))
-	 Add_Option("-cart6");
-
-     if (strlen(RPATH) >= strlen(".a0"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".a0")], ".a0"))
-	 Add_Option("-cartA");
-
-     if (strlen(RPATH) >= strlen(".b0"))
-       if (!strcasecmp(&RPATH[strlen(RPATH)-strlen(".b0")], ".b0"))
-	 Add_Option("-cartB");
-#endif
-
-     Add_Option(RPATH/*ARGUV[0]*/);
-   }
-   else
-   { // Pass all cmdline args
-      for(i = 0; i < ARGUC; i++) {
-         Skip_Option=0;
-         if(strstr(ARGUV[i], "-j1")) {
-            Skip_Option=1;
-            cur_port=1;
-            cur_port_locked = 1;
-         }
-         if(strstr(ARGUV[i], "-j2")) {
-            Skip_Option=1;
-            cur_port=2;
-            cur_port_locked = 1;
-         }
-         
-         if(!Skip_Option)
-            Add_Option(ARGUV[i]);
-      }
-   }
-
-   for (i = 0; i < PARAMCOUNT; i++)
-   {
-      xargv_cmd[i] = (char*)(XARGV[i]);
-      log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
-   }
-
-   skel_main(PARAMCOUNT,( char **)xargv_cmd);
-
-   xargv_cmd[PARAMCOUNT - 2] = NULL;
-
-   return 0;
-}
-
-void parse_cmdline(const char *argv)
+static void parse_cmdline(const char *argv)
 {
    char *p,*p2,*start_of_word;
    int c,c2;
    static char buffer[512*4];
    enum states { DULL, IN_WORD, IN_STRING } state = DULL;
+
+   ARGUC = 0;
 
    strcpy(buffer,argv);
    strcat(buffer," \0");
@@ -374,6 +290,419 @@ void parse_cmdline(const char *argv)
             continue; /* either still IN_WORD or we handled the end above */
       }
    }
+}
+
+static int check_joystick_control(const char* filename)
+{
+    int port = 0;
+    if (filename != NULL)
+    {
+        if (strcasestr(filename, "_j1.") || strcasestr(filename, "(j1)."))
+        {
+            port = 1;
+        }
+        else if (strcasestr(filename, "_j2.") || strcasestr(filename, "(j2)."))
+        {
+            port = 2;
+        }
+    }
+    return port;
+}
+
+static int get_image_unit()
+{
+    int unit = dc->unit;
+    if (unit == 0 && dc->index < dc->count)
+    {
+        if (strendswith(dc->files[dc->index], "tap") || strendswith(dc->files[dc->index], "t64"))
+           unit = 1;
+        else
+           unit = 8;
+    }
+    return unit;
+}
+
+// If we display the message now, it wold be immediatelly overwritten
+// by "changed disk in drive", so queue it to display on next retro_run.
+// The side effect is that if disk is changed from menu, the message will be displayed
+// only after emulation is unpaused.
+static void log_disk_in_tray(bool display)
+{
+    if (dc->index < dc->count)
+    {
+        int unit = get_image_unit();
+        size_t pos = 0;
+        const char* label;
+        // Build message do display
+        if (unit == 1)
+            snprintf(queued_msg, sizeof(queued_msg), "Tape: ");
+        else
+            snprintf(queued_msg, sizeof(queued_msg), "Drive %d: ", unit);
+        pos = strlen(queued_msg);
+        snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "%d/%d: %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
+        pos += strlen(queued_msg + pos);
+        label = dc->labels[dc->index];
+        if (label && label[0])
+        {
+            snprintf(queued_msg + pos, sizeof(queued_msg) - pos, " (%s)", label);
+        }
+        log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
+        if (display)
+            show_queued_msg = 180;
+    }
+}
+
+static int process_cmdline(const char* argv)
+{
+    int i=0;
+    bool is_fliplist = false;
+    int joystick_control = 0;
+
+    noautostart = false;
+    PARAMCOUNT = 0;
+    dc_reset(dc);
+
+    cur_port_locked = 0;
+    free(autostartString);
+    autostartString = NULL;
+
+    // Load command line arguments from cmd file
+    if (strendswith(argv, ".cmd"))
+    {
+        if (loadcmdfile(argv))
+        {
+            argv = trimwhitespace(CMDFILE);
+            log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", argv);
+            RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
+        }
+        else
+        {
+            log_cb(RETRO_LOG_ERROR, "Failed to load command line from %s\n", argv);
+            argv = CMDFILE;
+        }
+    }
+    parse_cmdline(argv);
+
+    // Core command line is now parsed to ARGUV, ARGUC.
+    // Build command file for VICE in XARGV, PARAMCOUNT.
+
+    bool single_image = strcmp(ARGUV[0], CORE_NAME) != 0;
+
+    // If first command line argument is "x64", it's and extended command line
+    // otherwise it's just image filename
+    if (single_image)
+    {
+        Add_Option(CORE_NAME);
+
+        // Ignore parsed arguments, read filename directly from argv
+
+        // Check original filename for joystick control,
+        // not the first name from M3U or VFL
+        joystick_control = check_joystick_control(argv);
+        if (joystick_control)
+        {
+            cur_port = joystick_control;
+            cur_port_locked = 1;
+        }
+
+#if defined(__VIC20__)
+        if (strendswith(argv, ".20"))
+            Add_Option("-cart2");
+        else if (strendswith(argv, ".40"))
+            Add_Option("-cart4");
+        else if (strendswith(argv, ".60"))
+            Add_Option("-cart6");
+        else if (strendswith(argv, ".a0"))
+            Add_Option("-cartA");
+        else if (strendswith(argv, ".b0"))
+            Add_Option("-cartB");
+#endif
+
+        if (strendswith(argv, ".m3u"))
+        {
+            // Parse the m3u file
+            dc_parse_m3u(dc, argv);
+            is_fliplist = true;
+        }
+        else if (strendswith(argv, ".vfl"))
+        {
+            // Parse the vfl file
+            dc_parse_vfl(dc, argv);
+            is_fliplist = true;
+        }
+
+        if (!is_fliplist)
+        {
+            // Add image name as autostart parameter
+            Add_Option(argv);
+        }
+        else
+        {
+            // Some debugging
+            log_cb(RETRO_LOG_INFO, "m3u/vfl file parsed, %d file(s) found\n", dc->count);
+
+            if (!dc->command)
+            {
+                // Add first disk from list as autostart parameter
+                if (dc->count != 0)
+                    Add_Option(dc->files[0]);
+            }
+            else
+            {
+                // Re-parse command line from M3U #COMMAND:
+                log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", dc->command);
+                RETROC64MODL = 99; // set model to unknown for custom settings - prevents overriding of command line options
+                parse_cmdline(dc->command);
+                // Reset parameters list for Vice
+                PARAMCOUNT = 0;
+                single_image = false;
+            }
+        }
+    }
+
+    // It might be single_image initially, but changed by M3U file #COMMAND line
+    if (!single_image)
+    {
+        if (ARGUC == 0 || strcmp(ARGUV[0], CORE_NAME) != 0)
+        {
+            // Command doesn't start with core name, so add it first
+            Add_Option(CORE_NAME);
+        }
+
+        bool is_flipname_param = false;
+        // Scan vice arguments for special processing
+        for (i = 0; i < ARGUC; i++)
+        {
+            const char* arg = ARGUV[i];
+
+            // Previous arg was '-flipname'
+            if (is_flipname_param)
+            {
+                is_flipname_param = false;
+                // Parse the vfl file, don't pass to vice
+                dc_parse_vfl(dc, arg);
+                // Don't pass -flipname argument to vice - it has no use of it
+                // and we won't have to take care of cleaning it up
+                is_fliplist = true;
+            }
+            // Was strstr, but I don't see the point
+            else if (strcmp(arg, "-j1") == 0)
+            {
+                cur_port = 1;
+                cur_port_locked = 1;
+            }
+            else if (strcmp(arg, "-j2") == 0)
+            {
+                cur_port = 2;
+                cur_port_locked = 1;
+            }
+            else if (strendswith(arg, ".m3u"))
+            {
+                // Parse the m3u file, don't pass to vice
+                dc_parse_m3u(dc, arg);
+                is_fliplist = true;
+            }
+            else if (strcmp(arg, "-flipname") == 0)
+            {
+                // Set flag for next arg
+                is_flipname_param = true;
+            }
+            else if (strcmp(arg, "-noautostart") == 0)
+            {
+                // User ask to not automatically start image in drive
+                noautostart = true;
+            }
+            else
+            {
+                Add_Option(arg);
+            }
+        }
+
+        if (is_fliplist)
+        {
+            // Some debugging
+            log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
+        }
+    }
+
+    return 0;
+}
+
+// Update autostart image from vice and add disk in drive to fliplist
+void update_from_vice()
+{
+    const char* attachedImage = NULL;
+
+    // Get autostart string from vice
+    free(autostartString);
+    autostartString = x_strdup(cmdline_get_autostart_string());
+    if (autostartString)
+    {
+        log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
+    }
+    else
+    {
+        log_cb(RETRO_LOG_INFO, "No image for autostart\n");
+    }
+
+    // If flip list is empty, get current tape or floppy image name and add to the list
+    if (dc->count == 0)
+    {
+        if ((attachedImage = tape_get_file_name()) != NULL)
+        {
+            dc->unit = 1;
+            dc_add_file(dc, attachedImage);
+        }
+        else
+        {
+            int unit;
+            for (unit = 8; unit <= 11; ++unit)
+            {
+                if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
+                {
+                    dc->unit = unit;
+                    dc_add_file(dc, attachedImage);
+                    break;
+                }
+            }
+        }
+    }
+
+    if (dc->unit == 1)
+    {
+        log_cb(RETRO_LOG_INFO, "Image list is active for tape\n");
+    }
+    else if (dc->unit != 0)
+    {
+        log_cb(RETRO_LOG_INFO, "Image list is active for drive #%d\n", dc->unit);
+    }
+    log_cb(RETRO_LOG_INFO, "Image list has %d file(s)\n", dc->count);
+    for(unsigned i = 0; i < dc->count; i++)
+    {
+        log_cb(RETRO_LOG_INFO, "File %d: %s\n", i+1, dc->files[i]);
+    }
+
+    // If flip list is not empty, but there is no image attached to drive, attach the first one from list.
+    // This can only happen if flip list was loaded via cmd file or from m3u with #COMMAND
+    if (dc->count != 0)
+    {
+        if (dc->unit == 1)
+        {
+            if ((attachedImage = tape_get_file_name()) == NULL)
+            {
+                attachedImage = dc->files[0];
+                // Don't attach if we will autostart from it just in a moment
+                if (autostartString != NULL || noautostart)
+                {
+                    log_cb(RETRO_LOG_INFO, "Attaching first tape %s\n", attachedImage);
+                    tape_image_attach(1, attachedImage);
+                }
+            }
+        }
+        else if (dc->unit != 0)
+        {
+            if ((attachedImage = file_system_get_disk_name(dc->unit)) == NULL)
+            {
+                attachedImage = dc->files[0];
+                // Don't attach if we will autostart from it just in a moment
+                if (autostartString != NULL || noautostart)
+                {
+                    log_cb(RETRO_LOG_INFO, "Attaching first disk %s to drive #%d\n", attachedImage, dc->unit);
+                    file_system_attach_disk(dc->unit, attachedImage);
+                }
+            }
+        }
+    }
+
+    // If there an image attached, but autostart is empty, autostart from the image
+    if (autostartString == NULL && attachedImage != NULL && !noautostart)
+    {
+        log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image %s\n", attachedImage);
+        autostartString = x_strdup(attachedImage);
+        autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+    }
+
+    dc->index = 0;
+    // If vice has image attached to drive, tell libretro that the 'tray' is closed
+    if (attachedImage != NULL)
+        dc->eject_state = false;
+    else
+        dc->eject_state = true;
+}
+
+int build_params()
+{
+    int i;
+
+    if (PARAMCOUNT == 0)
+    {
+        // No game loaded - set command line to 'x64'
+        Add_Option(CORE_NAME);
+    }
+
+    for (i = 0; i < PARAMCOUNT; i++)
+    {
+        xargv_cmd[i] = (char*)(XARGV[i]);
+        log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
+    }
+
+    xargv_cmd[PARAMCOUNT] = NULL;
+}
+
+int pre_main()
+{
+    int argc = PARAMCOUNT;
+
+#ifndef START_WITHOUT_PARAMS
+    build_params();
+#else
+    /* start core with empty params */
+    xargv_cmd[0] = CORE_NAME;
+    xargv_cmd[1] = NULL;
+    argc = 1;
+#endif
+
+    if (skel_main(argc, (char**)xargv_cmd) < 0)
+    {
+        log_cb(RETRO_LOG_ERROR, "Core startup failed\n");
+        environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+    }
+
+#ifndef START_WITHOUT_PARAMS
+    update_from_vice();
+#endif
+
+    return 0;
+}
+
+static void update_variables(void);
+
+extern int ui_init_finalize(void);
+
+void reload_restart()
+{
+    /* Load content was called while core was already running, pass command line to core for restart */
+    datasette_control(DATASETTE_CONTROL_STOP);
+
+    /* Reset resources to defaults */
+    resources_set_defaults();
+    resources_load(NULL);
+
+    /* Update resources from environment */
+    update_variables();
+    /* Some resources are not set until we call this */
+    ui_init_finalize();
+
+    /* And process command line */
+    build_params();
+    if (initcmdline_restart(PARAMCOUNT, (char**)xargv_cmd) < 0)
+    {
+        log_cb(RETRO_LOG_ERROR, "Restart failed\n");
+        // Nevermind, the core is already running
+    }
+
+    /* Now read disk image and autostart file (may be the same or not) from vice */
+    update_from_vice();
 }
 
 long GetTicks(void) {
@@ -1123,6 +1452,18 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
 }
 
+int log_resources_set_int(const char *name, int value)
+{
+    log_cb(RETRO_LOG_INFO, "Resource %s = %d\n", name, value);
+    resources_set_int(name, value);
+}
+
+int log_resources_set_string(const char *name, const char* value)
+{
+    log_cb(RETRO_LOG_INFO, "Resource %s = \"%s\"\n", name, value);
+    resources_set_string(name, value);
+}
+
 static void update_variables(void)
 {
    struct retro_variable var;
@@ -1130,17 +1471,19 @@ static void update_variables(void)
    var.key = "vice_statusbar";
    var.value = NULL;
 
+   log_cb(RETRO_LOG_INFO, "Updating variables, ui finalized = %d\n", retro_ui_finalized);
+
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if(retro_ui_finalized){
+      if (retro_ui_finalized) {
          if (strcmp(var.value, "enabled") == 0)
-            resources_set_int("SDLStatusbar", 1);
+            log_resources_set_int("SDLStatusbar", 1);
          if (strcmp(var.value, "disabled") == 0)
-            resources_set_int("SDLStatusbar", 0);
+            log_resources_set_int("SDLStatusbar", 0);
       }
       else {
-         if (strcmp(var.value, "enabled") == 0)RETROSTATUS=1;
-         if (strcmp(var.value, "disabled") == 0)RETROSTATUS=0;
+         if (strcmp(var.value, "enabled") == 0) RETROSTATUS=1;
+         if (strcmp(var.value, "disabled") == 0) RETROSTATUS=0;
       }
    }
 
@@ -1149,15 +1492,15 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if(retro_ui_finalized){
+      if (retro_ui_finalized) {
          if (strcmp(var.value, "enabled") == 0)
-            resources_set_int("AutostartWarp", 1);
+            log_resources_set_int("AutostartWarp", 1);
          if (strcmp(var.value, "disabled") == 0)
-            resources_set_int("AutostartWarp", 0);
+            log_resources_set_int("AutostartWarp", 0);
       }
       else {
-         if (strcmp(var.value, "enabled") == 0)RETROAUTOSTARTWARP=1;
-         if (strcmp(var.value, "disabled") == 0)RETROAUTOSTARTWARP=0;
+         if (strcmp(var.value, "enabled") == 0) RETROAUTOSTARTWARP=1;
+         if (strcmp(var.value, "disabled") == 0) RETROAUTOSTARTWARP=0;
       }
    }
 
@@ -1166,25 +1509,25 @@ static void update_variables(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if(retro_ui_finalized){
-         if (strcmp(var.value, "enabled") == 0){
-            if(RETROTDE==0){
+      if (retro_ui_finalized) {
+         if (strcmp(var.value, "enabled") == 0) {
+            if (RETROTDE==0) {
                RETROTDE=1;
-               resources_set_int("DriveTrueEmulation", 1);
-               resources_set_int("VirtualDevices", 0);
+               log_resources_set_int("DriveTrueEmulation", 1);
+               log_resources_set_int("VirtualDevices", 0);
             }
          }
-         else if (strcmp(var.value, "disabled") == 0){
-            if(RETROTDE==1){
+         else if (strcmp(var.value, "disabled") == 0) {
+            if (RETROTDE==1) {
                RETROTDE=0;
-               resources_set_int("DriveTrueEmulation", 0);
-               resources_set_int("VirtualDevices", 1);
+               log_resources_set_int("DriveTrueEmulation", 0);
+               log_resources_set_int("VirtualDevices", 1);
             }
          }
       }
       else {
-         if (strcmp(var.value, "enabled") == 0)RETROTDE=1;
-         if (strcmp(var.value, "disabled") == 0)RETROTDE=0;
+         if (strcmp(var.value, "enabled") == 0) RETROTDE=1;
+         if (strcmp(var.value, "disabled") == 0) RETROTDE=0;
       }
    }
 
@@ -1196,17 +1539,17 @@ static void update_variables(void)
       int val = atoi(var.value);
       val = val * 20;
 
-      if(retro_ui_finalized){
-         if (strcmp(var.value, "disabled") == 0){
-            resources_set_int("DriveSoundEmulation", 0);
+      if (retro_ui_finalized) {
+         if (strcmp(var.value, "disabled") == 0) {
+            log_resources_set_int("DriveSoundEmulation", 0);
     	 }
          else {
-            resources_set_int("DriveSoundEmulation", 1);
-            resources_set_int("DriveSoundEmulationVolume", val);
+            log_resources_set_int("DriveSoundEmulation", 1);
+            log_resources_set_int("DriveSoundEmulationVolume", val);
          }
       }
       else {
-         if (strcmp(var.value, "disabled") == 0)RETRODSE=0;
+         if (strcmp(var.value, "disabled") == 0) RETRODSE=0;
          else RETRODSE=val;
       }
    }
@@ -1218,16 +1561,16 @@ static void update_variables(void)
    {
       int eng=0,modl=0,sidmdl=0;
 
-      if (strcmp(var.value, "6581F") == 0){eng=0;modl=0;}
-      else if (strcmp(var.value, "8580F") == 0){eng=0;modl=1;}
-      else if (strcmp(var.value, "6581R") == 0){eng=1;modl=0;}
-      else if (strcmp(var.value, "8580R") == 0){eng=1;modl=1;}
-      else if (strcmp(var.value, "8580RD") == 0){eng=1;modl=2;}
+      if (strcmp(var.value, "6581F") == 0) {eng=0; modl=0;}
+      else if (strcmp(var.value, "8580F") == 0) {eng=0; modl=1;}
+      else if (strcmp(var.value, "6581R") == 0) {eng=1; modl=0;}
+      else if (strcmp(var.value, "8580R") == 0) {eng=1; modl=1;}
+      else if (strcmp(var.value, "8580RD") == 0) {eng=1; modl=2;}
 
       sidmdl=((eng << 8) | modl) ;
 
-      if(retro_ui_finalized)
-         if(RETROSIDMODL!=sidmdl)
+      if (retro_ui_finalized)
+         if (RETROSIDMODL!=sidmdl)
             sid_set_engine_model(eng, modl);
 
       RETROSIDMODL=sidmdl;
@@ -1240,14 +1583,14 @@ static void update_variables(void)
    {
       int resid=0;
       
-      if (strcmp(var.value, "Fast") == 0){ resid=0; }
-      else if (strcmp(var.value, "Interpolation") == 0){ resid=1; }
-      else if (strcmp(var.value, "Resampling") == 0){ resid=2; }
-      else if (strcmp(var.value, "Fast resampling") == 0){ resid=3; }
+      if (strcmp(var.value, "Fast") == 0) { resid=0; }
+      else if (strcmp(var.value, "Interpolation") == 0) { resid=1; }
+      else if (strcmp(var.value, "Resampling") == 0) { resid=2; }
+      else if (strcmp(var.value, "Fast resampling") == 0) { resid=3; }
 
-      if(retro_ui_finalized)
-         if(RETRORESIDSAMPLING!=resid)
-            resources_set_int("SidResidSampling", resid);
+      if (retro_ui_finalized)
+         if (RETRORESIDSAMPLING!=resid)
+            log_resources_set_int("SidResidSampling", resid);
 
       RETRORESIDSAMPLING=resid;
    }
@@ -1260,12 +1603,12 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "VIC20 PAL") == 0)modl=VIC20MODEL_VIC20_PAL;
-      else if (strcmp(var.value, "VIC20 NTSC") == 0)modl=VIC20MODEL_VIC20_NTSC;
-      else if (strcmp(var.value, "SuperVIC (+16K)") == 0)modl=VIC20MODEL_VIC21;
+      if (strcmp(var.value, "VIC20 PAL") == 0) modl=VIC20MODEL_VIC20_PAL;
+      else if (strcmp(var.value, "VIC20 NTSC") == 0) modl=VIC20MODEL_VIC20_NTSC;
+      else if (strcmp(var.value, "SuperVIC (+16K)") == 0) modl=VIC20MODEL_VIC21;
 
       RETROC64MODL=modl;
-      if(retro_ui_finalized)
+      if (retro_ui_finalized)
         vic20model_set(modl);
    }
 #elif  defined(__PLUS4__)
@@ -1276,12 +1619,12 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C16 PAL") == 0)modl=PLUS4MODEL_C16_PAL;
-      else if (strcmp(var.value, "C16 NTSC") == 0)modl=PLUS4MODEL_C16_NTSC;
-      else if (strcmp(var.value, "PLUS4 PAL") == 0)modl=PLUS4MODEL_PLUS4_PAL;
-      else if (strcmp(var.value, "PLUS4 NTSC") == 0)modl=PLUS4MODEL_PLUS4_NTSC;
-      else if (strcmp(var.value, "V364 NTSC") == 0)modl=PLUS4MODEL_V364_NTSC;
-      else if (strcmp(var.value, "232 NTSC") == 0)modl=PLUS4MODEL_232_NTSC;
+      if (strcmp(var.value, "C16 PAL") == 0) modl=PLUS4MODEL_C16_PAL;
+      else if (strcmp(var.value, "C16 NTSC") == 0) modl=PLUS4MODEL_C16_NTSC;
+      else if (strcmp(var.value, "PLUS4 PAL") == 0) modl=PLUS4MODEL_PLUS4_PAL;
+      else if (strcmp(var.value, "PLUS4 NTSC") == 0) modl=PLUS4MODEL_PLUS4_NTSC;
+      else if (strcmp(var.value, "V364 NTSC") == 0) modl=PLUS4MODEL_V364_NTSC;
+      else if (strcmp(var.value, "232 NTSC") == 0) modl=PLUS4MODEL_232_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1295,10 +1638,10 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C128 PAL") == 0)modl=C128MODEL_C128_PAL;
-      else if (strcmp(var.value, "C128DCR PAL") == 0)modl=C128MODEL_C128DCR_PAL;
-      else if (strcmp(var.value, "C128 NTSC") == 0)modl=C128MODEL_C128_NTSC;
-      else if (strcmp(var.value, "C128DCR NTSC") == 0)modl=C128MODEL_C128DCR_NTSC;
+      if (strcmp(var.value, "C128 PAL") == 0) modl=C128MODEL_C128_PAL;
+      else if (strcmp(var.value, "C128DCR PAL") == 0) modl=C128MODEL_C128DCR_PAL;
+      else if (strcmp(var.value, "C128 NTSC") == 0) modl=C128MODEL_C128_NTSC;
+      else if (strcmp(var.value, "C128DCR NTSC") == 0) modl=C128MODEL_C128DCR_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1312,18 +1655,18 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "2001") == 0)modl=PETMODEL_2001;
-      else if (strcmp(var.value, "3008") == 0)modl=PETMODEL_3008;
-      else if (strcmp(var.value, "3016") == 0)modl=PETMODEL_3016;
-      else if (strcmp(var.value, "3032") == 0)modl=PETMODEL_3032;
-      else if (strcmp(var.value, "3032B") == 0)modl=PETMODEL_3032B;
-      else if (strcmp(var.value, "4016") == 0)modl=PETMODEL_4016;
-      else if (strcmp(var.value, "4032") == 0)modl=PETMODEL_4032;
-      else if (strcmp(var.value, "4032B") == 0)modl=PETMODEL_4032B;
-      else if (strcmp(var.value, "8032") == 0)modl=PETMODEL_8032;
-      else if (strcmp(var.value, "8096") == 0)modl=PETMODEL_8096;
-      else if (strcmp(var.value, "8296") == 0)modl=PETMODEL_8296;
-      else if (strcmp(var.value, "SUPERPET") == 0)modl=PETMODEL_SUPERPET;
+      if (strcmp(var.value, "2001") == 0) modl=PETMODEL_2001;
+      else if (strcmp(var.value, "3008") == 0) modl=PETMODEL_3008;
+      else if (strcmp(var.value, "3016") == 0) modl=PETMODEL_3016;
+      else if (strcmp(var.value, "3032") == 0) modl=PETMODEL_3032;
+      else if (strcmp(var.value, "3032B") == 0) modl=PETMODEL_3032B;
+      else if (strcmp(var.value, "4016") == 0) modl=PETMODEL_4016;
+      else if (strcmp(var.value, "4032") == 0) modl=PETMODEL_4032;
+      else if (strcmp(var.value, "4032B") == 0) modl=PETMODEL_4032B;
+      else if (strcmp(var.value, "8032") == 0) modl=PETMODEL_8032;
+      else if (strcmp(var.value, "8096") == 0) modl=PETMODEL_8096;
+      else if (strcmp(var.value, "8296") == 0) modl=PETMODEL_8296;
+      else if (strcmp(var.value, "SUPERPET") == 0) modl=PETMODEL_SUPERPET;
       
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1337,17 +1680,17 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "510 PAL") == 0)modl=CBM2MODEL_510_PAL;
-      else if (strcmp(var.value, "510 NTSC") == 0)modl=CBM2MODEL_510_NTSC;
-      else if (strcmp(var.value, "610 PAL") == 0)modl=CBM2MODEL_610_PAL;
-      else if (strcmp(var.value, "610 NTSC") == 0)modl=CBM2MODEL_610_NTSC;
-      else if (strcmp(var.value, "620 PAL") == 0)modl=CBM2MODEL_620_PAL;
-      else if (strcmp(var.value, "620 NTSC") == 0)modl=CBM2MODEL_620_NTSC;
-      else if (strcmp(var.value, "620PLUS PAL") == 0)modl=CBM2MODEL_620PLUS_PAL;
-      else if (strcmp(var.value, "620PLUS NTSC") == 0)modl=CBM2MODEL_620PLUS_NTSC;
-      else if (strcmp(var.value, "710 NTSC") == 0)modl=CBM2MODEL_710_NTSC;
-      else if (strcmp(var.value, "720 NTSC") == 0)modl=CBM2MODEL_720_NTSC;
-      else if (strcmp(var.value, "720PLUS NTSC") == 0)modl=CBM2MODEL_720PLUS_NTSC;
+      if (strcmp(var.value, "510 PAL") == 0) modl=CBM2MODEL_510_PAL;
+      else if (strcmp(var.value, "510 NTSC") == 0) modl=CBM2MODEL_510_NTSC;
+      else if (strcmp(var.value, "610 PAL") == 0) modl=CBM2MODEL_610_PAL;
+      else if (strcmp(var.value, "610 NTSC") == 0) modl=CBM2MODEL_610_NTSC;
+      else if (strcmp(var.value, "620 PAL") == 0) modl=CBM2MODEL_620_PAL;
+      else if (strcmp(var.value, "620 NTSC") == 0) modl=CBM2MODEL_620_NTSC;
+      else if (strcmp(var.value, "620PLUS PAL") == 0) modl=CBM2MODEL_620PLUS_PAL;
+      else if (strcmp(var.value, "620PLUS NTSC") == 0) modl=CBM2MODEL_620PLUS_NTSC;
+      else if (strcmp(var.value, "710 NTSC") == 0) modl=CBM2MODEL_710_NTSC;
+      else if (strcmp(var.value, "720 NTSC") == 0) modl=CBM2MODEL_720_NTSC;
+      else if (strcmp(var.value, "720PLUS NTSC") == 0) modl=CBM2MODEL_720PLUS_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1361,19 +1704,19 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C64 PAL") == 0)modl=C64MODEL_C64_PAL;
-      else if (strcmp(var.value, "C64C PAL") == 0)modl=C64MODEL_C64C_PAL;
-      //else if (strcmp(var.value, "C64 OLD PAL") == 0)modl=C64MODEL_C64_OLD_PAL;
-      else if (strcmp(var.value, "C64 NTSC") == 0)modl=C64MODEL_C64_NTSC;
-      else if (strcmp(var.value, "C64C NTSC") == 0)modl=C64MODEL_C64C_NTSC;
+      if (strcmp(var.value, "C64 PAL") == 0) modl=C64MODEL_C64_PAL;
+      else if (strcmp(var.value, "C64C PAL") == 0) modl=C64MODEL_C64C_PAL;
+      //else if (strcmp(var.value, "C64 OLD PAL") == 0) modl=C64MODEL_C64_OLD_PAL;
+      else if (strcmp(var.value, "C64 NTSC") == 0) modl=C64MODEL_C64_NTSC;
+      else if (strcmp(var.value, "C64C NTSC") == 0) modl=C64MODEL_C64C_NTSC;
       //else if (strcmp(var.value, "C64 OLD NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
       //else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
-      else if (strcmp(var.value, "C64SX PAL") == 0)modl=C64MODEL_C64SX_PAL;
-      else if (strcmp(var.value, "C64SX NTSC") == 0)modl=C64MODEL_C64SX_NTSC;
-      else if (strcmp(var.value, "C64 JAP") == 0)modl=C64MODEL_C64_JAP;
-      else if (strcmp(var.value, "C64 GS") == 0)modl=C64MODEL_C64_GS;
-      else if (strcmp(var.value, "PET64 PAL") == 0)modl=C64MODEL_PET64_PAL;
-      else if (strcmp(var.value, "PET64 NTSC") == 0)modl=C64MODEL_PET64_NTSC;
+      else if (strcmp(var.value, "C64SX PAL") == 0) modl=C64MODEL_C64SX_PAL;
+      else if (strcmp(var.value, "C64SX NTSC") == 0) modl=C64MODEL_C64SX_NTSC;
+      else if (strcmp(var.value, "C64 JAP") == 0) modl=C64MODEL_C64_JAP;
+      else if (strcmp(var.value, "C64 GS") == 0) modl=C64MODEL_C64_GS;
+      else if (strcmp(var.value, "PET64 PAL") == 0) modl=C64MODEL_PET64_PAL;
+      else if (strcmp(var.value, "PET64 NTSC") == 0) modl=C64MODEL_PET64_NTSC;
 
       RETROC64MODL=modl;
       if(retro_ui_finalized)
@@ -1388,17 +1731,17 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int border=0; /* 0 : normal, 1: full, 2: debug, 3: none */
-      if (strcmp(var.value, "enabled") == 0)border=0;
-      else if (strcmp(var.value, "disabled") == 0)border=3;
+      if (strcmp(var.value, "enabled") == 0) border=0;
+      else if (strcmp(var.value, "disabled") == 0) border=3;
 
       RETROBORDERS=border;
-      if(retro_ui_finalized)
+      if (retro_ui_finalized)
 #if defined(__VIC20__)
-        resources_set_int("VICBorderMode", border);
+        log_resources_set_int("VICBorderMode", border);
 #elif defined(__PLUS4__)
-        resources_set_int("TEDBorderMode", border);
+        log_resources_set_int("TEDBorderMode", border);
 #else 
-        resources_set_int("VICIIBorderMode", border);
+        log_resources_set_int("VICIIBorderMode", border);
 #endif
    }
 #endif
@@ -1410,21 +1753,21 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Mike NTSC") == 0)sprintf(extpal, "%s", "mike-ntsc");
-      else if (strcmp(var.value, "Mike PAL") == 0)sprintf(extpal, "%s", "mike-pal");
-      else if (strcmp(var.value, "Colodore VIC") == 0)sprintf(extpal, "%s", "colodore_vic");
-      else if (strcmp(var.value, "Vice") == 0)sprintf(extpal, "%s", "vice");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Mike NTSC") == 0) sprintf(extpal, "%s", "mike-ntsc");
+      else if (strcmp(var.value, "Mike PAL") == 0) sprintf(extpal, "%s", "mike-pal");
+      else if (strcmp(var.value, "Colodore VIC") == 0) sprintf(extpal, "%s", "colodore_vic");
+      else if (strcmp(var.value, "Vice") == 0) sprintf(extpal, "%s", "vice");
 
-      if(retro_ui_finalized){
-         if(!*extpal) {
-            resources_set_int("VICExternalPalette", 0);
+      if (retro_ui_finalized) {
+         if (!*extpal) {
+            log_resources_set_int("VICExternalPalette", 0);
          } else {
-            resources_set_int("VICExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "VIC");
+            log_resources_set_int("VICExternalPalette", 1);
+            log_resources_set_string("VICPaletteFile", extpal);
          }
       } else {
-         if(!*extpal) {
+         if (!*extpal) {
             RETROEXTPAL=-1;
          } else {
             RETROEXTPAL=1;
@@ -1439,20 +1782,20 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Yape PAL") == 0)sprintf(extpal, "%s", "yape-pal");
-      else if (strcmp(var.value, "Yape NTSC") == 0)sprintf(extpal, "%s", "yape-ntsc");
-      else if (strcmp(var.value, "Colodore TED") == 0)sprintf(extpal, "%s", "colodore_ted");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Yape PAL") == 0) sprintf(extpal, "%s", "yape-pal");
+      else if (strcmp(var.value, "Yape NTSC") == 0) sprintf(extpal, "%s", "yape-ntsc");
+      else if (strcmp(var.value, "Colodore TED") == 0) sprintf(extpal, "%s", "colodore_ted");
 
-      if(retro_ui_finalized){
-         if(!*extpal) {
-            resources_set_int("TEDExternalPalette", 0);
+      if (retro_ui_finalized) {
+         if (!*extpal) {
+            log_resources_set_int("TEDExternalPalette", 0);
          } else {
-            resources_set_int("TEDExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "TED");
+            log_resources_set_int("TEDExternalPalette", 1);
+            log_resources_set_string("TEDPaletteFile", extpal);
          }
       } else {
-         if(!*extpal) {
+         if (!*extpal) {
             RETROEXTPAL=-1;
          } else {
             RETROEXTPAL=1;
@@ -1467,17 +1810,17 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
-      else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
-      else if (strcmp(var.value, "White") == 0)sprintf(extpal, "%s", "white");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Amber") == 0) sprintf(extpal, "%s", "amber");
+      else if (strcmp(var.value, "Green") == 0) sprintf(extpal, "%s", "green");
+      else if (strcmp(var.value, "White") == 0) sprintf(extpal, "%s", "white");
 
-      if(retro_ui_finalized){
-         if(!*extpal) {
-            resources_set_int("CrtcExternalPalette", 0);
+      if (retro_ui_finalized) {
+         if (!*extpal) {
+            log_resources_set_int("CrtcExternalPalette", 0);
          } else {
-            resources_set_int("CrtcExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "Crtc");
+            log_resources_set_int("CrtcExternalPalette", 1);
+            log_resources_set_string("CrtcPaletteFile", extpal);
          }
       } else {
          if(!*extpal) {
@@ -1495,20 +1838,20 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Amber") == 0)sprintf(extpal, "%s", "amber");
-      else if (strcmp(var.value, "Green") == 0)sprintf(extpal, "%s", "green");
-      else if (strcmp(var.value, "White") == 0)sprintf(extpal, "%s", "white");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Amber") == 0) sprintf(extpal, "%s", "amber");
+      else if (strcmp(var.value, "Green") == 0) sprintf(extpal, "%s", "green");
+      else if (strcmp(var.value, "White") == 0) sprintf(extpal, "%s", "white");
 
       if(retro_ui_finalized){
-         if(!*extpal) {
-            resources_set_int("CrtcExternalPalette", 0);
+         if (!*extpal) {
+            log_resources_set_int("CrtcExternalPalette", 0);
          } else {
-            resources_set_int("CrtcExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "Crtc");
+            log_resources_set_int("CrtcExternalPalette", 1);
+            log_resources_set_string("CrtcPaletteFile", extpal);
          }
       } else {
-         if(!*extpal) {
+         if (!*extpal) {
             RETROEXTPAL=-1;
          } else {
             RETROEXTPAL=1;
@@ -1523,33 +1866,33 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0)sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Pepto PAL") == 0)sprintf(extpal, "%s", "pepto-pal");
-      else if (strcmp(var.value, "Pepto PAL old") == 0)sprintf(extpal, "%s", "pepto-palold");
-      else if (strcmp(var.value, "Pepto NTSC Sony") == 0)sprintf(extpal, "%s", "pepto-ntsc-sony");
-      else if (strcmp(var.value, "Pepto NTSC") == 0)sprintf(extpal, "%s", "pepto-ntsc");
-      else if (strcmp(var.value, "Colodore") == 0)sprintf(extpal, "%s", "colodore");
-      else if (strcmp(var.value, "Vice") == 0)sprintf(extpal, "%s", "vice");
-      else if (strcmp(var.value, "C64HQ") == 0)sprintf(extpal, "%s", "c64hq");
-      else if (strcmp(var.value, "C64S") == 0)sprintf(extpal, "%s", "c64s");
-      else if (strcmp(var.value, "CCS64") == 0)sprintf(extpal, "%s", "ccs64");
-      else if (strcmp(var.value, "Frodo") == 0)sprintf(extpal, "%s", "frodo");
-      else if (strcmp(var.value, "Godot") == 0)sprintf(extpal, "%s", "godot");
-      else if (strcmp(var.value, "PC64") == 0)sprintf(extpal, "%s", "pc64");
-      else if (strcmp(var.value, "RGB") == 0)sprintf(extpal, "%s", "rgb");
-      else if (strcmp(var.value, "Deekay") == 0)sprintf(extpal, "%s", "deekay");
-      else if (strcmp(var.value, "Ptoing") == 0)sprintf(extpal, "%s", "ptoing");
-      else if (strcmp(var.value, "Community Colors") == 0)sprintf(extpal, "%s", "community-colors");
+      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
+      else if (strcmp(var.value, "Pepto PAL") == 0) sprintf(extpal, "%s", "pepto-pal");
+      else if (strcmp(var.value, "Pepto PAL old") == 0) sprintf(extpal, "%s", "pepto-palold");
+      else if (strcmp(var.value, "Pepto NTSC Sony") == 0) sprintf(extpal, "%s", "pepto-ntsc-sony");
+      else if (strcmp(var.value, "Pepto NTSC") == 0) sprintf(extpal, "%s", "pepto-ntsc");
+      else if (strcmp(var.value, "Colodore") == 0) sprintf(extpal, "%s", "colodore");
+      else if (strcmp(var.value, "Vice") == 0) sprintf(extpal, "%s", "vice");
+      else if (strcmp(var.value, "C64HQ") == 0) sprintf(extpal, "%s", "c64hq");
+      else if (strcmp(var.value, "C64S") == 0) sprintf(extpal, "%s", "c64s");
+      else if (strcmp(var.value, "CCS64") == 0) sprintf(extpal, "%s", "ccs64");
+      else if (strcmp(var.value, "Frodo") == 0) sprintf(extpal, "%s", "frodo");
+      else if (strcmp(var.value, "Godot") == 0) sprintf(extpal, "%s", "godot");
+      else if (strcmp(var.value, "PC64") == 0) sprintf(extpal, "%s", "pc64");
+      else if (strcmp(var.value, "RGB") == 0) sprintf(extpal, "%s", "rgb");
+      else if (strcmp(var.value, "Deekay") == 0) sprintf(extpal, "%s", "deekay");
+      else if (strcmp(var.value, "Ptoing") == 0) sprintf(extpal, "%s", "ptoing");
+      else if (strcmp(var.value, "Community Colors") == 0) sprintf(extpal, "%s", "community-colors");
 
-      if(retro_ui_finalized){
+      if (retro_ui_finalized) {
          if(!*extpal) {
-            resources_set_int("VICIIExternalPalette", 0);
+            log_resources_set_int("VICIIExternalPalette", 0);
          } else {
-            resources_set_int("VICIIExternalPalette", 1);
-            resources_set_string_sprintf("%sPaletteFile", extpal, "VICII");
+            log_resources_set_int("VICIIExternalPalette", 1);
+            log_resources_set_string("VICIIPaletteFile", extpal);
          }
       } else {
-         if(!*extpal) {
+         if (!*extpal) {
             RETROEXTPAL=-1;
          } else {
             RETROEXTPAL=1;
@@ -1566,20 +1909,20 @@ static void update_variables(void)
    {
 
       int joyadaptertype=-1;
-      if (strcmp(var.value, "None") == 0)joyadaptertype=-1;
-      else if (strcmp(var.value, "Protovision CGA") == 0)joyadaptertype=USERPORT_JOYSTICK_CGA;
-      else if (strcmp(var.value, "PET") == 0)joyadaptertype=USERPORT_JOYSTICK_PET;
-      else if (strcmp(var.value, "Hummer") == 0)joyadaptertype=USERPORT_JOYSTICK_HUMMER;
-      else if (strcmp(var.value, "OEM") == 0)joyadaptertype=USERPORT_JOYSTICK_OEM;
-      else if (strcmp(var.value, "Hit") == 0)joyadaptertype=USERPORT_JOYSTICK_HIT;
-      else if (strcmp(var.value, "Kingsoft") == 0)joyadaptertype=USERPORT_JOYSTICK_KINGSOFT;
-      else if (strcmp(var.value, "Starbyte") == 0)joyadaptertype=USERPORT_JOYSTICK_STARBYTE;
+      if (strcmp(var.value, "None") == 0) joyadaptertype=-1;
+      else if (strcmp(var.value, "Protovision CGA") == 0) joyadaptertype=USERPORT_JOYSTICK_CGA;
+      else if (strcmp(var.value, "PET") == 0) joyadaptertype=USERPORT_JOYSTICK_PET;
+      else if (strcmp(var.value, "Hummer") == 0) joyadaptertype=USERPORT_JOYSTICK_HUMMER;
+      else if (strcmp(var.value, "OEM") == 0) joyadaptertype=USERPORT_JOYSTICK_OEM;
+      else if (strcmp(var.value, "Hit") == 0) joyadaptertype=USERPORT_JOYSTICK_HIT;
+      else if (strcmp(var.value, "Kingsoft") == 0) joyadaptertype=USERPORT_JOYSTICK_KINGSOFT;
+      else if (strcmp(var.value, "Starbyte") == 0) joyadaptertype=USERPORT_JOYSTICK_STARBYTE;
 
       if(retro_ui_finalized){
-           if(joyadaptertype==-1)resources_set_int("UserportJoy", 0);
+           if(joyadaptertype==-1) log_resources_set_int("UserportJoy", 0);
            else {
-             resources_set_int("UserportJoy", 1);
-             resources_set_int("UserportJoyType", joyadaptertype);
+             log_resources_set_int("UserportJoy", 1);
+             log_resources_set_int("UserportJoyType", joyadaptertype);
            }
       } else {
         RETROUSERPORTJOY=joyadaptertype;
@@ -1894,9 +2237,15 @@ static void update_variables(void)
 
 void emu_reset(void)
 {
+   // Always stop datasette or autostart from tape will fail
+   datasette_control(DATASETTE_CONTROL_STOP);
+
    switch(RETRORESET) {
       case 0:
-         autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
+         if (autostartString != NULL && autostartString[0] != '\0')
+            autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+         else
+            machine_trigger_reset(MACHINE_RESET_MODE_HARD);
          break;
       case 1:
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
@@ -1910,107 +2259,107 @@ void emu_reset(void)
 void retro_reset(void)
 {
    microSecCounter = 0;
+
+   // Always stop datasette, or autostart from tape will fail
+   datasette_control(DATASETTE_CONTROL_STOP);
+
    /* Retro reset should always autostart */
-   autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
+   if (autostartString != NULL && autostartString[0] != '\0')
+      autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+   else
+      machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 }
 
 struct DiskImage {
     char* fname;
 };
 
-#include <attach.h>
-
-static int get_image_unit() {
-    int unit = dc->unit;
-    if (unit == 0)
+static bool retro_set_eject_state(bool ejected)
+{
+    if (dc)
     {
-	if (strendswith(dc->files[dc->index], "tap") || strendswith(dc->files[dc->index], "t64"))
-	    unit = 1;
-	else
-	    unit = 8;
+        int unit = get_image_unit();
+
+        if (dc->eject_state != ejected)
+        {
+            if (ejected && dc->index <= dc->count)
+            {
+                dc->eject_state = ejected;
+                if (unit == 1)
+                    tape_image_detach(unit);
+                else
+                    file_system_detach_disk(unit);
+
+                return true;
+            }
+            else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
+            {
+                dc->eject_state = ejected;
+                if (unit == 1)
+                    tape_image_attach(unit, dc->files[dc->index]);
+                else
+                    file_system_attach_disk(unit, dc->files[dc->index]);
+
+                return true;
+            }
+        }
     }
-    return unit;
-}
 
-static bool retro_set_eject_state(bool ejected) {
-	if (dc)
-	{
-	    	int unit = get_image_unit();
-
-		dc->eject_state = ejected;
-		
-		if(dc->eject_state)
-		{
-			if (unit == 1)
-			    tape_image_detach(unit);
-			else
-			    file_system_detach_disk(unit);
-		}
-		else
-		{
-			if (unit == 1)
-			    tape_image_attach(unit, dc->files[dc->index]);
-			else
-			    file_system_attach_disk(unit, dc->files[dc->index]);
-		}
-	}
-	
-	return true;
+    return false;
 }
 
 /* Gets current eject state. The initial state is 'not ejected'. */
-static bool retro_get_eject_state(void) {
-	if (dc)
-		return dc->eject_state;
-	
-	return true;
+static bool retro_get_eject_state(void)
+{
+    if (dc)
+        return dc->eject_state;
+
+    return true;
 }
 
 /* Gets current disk index. First disk is index 0.
  * If return value is >= get_num_images(), no disk is currently inserted.
  */
-static unsigned retro_get_image_index(void) {
-	if (dc)
-		return dc->index;
-	
-	return 0;
+static unsigned retro_get_image_index(void)
+{
+    if (dc)
+        return dc->index;
+
+    return 0;
 }
 
 /* Sets image index. Can only be called when disk is ejected.
  * The implementation supports setting "no disk" by using an
  * index >= get_num_images().
  */
-static bool retro_set_image_index(unsigned index) {
-	// Insert disk
-	if (dc)
-	{
-		// Same disk...
-		// This can mess things in the emu
-		if(index == dc->index)
-			return true;
-		
-		if ((index < dc->count) && (dc->files[index]))
-		{
-		    	int unit;
-			dc->index = index;
-			unit = get_image_unit();
-			if (unit == 1)
-			    log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
-			else 
-			    log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive %d: %s\n", dc->index+1, unit, dc->files[dc->index]);
-			return true;
-		}
-	}
-	
-	return false;
+static bool retro_set_image_index(unsigned index)
+{
+    // Switch disk in drive
+    if (dc)
+    {
+        if (index <= dc->count)
+        {
+            dc->index = index;
+
+            if ((index < dc->count) && (dc->files[index]))
+            {
+                log_disk_in_tray(display_disk_name);
+            }
+
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /* Gets total number of images which are available to use. */
-static unsigned retro_get_num_images(void) {
-	if (dc)
-		return dc->count;
+static unsigned retro_get_num_images(void)
+{
+    if (dc)
+        return dc->count;
 
-	return 0;
+    return 0;
 }
 
 
@@ -2027,25 +2376,20 @@ static unsigned retro_get_num_images(void) {
  * Index 1 will be removed, and the new index is 3.
  */
 static bool retro_replace_image_index(unsigned index,
-      const struct retro_game_info *info) {
-	if (dc)
-	{
-		if(dc->files[index])
-		{
-			free(dc->files[index]);
-			dc->files[index] = NULL;
-		}
-		
-		if(info != NULL)
-		{
-			dc->files[index] = strdup(info->path);
-		}
-		else
-		{
-			dc_remove_file(dc, index);
-		}
-	}
-	
+      const struct retro_game_info *info)
+{
+    if (dc)
+    {
+        if (info != NULL)
+        {
+            dc_replace_file(dc, index, info->path);
+        }
+        else
+        {
+            dc_remove_file(dc, index);
+        }
+    }
+
     return false;	
 }
 
@@ -2053,17 +2397,19 @@ static bool retro_replace_image_index(unsigned index,
  * This will increment subsequent return values from get_num_images() by 1.
  * This image index cannot be used until a disk image has been set
  * with replace_image_index. */
-static bool retro_add_image_index(void) {
-	if (dc)
-	{
-		if(dc->count <= DC_MAX_SIZE)
-		{
-			dc->files[dc->count] = NULL;
-			dc->count++;
-			return true;
-		}
-	}
-	
+static bool retro_add_image_index(void)
+{
+    if (dc)
+    {
+        if (dc->count <= DC_MAX_SIZE)
+        {
+            dc->files[dc->count] = NULL;
+            dc->labels[dc->count] = NULL;
+            dc->count++;
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -2151,7 +2497,8 @@ void retro_init(void)
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
       log_cb(RETRO_LOG_ERROR, "PIXEL FORMAT is not supported.\n");
-      exit(0);
+      environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+      return;
    }
 
 #define RETRO_DESCRIPTOR_BLOCK( _user )                                            \
@@ -2320,11 +2667,13 @@ void retro_blit(void)
    memcpy(Retro_Screen,bmp,PITCH*WINDOW_SIZE);
 }
 
+static int prev_ui_finalized = 0;
+
 void retro_run(void)
 {
    bool updated = false;
 
-   if(lastW!=retroW || lastH!=retroH){
+   if (lastW!=retroW || lastH!=retroH) {
       update_geometry();
 #ifdef RETRO_DEBUG
       log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n",lastW,lastH,retroW,retroH);
@@ -2337,24 +2686,42 @@ void retro_run(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
 
+   if (retro_ui_finalized && !prev_ui_finalized)
+   {
+       log_cb(RETRO_LOG_INFO, "UI finalized now\n");
+       prev_ui_finalized = 1;
+   }
+
+   if (show_queued_msg != 0)
+   {
+      struct retro_message rmsg;
+      rmsg.msg = queued_msg;
+      rmsg.frames = show_queued_msg;
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &rmsg);
+      show_queued_msg = 0;
+   }
+
    if(runstate == RUNSTATE_FIRST_START)
    {
       /* this is only done once after just loading the core from scratch and starting it */
 #ifdef RETRO_DEBUG
       log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
 #endif
-      retro_load_ok=true;
+      retro_load_ok = true;
       app_init();
+      pre_main();
+#ifdef START_WITHOUT_PARAMS
+      reload_restart();
+#else
       update_variables();
-      pre_main(RPATH);
+#endif
       runstate = RUNSTATE_RUNNING;
       return;
    } 
    else if (runstate == RUNSTATE_LOADED_CONTENT)
    {
       /* Load content was called while core was already running, just do a reset with autostart */
-      datasette_control(DATASETTE_CONTROL_STOP);
-      autostart_autodetect(RPATH, NULL, 0, AUTOSTART_MODE_RUN);
+      reload_restart();
       /* After retro_load_game, get_system_av_info is always called by the frontend */
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
       /* current aspect ratio and screen size again here */
@@ -2374,87 +2741,12 @@ void retro_run(void)
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
-#define M3U_FILE_EXT ".m3u"
-
 bool retro_load_game(const struct retro_game_info *info)
 {
    if (info)
    {
-	const char *full_path;
-	bool is_fliplist = false;
-
-	(void)info;
-
-	full_path = info->path;
-
-	// If it's a m3u file
-	if(strendswith(full_path, M3U_FILE_EXT))
-	{
-		// Parse the m3u file
-		dc_parse_m3u(dc, full_path);
-		is_fliplist = true;
-	}
-	else if (strendswith(full_path, ".vfl"))
-	{
-		// Parse the vfl file
-		dc_parse_vfl(dc, full_path);
-		is_fliplist = true;
-	}
-
-	if (is_fliplist)
-	{
-		// Some debugging
-		log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
-		for(unsigned i = 0; i < dc->count; i++)
-		{
-			log_cb(RETRO_LOG_INFO, "file %d: %s\n", i+1, dc->files[i]);
-		}	
-	}
-	else
-	{
-		// Add the file to disk control context
-		// Maybe, in a later version of retroarch, we could add disk on the fly (didn't find how to do this)
-		dc_add_file(dc, full_path);
-	}
-
-	// Init first disk
-	dc->index = 0;
-	dc->eject_state = false;
-	if (dc->count != 0)
-	{
-	    int unit = get_image_unit();
-	    if (unit == 1)
-		log_cb(RETRO_LOG_INFO, "Tape (%d) inserted into datasette: %s\n", dc->index+1, dc->files[dc->index]);
-	    else 
-		log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive %d: %s\n", dc->index+1, unit, dc->files[dc->index]);
-	    strcpy(RPATH,dc->files[0]);
-	}
-	else
-	{
-	    log_cb(RETRO_LOG_WARN, "No images found in list file %s\n", full_path);
-	    RPATH[0]=0;
-	}
+      process_cmdline(info->path);
    }
-   else
-   {
-      RPATH[0]=0;
-   }
-
-   cur_port_locked = 0;
-
-   if (strlen(RPATH) >= strlen("j1"))
-     if (strstr(RPATH, "_j1.") || strstr(RPATH, "(j1).") || strstr(RPATH, "_J1.") || strstr(RPATH, "(J1)."))
-     {
-        cur_port = 1;
-        cur_port_locked = 1;
-     }
-
-   if (strlen(RPATH) >= strlen("j2"))
-     if (strstr(RPATH, "_j2.") || strstr(RPATH, "(j2).") || strstr(RPATH, "_J2.") || strstr(RPATH, "(J2)."))
-     {
-        cur_port = 2;
-        cur_port_locked = 1;
-     }
 
    update_variables();
    
@@ -2475,7 +2767,9 @@ void retro_unload_game(void){
 #ifndef __PET__
     cartridge_detach_image(-1);
 #endif
-    RPATH[0] = 0;
+    dc_reset(dc);
+    free(autostartString);
+    autostartString = NULL;
 }
 
 unsigned retro_get_region(void)
@@ -2573,6 +2867,7 @@ size_t retro_serialize_size(void)
          }
       }
    }
+   log_cb(RETRO_LOG_INFO, "Failed to save pre-snapshot to %s\n", save_file);
    return 0;
 }
 
@@ -2601,6 +2896,7 @@ bool retro_serialize(void *data_, size_t size)
             remove(save_file);
          }
       }
+      log_cb(RETRO_LOG_INFO, "Failed to save temp snapshot to %s\n", save_file);
    }
    return false;
 }
@@ -2622,13 +2918,16 @@ bool retro_unserialize(const void *data_, size_t size)
             while (!load_trap_happened)
                maincpu_mainloop_retro();
             if (success)
+            {
                remove(save_file);
                return true;
+            }
          }
          else
             fclose(file);
          remove(save_file);
       }
+      log_cb(RETRO_LOG_INFO, "Failed to write temp snapshot to %s\n", save_file);
    }
    return false;
 }

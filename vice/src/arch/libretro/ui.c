@@ -148,81 +148,84 @@ int ui_init_finish(void)
    return 0;
 }
 
+extern int log_resources_set_int(const char *name, int value);
+extern int log_resources_set_string(const char *name, const char* value);
+
 int ui_init_finalize(void)
 {
    /* Sensible defaults */
-   resources_set_int("Mouse", 0);
-   resources_set_int("AutostartPrgMode", 1);
+   log_resources_set_int("Mouse", 0);
+   log_resources_set_int("AutostartPrgMode", 1);
 
 #if defined(__CBM2__) || defined(__PET__)
-   resources_set_int("CrtcFilter", 0);
-   resources_set_int("CrtcStretchVertical", 0);
+   log_resources_set_int("CrtcFilter", 0);
+   log_resources_set_int("CrtcStretchVertical", 0);
 #endif
 
    /* Core options */
-   if(RETROSTATUS==1) {
-      resources_set_int("SDLStatusbar", 1);
-   } else if(RETROSTATUS==0) {
-      resources_set_int("SDLStatusbar", 0);
+   if (RETROSTATUS==1) {
+      log_resources_set_int("SDLStatusbar", 1);
+   } else if (RETROSTATUS==0) {
+      log_resources_set_int("SDLStatusbar", 0);
    }
 
 #if defined(__VIC20__)
-   if(RETROEXTPAL==-1)resources_set_int("VICExternalPalette", 0);
+   if(RETROEXTPAL==-1) log_resources_set_int("VICExternalPalette", 0);
    else {
-      resources_set_int("VICExternalPalette", 1);
-      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "VIC");
+      log_resources_set_int("VICExternalPalette", 1);
+      log_resources_set_string("VICPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__PLUS4__)
-   if(RETROEXTPAL==-1)resources_set_int("TEDExternalPalette", 0);
+   if(RETROEXTPAL==-1) log_resources_set_int("TEDExternalPalette", 0);
    else {
-      resources_set_int("TEDExternalPalette", 1);
-      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "TED");
+      log_resources_set_int("TEDExternalPalette", 1);
+      log_resources_set_string("TEDPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__PET__)
-   if(RETROEXTPAL==-1)resources_set_int("CrtcExternalPalette", 0);
+   if(RETROEXTPAL==-1) log_resources_set_int("CrtcExternalPalette", 0);
    else {
-      resources_set_int("CrtcExternalPalette", 1);
-      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "Crtc");
+      log_resources_set_int("CrtcExternalPalette", 1);
+      log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__CBM2__)
-   if(RETROEXTPAL==-1)resources_set_int("CrtcExternalPalette", 0);
+   if(RETROEXTPAL==-1) log_resources_set_int("CrtcExternalPalette", 0);
    else {
-      resources_set_int("CrtcExternalPalette", 1);
-      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "Crtc");
+      log_resources_set_int("CrtcExternalPalette", 1);
+      log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
    }
 #else
-   if(RETROEXTPAL==-1)resources_set_int("VICIIExternalPalette", 0);
+   if(RETROEXTPAL==-1) log_resources_set_int("VICIIExternalPalette", 0);
    else {
-      resources_set_int("VICIIExternalPalette", 1);
-      resources_set_string_sprintf("%sPaletteFile", RETROEXTPALNAME, "VICII");
+      log_resources_set_int("VICIIExternalPalette", 1);
+      log_resources_set_string("VICIIPaletteFile", RETROEXTPALNAME);
    }
 #endif
 
-   if(RETROUSERPORTJOY==-1)resources_set_int("UserportJoy", 0);
+   if(RETROUSERPORTJOY==-1) log_resources_set_int("UserportJoy", 0);
    else {
-      resources_set_int("UserportJoy", 1);
-      resources_set_int("UserportJoyType", RETROUSERPORTJOY);
+      log_resources_set_int("UserportJoy", 1);
+      log_resources_set_int("UserportJoyType", RETROUSERPORTJOY);
    }
 
-   if(RETROTDE==1){
-      resources_set_int("DriveTrueEmulation", 1);
-      resources_set_int("VirtualDevices", 0);
+   if (RETROTDE==1) {
+      log_resources_set_int("DriveTrueEmulation", 1);
+      log_resources_set_int("VirtualDevices", 0);
    }
-   else if(RETROTDE==0){
-      resources_set_int("DriveTrueEmulation", 0);
-      resources_set_int("VirtualDevices", 1);
+   else if (RETROTDE==0) {
+      log_resources_set_int("DriveTrueEmulation", 0);
+      log_resources_set_int("VirtualDevices", 1);
    }
 
-   if(RETRODSE>0) {
-      resources_set_int("DriveSoundEmulation", 1);
-      resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+   if (RETRODSE>0) {
+      log_resources_set_int("DriveSoundEmulation", 1);
+      log_resources_set_int("DriveSoundEmulationVolume", RETRODSE);
    } else
-      resources_set_int("DriveSoundEmulation", 0);
+      log_resources_set_int("DriveSoundEmulation", 0);
 
-   resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
+   log_resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 
    sid_set_engine_model((RETROSIDMODL >> 8),  (RETROSIDMODL & 0xff));
-   resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
+   log_resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
 
 #if defined(__VIC20__) 
    vic20model_set(RETROC64MODL);
@@ -242,11 +245,11 @@ int ui_init_finalize(void)
 
 #if !defined(__PET__) && !defined(__CBM2__)
 #if defined(__VIC20__)
-   resources_set_int("VICBorderMode", RETROBORDERS);
+   log_resources_set_int("VICBorderMode", RETROBORDERS);
 #elif defined(__PLUS4__)
-   resources_set_int("TEDBorderMode", RETROBORDERS);
+   log_resources_set_int("TEDBorderMode", RETROBORDERS);
 #else
-   resources_set_int("VICIIBorderMode", RETROBORDERS);
+   log_resources_set_int("VICIIBorderMode", RETROBORDERS);
 #endif
 #endif
 

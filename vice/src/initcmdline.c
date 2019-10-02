@@ -48,6 +48,7 @@
 #include "tape.h"
 #include "util.h"
 #include "vicefeatures.h"
+#include "monitor.h"
 
 #ifdef DEBUG_CMDLINE
 #define DBG(x)  printf x
@@ -63,6 +64,11 @@ static unsigned int autostart_mode = AUTOSTART_MODE_NONE;
 int cmdline_get_autostart_mode(void)
 {
     return autostart_mode;
+}
+
+const char* cmdline_get_autostart_string(void)
+{
+    return autostart_string;
 }
 
 static void cmdline_free_autostart_string(void)
@@ -373,5 +379,29 @@ void initcmdline_check_attach(void)
         }
     }
 
+    // Keep autostart string for libretro-core
+#ifndef __LIBRETRO__
     cmdline_free_autostart_string();
+#endif
+}
+
+int initcmdline_restart(int argc, char **argv)
+{
+    cmdline_free_autostart_string();
+
+    tape_image_detach(1);
+    file_system_detach_disk(8);
+    file_system_detach_disk(9);
+    file_system_detach_disk(10);
+    file_system_detach_disk(11);
+    if (mon_cart_cmd.cartridge_detach_image != NULL) {
+        (mon_cart_cmd.cartridge_detach_image)(-1);
+    }
+
+    if (initcmdline_check_args(argc, argv) == -1) {
+        return -1;
+    }
+
+    initcmdline_check_attach();
+    return 0;
 }

@@ -21,13 +21,25 @@
 
 #include <stdbool.h>
 
+// See which looks best in most cases and tweak (or make configurable)
+#define DISK_LABEL_MODE_ASCII              1 // Convert to ascii - unshifted chars are lowercase
+#define DISK_LABEL_MODE_UPPERCASE          2 // All characters are always uppercase
+#define DISK_LABEL_MODE_LOWERCASE          3 // All characters are always lowercase
+#define DISK_LABEL_MODE_ASCII_OR_UPPERCASE 4 // If all chars are unshifted - convert to uppercase
+#define DISK_LABEL_MODE_ASCII_OR_CAMELCASE 5 // If all chars are unshifted - convert to camelcase
+#define DISK_LABEL_MODE_PETSCII            6 // Unmodified petscii codes - case is inverted
+
+extern int disk_label_mode;
+
 //*****************************************************************************
 // Disk control structure and functions
 #define DC_MAX_SIZE 20
 
-struct dc_storage{
+struct dc_storage
+{
 	char* command;
 	char* files[DC_MAX_SIZE];
+    char* labels[DC_MAX_SIZE];
 	unsigned unit;
 	unsigned count;
 	int index;
@@ -40,6 +52,8 @@ void dc_parse_m3u(dc_storage* dc, const char* m3u_file);
 void dc_parse_vfl(dc_storage* dc, const char* vfl_file);
 bool dc_add_file(dc_storage* dc, const char* filename);
 void dc_free(dc_storage* dc);
+void dc_reset(dc_storage* dc);
+bool dc_replace_file(dc_storage* dc, int index, const char* filename);
 bool dc_remove_file(dc_storage* dc, int index);
 
 #endif

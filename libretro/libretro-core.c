@@ -688,7 +688,8 @@ void reload_restart()
     resources_set_defaults();
     resources_load(NULL);
 
-    /* Update resources from environment */
+    /* Update resources from environment just like on fresh start of core */
+    retro_ui_finalized = 0;
     update_variables();
     /* Some resources are not set until we call this */
     ui_init_finalize();

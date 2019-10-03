@@ -385,19 +385,27 @@ void initcmdline_check_attach(void)
 #endif
 }
 
-int initcmdline_restart(int argc, char **argv)
+#ifdef __LIBRETRO__
+int initcmdline_cleanup()
 {
     cmdline_free_autostart_string();
 
+    /* Detach all tapes and disks from previous content */
     tape_image_detach(1);
-    file_system_detach_disk(8);
-    file_system_detach_disk(9);
-    file_system_detach_disk(10);
-    file_system_detach_disk(11);
-    if (mon_cart_cmd.cartridge_detach_image != NULL) {
-        (mon_cart_cmd.cartridge_detach_image)(-1);
+    file_system_detach_disk(-1);
+
+    /* Detach cartridge and reset default name */
+    if (resources_query_type("CartridgeFile") == RES_STRING) {
+        resources_set_string("CartridgeFile", "");
     }
 
+    /* Reset resources to defaults */
+    resources_set_defaults();
+    resources_load(NULL);
+}
+
+int initcmdline_restart(int argc, char **argv)
+{
     if (initcmdline_check_args(argc, argv) == -1) {
         return -1;
     }
@@ -405,3 +413,4 @@ int initcmdline_restart(int argc, char **argv)
     initcmdline_check_attach();
     return 0;
 }
+#endif

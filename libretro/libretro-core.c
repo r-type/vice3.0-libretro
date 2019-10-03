@@ -40,6 +40,10 @@ static char buf[64][4096] = { 0 };
 long microSecCounter=0;
 int cpuloop=1;
 
+// If this parameter is set, we always initialize vice core without parameters
+// and pass params later
+#define START_WITHOUT_PARAMS
+
 #ifdef FRONTEND_SUPPORTS_RGB565
 	uint16_t *Retro_Screen;
 	uint16_t bmp[WINDOW_SIZE];
@@ -649,16 +653,24 @@ int pre_main()
 {
     int argc = PARAMCOUNT;
 
+#ifndef START_WITHOUT_PARAMS
+    build_params();
+#else
     /* start core with empty params */
     xargv_cmd[0] = CORE_NAME;
     xargv_cmd[1] = NULL;
     argc = 1;
+#endif
 
     if (skel_main(argc, (char**)xargv_cmd) < 0)
     {
         log_cb(RETRO_LOG_ERROR, "Core startup failed\n");
         environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
     }
+
+#ifndef START_WITHOUT_PARAMS
+    update_from_vice();
+#endif
 
     return 0;
 }
@@ -669,12 +681,12 @@ extern int ui_init_finalize(void);
 
 void reload_restart()
 {
-
-    /* Stop datasette */
+    /* Load content was called while core was already running, pass command line to core for restart */
     datasette_control(DATASETTE_CONTROL_STOP);
 
-    /* Cleanup after previous content and reset resources */
-    initcmdline_cleanup();
+    /* Reset resources to defaults */
+    resources_set_defaults();
+    resources_load(NULL);
 
     /* Update resources from environment just like on fresh start of core */
     retro_ui_finalized = 0;
@@ -687,7 +699,7 @@ void reload_restart()
     if (initcmdline_restart(PARAMCOUNT, (char**)xargv_cmd) < 0)
     {
         log_cb(RETRO_LOG_ERROR, "Restart failed\n");
-        /* Nevermind, the core is already running */
+        // Nevermind, the core is already running
     }
 
     /* Now read disk image and autostart file (may be the same or not) from vice */
@@ -2699,7 +2711,11 @@ void retro_run(void)
       retro_load_ok = true;
       app_init();
       pre_main();
+#ifdef START_WITHOUT_PARAMS
       reload_restart();
+#else
+      update_variables();
+#endif
       runstate = RUNSTATE_RUNNING;
       return;
    } 

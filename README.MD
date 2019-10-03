@@ -9,7 +9,7 @@ https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
 
 ## Recent improvements
 
-- Savestates (disabled during netplay and rerecording because of temp file creation)
+- Savestates
 - Vice 3.3 update
 - x64sc / xpet
 - Virtual keyboard revamped: more responsive, cleaner design, much easier to control
@@ -25,10 +25,6 @@ https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
   - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset, datasette controls)
   - Analog sticks mappable
   - Virtual keyboard themes
-
-## To Do List
-
-- Proper savestates that work without requiring temp file creation in Retroarch save dir.
 
 ## Joyport control via Filename
 

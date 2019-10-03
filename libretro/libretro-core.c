@@ -29,7 +29,7 @@ bool retro_load_ok = false;
 retro_log_printf_t log_cb;
 
 char RETRO_DIR[512];
-char save_file[512];
+static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
@@ -2828,76 +2828,73 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 static void save_trap(uint16_t addr, void *success)
 {
-      if (machine_write_snapshot(save_file, 0, 0, 0) >= 0) /* filename, save_roms, save_disks, event_mode */
-         *((int *)success) = 1;
-      else
-         *((int *)success) = 0;
-      save_trap_happened = 1;
+   /* params: stream, save_roms, save_disks, event_mode */
+   if (machine_write_snapshot_to_stream(snapshot_stream, 0, 0, 0) >= 0) 
+      *((int *)success) = 1;
+   else
+      *((int *)success) = 0;
+   save_trap_happened = 1;
 }
 
 static void load_trap(uint16_t addr, void *success)
 {
-      if (machine_read_snapshot(save_file, 0) >= 0)
-         *((int *)success) = 1;
-      else
-         *((int *)success) = 0;
-      load_trap_happened = 1;
+   /* params: stream, event_mode */
+   if (machine_read_snapshot_from_stream(snapshot_stream, 0) >= 0)
+      *((int *)success) = 1;
+   else
+      *((int *)success) = 0;
+   load_trap_happened = 1;
 }
 
 size_t retro_serialize_size(void)
 {
+   long snapshot_size = 0;
    if (retro_ui_finalized)
    {
-      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
+      snapshot_stream = snapshot_memory_write_fopen(NULL, 0);
       int success = 0;
       interrupt_maincpu_trigger_trap(save_trap, (void *)&success);
       save_trap_happened = 0;
       while (!save_trap_happened)
          maincpu_mainloop_retro();
-      if (success)
+      if (snapshot_stream != NULL)
       {
-         FILE *file = fopen(save_file, "rb");
-         if (file)
+         if (success)
          {
-            size_t size = 0;
-            fseek(file, 0L, SEEK_END);
-            size = ftell(file);
-            fclose(file);
-            remove(save_file);
-            return size;
+            snapshot_fseek(snapshot_stream, 0, SEEK_END);
+            snapshot_size = snapshot_ftell(snapshot_stream);
          }
+         else
+         {
+            log_cb(RETRO_LOG_INFO, "Failed to calculate snapshot size\n");
+         }
+         snapshot_fclose(snapshot_stream);
+         snapshot_stream = NULL;
       }
    }
-   log_cb(RETRO_LOG_INFO, "Failed to save pre-snapshot to %s\n", save_file);
-   return 0;
+   return snapshot_size;
 }
 
 bool retro_serialize(void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
-      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
+      snapshot_stream = snapshot_memory_write_fopen(data_, size);
       int success = 0;
       interrupt_maincpu_trigger_trap(save_trap, (void *)&success);
       save_trap_happened = 0;
       while (!save_trap_happened)
          maincpu_mainloop_retro();
+      if (snapshot_stream != NULL)
+      {
+         snapshot_fclose(snapshot_stream);
+         snapshot_stream = NULL;
+      }
       if (success)
       {
-         FILE *file = fopen(save_file, "rb");
-         if (file)
-         {
-            if (fread(data_, size, 1, file) == 1)
-            {
-               fclose(file);
-               remove(save_file);
-               return true;
-            }
-            fclose(file);
-            remove(save_file);
-         }
+         return true;
       }
-      log_cb(RETRO_LOG_INFO, "Failed to save temp snapshot to %s\n", save_file);
+      log_cb(RETRO_LOG_INFO, "Failed to serialize snapshot\n");
    }
    return false;
 }
@@ -2906,29 +2903,22 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
-      snprintf(save_file, sizeof(save_file), "%s%svice_tempsave.vsf", retro_save_directory, FSDEV_DIR_SEP_STR);
-      FILE *file = fopen(save_file, "wb");
-      if (file)
+      snapshot_stream = snapshot_memory_read_fopen(data_, size);
+      int success = 0;
+      interrupt_maincpu_trigger_trap(load_trap, (void *)&success);
+      load_trap_happened = 0;
+      while (!load_trap_happened)
+         maincpu_mainloop_retro();
+      if (snapshot_stream != NULL)
       {
-         if (fwrite(data_, size, 1, file) == 1)
-         {
-            fclose(file);
-            int success = 0;
-            interrupt_maincpu_trigger_trap(load_trap, (void *)&success);
-            load_trap_happened = 0;
-            while (!load_trap_happened)
-               maincpu_mainloop_retro();
-            if (success)
-            {
-               remove(save_file);
-               return true;
-            }
-         }
-         else
-            fclose(file);
-         remove(save_file);
+         snapshot_fclose(snapshot_stream);
+         snapshot_stream = NULL;
       }
-      log_cb(RETRO_LOG_INFO, "Failed to write temp snapshot to %s\n", save_file);
+      if (success)
+      {
+         return true;
+      }
+      log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");
    }
    return false;
 }

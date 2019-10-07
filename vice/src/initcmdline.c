@@ -66,10 +66,12 @@ int cmdline_get_autostart_mode(void)
     return autostart_mode;
 }
 
+#ifdef __LIBRETRO__
 const char* cmdline_get_autostart_string(void)
 {
     return autostart_string;
 }
+#endif /* __LIBRETRO__ */
 
 static void cmdline_free_autostart_string(void)
 {
@@ -382,7 +384,7 @@ void initcmdline_check_attach(void)
     // Keep autostart string for libretro-core
 #ifndef __LIBRETRO__
     cmdline_free_autostart_string();
-#endif
+#endif /* __LIBRETRO__ */
 }
 
 #ifdef __LIBRETRO__
@@ -413,4 +415,4 @@ int initcmdline_restart(int argc, char **argv)
     initcmdline_check_attach();
     return 0;
 }
-#endif
+#endif /* __LIBRETRO__ */

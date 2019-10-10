@@ -41,23 +41,28 @@ extern int RETROKEYRAHKEYPAD;
 int turbo_fire_button_disabled=-1;
 int turbo_fire_button=-1;
 unsigned int turbo_pulse=2;
-unsigned int turbo_state[5]={0,0,0,0,0};
-unsigned int turbo_toggle[5]={0,0,0,0,0};
+unsigned int turbo_state[5]={0};
+unsigned int turbo_toggle[5]={0};
 
-#define EMU_VKBD 1
-#define EMU_STATUSBAR 2
-#define EMU_JOYPORT 3
-#define EMU_RESET 4
-#define EMU_WARP_ON 5
-#define EMU_WARP_OFF 6
-#define EMU_DATASETTE_TOGGLE_HOTKEYS 7
-#define EMU_DATASETTE_STOP 8
-#define EMU_DATASETTE_START 9
-#define EMU_DATASETTE_FORWARD 10
-#define EMU_DATASETTE_REWIND 11
-#define EMU_DATASETTE_RESET 12
+enum EMU_FUNCTIONS
+{
+    EMU_VKBD = 0,
+    EMU_STATUSBAR,
+    EMU_JOYPORT,
+    EMU_RESET,
+    EMU_WARP_ON,
+    EMU_WARP_OFF,
+    EMU_DATASETTE_TOGGLE_HOTKEYS,
+    EMU_DATASETTE_STOP,
+    EMU_DATASETTE_START,
+    EMU_DATASETTE_FORWARD,
+    EMU_DATASETTE_REWIND,
+    EMU_DATASETTE_RESET,
+    EMU_FUNCTION_COUNT
+};
 
-void emu_function(int function) {
+void emu_function(int function)
+{
     switch (function)
     {
         case EMU_VKBD:
@@ -176,28 +181,31 @@ void app_vkb_handle(void)
                 else if(turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
                     turbo_fire_button_disabled = -1;
 
-                if(turbo_fire_button_disabled != -1) {
-                    turbo_fire_button=turbo_fire_button_disabled;
-                    turbo_fire_button_disabled=-1;
-                } else {
-                    turbo_fire_button_disabled=turbo_fire_button;
-                    turbo_fire_button=-1;
+                if(turbo_fire_button_disabled != -1)
+                {
+                    turbo_fire_button = turbo_fire_button_disabled;
+                    turbo_fire_button_disabled = -1;
+                }
+                else
+                {
+                    turbo_fire_button_disabled = turbo_fire_button;
+                    turbo_fire_button = -1;
                 }
                 break;
 
-            case -EMU_DATASETTE_STOP:
+            case -11:
                 emu_function(EMU_DATASETTE_STOP);
                 break;
-            case -EMU_DATASETTE_START:
+            case -12:
                 emu_function(EMU_DATASETTE_START);
                 break;
-            case -EMU_DATASETTE_FORWARD:
+            case -13:
                 emu_function(EMU_DATASETTE_FORWARD);
                 break;
-            case -EMU_DATASETTE_REWIND:
+            case -14:
                 emu_function(EMU_DATASETTE_REWIND);
                 break;
-            case -EMU_DATASETTE_RESET:
+            case -15:
                 emu_function(EMU_DATASETTE_RESET);
                 break;
 
@@ -261,31 +269,30 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     //   INDEX        0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15  16  17  18  19  20  21  22  23
 
     int i, mk;
-    static int jbt[24]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    static int kbt[11]={0,0,0,0,0,0,0,0,0,0,0};
+    static int jbt[24]={0};
+    static int kbt[11]={0};
     
-    if(!retro_load_ok)return 1;
+    if (!retro_load_ok) return 1;
     input_poll_cb();
 
-    int mouse_l;
-    int mouse_r;
-    int16_t mouse_x,mouse_y;
-    mouse_x=mouse_y=0;
-    
-    int LX, LY, RX, RY;
+    int mouse_l,mouse_r=0;
+    int16_t mouse_x,mouse_y=0;
+    int LX,LY,RX,RY=0;
     int threshold=20000;
 
-    /* Iterate hotkeys, skip datasette control if disabled or if vkbd is on */
-    int imax = (datasette && SHOWKEY==-1) ? 11 : 6;
+    /* Iterate hotkeys, skip datasette control if datasette controls are disabled or if VKBD is on */
+    int imax = (datasette && SHOWKEY==-1) ? EMU_FUNCTION_COUNT : EMU_DATASETTE_TOGGLE_HOTKEYS;
     
-    for(i = 0; i < imax; i++) {
+    for (i = 0; i < imax; i++)
+    {
         mk = i + 24;
         
         /* Key down */
         if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[mk]) && kbt[i]==0 && mapper_keys[mk]!=0)
         {
             kbt[i]=1;
-            switch(mk) {
+            switch(mk)
+            {
                 case 24:
                     emu_function(EMU_VKBD);
                     break;
@@ -323,10 +330,11 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             }
         }
         /* Key up */
-        else if ( kbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[mk]) && mapper_keys[mk]!=0)
+        else if (!input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[mk]) && kbt[i]==1 && mapper_keys[mk]!=0)
         {
             kbt[i]=0;
-            switch(mk) {
+            switch(mk)
+            {
                 case 28:
                     emu_function(EMU_WARP_OFF);
                     break;
@@ -337,15 +345,16 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     /* The check for kbt[i] here prevents the hotkey from generating C64 key events */
     /* SHOWKEY check is now in Core_Processkey to allow certain keys while SHOWKEY */
     int processkey=1;
-    for(i = 0; i < (sizeof(kbt)/sizeof(kbt[0])); i++) {
-        if(kbt[i] == 1)
+    for (i = 0; i < (sizeof(kbt)/sizeof(kbt[0])); i++)
+    {
+        if (kbt[i] == 1)
         {
             processkey=0;
             break;
         }
     }
 
-    if (processkey)
+    if (processkey && disable_physical_cursor_keys != 2)
         Core_Processkey(disable_physical_cursor_keys);
 
     /* RetroPad extra mappings */
@@ -357,14 +366,14 @@ int Core_PollEvent(int disable_physical_cursor_keys)
         RY = input_state_cb(0, RETRO_DEVICE_ANALOG, 1, 1);
 
         /* shortcut for joy mode only */
-        for(i = 0; i < 24; i++)
+        for (i = 0; i < 24; i++)
         {
             int just_pressed = 0;
             int just_released = 0;
-            if(i > 0 && (i<4 || i>7) && i < 16) /* remappable retropad buttons (all apart from DPAD and B) */
+            if (i > 0 && (i<4 || i>7) && i < 16) /* remappable retropad buttons (all apart from DPAD and B) */
             {
                 /* Skip the transparency toggle button if vkbd is visible */
-                if(SHOWKEY==1 && i==RETRO_DEVICE_ID_JOYPAD_A)
+                if (SHOWKEY==1 && i==RETRO_DEVICE_ID_JOYPAD_A)
                     continue;
 
                 if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 && i!=turbo_fire_button)
@@ -499,9 +508,13 @@ int Core_PollEvent(int disable_physical_cursor_keys)
 
 void retro_poll_event()
 {
-    /* if user plays with cursor keys, then prevent up/down/left/right from generating */
-    /* keyboard key presses, this prevent cursor up from becoming a run/stop input */
-    if (
+    /* If RetroPad is controlled with cursor keys, then prevent up/down/left/right/fire from generating */
+    /* keyboard key presses, this prevents cursor up from becoming a run/stop input */
+    if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
+        input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B)
+    )
+        Core_PollEvent(2); /* Skip all keyboard input when fire is pressed */
+    else if (
         (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
         (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
@@ -515,7 +528,8 @@ void retro_poll_event()
     //if(SHOWKEY==-1) /* retro joypad take control over keyboard joy */
     /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
     /* keyup allowing most likely not needed on actual keyboard presses even though they get stuck also */
-    if (CTRLON==-1) {
+    if (CTRLON==-1)
+    {
         int retro_port;
         for (retro_port = 0; retro_port <= 4; retro_port++)
         {
@@ -581,23 +595,32 @@ void retro_poll_event()
                     j &= ~0x10;
 
                 /* Turbo fire */
-                if(turbo_fire_button != -1) {
+                if(turbo_fire_button != -1)
+                {
                     if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, turbo_fire_button))
                     {
-                        if(turbo_state[vice_port]) {
-                            if (turbo_toggle[vice_port] > turbo_pulse) {
+                        if(turbo_state[vice_port])
+                        {
+                            if (turbo_toggle[vice_port] > turbo_pulse)
+                            {
                                 if((turbo_toggle[vice_port] / 2) == turbo_pulse)
                                     turbo_toggle[vice_port] = 0;
                                 j &= ~0x10;
-                            } else {
+                            }
+                            else
+                            {
                                 j |= (SHOWKEY==-1) ? 0x10 : j;
                             }
                             turbo_toggle[vice_port]++;
-                        } else {
+                        }
+                        else
+                        {
                             turbo_state[vice_port] = 1;
                             j |= (SHOWKEY==-1) ? 0x10 : j;
                         }
-                    } else {
+                    }
+                    else
+                    {
                         turbo_state[vice_port] = 0;
                         turbo_toggle[vice_port] = 0;
                     }

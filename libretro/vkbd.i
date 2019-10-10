@@ -62,8 +62,8 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ ":"  ,"["   ,RETROK_SEMICOLON},
 	{ ";"  ,"]"   ,RETROK_QUOTE},
 	{ "="  ,"="   ,RETROK_BACKSLASH},
-	{ "DRe","DRe" ,-11},
-	{ "DFw","DFw" ,-10},
+	{ "DRe","DRe" ,-14},
+	{ "DFw","DFw" ,-13},
 	{ "Stb","Stb" ,-3},
 
 	// 55
@@ -75,8 +75,8 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "DEL","DEL" ,RETROK_BACKSPACE},
 	{ "Cr^","Cr^" ,RETROK_UP},
 	{ "RET","RET" ,RETROK_RETURN},
-	{ "DSt","DSt" ,-8},
-	{ "DPl","DPl" ,-9},
+	{ "DSt","DSt" ,-11},
+	{ "DPl","DPl" ,-12},
 	{ "Joy","Joy" ,-4},
 
 	// 66
@@ -88,8 +88,8 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "Cr<","Cr<" ,RETROK_LEFT},
 	{ "Crv","Crv" ,RETROK_DOWN},
 	{ "Cr>","Cr>" ,RETROK_RIGHT},
-	{ "DRs","DRs" ,-12},
-	{ "Rst", "Rst",-2},
+	{ "DRs","DRs" ,-15},
+	{ "Rst","Rst" ,-2},
 	{ "Ttf","Ttf" ,-20},
 };
 

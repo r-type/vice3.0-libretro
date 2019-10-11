@@ -92,7 +92,7 @@ static void display_tape(void)
 
 char* joystick_value_human(char val)
 {
-    static char str[3];
+    static char str[6] = { 0 };
     switch(val) {
         default:
             sprintf(str, "%3s", "   ");

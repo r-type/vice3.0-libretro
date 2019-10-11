@@ -37,6 +37,7 @@ extern bool retro_load_ok;
 extern int mapper_keys[35];
 int statusbar=0;
 extern int RETROKEYRAHKEYPAD;
+extern int RETROKEYBOARDPASSTHROUGH;
 
 int turbo_fire_button_disabled=-1;
 int turbo_fire_button=-1;
@@ -511,7 +512,8 @@ void retro_poll_event()
     /* If RetroPad is controlled with cursor keys, then prevent up/down/left/right/fire from generating */
     /* keyboard key presses, this prevents cursor up from becoming a run/stop input */
     if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
-        input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B)
+        input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) &&
+        !RETROKEYBOARDPASSTHROUGH
     )
         Core_PollEvent(2); /* Skip all keyboard input when fire is pressed */
     else if (
@@ -519,7 +521,8 @@ void retro_poll_event()
         (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
-         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)) &&
+         !RETROKEYBOARDPASSTHROUGH
     )
         Core_PollEvent(1); /* Process all inputs but disable cursor keys */
     else

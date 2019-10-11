@@ -91,6 +91,7 @@ extern int RETROAUTOSTARTWARP;
 extern int RETROBORDERS;
 extern int RETROTHEME;
 extern int RETROKEYRAHKEYPAD;
+extern int RETROKEYBOARDPASSTHROUGH;
 extern char RETROEXTPALNAME[512];
 extern int retro_ui_finalized;
 extern unsigned int cur_port;
@@ -1121,6 +1122,17 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+      {
+         "vice_physical_keyboard_pass_through",
+         "Physical keyboard pass-through",
+         "Pass all physical keyboard events to the core. Disable this to prevent cursor keys and fire key from generating C64 key events.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
 /* Hotkeys */
       {
          "vice_mapper_vkbd",
@@ -1934,6 +1946,15 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "disabled") == 0) RETROKEYRAHKEYPAD=0;
       else if (strcmp(var.value, "enabled") == 0) RETROKEYRAHKEYPAD=1;
+   }
+
+   var.key = "vice_physical_keyboard_pass_through";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) RETROKEYBOARDPASSTHROUGH=0;
+      else if (strcmp(var.value, "enabled") == 0) RETROKEYBOARDPASSTHROUGH=1;
    }
 
    var.key = "vice_turbo_fire_button";

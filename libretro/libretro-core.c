@@ -267,6 +267,8 @@ static void parse_cmdline(const char *argv)
                //... do something with the word ...
                for (c2 = 0,p2 = start_of_word; p2 < p; p2++, c2++)
                   ARGUV[ARGUC][c2] = (unsigned char) *p2;
+               /* terminate word */
+               ARGUV[ARGUC][c2] = '\0';
                ARGUC++;
 
                state = DULL; /* back to "not in word, not in string" state */
@@ -280,6 +282,8 @@ static void parse_cmdline(const char *argv)
                //... do something with the word ...
                for (c2 = 0,p2 = start_of_word; p2 <p; p2++,c2++)
                   ARGUV[ARGUC][c2] = (unsigned char) *p2;
+               /* terminate word */
+               ARGUV[ARGUC][c2] = '\0';
                ARGUC++;
 
                state = DULL; /* back to "not in word, not in string" state */

@@ -772,7 +772,7 @@ void retro_set_environment(retro_environment_t cb)
 #if  defined(__VIC20__)
       {
          "vice_vic20_model",
-         "VIC20 Model",
+         "Model",
          "",
          {
             { "VIC20 PAL", NULL },
@@ -785,7 +785,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__PLUS4__)
       {
          "vice_plus4_model",
-         "PLUS4 Model",
+         "Model",
          "",
          {
             { "C16 PAL", NULL },
@@ -801,7 +801,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__X128__)
       {
          "vice_c128_model",
-         "C128 Model",
+         "Model",
          "",
          {
             { "C128 PAL", NULL },
@@ -815,7 +815,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__PET__)
       {
          "vice_pet_model",
-         "PET Model",
+         "Model",
          "",
          {
             { "2001", NULL },
@@ -838,7 +838,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__CBM2__)
       {
          "vice_cbm2_model",
-         "CBM2 Model",
+         "Model",
          "",
          {
             { "510 PAL", NULL },
@@ -860,7 +860,7 @@ void retro_set_environment(retro_environment_t cb)
 #else
       {
          "vice_c64_model",
-         "C64 Model",
+         "Model",
          "",
          {
             { "C64 PAL", NULL },
@@ -1364,6 +1364,7 @@ void retro_set_environment(retro_environment_t cb)
             { "R", "RetroPad R" },
             { "L2", "RetroPad L2" },
             { "R2", "RetroPad R2" },
+            { NULL, NULL },
          },
          "disabled"
       },
@@ -1378,6 +1379,7 @@ void retro_set_environment(retro_environment_t cb)
             { "8", NULL },
             { "10", NULL },
             { "12", NULL },
+            { NULL, NULL },
          },
          "4"
       },
@@ -1388,12 +1390,12 @@ void retro_set_environment(retro_environment_t cb)
    /* fill in the values for all the mappers */
    int i = 0;
    int j = 0;
-   while(core_options[i].key) 
+   while (core_options[i].key) 
    {
       if (strstr(core_options[i].key, "vice_mapper_"))
       {
          j = 0;
-         while(keyDesc[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+         while (keyDesc[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
          {
             core_options[i].values[j].value = keyDesc[j];
             core_options[i].values[j].label = NULL;
@@ -1409,7 +1411,7 @@ void retro_set_environment(retro_environment_t cb)
 
    environ_cb = cb;
 
-   cb( RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports );
+   cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
    unsigned version = 0;
    if (cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && (version == 1))
@@ -1419,7 +1421,7 @@ void retro_set_environment(retro_environment_t cb)
       /* Fallback for older API */
       static struct retro_variable variables[64] = { 0 };
       i = 0;
-      while(core_options[i].key) 
+      while (core_options[i].key) 
       {
          buf[i][0] = 0;
          variables[i].key = core_options[i].key;
@@ -1427,7 +1429,7 @@ void retro_set_environment(retro_environment_t cb)
          strcat(buf[i], "; ");
          strcat(buf[i], core_options[i].default_value);
          j = 0;
-         while(core_options[i].values[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX)
+         while (core_options[i].values[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX)
          {
             strcat(buf[i], "|");
             strcat(buf[i], core_options[i].values[j].value);
@@ -2615,7 +2617,6 @@ void retro_get_system_info(struct retro_system_info *info)
 #endif
    info->need_fullpath    = true;
    info->block_extract    = false;
-
 }
 
 void update_geometry()
@@ -2659,7 +2660,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 
    info->timing.sample_rate = 44100.0;
 
-   switch(retro_get_region()) {
+   switch(retro_get_region())
+   {
       case RETRO_REGION_PAL:
          info->geometry.base_height = 272;
          info->timing.fps = C64_PAL_RFSH_PER_SEC;
@@ -2690,19 +2692,20 @@ void retro_set_video_refresh(retro_video_refresh_t cb)
    video_cb = cb;
 }
 
-void retro_audio_cb( short l, short r)
+void retro_audio_cb(short l, short r)
 {
-   audio_cb(l,r);
+   audio_cb(l, r);
 }
 
-void retro_audiocb(signed short int *sound_buffer,int sndbufsize){
+void retro_audiocb(signed short int *sound_buffer, int sndbufsize)
+{
    int x;
-   for(x=0;x<sndbufsize;x++)audio_cb(sound_buffer[x],sound_buffer[x]);
+   for (x=0; x<sndbufsize; x++) audio_cb(sound_buffer[x], sound_buffer[x]);
 }
 
 void retro_blit(void)
 {
-   memcpy(Retro_Screen,bmp,PITCH*WINDOW_SIZE);
+   memcpy(Retro_Screen, bmp, PITCH*WINDOW_SIZE);
 }
 
 static int prev_ui_finalized = 0;

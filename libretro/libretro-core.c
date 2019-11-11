@@ -172,7 +172,6 @@ unsigned retro_get_borders(void)
 unsigned retro_toggle_theme(void)
 {
    opt_theme = (opt_theme % 2) ? opt_theme-1 : opt_theme+1;
-   // unused return value
    return opt_theme;
 }
 
@@ -770,90 +769,10 @@ void retro_set_environment(retro_environment_t cb)
 
    static struct retro_core_option_definition core_options[] =
    {
-      {
-         "vice_statusbar",
-         "Statusbar",
-         "Display a statusbar with joystick, drive, tape and speed indicators",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_drive_true_emulation",
-         "Drive true emulation",
-         "True emulation loads much slower, but some games need it",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_drive_sound_emulation",
-         "Drive sound emulation",
-         "Emulates the iconic floppy drive sounds. D64 & true drive emulation required",
-         {
-            { "disabled", NULL },
-            { "10\%", "10\% volume" },
-            { "20\%", "20\% volume" },
-            { "30\%", "30\% volume" },
-            { "40\%", "40\% volume" },
-            { "50\%", "50\% volume" },
-            { "60\%", "60\% volume" },
-            { "70\%", "70\% volume" },
-            { "80\%", "80\% volume" },
-            { "90\%", "90\% volume" },
-            { "100\%", "100\% volume" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_autostart_warp",
-         "Autostart warp",
-         "Automatically turns on warp mode between load and run for faster loading",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_sid_model",
-         "SID model",
-         "ReSID is accurate but slower, 6581 was used in original C64",
-         {
-            { "6581F", "6581 FastSID" },
-            { "6581R", "6581 ReSID" },
-            { "8580F", "8580 FastSID" },
-            { "8580R", "8580 ReSID" },
-            { "8580RD", "8580 ReSID + digi boost" },
-            { NULL, NULL },
-         },
-         "6581F"
-      },
-      {
-         "vice_resid_sampling",
-         "ReSID sampling",
-         "Resampling for best quality. Fast setting improves performance dramatically on PS Vita",
-         {
-            { "Resampling", NULL },
-            { "Fast resampling", NULL },
-            { "Interpolation", NULL },
-            { "Fast", NULL },
-            { NULL, NULL },
-         },
-         "Resampling"
-      },
 #if  defined(__VIC20__)
       {
          "vice_vic20_model",
-         "VIC20 model",
+         "VIC20 Model",
          "",
          {
             { "VIC20 PAL", NULL },
@@ -866,7 +785,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__PLUS4__)
       {
          "vice_plus4_model",
-         "PLUS4 model",
+         "PLUS4 Model",
          "",
          {
             { "C16 PAL", NULL },
@@ -882,7 +801,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__X128__)
       {
          "vice_c128_model",
-         "C128 model",
+         "C128 Model",
          "",
          {
             { "C128 PAL", NULL },
@@ -896,7 +815,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__PET__)
       {
          "vice_pet_model",
-         "PET model",
+         "PET Model",
          "",
          {
             { "2001", NULL },
@@ -919,7 +838,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif  defined(__CBM2__)
       {
          "vice_cbm2_model",
-         "CBM2 model",
+         "CBM2 Model",
          "",
          {
             { "510 PAL", NULL },
@@ -941,7 +860,7 @@ void retro_set_environment(retro_environment_t cb)
 #else
       {
          "vice_c64_model",
-         "C64 model",
+         "C64 Model",
          "",
          {
             { "C64 PAL", NULL },
@@ -962,10 +881,91 @@ void retro_set_environment(retro_environment_t cb)
          "C64 PAL"
       },
 #endif
+      {
+         "vice_reset",
+         "Reset Type",
+         "Soft keeps some code in memory, hard erases all memory.",
+         {
+            { "Autostart", NULL },
+            { "Soft", NULL },
+            { "Hard", NULL },
+            { NULL, NULL },
+         },
+         "Autostart"
+      },
+      {
+         "vice_drive_true_emulation",
+         "Drive True Emulation",
+         "Loads much slower, but some games need it.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_drive_sound_emulation",
+         "Drive Sound Emulation",
+         "Emulates the iconic floppy drive sounds.\nDrive True Emulation & D64 disk image required.",
+         {
+            { "disabled", NULL },
+            { "10\%", "10\% volume" },
+            { "20\%", "20\% volume" },
+            { "30\%", "30\% volume" },
+            { "40\%", "40\% volume" },
+            { "50\%", "50\% volume" },
+            { "60\%", "60\% volume" },
+            { "70\%", "70\% volume" },
+            { "80\%", "80\% volume" },
+            { "90\%", "90\% volume" },
+            { "100\%", "100\% volume" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_autostart_warp",
+         "Autostart Warp",
+         "Automatically turns on warp mode between load and run for faster loading.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_sid_model",
+         "SID Model",
+         "ReSID is accurate but slower. 6581 was used in original C64, 8580 in C64C.",
+         {
+            { "6581F", "6581 FastSID" },
+            { "6581R", "6581 ReSID" },
+            { "8580F", "8580 FastSID" },
+            { "8580R", "8580 ReSID" },
+            { "8580RD", "8580 ReSID + Digi Boost" },
+            { NULL, NULL },
+         },
+         "6581R"
+      },
+      {
+         "vice_resid_sampling",
+         "ReSID Sampling",
+         "Resampling for best quality. 'Fast' improves performance dramatically on PS Vita.",
+         {
+            { "Fast", NULL },
+            { "Interpolation", NULL },
+            { "Resampling", NULL },
+            { "Fast resampling", NULL },
+            { NULL, NULL },
+         },
+         "Resampling"
+      },
 #if !defined(__PET__) && !defined(__CBM2__)
       {
          "vice_border",
-         "Display borders",
+         "Display Borders",
          "",
          {
             { "enabled", NULL },
@@ -978,8 +978,8 @@ void retro_set_environment(retro_environment_t cb)
 #if defined(__VIC20__)
       {
          "vice_vic20_external_palette",
-         "Color palette",
-         "Colodore is recommended for the most accurate colors",
+         "Color Palette",
+         "Colodore is recommended for the most accurate colors.",
          {
             { "Default", NULL },
             { "Colodore VIC", NULL },
@@ -993,8 +993,8 @@ void retro_set_environment(retro_environment_t cb)
 #elif defined(__PLUS4__) 
       {
          "vice_plus4_external_palette",
-         "Color palette",
-         "Colodore is recommended for the most accurate colors",
+         "Color Palette",
+         "Colodore is recommended for the most accurate colors.",
          {
             { "Default", NULL },
             { "Colodore TED", NULL },
@@ -1007,7 +1007,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif defined(__PET__)
       {
          "vice_pet_external_palette",
-         "Color palette",
+         "Color Palette",
          "",
          {
             { "Default", NULL },
@@ -1021,7 +1021,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif defined(__CBM2__)
       {
          "vice_cbm2_external_palette",
-         "Color palette",
+         "Color Palette",
          "",
          {
             { "Default", NULL },
@@ -1035,8 +1035,8 @@ void retro_set_environment(retro_environment_t cb)
 #else
       {
          "vice_external_palette",
-         "Color palette",
-         "Colodore is recommended for most accurate colors",
+         "Color Palette",
+         "Colodore is recommended for most accurate colors.",
          {
             { "Default", NULL },
             { "Colodore", NULL },
@@ -1048,11 +1048,11 @@ void retro_set_environment(retro_environment_t cb)
             { "C64HQ", NULL },
             { "C64S", NULL },
             { "CCS64", NULL },
-            { "Deekay", NULL },
+            //{ "Deekay", NULL },
             { "Frodo", NULL },
             { "Godot", NULL },
             { "PC64", NULL },
-            { "Ptoing", NULL },
+            //{ "Ptoing", NULL },
             { "RGB", NULL },
             { "Vice", NULL },
             { NULL, NULL },
@@ -1062,8 +1062,8 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_theme",
-         "Virtual keyboard theme",
-         "By default, the keyboard comes up with L button or F11 key",
+         "Virtual Keyboard Theme",
+         "By default, the keyboard comes up with L button or F11 key.",
          {
             { "C64", NULL },
             { "C64 transparent", NULL },
@@ -1076,23 +1076,22 @@ void retro_set_environment(retro_environment_t cb)
          "C64"
       },
       {
-         "vice_reset",
-         "Reset type",
-         "Soft keeps some code in memory, hard erases all memory",
+         "vice_joyport",
+         "RetroPad Port",
+         "Most games use port 2, some use port 1.",
          {
-            { "Autostart", NULL },
-            { "Soft", NULL },
-            { "Hard", NULL },
+            { "Port 2", NULL },
+            { "Port 1", NULL },
             { NULL, NULL },
          },
-         "Autostart"
+         "Port 2"
       },
       {
          "vice_userport_joytype",
-         "4-player adapter",
-         "Essential when 2 joysticks are not enough, for example IK+ Gold with 3 players",
+         "4 Player Adapter",
+         "Essential when 2 joysticks are not enough, for example IK+ Gold with 3 players.",
          {
-            { "None", NULL },
+            { "None", "disabled" },
             { "Protovision CGA", NULL },
             { "PET", NULL },
             { "Hummer", NULL },
@@ -1105,20 +1104,9 @@ void retro_set_environment(retro_environment_t cb)
          "None"
       },
       {
-         "vice_joyport",
-         "RetroPad port",
-         "Most games use port 2, some use port 1",
-         {
-            { "Port 2", NULL },
-            { "Port 1", NULL },
-            { NULL, NULL },
-         },
-         "Port 2"
-      },
-      {
          "vice_keyrah_keypad_mappings",
-         "Keyrah keypad mappings",
-         "Hardcoded keypad to joy mappings for Keyrah hardware",
+         "Keyrah Keypad Mappings",
+         "Hardcoded keypad to joy mappings for Keyrah hardware.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1128,7 +1116,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_physical_keyboard_pass_through",
-         "Physical keyboard pass-through",
+         "Physical Keyboard Pass-through",
          "Pass all physical keyboard events to the core. Disable this to prevent cursor keys and fire key from generating C64 key events.",
          {
             { "disabled", NULL },
@@ -1140,51 +1128,51 @@ void retro_set_environment(retro_environment_t cb)
 /* Hotkeys */
       {
          "vice_mapper_vkbd",
-         "Hotkey: Toggle virtual keyboard",
-         "Pressing a button mapped to this key opens the keyboard",
+         "Hotkey: Toggle Virtual Keyboard",
+         "Pressing a button mapped to this key opens the keyboard.",
          {{ NULL, NULL }},
          "RETROK_F11"
       },
       {
          "vice_mapper_statusbar",
-         "Hotkey: Toggle statusbar",
-         "Pressing a button mapped to this key toggles statusbar",
+         "Hotkey: Toggle Statusbar",
+         "Pressing a button mapped to this key toggles statusbar.",
          {{ NULL, NULL }},
          "RETROK_F10"
       },
       {
          "vice_mapper_joyport_switch",
-         "Hotkey: Switch joyports",
-         "Pressing a button mapped to this key swaps joyports",
+         "Hotkey: Swap Joyports",
+         "Pressing a button mapped to this key swaps joyports 1 & 2.",
          {{ NULL, NULL }},
          "RETROK_RCTRL"
       },
       {
          "vice_mapper_reset",
          "Hotkey: Reset",
-         "Pressing a button mapped to this key triggers reset",
+         "Pressing a button mapped to this key triggers reset.",
          {{ NULL, NULL }},
          "RETROK_END"
       },
       {
          "vice_mapper_warp_mode",
-         "Hotkey: Warp mode",
-         "Hold a button mapped to this key for warp mode",
+         "Hotkey: Warp Mode",
+         "Hold a button mapped to this key for warp mode.",
          {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
       },
 /* Datasette controls */
       {
          "vice_mapper_datasette_toggle_hotkeys",
-         "Hotkey: Toggle datasette hotkeys",
-         "This key enables/disables the datasette hotkeys",
+         "Hotkey: Toggle Datasette Hotkeys",
+         "This key enables/disables the datasette hotkeys.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_datasette_hotkeys",
-         "Datasette hotkeys",
-         "Enable or disable all datasette hotkeys",
+         "Datasette Hotkeys",
+         "Enable or disable all datasette hotkeys.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1194,36 +1182,36 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_mapper_datasette_stop",
-         "Hotkey: Datasette stop",
-         "Press stop on tape",
+         "Hotkey: Datasette Stop",
+         "Press stop on tape.",
          {{ NULL, NULL }},
          "RETROK_DOWN"
       },
       {
          "vice_mapper_datasette_start",
-         "Hotkey: Datasette start",
-         "Press start on tape",
+         "Hotkey: Datasette Start",
+         "Press start on tape.",
          {{ NULL, NULL }},
          "RETROK_UP"
       },
       {
          "vice_mapper_datasette_forward",
-         "Hotkey: Datasette forward",
-         "Tape fast forward",
+         "Hotkey: Datasette Forward",
+         "Press fast forward on tape.",
          {{ NULL, NULL }},
          "RETROK_RIGHT"
       },
       {
          "vice_mapper_datasette_rewind",
-         "Hotkey: Datasette rewind",
-         "Tape rewind",
+         "Hotkey: Datasette Rewind",
+         "Press rewind on tape.",
          {{ NULL, NULL }},
          "RETROK_LEFT"
       },
       {
          "vice_mapper_datasette_reset",
-         "Hotkey: Datasette reset",
-         "Tape reset",
+         "Hotkey: Datasette Reset",
+         "Press reset on tape.",
          {{ NULL, NULL }},
          "---"
       },
@@ -1309,28 +1297,28 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_lu",
          "RetroPad L-Up",
-         "Mapping for left analog stick up",
+         "Mapping for left analog stick up.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_ld",
          "RetroPad L-Down",
-         "Mapping for left analog stick down",
+         "Mapping for left analog stick down.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_ll",
          "RetroPad L-Left",
-         "Mapping for left analog stick left",
+         "Mapping for left analog stick left.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_lr",
          "RetroPad L-Right",
-         "Mapping for left analog stick right",
+         "Mapping for left analog stick right.",
          {{ NULL, NULL }},
          "---"
       },
@@ -1338,35 +1326,35 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_ru",
          "RetroPad R-Up",
-         "Mapping for right analog stick up",
+         "Mapping for right analog stick up.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rd",
          "RetroPad R-Down",
-         "Mapping for right analog stick down",
+         "Mapping for right analog stick down.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rl",
          "RetroPad R-Left",
-         "Mapping for right analog stick left",
+         "Mapping for right analog stick left.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rr",
          "RetroPad R-Right",
-         "Mapping for right analog stick right",
+         "Mapping for right analog stick right.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_turbo_fire_button",
-         "RetroPad turbo fire",
-         "Replaces mapped key with a turbo fire button",
+         "RetroPad Turbo Fire",
+         "Replaces the mapped key with a turbo fire button.",
          {
             { "disabled", NULL },
             { "A", "RetroPad A" },
@@ -1381,8 +1369,8 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_turbo_pulse",
-         "RetroPad turbo pulse",
-         "Frames in a button cycle. 2 equals button press and release on every other frame",
+         "RetroPad Turbo Pulse",
+         "Frames in a button cycle. 2 equals button press on a frame and release on the next frame.",
          {
             { "2", NULL },
             { "4", NULL },
@@ -1473,24 +1461,7 @@ static void update_variables(void)
 {
    struct retro_variable var;
 
-   var.key = "vice_statusbar";
-   var.value = NULL;
-
    log_cb(RETRO_LOG_INFO, "Updating variables, ui finalized = %d\n", retro_ui_finalized);
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      if (retro_ui_finalized) {
-         if (strcmp(var.value, "enabled") == 0)
-            log_resources_set_int("SDLStatusbar", 1);
-         if (strcmp(var.value, "disabled") == 0)
-            log_resources_set_int("SDLStatusbar", 0);
-      }
-      else {
-         if (strcmp(var.value, "enabled") == 0) RETROSTATUS=1;
-         if (strcmp(var.value, "disabled") == 0) RETROSTATUS=0;
-      }
-   }
 
    var.key = "vice_autostart_warp";
    var.value = NULL;

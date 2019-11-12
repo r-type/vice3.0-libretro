@@ -1962,10 +1962,8 @@ static void update_variables(void)
             log_resources_set_int("UserportJoyType", joyadaptertype);
          }
       }
-      else
-      {
-         RETROUSERPORTJOY=joyadaptertype;
-      }
+
+      RETROUSERPORTJOY=joyadaptertype;
    }
 
    var.key = "vice_joyport";

@@ -136,6 +136,7 @@ char* joystick_value_human(char val)
 }
 
 extern unsigned int cur_port;
+extern int RETROUSERPORTJOY;
 
 static void display_joyport(void)
 {
@@ -152,8 +153,16 @@ static void display_joyport(void)
     
     sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
     sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2]));
-    sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3]));
-    sprintf(tmpstr + strlen(tmpstr), "J%d%3s", 4, joystick_value_human(joystick_value[4]));
+    if (RETROUSERPORTJOY != -1)
+    {
+        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3]));
+        sprintf(tmpstr + strlen(tmpstr), "J%d%3s", 4, joystick_value_human(joystick_value[4]));
+    }
+    else
+    {
+        sprintf(tmpstr + strlen(tmpstr), "%5s", "");
+        sprintf(tmpstr + strlen(tmpstr), "%5s", "");
+    }
 
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';

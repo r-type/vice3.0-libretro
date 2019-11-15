@@ -7,8 +7,6 @@
 
 #define NUMB(a) (sizeof(a) / sizeof(*a))
 
-#define GUIRECT nk_rect(32, 35, 319, 199)
-
 typedef enum
 {
     GUI_NONE = 0,
@@ -26,14 +24,16 @@ extern unsigned retro_get_borders(void);
 static int gui(struct nk_context *ctx)
 {
     GUISTATE = GUI_NONE;
-    if(SHOWKEY==1)
+    if (SHOWKEY==1)
         GUISTATE = GUI_VKBD;
 
-    switch(GUISTATE)
+    switch (GUISTATE)
     {
         case GUI_VKBD:
-            if (nk_begin(ctx,"Vice Keyboard", GUIRECT, NK_WINDOW_NO_SCROLLBAR)) {
-                switch(opt_theme) {
+            if (nk_begin(ctx, "Vice Keyboard", GUIRECT, NK_WINDOW_NO_SCROLLBAR))
+            {
+                switch (opt_theme)
+                {
                     default:
                     case 0:
                         set_style(ctx, THEME_C64);
@@ -56,13 +56,25 @@ static int gui(struct nk_context *ctx)
                 }
                 
                 /* ensure vkbd is centered regardless of border setting */
-                if (retro_get_borders()) {
+                if (retro_get_borders())
+                {
                     offset.x = 0;
                     offset.y = 0;
-                } else {
+                }
+                else
+                {
                     offset.x = GUIRECT.x;
                     offset.y = GUIRECT.y;
-                    if(retro_get_region() == RETRO_REGION_NTSC) offset.y -= 12;
+#if defined(__VIC20__)
+                    if (retro_get_region() == RETRO_REGION_NTSC)
+                    {
+                        offset.x -= 16;
+                        offset.y -= 26;
+                    }
+#else
+                    if (retro_get_region() == RETRO_REGION_NTSC)
+                        offset.y -= 12;
+#endif
                 }
                 nk_window_set_position(ctx, offset);
                 #include "vkboard.i"
@@ -75,4 +87,3 @@ static int gui(struct nk_context *ctx)
     }
     return GUISTATE;
 }
-

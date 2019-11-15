@@ -1,6 +1,10 @@
 int x = 0,y = 0;
 
+#if defined(__VIC20__)
+ctx->style.window.padding = nk_vec2(0,1);
+#else
 ctx->style.window.padding = nk_vec2(3,2);
+#endif
 ctx->style.window.spacing = nk_vec2(2,2);
 
 ctx->style.button.padding = nk_vec2(0,0);
@@ -13,7 +17,11 @@ struct nk_style_item key_color_hotkey = ctx->style.property.normal;
 struct nk_style_item key_color_reset = ctx->style.slider.cursor_active;
 struct nk_style_item key_color_datasette = ctx->style.slider.cursor_hover;
 
+#if defined(__VIC20__)
+nk_layout_row_dynamic(ctx, 23, NPLGN);
+#else
 nk_layout_row_dynamic(ctx, 25, NPLGN);
+#endif
 nk_button_set_behavior(ctx, NK_BUTTON_REPEATER);
 
 vkey_pressed = -1;

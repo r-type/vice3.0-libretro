@@ -55,11 +55,11 @@
 
 int RETROTDE=0;
 int RETRODSE=0;
-int RETROSTATUS=0;
 int RETRORESET=0;
 int RETROSIDMODL=0;
 int RETRORESIDSAMPLING=0;
 int RETROC64MODL=0;
+int RETROVIC20MEM=0;
 int RETROUSERPORTJOY=-1;
 int RETROEXTPAL=-1;
 int RETROAUTOSTARTWARP=0;
@@ -164,69 +164,81 @@ int ui_init_finalize(void)
 #endif
 
    /* Core options */
-   if (RETROSTATUS==1) {
-      log_resources_set_int("SDLStatusbar", 1);
-   } else if (RETROSTATUS==0) {
-      log_resources_set_int("SDLStatusbar", 0);
-   }
-
 #if defined(__VIC20__)
-   if(RETROEXTPAL==-1) log_resources_set_int("VICExternalPalette", 0);
-   else {
+   if (RETROEXTPAL==-1)
+      log_resources_set_int("VICExternalPalette", 0);
+   else
+   {
       log_resources_set_int("VICExternalPalette", 1);
       log_resources_set_string("VICPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__PLUS4__)
-   if(RETROEXTPAL==-1) log_resources_set_int("TEDExternalPalette", 0);
-   else {
+   if (RETROEXTPAL==-1)
+      log_resources_set_int("TEDExternalPalette", 0);
+   else
+   {
       log_resources_set_int("TEDExternalPalette", 1);
       log_resources_set_string("TEDPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__PET__)
-   if(RETROEXTPAL==-1) log_resources_set_int("CrtcExternalPalette", 0);
-   else {
+   if (RETROEXTPAL==-1)
+      log_resources_set_int("CrtcExternalPalette", 0);
+   else
+   {
       log_resources_set_int("CrtcExternalPalette", 1);
       log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__CBM2__)
-   if(RETROEXTPAL==-1) log_resources_set_int("CrtcExternalPalette", 0);
-   else {
+   if (RETROEXTPAL==-1)
+      log_resources_set_int("CrtcExternalPalette", 0);
+   else
+   {
       log_resources_set_int("CrtcExternalPalette", 1);
       log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
    }
 #else
-   if(RETROEXTPAL==-1) log_resources_set_int("VICIIExternalPalette", 0);
-   else {
+   if (RETROEXTPAL==-1)
+      log_resources_set_int("VICIIExternalPalette", 0);
+   else
+   {
       log_resources_set_int("VICIIExternalPalette", 1);
       log_resources_set_string("VICIIPaletteFile", RETROEXTPALNAME);
    }
 #endif
 
-   if(RETROUSERPORTJOY==-1) log_resources_set_int("UserportJoy", 0);
-   else {
+   if (RETROUSERPORTJOY==-1)
+      log_resources_set_int("UserportJoy", 0);
+   else
+   {
       log_resources_set_int("UserportJoy", 1);
       log_resources_set_int("UserportJoyType", RETROUSERPORTJOY);
    }
 
-   if (RETROTDE==1) {
+   if (RETROTDE==1)
+   {
       log_resources_set_int("DriveTrueEmulation", 1);
       log_resources_set_int("VirtualDevices", 0);
    }
-   else if (RETROTDE==0) {
+   else
+   {
       log_resources_set_int("DriveTrueEmulation", 0);
       log_resources_set_int("VirtualDevices", 1);
    }
 
-   if (RETRODSE>0) {
+   if (RETRODSE==0)
+      log_resources_set_int("DriveSoundEmulation", 0);
+   else
+   {
       log_resources_set_int("DriveSoundEmulation", 1);
       log_resources_set_int("DriveSoundEmulationVolume", RETRODSE);
-   } else
-      log_resources_set_int("DriveSoundEmulation", 0);
+   }
 
    log_resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 
-   sid_set_engine_model((RETROSIDMODL >> 8),  (RETROSIDMODL & 0xff));
+#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+   sid_set_engine_model((RETROSIDMODL >> 8), (RETROSIDMODL & 0xff));
    log_resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
+#endif
 
 #if defined(__VIC20__) 
    vic20model_set(RETROC64MODL);
@@ -252,6 +264,59 @@ int ui_init_finalize(void)
 #else
    log_resources_set_int("VICIIBorderMode", RETROBORDERS);
 #endif
+#endif
+
+#if defined(__VIC20__)
+   switch (RETROVIC20MEM)
+   {
+      case 0:
+         log_resources_set_int("RAMBlock0", 0);
+         log_resources_set_int("RAMBlock1", 0);
+         log_resources_set_int("RAMBlock2", 0);
+         log_resources_set_int("RAMBlock3", 0);
+         log_resources_set_int("RAMBlock5", 0);
+         break;
+
+      case 1:
+         log_resources_set_int("RAMBlock0", 1);
+         log_resources_set_int("RAMBlock1", 0);
+         log_resources_set_int("RAMBlock2", 0);
+         log_resources_set_int("RAMBlock3", 0);
+         log_resources_set_int("RAMBlock5", 0);
+         break;
+
+      case 2:
+         log_resources_set_int("RAMBlock0", 0);
+         log_resources_set_int("RAMBlock1", 1);
+         log_resources_set_int("RAMBlock2", 0);
+         log_resources_set_int("RAMBlock3", 0);
+         log_resources_set_int("RAMBlock5", 0);
+         break;
+
+      case 3:
+         log_resources_set_int("RAMBlock0", 0);
+         log_resources_set_int("RAMBlock1", 1);
+         log_resources_set_int("RAMBlock2", 1);
+         log_resources_set_int("RAMBlock3", 0);
+         log_resources_set_int("RAMBlock5", 0);
+         break;
+
+      case 4:
+         log_resources_set_int("RAMBlock0", 0);
+         log_resources_set_int("RAMBlock1", 1);
+         log_resources_set_int("RAMBlock2", 1);
+         log_resources_set_int("RAMBlock3", 1);
+         log_resources_set_int("RAMBlock5", 0);
+         break;
+
+      case 5:
+         log_resources_set_int("RAMBlock0", 1);
+         log_resources_set_int("RAMBlock1", 1);
+         log_resources_set_int("RAMBlock2", 1);
+         log_resources_set_int("RAMBlock3", 1);
+         log_resources_set_int("RAMBlock5", 1);
+         break;
+  }
 #endif
 
    retro_ui_finalized = 1;

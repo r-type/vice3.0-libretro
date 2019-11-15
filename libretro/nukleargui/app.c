@@ -29,6 +29,16 @@ extern int SHOWKEY;
 
 #define NK_RETRO_SOFT_IMPLEMENTATION
 
+#if defined(__VIC20__)
+#define GUI_W 351
+#define GUI_H 199
+#define GUIRECT nk_rect(48, 48, GUI_W, GUI_H)
+#else
+#define GUI_W 319
+#define GUI_H 199
+#define GUIRECT nk_rect(32, 35, GUI_W, GUI_H)
+#endif
+
 #include "nuklear.h"
 #include "nuklear_retro_soft.h"
 
@@ -54,12 +64,12 @@ static nk_retro_Font *RSDL_font;
 int app_init()
 {
 
-#ifdef  FRONTEND_SUPPORTS_RGB565
-    screen_surface=Retro_CreateRGBSurface16(retrow,retroh,16,0,0,0,0);
-    Retro_Screen=(unsigned short int *)screen_surface->pixels;
+#ifdef FRONTEND_SUPPORTS_RGB565
+    screen_surface = Retro_CreateRGBSurface16(retrow, retroh, 16, 0, 0, 0, 0);
+    Retro_Screen = (unsigned short int *)screen_surface->pixels;
 #else
-    screen_surface=Retro_CreateRGBSurface32(retrow,retroh,32,0,0,0,0);
-    Retro_Screen=(unsigned int *)screen_surface->pixels;
+    screen_surface = Retro_CreateRGBSurface32(retrow, retroh, 32, 0, 0, 0, 0);
+    Retro_Screen = (unsigned int *)screen_surface->pixels;
 #endif
 
     RSDL_font = (nk_retro_Font*)calloc(1, sizeof(nk_retro_Font));
@@ -69,13 +79,13 @@ int app_init()
         return -1;
 
     /* GUI */
-    ctx = nk_retro_init(RSDL_font,screen_surface,retrow,retroh);
+    ctx = nk_retro_init(RSDL_font, screen_surface, retrow, retroh);
 
     /* style.c */
     set_style(ctx, THEME_C64);
 
-    memset(core_key_state,0,512);
-    memset(core_old_key_state ,0, sizeof(core_old_key_state));
+    memset(core_key_state, 0, 512);
+    memset(core_old_key_state, 0, sizeof(core_old_key_state));
 
 #ifdef RETRO_DEBUG
     printf("Init nuklear\n");
@@ -116,7 +126,7 @@ int app_event(int poll)
 int app_render()
 {
     static int state_prev=0,state_reset=0;
-    if(state_reset)
+    if (state_reset)
     {
         nk_clear(ctx);
         state_reset=0;
@@ -126,7 +136,7 @@ int app_render()
     app_event(0);
 
     int state=gui(ctx);
-    if(state==1 && state_prev!=1) state_reset=1;
+    if (state==1 && state_prev!=1) state_reset=1;
     state_prev=state;
 
     nk_retro_render(nk_rgba(0,0,0,0));

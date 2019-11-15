@@ -92,8 +92,9 @@ static void display_tape(void)
 
 char* joystick_value_human(char val)
 {
-    static char str[6] = { 0 };
-    switch(val) {
+    static char str[6] = {0};
+    switch (val)
+    {
         default:
             sprintf(str, "%3s", "   ");
             break;
@@ -131,7 +132,7 @@ char* joystick_value_human(char val)
             break;
     }
 
-    str[1] = (val >= 16 ) ? (str[1] | 0x80) : str[1];
+    str[1] = (val >= 16) ? (str[1] | 0x80) : str[1];
     return str;
 }
 
@@ -142,6 +143,8 @@ static void display_joyport(void)
 {
     int len;
     char tmpstr[25];
+
+#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
     char joy1[2];
     char joy2[2];
     sprintf(joy1, "%s", "1");
@@ -156,13 +159,19 @@ static void display_joyport(void)
     if (RETROUSERPORTJOY != -1)
     {
         sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3]));
-        sprintf(tmpstr + strlen(tmpstr), "J%d%3s", 4, joystick_value_human(joystick_value[4]));
+        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4]));
     }
     else
     {
         sprintf(tmpstr + strlen(tmpstr), "%5s", "");
         sprintf(tmpstr + strlen(tmpstr), "%5s", "");
     }
+#else
+    char joy1[2];
+    sprintf(joy1, "%s", "1");
+
+    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
+#endif
 
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
@@ -475,7 +484,7 @@ unsigned int color_f, color_b;
   //  color_f = 0xff;
   //  color_b = 0;
 
-    pitch =PITCH;
+    pitch = PITCH;
 
     char tmpstr[512];
 
@@ -488,53 +497,74 @@ unsigned int color_f, color_b;
     fake.clip_rect.y=0;
 
     /* Statusbar location with or without borders */
+    /* 0 : normal, 1: full, 2: debug, 3: none */
+    /* Placement on bottom + inside VICII */
     int x, y;
     int border = 0;
 #if !defined(__PET__) && !defined(__CBM2__)
-#if defined(__VIC20__)
-    resources_get_int("VICBorderMode", &border);
-#elif defined(__PLUS4__)
+#if defined(__PLUS4__)
     resources_get_int("TEDBorderMode", &border);
+#elif defined(__VIC20__)
+    resources_get_int("VICBorderMode", &border);
+    switch (border)
+    {
+        default:
+        case 0:
+            x=64;
+            y=224;
+            if (retro_get_region() == RETRO_REGION_NTSC)
+            {
+                x=48;
+                y=198;
+            }
+            break;
+
+        case 3:
+            x=16;
+            y=176;
+            break;
+    }
 #else
     resources_get_int("VICIIBorderMode", &border);
-#endif
-#endif
-
-    /* 0 : normal, 1: full, 2: debug, 3: none */
-    /* Placement on bottom + inside VIC */
-    switch(border) {
+    switch (border)
+    {
         default:
         case 0:
             x=32;
-            y=227;/* Below VIC: 236 */
-            if(retro_get_region() == RETRO_REGION_NTSC) {
+            y=227;/* Below VICII: 236 */
+            if (retro_get_region() == RETRO_REGION_NTSC)
                 y=215;
-            }
             break;
-        case 3: 
+
+        case 3:
             x=0;
             y=192;
             break;
     }
+#endif
+#endif
 
     display_joyport();
 
-    for (i = 0; i < MAX_STATUSBAR_LEN; ++i) {
+    for (i = 0; i < MAX_STATUSBAR_LEN; ++i)
+    {
         c = statusbar_text[i];
 
-        if (c == 0) {
+        if (c == 0)
             break;
-        }
         
-        /* Trickery to balance uneven character width with VIC area width */
+        /* Trickery to balance uneven character width with VICII area width */
         char_width = 7;
         char_offset = (MAX_STATUSBAR_LEN - i <= 4) ? -2 : 0;
 
-        if (c & 0x80) {
+        if (c & 0x80)
+        {
             sprintf(tmpstr,"%c",c&0x7f);
             Retro_Draw_string(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b, color_f);
             //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
-        } else {
+        }
+        else
+        {
             sprintf(tmpstr,"%c",c);
             Retro_Draw_string(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f, color_b);
             //  uistatusbar_putchar(c, i, 0, color_f, color_b);

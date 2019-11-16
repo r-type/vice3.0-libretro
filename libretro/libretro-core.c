@@ -84,7 +84,12 @@ extern int RETRORESET;
 extern int RETROSIDMODL;
 extern int RETRORESIDSAMPLING;
 extern int RETROC64MODL;
+#if defined(__X128__)
+extern int RETROC128COLUMNKEY;
+#endif
+#if defined(__VIC20__)
 extern int RETROVIC20MEM;
+#endif
 extern int RETROUSERPORTJOY;
 extern int RETROEXTPAL;
 extern int RETROAUTOSTARTWARP;
@@ -821,12 +826,23 @@ void retro_set_environment(retro_environment_t cb)
          "",
          {
             { "C128 PAL", NULL },
-            { "C128DCR PAL", NULL },
+            { "C128 DCR PAL", NULL },
             { "C128 NTSC", NULL },
-            { "C128DCR NTSC", NULL },
+            { "C128 DCR NTSC", NULL },
             { NULL, NULL },
          },
          "C128 PAL"
+      },
+      {
+         "vice_c128_video_output",
+         "Video Output",
+         "",
+         {
+            { "VICII", "VICII (40 cols)" },
+            { "VDC", "VCD (80 cols)" },
+            { NULL, NULL },
+         },
+         "VICII"
       },
 #elif defined(__PET__)
       {
@@ -1722,13 +1738,31 @@ static void update_variables(void)
       int modl=0;
 
       if (strcmp(var.value, "C128 PAL") == 0) modl=C128MODEL_C128_PAL;
-      else if (strcmp(var.value, "C128DCR PAL") == 0) modl=C128MODEL_C128DCR_PAL;
+      else if (strcmp(var.value, "C128 DCR PAL") == 0) modl=C128MODEL_C128DCR_PAL;
       else if (strcmp(var.value, "C128 NTSC") == 0) modl=C128MODEL_C128_NTSC;
-      else if (strcmp(var.value, "C128DCR NTSC") == 0) modl=C128MODEL_C128DCR_NTSC;
+      else if (strcmp(var.value, "C128 DCR NTSC") == 0) modl=C128MODEL_C128DCR_NTSC;
 
       RETROC64MODL=modl;
       if (retro_ui_finalized)
-        c128model_set(modl);
+         c128model_set(modl);
+   }
+
+   var.key = "vice_c128_video_output";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int c128columnkey=1;
+
+      if (strcmp(var.value, "VICII") == 0) c128columnkey=1;
+      else if (strcmp(var.value, "VDC") == 0) c128columnkey=0;
+
+      if (retro_ui_finalized && RETROC128COLUMNKEY != c128columnkey)
+      {
+         log_resources_set_int("C128ColumnKey", c128columnkey);
+         machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
+      }
+      RETROC128COLUMNKEY=c128columnkey;
    }
 #elif defined(__PET__)
    var.key = "vice_pet_model";

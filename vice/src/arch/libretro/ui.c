@@ -58,6 +58,7 @@ int RETRODSE=0;
 int RETRORESET=0;
 int RETROSIDMODL=0;
 int RETRORESIDSAMPLING=0;
+int RETROAUDIOLEAK=0;
 int RETROC64MODL=0;
 #if defined(__X128__)
 int RETROC128COLUMNKEY=1;
@@ -243,6 +244,12 @@ int ui_init_finalize(void)
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
    sid_set_engine_model((RETROSIDMODL >> 8), (RETROSIDMODL & 0xff));
    log_resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
+#endif
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   log_resources_set_int("VICIIAudioLeak", RETROAUDIOLEAK);
+#elif defined(__VIC20__)
+   log_resources_set_int("VICAudioLeak", RETROAUDIOLEAK);
 #endif
 
 #if defined(__VIC20__) 

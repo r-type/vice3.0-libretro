@@ -83,6 +83,7 @@ extern int RETRODSE;
 extern int RETRORESET;
 extern int RETROSIDMODL;
 extern int RETRORESIDSAMPLING;
+extern int RETROAUDIOLEAK;
 extern int RETROC64MODL;
 #if defined(__X128__)
 extern int RETROC128COLUMNKEY;
@@ -838,7 +839,7 @@ void retro_set_environment(retro_environment_t cb)
          "Video Output",
          "",
          {
-            { "VICII", "VICII (40 cols)" },
+            { "VICII", "VIC-II (40 cols)" },
             { "VDC", "VCD (80 cols)" },
             { NULL, NULL },
          },
@@ -967,6 +968,23 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
+      {
+         "vice_audio_leak_emulation",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+         "VIC-II Audio Leak Emulation",
+#elif defined(__VIC20__)
+         "VIC Audio Leak Emulation",
+#endif
+         "",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
       {
          "vice_sid_model",
@@ -1581,6 +1599,27 @@ static void update_variables(void)
          else RETRODSE=val;
       }
    }
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
+   var.key = "vice_audio_leak_emulation";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int audioleak=0;
+
+      if (strcmp(var.value, "disabled") == 0) audioleak=0;
+      else if (strcmp(var.value, "enabled") == 0) audioleak=1;
+
+      if (retro_ui_finalized && RETROAUDIOLEAK != audioleak)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+         log_resources_set_int("VICIIAudioLeak", audioleak);
+#elif defined(__VIC20__)
+         log_resources_set_int("VICAudioLeak", audioleak);
+#endif
+      RETROAUDIOLEAK=audioleak;
+   }
+#endif
 
    var.key = "vice_sid_model";
    var.value = NULL;

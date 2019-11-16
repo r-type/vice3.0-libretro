@@ -58,8 +58,14 @@ int RETRODSE=0;
 int RETRORESET=0;
 int RETROSIDMODL=0;
 int RETRORESIDSAMPLING=0;
+int RETROAUDIOLEAK=0;
 int RETROC64MODL=0;
+#if defined(__X128__)
+int RETROC128COLUMNKEY=1;
+#endif
+#if defined(__VIC20__)
 int RETROVIC20MEM=0;
+#endif
 int RETROUSERPORTJOY=-1;
 int RETROEXTPAL=-1;
 int RETROAUTOSTARTWARP=0;
@@ -240,6 +246,12 @@ int ui_init_finalize(void)
    log_resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
 #endif
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   log_resources_set_int("VICIIAudioLeak", RETROAUDIOLEAK);
+#elif defined(__VIC20__)
+   log_resources_set_int("VICAudioLeak", RETROAUDIOLEAK);
+#endif
+
 #if defined(__VIC20__) 
    vic20model_set(RETROC64MODL);
 #elif defined(__PLUS4__)
@@ -264,6 +276,10 @@ int ui_init_finalize(void)
 #else
    log_resources_set_int("VICIIBorderMode", RETROBORDERS);
 #endif
+#endif
+
+#if defined(__X128__)
+   log_resources_set_int("C128ColumnKey", RETROC128COLUMNKEY);
 #endif
 
 #if defined(__VIC20__)

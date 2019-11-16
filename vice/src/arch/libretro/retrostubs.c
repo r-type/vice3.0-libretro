@@ -117,7 +117,7 @@ void Keymap_KeyUp(int symkey)
     /* Prevent LShift keyup if ShiftLock is on */
     else if (symkey == RETROK_LSHIFT)
     {
-        if(SHIFTON == -1)
+        if (SHIFTON == -1)
             kbd_handle_keyup(symkey);
     }
     else 
@@ -132,7 +132,7 @@ void Keymap_KeyDown(int symkey)
     /* CapsLock / ShiftLock */
     else if (symkey == RETROK_CAPSLOCK)
     {
-        if(SHIFTON == 1)
+        if (SHIFTON == 1)
             kbd_handle_keyup(RETROK_LSHIFT);
         else
             kbd_handle_keydown(RETROK_LSHIFT);
@@ -142,7 +142,7 @@ void Keymap_KeyDown(int symkey)
     else if (symkey == RETROK_UP || symkey == RETROK_DOWN || symkey == RETROK_LEFT || symkey == RETROK_RIGHT)
     {
         /* Cursors will not move if CTRL actually is pressed, so we need to fake keyup */
-        if(CTRLON == 1)
+        if (CTRLON == 1)
             kbd_handle_keyup(RETROK_TAB);
             kbd_handle_keydown(symkey);
     }
@@ -155,7 +155,7 @@ void app_vkb_handle(void)
     static int last_vkey_pressed = -1;
 
     /* key up */
-    if(vkey_pressed == -1 && last_vkey_pressed >= 0)
+    if (vkey_pressed == -1 && last_vkey_pressed >= 0)
         kbd_handle_keyup(last_vkey_pressed);
 
     /* key down */
@@ -177,12 +177,12 @@ void app_vkb_handle(void)
                 Keymap_KeyUp(RETROK_CAPSLOCK);
                 break;
             case -20:
-                if(turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
+                if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
                     break;
-                else if(turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
+                else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
                     turbo_fire_button_disabled = -1;
 
-                if(turbo_fire_button_disabled != -1)
+                if (turbo_fire_button_disabled != -1)
                 {
                     turbo_fire_button = turbo_fire_button_disabled;
                     turbo_fire_button_disabled = -1;
@@ -223,38 +223,38 @@ void Core_Processkey(int disable_physical_cursor_keys)
 {
    int i;
 
-   for(i=0; i<320; i++)
+   for (i=0; i<320; i++)
       core_key_state[i]=input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0,i) ? 0x80: 0;
 
-   if(memcmp(core_key_state, core_old_key_state, sizeof(core_key_state)))
+   if (memcmp(core_key_state, core_old_key_state, sizeof(core_key_state)))
    {
-      for(i=0; i<320; i++)
+      for (i=0; i<320; i++)
       {
-         if(core_key_state[i] && core_key_state[i]!=core_old_key_state[i])
+         if (core_key_state[i] && core_key_state[i]!=core_old_key_state[i])
          {	
-            if(i==RETROK_LALT)
+            if (i==RETROK_LALT)
                continue;
-            else if(i==RETROK_TAB) /* CTRL acts as a cursor enabler */
+            else if (i==RETROK_TAB) /* CTRL acts as a cursor enabler */
                CTRLON=1;
-            else if(i==RETROK_CAPSLOCK) /* Allow CapsLock while SHOWKEY */
+            else if (i==RETROK_CAPSLOCK) /* Allow CapsLock while SHOWKEY */
                ;
-            else if(disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
+            else if (disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
                continue;
-            else if(SHOWKEY==1)
+            else if (SHOWKEY==1)
                continue;
             Keymap_KeyDown(i);
          }
-         else if(!core_key_state[i] && core_key_state[i] != core_old_key_state[i])
+         else if (!core_key_state[i] && core_key_state[i] != core_old_key_state[i])
          {
-            if(i==RETROK_LALT)
+            if (i==RETROK_LALT)
                continue;
-            else if(i==RETROK_TAB)
+            else if (i==RETROK_TAB)
                CTRLON=-1;
-            else if(i==RETROK_CAPSLOCK)
+            else if (i==RETROK_CAPSLOCK)
                ;
-            else if(disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
+            else if (disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
                continue;
-            //else if(SHOWKEY==1) /* We need to allow keyup while SHOWKEY to prevent the summoning key from staying down, if keyboard is used as a RetroPad */
+            //else if (SHOWKEY==1) /* We need to allow keyup while SHOWKEY to prevent the summoning key from staying down, if keyboard is used as a RetroPad */
             //   continue;
             Keymap_KeyUp(i);
          }
@@ -442,30 +442,30 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             if (just_pressed)
             {
                 jbt[i] = 1;
-                if(mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
+                if (mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
                     continue;
 
-                if(mapper_keys[i] == mapper_keys[24]) /* Virtual keyboard */
+                if (mapper_keys[i] == mapper_keys[24]) /* Virtual keyboard */
                     emu_function(EMU_VKBD);
-                else if(mapper_keys[i] == mapper_keys[25]) /* Statusbar */
+                else if (mapper_keys[i] == mapper_keys[25]) /* Statusbar */
                     emu_function(EMU_STATUSBAR);
-                else if(mapper_keys[i] == mapper_keys[26]) /* Switch joyport */
+                else if (mapper_keys[i] == mapper_keys[26]) /* Switch joyport */
                     emu_function(EMU_JOYPORT);
-                else if(mapper_keys[i] == mapper_keys[27]) /* Reset */
+                else if (mapper_keys[i] == mapper_keys[27]) /* Reset */
                     emu_function(EMU_RESET);
-                else if(mapper_keys[i] == mapper_keys[28]) /* Warp mode */
+                else if (mapper_keys[i] == mapper_keys[28]) /* Warp mode */
                     emu_function(EMU_WARP_ON);
-                else if(mapper_keys[i] == mapper_keys[29]) /* Datasette toggle */
+                else if (mapper_keys[i] == mapper_keys[29]) /* Datasette toggle */
                     emu_function(EMU_DATASETTE_TOGGLE_HOTKEYS);
-                else if(datasette && mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
+                else if (datasette && mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
                     emu_function(EMU_DATASETTE_STOP);
-                else if(datasette && mapper_keys[i] == mapper_keys[31]) /* Datasette start */
+                else if (datasette && mapper_keys[i] == mapper_keys[31]) /* Datasette start */
                     emu_function(EMU_DATASETTE_START);
-                else if(datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
+                else if (datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
                     emu_function(EMU_DATASETTE_FORWARD);
-                else if(datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
+                else if (datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
                     emu_function(EMU_DATASETTE_REWIND);
-                else if(datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
+                else if (datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
                     emu_function(EMU_DATASETTE_RESET);
                 else
                     Keymap_KeyDown(mapper_keys[i]);
@@ -473,30 +473,30 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             else if (just_released)
             {
                 jbt[i] = 0;
-                if(mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
+                if (mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
                     continue;
 
-                if(mapper_keys[i] == mapper_keys[24])
+                if (mapper_keys[i] == mapper_keys[24])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[25])
+                else if (mapper_keys[i] == mapper_keys[25])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[26])
+                else if (mapper_keys[i] == mapper_keys[26])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[27])
+                else if (mapper_keys[i] == mapper_keys[27])
                     ; /* nop */
-                else if(mapper_keys[i] == mapper_keys[28])
+                else if (mapper_keys[i] == mapper_keys[28])
                     emu_function(EMU_WARP_OFF);
-                else if(mapper_keys[i] == mapper_keys[29])
+                else if (mapper_keys[i] == mapper_keys[29])
                     ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[30])
+                else if (datasette && mapper_keys[i] == mapper_keys[30])
                     ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[31])
+                else if (datasette && mapper_keys[i] == mapper_keys[31])
                     ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[32])
+                else if (datasette && mapper_keys[i] == mapper_keys[32])
                     ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[33])
+                else if (datasette && mapper_keys[i] == mapper_keys[33])
                     ; /* nop */
-                else if(datasette && mapper_keys[i] == mapper_keys[34])
+                else if (datasette && mapper_keys[i] == mapper_keys[34])
                     ; /* nop */
                 else
                     Keymap_KeyUp(mapper_keys[i]);
@@ -509,26 +509,30 @@ int Core_PollEvent(int disable_physical_cursor_keys)
 
 void retro_poll_event()
 {
-    /* If RetroPad is controlled with cursor keys, then prevent up/down/left/right/fire from generating */
+    /* If RetroPad is controlled with cursor keys, then prevent up/down/left/right/b/a/x/y from generating */
     /* keyboard key presses, this prevents cursor up from becoming a run/stop input */
     if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
-        input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) &&
+        (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y)
+        ) &&
         !RETROKEYBOARDPASSTHROUGH
     )
         Core_PollEvent(2); /* Skip all keyboard input when fire is pressed */
-    else if (
-        (vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
+    else if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
         (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
-         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)) &&
-         !RETROKEYBOARDPASSTHROUGH
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)
+        ) &&
+        !RETROKEYBOARDPASSTHROUGH
     )
         Core_PollEvent(1); /* Process all inputs but disable cursor keys */
     else
         Core_PollEvent(0); /* Process all inputs */
 
-    //if(SHOWKEY==-1) /* retro joypad take control over keyboard joy */
+    /* retro joypad take control over keyboard joy */
     /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
     /* keyup allowing most likely not needed on actual keyboard presses even though they get stuck also */
     if (CTRLON==-1)
@@ -598,15 +602,15 @@ void retro_poll_event()
                     j &= ~0x10;
 
                 /* Turbo fire */
-                if(turbo_fire_button != -1)
+                if (turbo_fire_button != -1)
                 {
                     if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, turbo_fire_button))
                     {
-                        if(turbo_state[vice_port])
+                        if (turbo_state[vice_port])
                         {
                             if (turbo_toggle[vice_port] > turbo_pulse)
                             {
-                                if((turbo_toggle[vice_port] / 2) == turbo_pulse)
+                                if ((turbo_toggle[vice_port] / 2) == turbo_pulse)
                                     turbo_toggle[vice_port] = 0;
                                 j &= ~0x10;
                             }
@@ -631,7 +635,7 @@ void retro_poll_event()
                     
                 joystick_value[vice_port] = j;
                     
-                //if(vice_port == 2) {
+                //if (vice_port == 2) {
                 //    printf("Joy %d: Button %d, %2d %d %d\n", vice_port, turbo_fire_button, j, turbo_state[vice_port], turbo_toggle[vice_port]);
                 //}
             }

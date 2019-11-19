@@ -674,19 +674,53 @@ int build_params()
     xargv_cmd[PARAMCOUNT] = NULL;
 }
 
+extern char archdep_startup_error[];
+
+static void archdep_startup_error_log_lines()
+{
+    /* Message may contain several lines, log them separately for better readbility. */
+    for (char *p=archdep_startup_error, *p_end;strlen(p);p=p_end)
+    {
+        if (!(p_end=strchr(p,'\n')))
+            p_end=p+strlen(p);
+        else
+            *(p_end++)=0;
+        log_cb(RETRO_LOG_WARN, "VICE: %s\n", p);
+    }
+}
+
 int pre_main()
 {
     int argc = PARAMCOUNT;
 
-    /* start core with empty params */
-    xargv_cmd[0] = CORE_NAME;
-    xargv_cmd[1] = NULL;
-    argc = 1;
+    /* start core with full params */
+    build_params();
 
+    *archdep_startup_error=0;
     if (skel_main(argc, (char**)xargv_cmd) < 0)
     {
-        log_cb(RETRO_LOG_ERROR, "Core startup failed\n");
-        environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+        log_cb(RETRO_LOG_WARN, "Core startup failed with error:\n");
+        archdep_startup_error_log_lines();
+        log_cb(RETRO_LOG_INFO, "Core startup retry without parameters.\n");
+
+        /* Show only first line in message to indicate something went wrong. */
+        struct retro_message rmsg;
+        rmsg.msg = archdep_startup_error;
+        rmsg.frames = 500;
+        environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &rmsg);
+
+        /* start core with empty params */
+        xargv_cmd[0] = CORE_NAME;
+        xargv_cmd[1] = NULL;
+        argc = 1;
+
+        *archdep_startup_error=0;
+        if (skel_main(argc, (char**)xargv_cmd) < 0)
+        {
+            log_cb(RETRO_LOG_ERROR, "Core startup without parameters failed with error:\n");
+            archdep_startup_error_log_lines();
+            environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+        }
     }
 
     return 0;

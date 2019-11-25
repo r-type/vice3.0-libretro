@@ -183,6 +183,8 @@ static void display_speed(void)
 }
 
 static int imagename_timer = 0;
+static int drive_enabled = 0;
+static int drive_empty = 0;
 
 void display_current_image(const char *image)
 {
@@ -192,6 +194,7 @@ void display_current_image(const char *image)
     imagename_timer = 200;
     if (strcmp(image, "") != 0)
     {
+        drive_empty = 0;
         strcpy(imagepath, image);
         char *ptr = strtok(imagepath, FSDEV_DIR_SEP_STR);
         while (ptr != NULL) {
@@ -201,12 +204,24 @@ void display_current_image(const char *image)
     }
     else
     {
+        drive_empty = 1;
         sprintf(imagename, "%-36s", "Eject");
     }
 
     int len;
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-36s", imagename);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
+
+    if (drive_empty)
+    {
+        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = ' ';
+        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = ' ';
+    }
+    else
+    {
+        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = '0';
+        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = '0';
+    }
 }
 
 /* ----------------------------------------------------------------- */
@@ -252,6 +267,7 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
 {
     int drive_number;
     int drive_state = (int)state;
+    drive_enabled = drive_state;
 
     for (drive_number = 0; drive_number < 4; ++drive_number) {
         if (drive_state & 1) {
@@ -269,6 +285,9 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
 
 void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, unsigned int half_track_number)
 {
+    if (drive_empty)
+        return;
+
     unsigned int track_number = half_track_number / 2;
 
 #ifdef SDL_DEBUG
@@ -337,6 +356,9 @@ static int tape_control = 0;
 
 static void display_tape(void)
 {
+    if (drive_enabled)
+        return;
+
     int len;
 
     if (tape_enabled) {

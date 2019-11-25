@@ -30,6 +30,8 @@ char core_old_key_state[512];
 int PAS=4;
 int slowdown=0;
 unsigned int cur_port=2;
+extern int cur_port_locked;
+
 unsigned int datasette=0;
 bool num_locked = false;
 
@@ -75,6 +77,7 @@ void emu_function(int function)
             resources_set_int("SDLStatusbar", statusbar);
             break;
         case EMU_JOYPORT:
+            cur_port_locked = 1;
             cur_port++;
             if (cur_port>2) cur_port = 1;
             break;

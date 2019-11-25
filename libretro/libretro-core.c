@@ -1133,7 +1133,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport",
          "RetroPad Port",
-         "Most games use port 2, some use port 1.",
+         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling will disable this option until core restart.",
          {
             { "Port 2", NULL },
             { "Port 1", NULL },
@@ -1211,7 +1211,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_joyport_switch",
          "Hotkey: Swap Joyports",
-         "Press the mapped key to swap joyports 1 & 2.",
+         "Press the mapped key to swap joyports 1 & 2.\nSwapping will disable 'RetroPad Port' option until core restart.",
          {{ NULL, NULL }},
          "RETROK_RCTRL"
       },

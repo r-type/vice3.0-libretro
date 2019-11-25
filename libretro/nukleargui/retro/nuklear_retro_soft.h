@@ -65,7 +65,6 @@ extern struct nk_vec2 offset; /* needed for correct wraparound in vkbd */
 struct nk_retro_event {
     char key_state[512];
     char old_key_state[512];
-    int LSHIFTON;
     int MOUSE_PAS_X;
     int MOUSE_PAS_Y;
     int MOUSE_RELATIVE; // 0 = absolute
@@ -517,7 +516,6 @@ static void retro_init_event()
     revent.last_press_time=0;
     memset(revent.key_state,0,512);
     memset(revent.old_key_state,0,sizeof(revent.old_key_state));
-    revent.LSHIFTON=-1;
     revent.showpointer=0;
 }
 
@@ -562,37 +560,6 @@ nk_retro_set_font(nk_retro_Font *xfont)
     nk_style_set_font(&retro.ctx, font);
 }
 
-static void retro_key(int key,int down)
-{
-	struct nk_context *ctx = &retro.ctx;
-	if(key<512);
-	else return;
-
-        if (key == RETROK_RSHIFT || key == RETROK_LSHIFT) nk_input_key(ctx, NK_KEY_SHIFT, down);
-        else if (key == RETROK_DELETE)    nk_input_key(ctx, NK_KEY_DEL, down);
-        else if (key == RETROK_RETURN)    nk_input_key(ctx, NK_KEY_ENTER, down);
-        else if (key == RETROK_TAB)       nk_input_key(ctx, NK_KEY_TAB, down);
-        else if (key == RETROK_LEFT)      nk_input_key(ctx, NK_KEY_LEFT, down);
-        else if (key == RETROK_RIGHT)     nk_input_key(ctx, NK_KEY_RIGHT, down);
-        else if (key == RETROK_UP)        nk_input_key(ctx, NK_KEY_UP, down);
-        else if (key == RETROK_DOWN)      nk_input_key(ctx, NK_KEY_DOWN, down);
-        else if (key == RETROK_BACKSPACE) nk_input_key(ctx, NK_KEY_BACKSPACE, down);
-        else if (key == RETROK_HOME)      nk_input_key(ctx, NK_KEY_TEXT_START, down);
-        else if (key == RETROK_END)       nk_input_key(ctx, NK_KEY_TEXT_END, down);
-        else if (key == RETROK_SPACE && !down) nk_input_char(ctx, ' ');
-
-        else if (key >= RETROK_0 && key <= RETROK_9) {
-                    nk_rune rune = '0' + key - RETROK_0;
-                    nk_input_unicode(ctx, rune);
-        }
-        else if (key >= RETROK_a && key <= RETROK_z) {
-                    nk_rune rune = 'a' + key - RETROK_a;
-                    rune = ((1 == revent.LSHIFTON) ? (nk_rune)nk_to_upper((int)rune):rune);
-                    nk_input_unicode(ctx, rune);
-        }
-}
-
-
 static void mousebut(int but,int down,int x,int y){
 
 	struct nk_context *ctx = &retro.ctx;
@@ -600,39 +567,8 @@ static void mousebut(int but,int down,int x,int y){
  	if(but==1)nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
  	//else if(but==2)nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
  	else if(but==2 && down)retro_toggle_theme();
- 	else if(but==3)nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
-	else if(but==4)nk_input_scroll(ctx,(float)down);
-}
-
-static void Process_key()
-{
-	int i;
-
-	for(i=0;i<320;i++)
-        	revent.key_state[i]=input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0,i) ? 0x80: 0;
-   
-	if(memcmp( revent.key_state,revent.old_key_state , sizeof(revent.key_state) ) )
-	 	for(i=0;i<320;i++)
-			if(revent.key_state[i] && revent.key_state[i]!=revent.old_key_state[i]  )
-        	{
-				if(i==RETROK_LSHIFT){
-					revent.LSHIFTON=-revent.LSHIFTON;
-					//printf("Modifier shift pressed %d \n",revent.LSHIFTON); 
-					continue;
-				}
-				retro_key(i,1);
-        	}	
-        	else if ( !revent.key_state[i] && revent.key_state[i]!=revent.old_key_state[i]  )
-        	{
-				if(i==RETROK_LSHIFT){
-					revent.LSHIFTON=-revent.LSHIFTON;
-					//printf("Modifier shift released %d \n",revent.LSHIFTON); 
-					continue;
-				}
-				retro_key(i,0);
-        	}	
-
-	memcpy(revent.old_key_state,revent.key_state , sizeof(revent.key_state) );
+ 	//else if(but==3)nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
+	//else if(but==4)nk_input_scroll(ctx,(float)down);
 }
 
 NK_API void nk_retro_handle_event(int *evt, int poll)
@@ -647,16 +583,9 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
    static int mouse_l,mouse_m,mouse_r=0;
    int16_t mouse_x=0,mouse_y=0;
 
-   Process_key();
-
-   //revent.mouse_wu = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_WHEELUP);
-   //revent.mouse_wd = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_WHEELDOWN);
-   //if(revent.mouse_wu || revent.mouse_wd)mousebut(4,revent.mouse_wd?-1:1,0,0);
-
     // Joypad buttons
     mouse_l = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
     mouse_r = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
-    //mouse_m = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
        
     if (!mouse_l && !mouse_r && !mouse_m)
     {
@@ -669,7 +598,6 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
        // Mouse buttons
        mouse_l = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
        mouse_r = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
-       //mouse_m = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE);
     }
 
     // Relative

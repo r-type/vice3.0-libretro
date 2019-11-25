@@ -1183,7 +1183,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_mapping_options_display",
-         "Enable mapping options",
+         "Enable Mapping Options",
          "Show options for hotkeys & RetroPad mappings.\nCore option page refresh required.",
          {
             { "disabled", NULL },

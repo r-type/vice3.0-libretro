@@ -1175,11 +1175,10 @@ int autostart_disk(const char *file_name, const char *program_name,
         autostart_disk_cook_name(&name);
         if (!(file_system_attach_disk(8, file_name) < 0)) {
 
-#if __LIBRETRO__
+#ifdef __LIBRETRO__
             vdrive_t *vdrive;
             struct disk_image_s *diskimg;
 #endif
-
             log_message(autostart_log,
                         "Attached file `%s' as a disk image.", file_name);
 
@@ -1194,7 +1193,7 @@ int autostart_disk(const char *file_name, const char *program_name,
              *
              * --compyx
              */
-#if __LIBRETRO__
+#ifdef __LIBRETRO__
             /* shitty code, we really need to extend the drive API to
              * get at these sorts for things without breaking into core code
              */
@@ -1220,6 +1219,10 @@ int autostart_disk(const char *file_name, const char *program_name,
 
             return 0;
         }
+#ifdef __LIBRETRO__
+        else
+            resources_set_int("Drive8Type", 0);
+#endif
     }
 
     autostartmode = AUTOSTART_ERROR;

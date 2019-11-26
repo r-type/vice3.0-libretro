@@ -35,7 +35,6 @@
 #include "types.h"
 #include "ui.h"
 #include "uiapi.h"
-//#include "uimenu.h"
 #include "uistatusbar.h"
 #include "videoarch.h"
 
@@ -43,6 +42,7 @@
 #include "libretro-core.h"
 
 #include "joystick.h"
+#include "archdep.h"
 
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
@@ -58,37 +58,13 @@
 #define STATUSBAR_DRIVE9_TRACK_POS  40
 #define STATUSBAR_DRIVE10_TRACK_POS 40
 #define STATUSBAR_DRIVE11_TRACK_POS 40
-#define STATUSBAR_TAPE_POS          32
+#define STATUSBAR_TAPE_POS          37
 #define STATUSBAR_PAUSE_POS         43
 #define STATUSBAR_SPEED_POS         44
 
 static char statusbar_text[MAX_STATUSBAR_LEN] = "                                              ";
 
-static int pitch;
-static int draw_offset;
 
-
-
-static int tape_counter = 0;
-static int tape_enabled = 0;
-static int tape_motor = 0;
-static int tape_control = 0;
-
-static void display_tape(void)
-{
-    int len;
-
-    if (tape_enabled) {
-        len = sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? '*' : ' ', tape_counter, " >f<R"[tape_control]);
-    } else {
-        len = sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "     ");
-    }
-    statusbar_text[STATUSBAR_TAPE_POS + len] = ' ';
-
-    if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
-        uistatusbar_state |= UISTATUSBAR_REPAINT;
-    }
-}
 
 char* joystick_value_human(char val)
 {
@@ -173,14 +149,13 @@ static void display_joyport(void)
     sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
 #endif
 
-    len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%s", tmpstr);
+    len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-36s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
     }
 }
-
 
 static int per = 0;
 static int fps = 0;
@@ -204,6 +179,48 @@ static void display_speed(void)
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
+    }
+}
+
+static int imagename_timer = 0;
+static int drive_enabled = 0;
+static int drive_empty = 0;
+
+void display_current_image(const char *image)
+{
+    char imagepath[100] = "\0";
+    char imagename[40] = "\0";
+
+    imagename_timer = 200;
+    if (strcmp(image, "") != 0)
+    {
+        drive_empty = 0;
+        strcpy(imagepath, image);
+        char *ptr = strtok(imagepath, FSDEV_DIR_SEP_STR);
+        while (ptr != NULL) {
+            sprintf(imagename, "%.36s", ptr);
+            ptr = strtok(NULL, FSDEV_DIR_SEP_STR);
+        }
+    }
+    else
+    {
+        drive_empty = 1;
+        sprintf(imagename, "%-36s", "Eject");
+    }
+
+    int len;
+    len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-36s", imagename);
+    statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
+
+    if (drive_empty)
+    {
+        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = ' ';
+        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = ' ';
+    }
+    else
+    {
+        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = '0';
+        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = '0';
     }
 }
 
@@ -245,11 +262,12 @@ void ui_display_statustext(const char *text, int fade_out)
 #endif
 }
 
-/* Drive related UI.  */
+/* Drive related UI */
 void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
 {
     int drive_number;
     int drive_state = (int)state;
+    drive_enabled = drive_state;
 
     for (drive_number = 0; drive_number < 4; ++drive_number) {
         if (drive_state & 1) {
@@ -267,6 +285,9 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
 
 void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, unsigned int half_track_number)
 {
+    if (drive_empty)
+        return;
+
     unsigned int track_number = half_track_number / 2;
 
 #ifdef SDL_DEBUG
@@ -318,13 +339,39 @@ void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_
 
 void ui_display_drive_current_image(unsigned int drive_number, const char *image)
 {
-printf("d%d -> %s\n",drive_number, image);
+    //printf("d%d -> %s\n", drive_number, image);
+    display_current_image(image);
+
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s\n", __func__);
 #endif
 }
 
 /* Tape related UI */
+
+static int tape_counter = 0;
+static int tape_enabled = 0;
+static int tape_motor = 0;
+static int tape_control = 0;
+
+static void display_tape(void)
+{
+    if (drive_enabled)
+        return;
+
+    int len;
+
+    if (tape_enabled) {
+        len = sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? '*' : ' ', tape_counter, " >f<R"[tape_control]);
+    } else {
+        len = sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "     ");
+    }
+    statusbar_text[STATUSBAR_TAPE_POS + len] = ' ';
+
+    if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
+        uistatusbar_state |= UISTATUSBAR_REPAINT;
+    }
+}
 
 void ui_set_tape_status(int tape_status)
 {
@@ -358,6 +405,7 @@ void ui_display_tape_counter(int counter)
 
 void ui_display_tape_current_image(const char *image)
 {
+    display_current_image(image);
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s: %s\n", __func__, image);
 #endif
@@ -450,9 +498,6 @@ void uistatusbar_close(void)
 }
 
 #include "keyboard.h"
-extern unsigned int cur_port;
-
-
 #include "RSDL_wrapper.h"
 #include "libretro-core.h"
 
@@ -462,32 +507,25 @@ extern void Retro_Draw_string(RSDL_Surface *surface, signed short int x, signed 
 extern void Retro_Draw_string(RSDL_Surface *surface, signed short int x, signed short int y, const  char *string,unsigned short maxstrlen,unsigned short xscale, unsigned short yscale, unsigned  fg, unsigned  bg);
 #endif
 
-RSDL_Surface fake;
-
 void uistatusbar_draw(void)
 {
     int i;
-    BYTE c;//, color_f, color_b;
+    BYTE c;
 #ifdef M16B
 unsigned short int color_f, color_b;
     color_f = 0xffff;
-    color_b = 0x0001;
+    color_b = 0x0020;
 #else
 unsigned int color_f, color_b;
     color_f = 0xffffffff;
     color_b = 0x00000000;
 #endif
-    unsigned int line;
     unsigned int char_width;
     unsigned int char_offset;
 
-  //  color_f = 0xff;
-  //  color_b = 0;
-
-    pitch = PITCH;
-
     char tmpstr[512];
 
+    RSDL_Surface fake;
     fake.pixels=&bmp[0];
     fake.h=retroh;
     fake.w=retrow;
@@ -544,7 +582,10 @@ unsigned int color_f, color_b;
 #endif
 #endif
 
-    display_joyport();
+    if (imagename_timer > 0)
+        imagename_timer--;
+    else
+        display_joyport();
 
     for (i = 0; i < MAX_STATUSBAR_LEN; ++i)
     {

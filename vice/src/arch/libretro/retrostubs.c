@@ -22,7 +22,7 @@ extern unsigned int vice_devices[5];
 //EMU FLAGS
 int SHOWKEY=-1;
 int SHIFTON=-1;
-int CTRLON=-1;
+int TABON=-1;
 int SND=1;
 int vkey_pressed=-1;
 char core_key_state[512];
@@ -30,6 +30,8 @@ char core_old_key_state[512];
 int PAS=4;
 int slowdown=0;
 unsigned int cur_port=2;
+extern int cur_port_locked;
+
 unsigned int datasette=0;
 bool num_locked = false;
 
@@ -75,6 +77,7 @@ void emu_function(int function)
             resources_set_int("SDLStatusbar", statusbar);
             break;
         case EMU_JOYPORT:
+            cur_port_locked = 1;
             cur_port++;
             if (cur_port>2) cur_port = 1;
             break;
@@ -141,8 +144,8 @@ void Keymap_KeyDown(int symkey)
     /* Cursor keys */
     else if (symkey == RETROK_UP || symkey == RETROK_DOWN || symkey == RETROK_LEFT || symkey == RETROK_RIGHT)
     {
-        /* Cursors will not move if CTRL actually is pressed, so we need to fake keyup */
-        if (CTRLON == 1)
+        /* Cursors will not move if CTRL (Tab) actually is pressed, so we need to fake keyup */
+        if (TABON == 1)
             kbd_handle_keyup(RETROK_TAB);
             kbd_handle_keydown(symkey);
     }
@@ -234,8 +237,8 @@ void Core_Processkey(int disable_physical_cursor_keys)
          {	
             if (i==RETROK_LALT)
                continue;
-            else if (i==RETROK_TAB) /* CTRL acts as a cursor enabler */
-               CTRLON=1;
+            else if (i==RETROK_TAB) /* CTRL (Tab) acts as a keyboard enabler */
+               TABON=1;
             else if (i==RETROK_CAPSLOCK) /* Allow CapsLock while SHOWKEY */
                ;
             else if (disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
@@ -249,7 +252,7 @@ void Core_Processkey(int disable_physical_cursor_keys)
             if (i==RETROK_LALT)
                continue;
             else if (i==RETROK_TAB)
-               CTRLON=-1;
+               TABON=-1;
             else if (i==RETROK_CAPSLOCK)
                ;
             else if (disable_physical_cursor_keys && (i == RETROK_DOWN || i == RETROK_UP || i == RETROK_LEFT || i == RETROK_RIGHT))
@@ -269,17 +272,15 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     //   RETRO        B    Y    SLT  STA  UP   DWN  LEFT RGT  A    X    L    R    L2   R2   L3   R3  LR  LL  LD  LU  RR  RL  RD  RU
     //   INDEX        0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15  16  17  18  19  20  21  22  23
 
-    int i, mk;
-    static int jbt[24]={0};
+    static int i, j, mk;
+    static int jbt[2][24]={0};
     static int kbt[11]={0};
+
+    static int LX, LY, RX, RY;
+    static int threshold=20000;
     
     if (!retro_load_ok) return 1;
     input_poll_cb();
-
-    int mouse_l,mouse_r=0;
-    int16_t mouse_x,mouse_y=0;
-    int LX,LY,RX,RY=0;
-    int threshold=20000;
 
     /* Iterate hotkeys, skip datasette control if datasette controls are disabled or if VKBD is on */
     int imax = (datasette && SHOWKEY==-1) ? EMU_FUNCTION_COUNT : EMU_DATASETTE_TOGGLE_HOTKEYS;
@@ -358,169 +359,159 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     if (processkey && disable_physical_cursor_keys != 2)
         Core_Processkey(disable_physical_cursor_keys);
 
-    /* RetroPad extra mappings */
-    if (vice_devices[0] == RETRO_DEVICE_JOYPAD)
+    /* RetroPad hotkeys for ports 1 & 2 */
+    for (j = 0; j < 2; j++)
     {
-        LX = input_state_cb(0, RETRO_DEVICE_ANALOG, 0, 0);
-        LY = input_state_cb(0, RETRO_DEVICE_ANALOG, 0, 1);
-        RX = input_state_cb(0, RETRO_DEVICE_ANALOG, 1, 0);
-        RY = input_state_cb(0, RETRO_DEVICE_ANALOG, 1, 1);
-
-        /* shortcut for joy mode only */
-        for (i = 0; i < 24; i++)
+        if (vice_devices[j] == RETRO_DEVICE_JOYPAD)
         {
-            int just_pressed = 0;
-            int just_released = 0;
-            if (i > 0 && (i<4 || i>7) && i < 16) /* remappable retropad buttons (all apart from DPAD and B) */
-            {
-                /* Skip the transparency toggle button if vkbd is visible */
-                if (SHOWKEY==1 && i==RETRO_DEVICE_ID_JOYPAD_A)
-                    continue;
+            LX = input_state_cb(j, RETRO_DEVICE_ANALOG, 0, 0);
+            LY = input_state_cb(j, RETRO_DEVICE_ANALOG, 0, 1);
+            RX = input_state_cb(j, RETRO_DEVICE_ANALOG, 1, 0);
+            RY = input_state_cb(j, RETRO_DEVICE_ANALOG, 1, 1);
 
-                if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && jbt[i]==0 && i!=turbo_fire_button)
-                    just_pressed = 1;
-                else if (jbt[i]==1 && ! input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i))
-                    just_released = 1;
-            }
-            else if (i >= 16) /* remappable retropad joystick directions */
+            for (i = 0; i < 24; i++)
             {
-                switch (i)
+                int just_pressed = 0;
+                int just_released = 0;
+                if (i > 0 && (i<4 || i>7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad + B */
                 {
-                    case 16: /* LR */
-                        if (LX > threshold && jbt[i] == 0)
-                            just_pressed = 1;
-                        else if (LX < threshold && jbt[i] == 1)
-                            just_released = 1;
-                        break;
-                    case 17: /* LL */
-                        if (LX < -threshold && jbt[i] == 0)
-                            just_pressed = 1;
-                        else if (LX > -threshold && jbt[i] == 1)
-                            just_released = 1;
-                        break;
-                    case 18: /* LD */
-                        if (LY > threshold && jbt[i] == 0)
-                            just_pressed = 1;
-                        else if (LY < threshold && jbt[i] == 1)
-                            just_released = 1;
-                        break;
-                    case 19: /* LU */
-                        if (LY < -threshold && jbt[i] == 0)
-                            just_pressed = 1;
-                        else if (LY > -threshold && jbt[i] == 1)
-                            just_released = 1;
-                        break;
-                    case 20: /* RR */
-                        if (RX > threshold && jbt[i] == 0)
-                            just_pressed = 1;
-                        else if (RX < threshold && jbt[i] == 1)
-                            just_released = 1;
-                        break;
-                    case 21: /* RL */
-                        if (RX < -threshold && jbt[i] == 0)
-                            just_pressed = 1;
-                        else if (RX > -threshold && jbt[i] == 1)
-                            just_released = 1;
-                        break;
-                    case 22: /* RD */
-                        if (RY > threshold && jbt[i] == 0)
-                            just_pressed = 1;
-                        else if (RY < threshold && jbt[i] == 1)
-                            just_released = 1;
-                        break;
-                    case 23: /* RU */
-                        if (RY < -threshold && jbt[i] == 0)
-                            just_pressed = 1;
-                        else if (RY > -threshold && jbt[i] == 1)
-                            just_released = 1;
-                        break;
-                    default:
-                        break;
+                    /* Skip the transparency toggle button if vkbd is visible */
+                    if (SHOWKEY==1 && i==RETRO_DEVICE_ID_JOYPAD_A)
+                        continue;
+
+                    if (input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) && jbt[j][i]==0 && i!=turbo_fire_button)
+                        just_pressed = 1;
+                    else if (!input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) && jbt[j][i]==1 && i!=turbo_fire_button)
+                        just_released = 1;
                 }
-            }
+                else if (i >= 16) /* Remappable RetroPad analog stick directions */
+                {
+                    switch (i)
+                    {
+                        case 16: /* LR */
+                            if (LX > threshold && jbt[j][i] == 0) just_pressed = 1;
+                            else if (LX < threshold && jbt[j][i] == 1) just_released = 1;
+                            break;
+                        case 17: /* LL */
+                            if (LX < -threshold && jbt[j][i] == 0) just_pressed = 1;
+                            else if (LX > -threshold && jbt[j][i] == 1) just_released = 1;
+                            break;
+                        case 18: /* LD */
+                            if (LY > threshold && jbt[j][i] == 0) just_pressed = 1;
+                            else if (LY < threshold && jbt[j][i] == 1) just_released = 1;
+                            break;
+                        case 19: /* LU */
+                            if (LY < -threshold && jbt[j][i] == 0) just_pressed = 1;
+                            else if (LY > -threshold && jbt[j][i] == 1) just_released = 1;
+                            break;
+                        case 20: /* RR */
+                            if (RX > threshold && jbt[j][i] == 0) just_pressed = 1;
+                            else if (RX < threshold && jbt[j][i] == 1) just_released = 1;
+                            break;
+                        case 21: /* RL */
+                            if (RX < -threshold && jbt[j][i] == 0) just_pressed = 1;
+                            else if (RX > -threshold && jbt[j][i] == 1) just_released = 1;
+                            break;
+                        case 22: /* RD */
+                            if (RY > threshold && jbt[j][i] == 0) just_pressed = 1;
+                            else if (RY < threshold && jbt[j][i] == 1) just_released = 1;
+                            break;
+                        case 23: /* RU */
+                            if (RY < -threshold && jbt[j][i] == 0) just_pressed = 1;
+                            else if (RY > -threshold && jbt[j][i] == 1) just_released = 1;
+                            break;
+                        default:
+                            break;
+                    }
+                }
 
-            if (just_pressed)
-            {
-                jbt[i] = 1;
-                if (mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
-                    continue;
+                if (just_pressed)
+                {
+                    jbt[j][i] = 1;
+                    if (mapper_keys[i] == 0) /* Unmapped, e.g. set to "---" in core options */
+                        continue;
 
-                if (mapper_keys[i] == mapper_keys[24]) /* Virtual keyboard */
-                    emu_function(EMU_VKBD);
-                else if (mapper_keys[i] == mapper_keys[25]) /* Statusbar */
-                    emu_function(EMU_STATUSBAR);
-                else if (mapper_keys[i] == mapper_keys[26]) /* Switch joyport */
-                    emu_function(EMU_JOYPORT);
-                else if (mapper_keys[i] == mapper_keys[27]) /* Reset */
-                    emu_function(EMU_RESET);
-                else if (mapper_keys[i] == mapper_keys[28]) /* Warp mode */
-                    emu_function(EMU_WARP_ON);
-                else if (mapper_keys[i] == mapper_keys[29]) /* Datasette toggle */
-                    emu_function(EMU_DATASETTE_TOGGLE_HOTKEYS);
-                else if (datasette && mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
-                    emu_function(EMU_DATASETTE_STOP);
-                else if (datasette && mapper_keys[i] == mapper_keys[31]) /* Datasette start */
-                    emu_function(EMU_DATASETTE_START);
-                else if (datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
-                    emu_function(EMU_DATASETTE_FORWARD);
-                else if (datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
-                    emu_function(EMU_DATASETTE_REWIND);
-                else if (datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
-                    emu_function(EMU_DATASETTE_RESET);
-                else
-                    Keymap_KeyDown(mapper_keys[i]);
-            }
-            else if (just_released)
-            {
-                jbt[i] = 0;
-                if (mapper_keys[i] == 0) /* unmapped, e.g. set to "---" in core options */
-                    continue;
+                    if (mapper_keys[i] == mapper_keys[24]) /* Virtual keyboard */
+                        emu_function(EMU_VKBD);
+                    else if (mapper_keys[i] == mapper_keys[25]) /* Statusbar */
+                        emu_function(EMU_STATUSBAR);
+                    else if (mapper_keys[i] == mapper_keys[26]) /* Switch joyport */
+                        emu_function(EMU_JOYPORT);
+                    else if (mapper_keys[i] == mapper_keys[27]) /* Reset */
+                        emu_function(EMU_RESET);
+                    else if (mapper_keys[i] == mapper_keys[28]) /* Warp mode */
+                        emu_function(EMU_WARP_ON);
+                    else if (mapper_keys[i] == mapper_keys[29]) /* Datasette toggle */
+                        emu_function(EMU_DATASETTE_TOGGLE_HOTKEYS);
+                    else if (datasette && mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
+                        emu_function(EMU_DATASETTE_STOP);
+                    else if (datasette && mapper_keys[i] == mapper_keys[31]) /* Datasette start */
+                        emu_function(EMU_DATASETTE_START);
+                    else if (datasette && mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
+                        emu_function(EMU_DATASETTE_FORWARD);
+                    else if (datasette && mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
+                        emu_function(EMU_DATASETTE_REWIND);
+                    else if (datasette && mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
+                        emu_function(EMU_DATASETTE_RESET);
+                    else
+                        Keymap_KeyDown(mapper_keys[i]);
+                }
+                else if (just_released)
+                {
+                    jbt[j][i] = 0;
+                    if (mapper_keys[i] == 0) /* Unmapped, e.g. set to "---" in core options */
+                        continue;
 
-                if (mapper_keys[i] == mapper_keys[24])
-                    ; /* nop */
-                else if (mapper_keys[i] == mapper_keys[25])
-                    ; /* nop */
-                else if (mapper_keys[i] == mapper_keys[26])
-                    ; /* nop */
-                else if (mapper_keys[i] == mapper_keys[27])
-                    ; /* nop */
-                else if (mapper_keys[i] == mapper_keys[28])
-                    emu_function(EMU_WARP_OFF);
-                else if (mapper_keys[i] == mapper_keys[29])
-                    ; /* nop */
-                else if (datasette && mapper_keys[i] == mapper_keys[30])
-                    ; /* nop */
-                else if (datasette && mapper_keys[i] == mapper_keys[31])
-                    ; /* nop */
-                else if (datasette && mapper_keys[i] == mapper_keys[32])
-                    ; /* nop */
-                else if (datasette && mapper_keys[i] == mapper_keys[33])
-                    ; /* nop */
-                else if (datasette && mapper_keys[i] == mapper_keys[34])
-                    ; /* nop */
-                else
-                    Keymap_KeyUp(mapper_keys[i]);
-            }
-        } /* for i */
-    } /* if vice_devices[0]==joypad */
-
+                    if (mapper_keys[i] == mapper_keys[24])
+                        ; /* nop */
+                    else if (mapper_keys[i] == mapper_keys[25])
+                        ; /* nop */
+                    else if (mapper_keys[i] == mapper_keys[26])
+                        ; /* nop */
+                    else if (mapper_keys[i] == mapper_keys[27])
+                        ; /* nop */
+                    else if (mapper_keys[i] == mapper_keys[28])
+                        emu_function(EMU_WARP_OFF);
+                    else if (mapper_keys[i] == mapper_keys[29])
+                        ; /* nop */
+                    else if (datasette && mapper_keys[i] == mapper_keys[30])
+                        ; /* nop */
+                    else if (datasette && mapper_keys[i] == mapper_keys[31])
+                        ; /* nop */
+                    else if (datasette && mapper_keys[i] == mapper_keys[32])
+                        ; /* nop */
+                    else if (datasette && mapper_keys[i] == mapper_keys[33])
+                        ; /* nop */
+                    else if (datasette && mapper_keys[i] == mapper_keys[34])
+                        ; /* nop */
+                    else
+                        Keymap_KeyUp(mapper_keys[i]);
+                }
+            } /* for i */
+        } /* if vice_devices[0]==joypad */
+    } /* for j */
     return 1;
 }
 
 void retro_poll_event()
 {
-    /* If RetroPad is controlled with cursor keys, then prevent up/down/left/right/b/a/x/y from generating */
+    /* If RetroPad is controlled with keyboard keys, then prevent RetroPad from generating */
     /* keyboard key presses, this prevents cursor up from becoming a run/stop input */
-    if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
+    if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && TABON==-1 &&
         (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X) ||
-         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y)
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ||
+         input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2)
         ) &&
         !RETROKEYBOARDPASSTHROUGH
     )
         Core_PollEvent(2); /* Skip all keyboard input when fire is pressed */
-    else if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && CTRLON==-1 &&
+
+    else if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && TABON==-1 &&
         (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
          input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
@@ -529,13 +520,32 @@ void retro_poll_event()
         !RETROKEYBOARDPASSTHROUGH
     )
         Core_PollEvent(1); /* Process all inputs but disable cursor keys */
+
+    else if ((vice_devices[1] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[1] == RETRO_DEVICE_JOYPAD) && TABON==-1 &&
+        (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
+         input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)
+        ) &&
+        !RETROKEYBOARDPASSTHROUGH
+    )
+        Core_PollEvent(2); /* Skip all keyboard input from RetroPad 2 */
+
     else
         Core_PollEvent(0); /* Process all inputs */
 
     /* retro joypad take control over keyboard joy */
     /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
     /* keyup allowing most likely not needed on actual keyboard presses even though they get stuck also */
-    if (CTRLON==-1)
+    if (TABON==-1)
     {
         int retro_port;
         for (retro_port = 0; retro_port <= 4; retro_port++)

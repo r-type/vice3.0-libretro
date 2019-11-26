@@ -77,6 +77,7 @@ int lastH=768;
 
 unsigned int vice_devices[5];
 unsigned int opt_theme;
+unsigned int opt_mapping_options_display;
 unsigned int retro_region;
 
 extern int RETROTDE;
@@ -1132,7 +1133,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport",
          "RetroPad Port",
-         "Most games use port 2, some use port 1.",
+         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling will disable this option until core restart.",
          {
             { "Port 2", NULL },
             { "Port 1", NULL },
@@ -1180,7 +1181,18 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-/* Hotkeys */
+      {
+         "vice_mapping_options_display",
+         "Enable Mapping Options",
+         "Show options for hotkeys & RetroPad mappings.\nCore option page refresh required.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      /* Hotkeys */
       {
          "vice_mapper_vkbd",
          "Hotkey: Toggle Virtual Keyboard",
@@ -1199,7 +1211,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_joyport_switch",
          "Hotkey: Swap Joyports",
-         "Press the mapped key to swap joyports 1 & 2.",
+         "Press the mapped key to swap joyports 1 & 2.\nSwapping will disable 'RetroPad Port' option until core restart.",
          {{ NULL, NULL }},
          "RETROK_RCTRL"
       },
@@ -1218,7 +1230,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
       },
-/* Datasette controls */
+      /* Datasette controls */
       {
          "vice_mapper_datasette_toggle_hotkeys",
          "Hotkey: Toggle Datasette Hotkeys",
@@ -1272,7 +1284,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "---"
       },
-/* Button mappings */
+      /* Button mappings */
       {
          "vice_mapper_select",
          "RetroPad Select",
@@ -1350,7 +1362,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_t"
       },
-/* Left Stick */
+      /* Left Stick */
       {
          "vice_mapper_lu",
          "RetroPad L-Up",
@@ -1379,7 +1391,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "---"
       },
-/* Right Stick */
+      /* Right Stick */
       {
          "vice_mapper_ru",
          "RetroPad R-Up",
@@ -1408,6 +1420,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "---"
       },
+      /* Turbo Fire */
       {
          "vice_turbo_fire_button",
          "RetroPad Turbo Fire",
@@ -1519,12 +1532,12 @@ int log_resources_set_string(const char *name, const char* value)
 static void update_variables(void)
 {
    struct retro_variable var;
+   struct retro_core_option_display option_display;
 
-   log_cb(RETRO_LOG_INFO, "Updating variables, ui finalized = %d\n", retro_ui_finalized);
+   log_cb(RETRO_LOG_INFO, "Updating variables, UI finalized = %d\n", retro_ui_finalized);
 
    var.key = "vice_autostart_warp";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (retro_ui_finalized)
@@ -1543,7 +1556,6 @@ static void update_variables(void)
 
    var.key = "vice_drive_true_emulation";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (retro_ui_finalized)
@@ -1576,7 +1588,6 @@ static void update_variables(void)
 
    var.key = "vice_drive_sound_emulation";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int val = atoi(var.value);
@@ -1604,7 +1615,6 @@ static void update_variables(void)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
    var.key = "vice_audio_leak_emulation";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int audioleak=0;
@@ -1624,7 +1634,6 @@ static void update_variables(void)
 
    var.key = "vice_sid_model";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int eng=0,modl=0,sidmdl=0;
@@ -1646,7 +1655,6 @@ static void update_variables(void)
 
    var.key = "vice_resid_sampling";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int resid=0;
@@ -1666,7 +1674,6 @@ static void update_variables(void)
 #if defined(__VIC20__)
    var.key = "vice_vic20_model";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int modl=0;
@@ -1682,7 +1689,6 @@ static void update_variables(void)
 
    var.key = "vice_vic20_memory_expansions";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int vic20mem=0;
@@ -1753,7 +1759,6 @@ static void update_variables(void)
 #elif defined(__PLUS4__)
    var.key = "vice_plus4_model";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int modl=0;
@@ -1772,7 +1777,6 @@ static void update_variables(void)
 #elif defined(__X128__)
    var.key = "vice_c128_model";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int modl=0;
@@ -1789,7 +1793,6 @@ static void update_variables(void)
 
    var.key = "vice_c128_video_output";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int c128columnkey=1;
@@ -1807,7 +1810,6 @@ static void update_variables(void)
 #elif defined(__PET__)
    var.key = "vice_pet_model";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int modl=0;
@@ -1832,7 +1834,6 @@ static void update_variables(void)
 #elif defined(__CBM2__)
    var.key = "vice_cbm2_model";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int modl=0;
@@ -1856,7 +1857,6 @@ static void update_variables(void)
 #else
    var.key = "vice_c64_model";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int modl=0;
@@ -1884,7 +1884,6 @@ static void update_variables(void)
 #if !defined(__PET__) && !defined(__CBM2__)
    var.key = "vice_border";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int border=0; /* 0 : normal, 1: full, 2: debug, 3: none */
@@ -1906,7 +1905,6 @@ static void update_variables(void)
 #if defined(__VIC20__)
    var.key = "vice_vic20_external_palette";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
@@ -1944,7 +1942,6 @@ static void update_variables(void)
 #elif defined(__PLUS4__)
    var.key = "vice_plus4_external_palette";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
@@ -1981,7 +1978,6 @@ static void update_variables(void)
 #elif defined(__PET__)
    var.key = "vice_pet_external_palette";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
@@ -2018,7 +2014,6 @@ static void update_variables(void)
 #elif defined(__CBM2__)
    var.key = "vice_cbm2_external_palette";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
@@ -2055,7 +2050,6 @@ static void update_variables(void)
 #else
    var.key = "vice_external_palette";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       char extpal[20] = "";
@@ -2106,7 +2100,6 @@ static void update_variables(void)
 
    var.key = "vice_userport_joytype";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
 
@@ -2135,7 +2128,6 @@ static void update_variables(void)
 
    var.key = "vice_joyport";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "Port 2") == 0 && !cur_port_locked) cur_port=2;
@@ -2144,7 +2136,6 @@ static void update_variables(void)
 
    var.key = "vice_keyrah_keypad_mappings";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "disabled") == 0) RETROKEYRAHKEYPAD=0;
@@ -2153,7 +2144,6 @@ static void update_variables(void)
 
    var.key = "vice_physical_keyboard_pass_through";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "disabled") == 0) RETROKEYBOARDPASSTHROUGH=0;
@@ -2162,7 +2152,6 @@ static void update_variables(void)
 
    var.key = "vice_turbo_fire_button";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "disabled") == 0) turbo_fire_button=-1;
@@ -2179,7 +2168,6 @@ static void update_variables(void)
 
    var.key = "vice_turbo_pulse";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "2") == 0) turbo_pulse=2;
@@ -2192,7 +2180,6 @@ static void update_variables(void)
 
    var.key = "vice_reset";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "Autostart") == 0) RETRORESET=0;
@@ -2202,7 +2189,6 @@ static void update_variables(void)
 
    var.key = "vice_theme";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (strcmp(var.value, "C64") == 0) RETROTHEME=0;
@@ -2215,6 +2201,16 @@ static void update_variables(void)
       opt_theme=RETROTHEME;
    }
 
+   var.key = "vice_mapping_options_display";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) opt_mapping_options_display=0;
+      else if (strcmp(var.value, "enabled") == 0) opt_mapping_options_display=1;
+   }
+
+
+   /* Mapper */
    var.key = "vice_mapper_select";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2436,6 +2432,75 @@ static void update_variables(void)
    {
       mapper_keys[34] = keyId(var.value);
    }
+
+
+   /* Options display */
+   option_display.visible = opt_mapping_options_display;
+
+   option_display.key = "vice_mapper_select";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_start";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_a";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_y";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_x";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_l";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_r";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_l2";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_r2";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_l3";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_r3";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_lu";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_ld";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_ll";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_lr";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_ru";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_rd";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_rl";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_rr";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_vkbd";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_statusbar";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
+   option_display.key = "vice_mapper_joyport_switch";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
+   option_display.key = "vice_mapper_reset";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_warp_mode";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_datasette_toggle_hotkeys";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_datasette_hotkeys";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_datasette_start";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_datasette_stop";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_datasette_rewind";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_datasette_forward";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_datasette_reset";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 }
 
 void emu_reset(void)

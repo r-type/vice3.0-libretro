@@ -1,7 +1,7 @@
 #include "libretro.h"
 #include "libretro-core.h"
 #include "file/file_path.h"
-#include "log.h"
+#include "compat/strcasestr.h"
 
 #include "archdep.h"
 #include "c64.h"
@@ -19,47 +19,44 @@
 #endif
 #include "initcmdline.h"
 #include "vsync.h"
-
-#include "compat/strcasestr.h"
-
-//CORE VAR
-char slash = FSDEV_DIR_SEP_CHR;
-
-bool retro_load_ok = false;
-
-retro_log_printf_t log_cb;
-
-char RETRO_DIR[512];
-static snapshot_stream_t* snapshot_stream = NULL;
-static int load_trap_happened = 0;
-static int save_trap_happened = 0;
-
-int mapper_keys[35] = { 0 };
-static char buf[64][4096] = { 0 };
+#include "log.h"
 
 // Our virtual time counter, increased by retro_run()
 long microSecCounter=0;
 int cpuloop=1;
 
-#ifdef FRONTEND_SUPPORTS_RGB565
-	uint16_t *Retro_Screen;
-	uint16_t bmp[WINDOW_SIZE];
-	uint16_t save_Screen[WINDOW_SIZE];
-#else
-	unsigned int *Retro_Screen;
-	unsigned int bmp[WINDOW_SIZE];
-	unsigned int save_Screen[WINDOW_SIZE];
-#endif
-
-//PATH
-static char* autostartString = NULL;
-
+// VKBD 
 extern int SHOWKEY;
+extern void reset_mouse_pos();
+unsigned int opt_theme;
 
+// Nuklear
 extern int app_init(void);
 extern int app_free(void);
 extern int app_render(void);
 
+// Core vars
+char slash = FSDEV_DIR_SEP_CHR;
+bool retro_load_ok = false;
+static bool noautostart = false;
+static char* autostartString = NULL;
+char RETRO_DIR[512];
+static char buf[64][4096] = { 0 };
+
+static snapshot_stream_t* snapshot_stream = NULL;
+static int load_trap_happened = 0;
+static int save_trap_happened = 0;
+
+int mapper_keys[35] = { 0 };
+unsigned int vice_devices[5];
+unsigned int opt_mapping_options_display;
+unsigned int retro_region;
+
+extern int retro_ui_finalized;
+extern uint8_t mem_ram[];
+extern int g_mem_ram_size;
+
+// Core geometry
 int CROP_WIDTH;
 int CROP_HEIGHT;
 int VIRTUAL_WIDTH;
@@ -73,13 +70,17 @@ int retroh=768;
 int lastW=1024;
 int lastH=768;
 
-#include "vkbd.i"
+#ifdef FRONTEND_SUPPORTS_RGB565
+	uint16_t *Retro_Screen;
+	uint16_t bmp[WINDOW_SIZE];
+	uint16_t save_Screen[WINDOW_SIZE];
+#else
+	unsigned int *Retro_Screen;
+	unsigned int bmp[WINDOW_SIZE];
+	unsigned int save_Screen[WINDOW_SIZE];
+#endif
 
-unsigned int vice_devices[5];
-unsigned int opt_theme;
-unsigned int opt_mapping_options_display;
-unsigned int retro_region;
-
+// Core options
 extern int RETROTDE;
 extern int RETRODSE;
 extern int RETRORESET;
@@ -101,17 +102,21 @@ extern int RETROTHEME;
 extern int RETROKEYRAHKEYPAD;
 extern int RETROKEYBOARDPASSTHROUGH;
 extern char RETROEXTPALNAME[512];
-extern int retro_ui_finalized;
+
+extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
-extern unsigned int datasette;
 extern int cur_port_locked;
 
 extern int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
-extern void reset_mouse_pos();
-extern uint8_t mem_ram[];
-extern int g_mem_ram_size;
+#if defined(__VIC20__)
+char resources_var_border[20] = "VICBorderMode";
+#elif defined(__PLUS4__)
+char resources_var_border[20] = "TEDBorderMode";
+#else
+char resources_var_border[20] = "VICIIBorderMode";
+#endif
 
 //VICE DEF BEGIN
 #include "resources.h"
@@ -140,13 +145,13 @@ const char *retro_system_directory;
 const char *retro_content_directory;
 char retro_system_data_directory[512];
 
-/*static*/ retro_input_state_t input_state_cb;
-/*static*/ retro_input_poll_t input_poll_cb;
+retro_input_state_t input_state_cb;
+retro_input_poll_t input_poll_cb;
+retro_log_printf_t log_cb;
 static retro_video_refresh_t video_cb;
 static retro_audio_sample_t audio_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
-static bool noautostart = false;
 
 #include "retro_strings.h"
 #include "retro_files.h"
@@ -727,6 +732,7 @@ void Screen_SetFullUpdate(int scr)
       memset(&bmp, 0, sizeof(bmp));
 }
 
+#include "vkbd.i"
 int keyId(const char *val)
 {
    int i=0;
@@ -991,7 +997,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sid_model",
          "SID Model",
-         "ReSID is accurate but slower. 6581 was used in original C64, 8580 in C64C.",
+         "ReSID is accurate but slower. The original C64 uses 6581, C64C uses 8580.",
          {
             { "6581F", "6581 FastSID" },
             { "6581R", "6581 ReSID" },
@@ -1020,7 +1026,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_border",
          "Display Borders",
-         "",
+         "All cores except 'x64sc' will reset when changing this option.\nWARNING: Toggling this multiple times in 'x64sc' will crash eventually!",
          {
             { "enabled", NULL },
             { "disabled", NULL },
@@ -1183,7 +1189,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_mapping_options_display",
-         "Enable Mapping Options",
+         "Show Mapping Options",
          "Show options for hotkeys & RetroPad mappings.\nCore option page refresh required.",
          {
             { "disabled", NULL },
@@ -1210,8 +1216,8 @@ void retro_set_environment(retro_environment_t cb)
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
       {
          "vice_mapper_joyport_switch",
-         "Hotkey: Swap Joyports",
-         "Press the mapped key to swap joyports 1 & 2.\nSwapping will disable 'RetroPad Port' option until core restart.",
+         "Hotkey: Switch Joyports",
+         "Press the mapped key to switch joyports 1 & 2.\nSwitching will disable 'RetroPad Port' option until core restart.",
          {{ NULL, NULL }},
          "RETROK_RCTRL"
       },
@@ -1353,14 +1359,14 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad L3",
          "",
          {{ NULL, NULL }},
-         "RETROK_h"
+         "---"
       },
       {
          "vice_mapper_r3",
          "RetroPad R3",
          "",
          {{ NULL, NULL }},
-         "RETROK_t"
+         "---"
       },
       /* Left Stick */
       {
@@ -1892,13 +1898,7 @@ static void update_variables(void)
 
       RETROBORDERS=border;
       if (retro_ui_finalized)
-#if defined(__VIC20__)
-        log_resources_set_int("VICBorderMode", border);
-#elif defined(__PLUS4__)
-        log_resources_set_int("TEDBorderMode", border);
-#else 
-        log_resources_set_int("VICIIBorderMode", border);
-#endif
+         log_resources_set_int(resources_var_border, border);
    }
 #endif
 
@@ -2384,11 +2384,10 @@ static void update_variables(void)
 
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "enabled") == 0) datasette=1;
-      else if (strcmp(var.value, "disabled") == 0) datasette=0;
+      if (strcmp(var.value, "enabled") == 0) datasette_hotkeys=1;
+      else if (strcmp(var.value, "disabled") == 0) datasette_hotkeys=0;
    }
 
    var.key = "vice_mapper_datasette_toggle_hotkeys";
@@ -2488,8 +2487,6 @@ static void update_variables(void)
    option_display.key = "vice_mapper_warp_mode";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_datasette_toggle_hotkeys";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_datasette_hotkeys";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_datasette_start";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);

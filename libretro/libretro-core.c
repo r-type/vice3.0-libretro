@@ -853,7 +853,7 @@ void retro_set_environment(retro_environment_t cb)
          "",
          {
             { "VICII", "VIC-II (40 cols)" },
-            { "VDC", "VCD (80 cols)" },
+            { "VDC", "VDC (80 cols)" },
             { NULL, NULL },
          },
          "VICII"

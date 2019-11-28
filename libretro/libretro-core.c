@@ -30,7 +30,6 @@ extern int SHOWKEY;
 unsigned int opt_theme;
 extern void reset_mouse_pos();
 static bool request_reset_mouse_pos = false;
-static unsigned int request_reset_mouse_pos_timer = 0;
 
 // Nuklear
 extern int app_init(void);
@@ -3018,15 +3017,6 @@ void retro_run(void)
       request_reset_mouse_pos = true;
    }
 
-   if (request_reset_mouse_pos)
-   {
-      if (request_reset_mouse_pos_timer > 0)
-         request_reset_mouse_pos_timer--;
-      else
-         request_reset_mouse_pos = false;
-      reset_mouse_pos();
-   }
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
 
@@ -3100,6 +3090,12 @@ void retro_run(void)
    retro_blit();
    if (SHOWKEY==1) app_render();
 
+   if (request_reset_mouse_pos)
+   {
+      request_reset_mouse_pos = false;
+      reset_mouse_pos();
+   }
+
    if (zoom_mode_id_prev == -1)
    {
       zoomed_width = retroW;
@@ -3113,13 +3109,13 @@ void retro_run(void)
       zoom_mode_id_prev = zoom_mode_id;
       switch (zoom_mode_id)
       {
-#if defined(__X64__) || defined(__X64SC__)
+         #if defined(__X64__) || defined(__X64SC__)
          // PAL: 384x272, NTSC: 384x247
          case 1:
             zoomed_width    = retroW;
             retroXS_offset  = 0;
             zoomed_height   = (retro_get_region() == RETRO_REGION_NTSC) ? 230 : 240;
-            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 8 : 10;
+            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 8 : 16;
             break;
          case 2:
             zoomed_width    = retroW;
@@ -3133,27 +3129,27 @@ void retro_run(void)
             zoomed_height   = 200;
             retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 23 : 35;
             break;
-#elif defined(__VIC20__)
+         #elif defined(__VIC20__)
          // PAL: 448x284, NTSC: 400x234
          case 1:
-            zoomed_width    = (retro_get_region() == RETRO_REGION_NTSC) ? 388 : retroW;
-            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 14 : 0;
+            zoomed_width    = retroW;
+            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 8 : 0;
             zoomed_height   = (retro_get_region() == RETRO_REGION_NTSC) ? 218 : 236;
-            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 4 : 20;
+            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 6 : 20;
             break;
          case 2:
-            zoomed_width    = (retro_get_region() == RETRO_REGION_NTSC) ? 360 : 384;
-            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 28 : 32;
+            zoomed_width    = retroW;
+            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 8 : 0;
             zoomed_height   = (retro_get_region() == RETRO_REGION_NTSC) ? 202 : 216;
             retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 13 : 32;
             break;
          case 3:
-            zoomed_width    = 352;
-            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 32 : 48;
+            zoomed_width    = (retro_get_region() == RETRO_REGION_NTSC) ? retroW : 392;
+            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 8 : 28;
             zoomed_height   = 184;
             retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 22 : 48;
             break;
-#endif
+         #endif
          default:
             zoomed_width    = retroW;
             zoomed_height   = retroH;
@@ -3166,21 +3162,21 @@ void retro_run(void)
       new_av_info.geometry.base_width = zoomed_width;
       new_av_info.geometry.base_height = zoomed_height;
 
-#if defined(__X64__) || defined(__X64SC__)
+      #if defined(__X64__) || defined(__X64SC__)
       if (retro_get_region() == RETRO_REGION_NTSC)
-         new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.7500;
+         new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.75000000;
       else
-         new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.9365;
-#elif defined(__VIC20__)
-      new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height);
-#endif
+         new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.93650794;
+      #elif defined(__VIC20__)
+      if (retro_get_region() == RETRO_REGION_NTSC)
+         new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * ((float)1.50411479 / (float)2.0);
+      else
+         new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * ((float)1.66574035 / (float)2.0);
+      #endif
       environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);
-
       request_reset_mouse_pos = true;
-#if defined(__VIC20__) // AAAARGH, trickery to keep VKBD cursor position in the right place when toggling zoom (retroXS_offset)
-      request_reset_mouse_pos_timer = 1;
-#endif
    }
+
    video_cb(Retro_Screen, zoomed_width, zoomed_height, retrow<<PIXEL_BYTES);
 #else
    video_cb(Retro_Screen, retroW, retroH, retrow<<PIXEL_BYTES);

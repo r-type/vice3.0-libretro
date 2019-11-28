@@ -20,6 +20,12 @@ extern char core_key_state[512];
 extern char core_old_key_state[512];
 extern char RPATH[512];
 extern int SHOWKEY;
+extern int SHIFTON;
+extern int vkey_pressed;
+extern int opt_theme;
+extern unsigned int retro_get_borders(void);
+extern int retroXS_offset;
+extern int retroYS_offset;
 
 #define NK_INCLUDE_FIXED_TYPES
 #define NK_INCLUDE_STANDARD_IO

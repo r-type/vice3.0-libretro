@@ -82,18 +82,22 @@ typedef struct{
 } retro_pal;
 
 //VARIABLES
-extern int CROP_WIDTH;
-extern int CROP_HEIGHT;
 extern int VIRTUAL_WIDTH;
 extern int retrow; 
 extern int retroh;
 extern int cpuloop;
 extern int retroXS;
 extern int retroYS;
+extern int retroXS_offset;
+extern int retroYS_offset;
 extern int retroH;
 extern int retroW;
+extern unsigned int zoomed_width;
+extern unsigned int zoomed_height;
 
 //FUNCS
 extern void maincpu_mainloop_retro(void);
 extern long GetTicks(void);
+extern unsigned int retro_get_borders(void);
+extern unsigned int retro_toggle_theme(void);
 #endif

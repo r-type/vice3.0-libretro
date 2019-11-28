@@ -52,6 +52,7 @@ NK_API struct nk_retro_event* nk_retro_event_ptr();
 #endif
 
 #include "libretro.h"
+#include "libretro-core.h"
 
 /* VKBD_MIN_HOLDING_TIME: Hold a direction longer than this and automatic movement sets in */
 /* VKBD_MOVE_DELAY: Delay between automatic movement from button to button */
@@ -445,41 +446,40 @@ nk_retro_get_text_width(nk_handle handle, float height, const char *text, int le
     return len * font->width;
 }
 
-
-extern unsigned retro_get_borders(void);
-extern unsigned retro_toggle_theme(void);
-
 void reset_mouse_pos()
 {
-	/* Starting point on F7 */
+    /* Starting point on F7 */
 #if defined(__VIC20__)
-	switch (retro_get_borders())
-	{
-	    case 0: /* Normal borders */
-	        revent.gmx = 384;
-	        revent.gmy = 138;
-	        break;
+    switch (retro_get_borders())
+    {
+        case 0: /* Normal borders */
+            revent.gmx = 384;
+            revent.gmy = 138;
 
-        case 3: /* No borders */
-	        revent.gmx = 324;
-	        revent.gmy = 90;
+            /* NTSC offset */
+            if (retro_get_region() == RETRO_REGION_NTSC)
+            {
+                revent.gmy -= 24;
+                revent.gmx -= 20;
+            }
+            break;
+
+        case 3: /* No borders, no NTSC offset */
+            revent.gmx = 330;
+            revent.gmy = 96;
             break;
     }
-
-    /* NTSC offset */
-    if (retro_get_region() == RETRO_REGION_NTSC)
-        revent.gmy -= 24;
 #else
-	switch (retro_get_borders())
-	{
-	    case 0: /* Normal borders */
-	        revent.gmx = 324;
-	        revent.gmy = 138;
-        	break;
-        
+    switch (retro_get_borders())
+    {
+        case 0: /* Normal borders */
+            revent.gmx = 324;
+            revent.gmy = 138;
+            break;
+
         case 3: /* No borders */
-	        revent.gmx = 288;
-	        revent.gmy = 100;
+            revent.gmx = 288;
+            revent.gmy = 100;
             break;
     }
 
@@ -487,6 +487,8 @@ void reset_mouse_pos()
     if (retro_get_region() == RETRO_REGION_NTSC)
         revent.gmy -= 12;
 #endif
+    revent.gmx -= retroXS_offset;
+    revent.gmy -= retroYS_offset;
 }
 
 static void retro_init_event()
@@ -518,7 +520,6 @@ static void retro_init_event()
     memset(revent.old_key_state,0,sizeof(revent.old_key_state));
     revent.showpointer=0;
 }
-
 
 NK_API struct nk_retro_event* 
 nk_retro_event_ptr()
@@ -560,28 +561,28 @@ nk_retro_set_font(nk_retro_Font *xfont)
     nk_style_set_font(&retro.ctx, font);
 }
 
-static void mousebut(int but,int down,int x,int y){
+static void mousebut(int but, int down, int x, int y)
+{
+    struct nk_context *ctx = &retro.ctx;
 
-	struct nk_context *ctx = &retro.ctx;
-
- 	if(but==1)nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
- 	//else if(but==2)nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
- 	else if(but==2 && down)retro_toggle_theme();
- 	//else if(but==3)nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
-	//else if(but==4)nk_input_scroll(ctx,(float)down);
+    if (but==1) nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
+    //else if (but==2) nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
+    else if (but==2 && down) retro_toggle_theme();
+    //else if (but==3) nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
+    //else if (but==4) nk_input_scroll(ctx,(float)down);
 }
 
 NK_API void nk_retro_handle_event(int *evt, int poll)
 {
-   struct nk_context *ctx = &retro.ctx;
+    struct nk_context *ctx = &retro.ctx;
 
-   if (poll)
-       input_poll_cb();
+    if (poll)
+        input_poll_cb();
 
-   static int lmx=0,lmy=0;
-   static int mmbL=0,mmbR=0,mmbM=0;
-   static int mouse_l,mouse_m,mouse_r=0;
-   int16_t mouse_x=0,mouse_y=0;
+    static int lmx=0,lmy=0;
+    static int mmbL=0,mmbR=0,mmbM=0;
+    static int mouse_l,mouse_m,mouse_r=0;
+    int16_t mouse_x=0,mouse_y=0;
 
     // Joypad buttons
     mouse_l = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
@@ -675,14 +676,14 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
             revent.gmy+=mouse_y;
 
             // Mouse corners
-            if (revent.gmx<offset.x)
-                revent.gmx=offset.x;
-            if (revent.gmx>retroW-offset.x-1)
-                revent.gmx=retroW-offset.x-1;
-            if (revent.gmy<offset.y)
-                revent.gmy=offset.y;
-            if (revent.gmy>retroH-offset.y-3)
-                revent.gmy=retroH-offset.y-3;
+            if (revent.gmx < offset.x)
+                revent.gmx = offset.x;
+            if (revent.gmx > zoomed_width - offset.x - 1)
+                revent.gmx = zoomed_width - offset.x - 1;
+            if (revent.gmy < offset.y)
+                revent.gmy = offset.y;
+            if (revent.gmy > zoomed_height - offset.y - 3)
+                revent.gmy = zoomed_height - offset.y - 3;
         }
     }
     else

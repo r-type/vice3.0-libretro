@@ -33,10 +33,12 @@ unsigned int warpmode;
 unsigned int datasette_hotkeys;
 unsigned int cur_port=2;
 extern int cur_port_locked;
-extern bool retro_load_ok;
-extern int mapper_keys[35];
+extern int mapper_keys[36];
+extern unsigned int zoom_mode_id;
+extern unsigned int opt_zoom_mode_id;
 extern int RETROKEYRAHKEYPAD;
 extern int RETROKEYBOARDPASSTHROUGH;
+extern bool retro_load_ok;
 
 int turbo_fire_button_disabled=-1;
 int turbo_fire_button=-1;
@@ -50,6 +52,7 @@ enum EMU_FUNCTIONS
     EMU_STATUSBAR,
     EMU_JOYPORT,
     EMU_RESET,
+    EMU_ZOOM_MODE,
     EMU_WARP,
     EMU_DATASETTE_HOTKEYS,
     EMU_DATASETTE_STOP,
@@ -78,6 +81,14 @@ void emu_function(int function)
             break;
         case EMU_RESET:
             emu_reset();
+            break;
+        case EMU_ZOOM_MODE:
+            if (zoom_mode_id == 0 && opt_zoom_mode_id == 0)
+                break;
+            if (zoom_mode_id > 0)
+                zoom_mode_id = 0;
+            else if (zoom_mode_id == 0)
+                zoom_mode_id = opt_zoom_mode_id;
             break;
         case EMU_WARP:
             warpmode = (warpmode) ? 0 : 1;
@@ -301,25 +312,28 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     emu_function(EMU_RESET);
                     break;
                 case 28:
-                    emu_function(EMU_WARP);
+                    emu_function(EMU_ZOOM_MODE);
                     break;
                 case 29:
+                    emu_function(EMU_WARP);
+                    break;
+                case 30:
                     emu_function(EMU_DATASETTE_HOTKEYS);
                     break;
 
-                case 30:
+                case 31:
                     emu_function(EMU_DATASETTE_STOP);
                     break;
-                case 31:
+                case 32:
                     emu_function(EMU_DATASETTE_START);
                     break;
-                case 32:
+                case 33:
                     emu_function(EMU_DATASETTE_FORWARD);
                     break;
-                case 33:
+                case 34:
                     emu_function(EMU_DATASETTE_REWIND);
                     break;
-                case 34:
+                case 35:
                     emu_function(EMU_DATASETTE_RESET);
                     break;
             }
@@ -330,7 +344,7 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             kbt[i]=0;
             switch(mk)
             {
-                case 28:
+                case 29:
                     emu_function(EMU_WARP);
                     break;
             }
@@ -432,19 +446,21 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                         emu_function(EMU_JOYPORT);
                     else if (mapper_keys[i] == mapper_keys[27]) /* Reset */
                         emu_function(EMU_RESET);
-                    else if (mapper_keys[i] == mapper_keys[28]) /* Warp mode */
+                    else if (mapper_keys[i] == mapper_keys[28]) /* Toggle zoom mode */
+                        emu_function(EMU_ZOOM_MODE);
+                    else if (mapper_keys[i] == mapper_keys[29]) /* Hold warp mode */
                         emu_function(EMU_WARP);
-                    else if (mapper_keys[i] == mapper_keys[29]) /* Datasette hotkeys toggle */
+                    else if (mapper_keys[i] == mapper_keys[30]) /* Datasette hotkeys toggle */
                         emu_function(EMU_DATASETTE_HOTKEYS);
-                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[30]) /* Datasette stop */
+                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[31]) /* Datasette stop */
                         emu_function(EMU_DATASETTE_STOP);
-                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[31]) /* Datasette start */
+                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[32]) /* Datasette start */
                         emu_function(EMU_DATASETTE_START);
-                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[32]) /* Datasette forward */
+                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[33]) /* Datasette forward */
                         emu_function(EMU_DATASETTE_FORWARD);
-                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[33]) /* Datasette rewind */
+                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[34]) /* Datasette rewind */
                         emu_function(EMU_DATASETTE_REWIND);
-                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[34]) /* Datasette reset */
+                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[35]) /* Datasette reset */
                         emu_function(EMU_DATASETTE_RESET);
                     else
                         Keymap_KeyDown(mapper_keys[i]);
@@ -464,10 +480,10 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     else if (mapper_keys[i] == mapper_keys[27])
                         ; /* nop */
                     else if (mapper_keys[i] == mapper_keys[28])
-                        emu_function(EMU_WARP);
-                    else if (mapper_keys[i] == mapper_keys[29])
                         ; /* nop */
-                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[30])
+                    else if (mapper_keys[i] == mapper_keys[29])
+                        emu_function(EMU_WARP);
+                    else if (mapper_keys[i] == mapper_keys[30])
                         ; /* nop */
                     else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[31])
                         ; /* nop */
@@ -476,6 +492,8 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[33])
                         ; /* nop */
                     else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[34])
+                        ; /* nop */
+                    else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[35])
                         ; /* nop */
                     else
                         Keymap_KeyUp(mapper_keys[i]);

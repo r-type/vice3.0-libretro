@@ -580,6 +580,8 @@ unsigned int color_f, color_b;
             break;
     }
 #endif
+    x -= retroXS_offset;
+    y -= retroYS_offset;
 #endif
 
     if (imagename_timer > 0)

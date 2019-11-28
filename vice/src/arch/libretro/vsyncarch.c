@@ -105,20 +105,21 @@ void vsyncarch_presync(void)
     retro_poll_event();
 
 #if defined(__VIC20__)
-        RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
+    RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
 #endif
-	video_canvas_render(RCANVAS,(BYTE *)bmp,
-			retroW,retroH,
-                        retroXS,retroYS,
-                        0,0,//xi, yi,
-                        retrow*PITCH,8*PITCH);
+    video_canvas_render(
+        RCANVAS, (BYTE *)bmp,
+        retroW, retroH,
+        retroXS+retroXS_offset, retroYS+retroYS_offset,
+        0, 0, //xi, yi,
+        retrow*PITCH, 8*PITCH
+    );
                         
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_draw();
     }
 
     cpuloop=0;
-
 }
 
 void_hook_t vsync_set_event_dispatcher(void_hook_t hook)

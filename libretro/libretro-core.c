@@ -27,8 +27,10 @@ int cpuloop=1;
 
 // VKBD 
 extern int SHOWKEY;
-extern void reset_mouse_pos();
 unsigned int opt_theme;
+extern void reset_mouse_pos();
+static bool request_reset_mouse_pos = false;
+static unsigned int request_reset_mouse_pos_timer = 0;
 
 // Nuklear
 extern int app_init(void);
@@ -47,7 +49,7 @@ static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
-int mapper_keys[35] = { 0 };
+int mapper_keys[36] = { 0 };
 unsigned int vice_devices[5];
 unsigned int opt_mapping_options_display;
 unsigned int retro_region;
@@ -57,12 +59,11 @@ extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
 
 // Core geometry
-int CROP_WIDTH;
-int CROP_HEIGHT;
 int VIRTUAL_WIDTH;
-
 int retroXS=0;
 int retroYS=0;
+int retroXS_offset=0;
+int retroYS_offset=0;
 int retroW=1024;
 int retroH=768;
 int retrow=1024;
@@ -102,6 +103,12 @@ extern int RETROTHEME;
 extern int RETROKEYRAHKEYPAD;
 extern int RETROKEYBOARDPASSTHROUGH;
 extern char RETROEXTPALNAME[512];
+
+unsigned int zoom_mode_id = 0;
+int zoom_mode_id_prev = -1;
+unsigned int opt_zoom_mode_id = 0;
+unsigned int zoomed_width;
+unsigned int zoomed_height;
 
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
@@ -177,12 +184,12 @@ static char* x_strdup(const char* str)
     return str ? strdup(str) : NULL;
 }
 
-unsigned retro_get_borders(void)
+unsigned int retro_get_borders(void)
 {
    return RETROBORDERS;
 }
 
-unsigned retro_toggle_theme(void)
+unsigned int retro_toggle_theme(void)
 {
    opt_theme = (opt_theme % 2) ? opt_theme-1 : opt_theme+1;
    return opt_theme;
@@ -419,8 +426,6 @@ static int process_cmdline(const char* argv)
         }
 
 #if defined(__VIC20__)
-        cur_port = 1;
-
         if (strendswith(argv, ".20"))
             Add_Option("-cart2");
         else if (strendswith(argv, ".40"))
@@ -1035,6 +1040,21 @@ void retro_set_environment(retro_environment_t cb)
          "enabled"
       },
 #endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__VIC20__)
+      {
+         "vice_zoom_mode",
+         "Zoom Mode",
+         "Zoom will be ignored without borders.\nRequirements in RetroArch settings:\nAspect Ratio: Core provided,\nInteger Scale: Off.",
+         {
+            { "none", "disabled" },
+            { "small", "Small" },
+            { "medium", "Medium" },
+            { "maximum", "Maximum" },
+            { NULL, NULL },
+         },
+         "none"
+      },
+#endif
 #if defined(__VIC20__)
       {
          "vice_vic20_external_palette",
@@ -1229,9 +1249,18 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_END"
       },
+#if defined(__X64__) || defined(__X64SC__) || defined(__VIC20__)
+      {
+         "vice_mapper_zoom_mode_toggle",
+         "Hotkey: Toggle Zoom Mode",
+         "Press the mapped key to toggle zoom mode.",
+         {{ NULL, NULL }},
+         "---"
+      },
+#endif
       {
          "vice_mapper_warp_mode",
-         "Hotkey: Warp Mode",
+         "Hotkey: Hold Warp Mode",
          "Hold the mapped key for warp mode.",
          {{ NULL, NULL }},
          "RETROK_PAGEDOWN"
@@ -1902,6 +1931,23 @@ static void update_variables(void)
    }
 #endif
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__VIC20__)
+   var.key = "vice_zoom_mode";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "none") == 0) zoom_mode_id=0;
+      else if (strcmp(var.value, "small") == 0) zoom_mode_id=1;
+      else if (strcmp(var.value, "medium") == 0) zoom_mode_id=2;
+      else if (strcmp(var.value, "maximum") == 0) zoom_mode_id=3;
+
+      if (RETROBORDERS)
+         zoom_mode_id = 0;
+
+      opt_zoom_mode_id = zoom_mode_id;
+   }
+#endif
+
 #if defined(__VIC20__)
    var.key = "vice_vic20_external_palette";
    var.value = NULL;
@@ -2126,6 +2172,7 @@ static void update_variables(void)
       RETROUSERPORTJOY=joyadaptertype;
    }
 
+#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
    var.key = "vice_joyport";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2133,6 +2180,7 @@ static void update_variables(void)
       if (strcmp(var.value, "Port 2") == 0 && !cur_port_locked) cur_port=2;
       else if (strcmp(var.value, "Port 1") == 0 && !cur_port_locked) cur_port=1;
    }
+#endif
 
    var.key = "vice_keyrah_keypad_mappings";
    var.value = NULL;
@@ -2375,11 +2423,18 @@ static void update_variables(void)
       mapper_keys[27] = keyId(var.value);
    }
 
-   var.key = "vice_mapper_warp_mode";
+   var.key = "vice_mapper_zoom_mode_toggle";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       mapper_keys[28] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_warp_mode";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[29] = keyId(var.value);
    }
 
    var.key = "vice_datasette_hotkeys";
@@ -2394,42 +2449,42 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[29] = keyId(var.value);
+      mapper_keys[30] = keyId(var.value);
    }
    
    var.key = "vice_mapper_datasette_stop";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[30] = keyId(var.value);
+      mapper_keys[31] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[31] = keyId(var.value);
+      mapper_keys[32] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_forward";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[32] = keyId(var.value);
+      mapper_keys[33] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_rewind";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[33] = keyId(var.value);
+      mapper_keys[34] = keyId(var.value);
    }
 
    var.key = "vice_mapper_datasette_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[34] = keyId(var.value);
+      mapper_keys[35] = keyId(var.value);
    }
 
 
@@ -2480,6 +2535,10 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
    option_display.key = "vice_mapper_joyport_switch";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__VIC20__)
+   option_display.key = "vice_mapper_zoom_mode_toggle";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
    option_display.key = "vice_mapper_reset";
@@ -2876,6 +2935,12 @@ void update_geometry()
    else
      system_av_info.geometry.aspect_ratio = (float)4.0/3.0;
    environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
+
+#ifdef RETRO_DEBUG
+   log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n",lastW,lastH,retroW,retroH);
+#endif
+   lastW = retroW;
+   lastH = retroH;
 }
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
@@ -2941,13 +3006,24 @@ void retro_run(void)
 {
    bool updated = false;
 
-   if (lastW!=retroW || lastH!=retroH) {
+   if (lastW != retroW || lastH != retroH)
+   {
+      zoomed_width = retroW;
+      zoomed_height = retroH;
+      retroXS_offset = 0;
+      retroYS_offset = 0;
+      zoom_mode_id_prev = -1;
+
       update_geometry();
-#ifdef RETRO_DEBUG
-      log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n",lastW,lastH,retroW,retroH);
-#endif
-      lastW=retroW;
-      lastH=retroH;
+      request_reset_mouse_pos = true;
+   }
+
+   if (request_reset_mouse_pos)
+   {
+      if (request_reset_mouse_pos_timer > 0)
+         request_reset_mouse_pos_timer--;
+      else
+         request_reset_mouse_pos = false;
       reset_mouse_pos();
    }
 
@@ -3024,8 +3100,91 @@ void retro_run(void)
    retro_blit();
    if (SHOWKEY==1) app_render();
 
-   video_cb(Retro_Screen,retroW,retroH,retrow<<PIXEL_BYTES);
+   if (zoom_mode_id_prev == -1)
+   {
+      zoomed_width = retroW;
+      zoomed_height = retroH;
+      retroXS_offset = 0;
+      retroYS_offset = 0;
+   }
+#if defined(__X64__) || defined(__X64SC__) || defined(__VIC20__)
+   if (zoom_mode_id != zoom_mode_id_prev)
+   {
+      zoom_mode_id_prev = zoom_mode_id;
+      switch (zoom_mode_id)
+      {
+#if defined(__X64__) || defined(__X64SC__)
+         // PAL: 384x272, NTSC: 384x247
+         case 1:
+            zoomed_width    = retroW;
+            retroXS_offset  = 0;
+            zoomed_height   = (retro_get_region() == RETRO_REGION_NTSC) ? 230 : 240;
+            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 8 : 10;
+            break;
+         case 2:
+            zoomed_width    = retroW;
+            retroXS_offset  = 0;
+            zoomed_height   = (retro_get_region() == RETRO_REGION_NTSC) ? 218 : 216;
+            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 14 : 27;
+            break;
+         case 3:
+            zoomed_width    = 380;
+            retroXS_offset  = 2;
+            zoomed_height   = 200;
+            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 23 : 35;
+            break;
+#elif defined(__VIC20__)
+         // PAL: 448x284, NTSC: 400x234
+         case 1:
+            zoomed_width    = (retro_get_region() == RETRO_REGION_NTSC) ? 388 : retroW;
+            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 14 : 0;
+            zoomed_height   = (retro_get_region() == RETRO_REGION_NTSC) ? 218 : 236;
+            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 4 : 20;
+            break;
+         case 2:
+            zoomed_width    = (retro_get_region() == RETRO_REGION_NTSC) ? 360 : 384;
+            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 28 : 32;
+            zoomed_height   = (retro_get_region() == RETRO_REGION_NTSC) ? 202 : 216;
+            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 13 : 32;
+            break;
+         case 3:
+            zoomed_width    = 352;
+            retroXS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 32 : 48;
+            zoomed_height   = 184;
+            retroYS_offset  = (retro_get_region() == RETRO_REGION_NTSC) ? 22 : 48;
+            break;
+#endif
+         default:
+            zoomed_width    = retroW;
+            zoomed_height   = retroH;
+            retroXS_offset  = 0;
+            retroYS_offset  = 0;
+            break;
+      }
 
+      static struct retro_system_av_info new_av_info;
+      new_av_info.geometry.base_width = zoomed_width;
+      new_av_info.geometry.base_height = zoomed_height;
+
+#if defined(__X64__) || defined(__X64SC__)
+      if (retro_get_region() == RETRO_REGION_NTSC)
+         new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.7500;
+      else
+         new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.9365;
+#elif defined(__VIC20__)
+      new_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height);
+#endif
+      environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);
+
+      request_reset_mouse_pos = true;
+#if defined(__VIC20__) // AAAARGH, trickery to keep VKBD cursor position in the right place when toggling zoom (retroXS_offset)
+      request_reset_mouse_pos_timer = 1;
+#endif
+   }
+   video_cb(Retro_Screen, zoomed_width, zoomed_height, retrow<<PIXEL_BYTES);
+#else
+   video_cb(Retro_Screen, retroW, retroH, retrow<<PIXEL_BYTES);
+#endif
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
@@ -3037,6 +3196,12 @@ bool retro_load_game(const struct retro_game_info *info)
    }
 
    update_variables();
+
+#if defined(__VIC20__)
+   /* Moved this here so it also applies without loading content */
+   cur_port = 1;
+   cur_port_locked = 1;
+#endif
    
    if (runstate == RUNSTATE_RUNNING) {
       /* load game was called while core is already running */
@@ -3049,7 +3214,8 @@ bool retro_load_game(const struct retro_game_info *info)
    return true;
 }
 
-void retro_unload_game(void){
+void retro_unload_game(void)
+{
    file_system_detach_disk(8);
    tape_image_detach(1);
 #ifndef __PET__
@@ -3068,6 +3234,7 @@ unsigned retro_get_region(void)
    switch(RETROC64MODL) {
 #if defined(__VIC20__)
       case VIC20MODEL_VIC20_NTSC:
+      case VIC20MODEL_VIC21:
 #elif defined(__CBM2__)
       case CBM2MODEL_510_NTSC:
       case CBM2MODEL_610_NTSC:
@@ -3099,7 +3266,6 @@ unsigned retro_get_region(void)
    }
 #endif /* __PET__ */
 }
-
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)
 {

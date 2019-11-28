@@ -15,12 +15,6 @@ typedef enum
 
 int GUISTATE = GUI_NONE;
 
-extern int SHIFTON;
-extern int vkey_pressed;
-extern int opt_theme;
-
-extern unsigned retro_get_borders(void);
-
 static int gui(struct nk_context *ctx)
 {
     GUISTATE = GUI_NONE;
@@ -63,8 +57,8 @@ static int gui(struct nk_context *ctx)
                 }
                 else
                 {
-                    offset.x = GUIRECT.x;
-                    offset.y = GUIRECT.y;
+                    offset.x = GUIRECT.x - retroXS_offset;
+                    offset.y = GUIRECT.y - retroYS_offset;
 #if defined(__VIC20__)
                     if (retro_get_region() == RETRO_REGION_NTSC)
                     {

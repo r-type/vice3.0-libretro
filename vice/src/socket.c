@@ -53,9 +53,16 @@
  *
  * Since Windows only works on two's complement systems, this will work.
  */
+#ifdef __LIBRETRO__
+#ifdef __WIN32__
+# undef INVALID_SOCKET
+# define INVALID_SOCKET -1
+#endif
+#else
 #ifdef WIN32_COMPILE
 # undef INVALID_SOCKET
 # define INVALID_SOCKET -1
+#endif
 #endif
 
 #include "archdep.h"

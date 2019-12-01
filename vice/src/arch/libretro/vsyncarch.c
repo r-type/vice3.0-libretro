@@ -41,9 +41,6 @@
 #include <psp2/kernel/threadmgr.h>
 #endif
 
-extern void retro_poll_event();
-extern void app_vkb_handle();
-
 extern struct video_canvas_s *RCANVAS;
 
 #include <time.h>
@@ -102,7 +99,6 @@ void vsyncarch_sleep(unsigned long delay)
 void vsyncarch_presync(void)
 {
     kbdbuf_flush();
-    retro_poll_event();
 
 #if defined(__VIC20__)
     RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;

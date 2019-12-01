@@ -53,6 +53,7 @@ unsigned int vice_devices[5];
 unsigned int opt_mapping_options_display;
 unsigned int retro_region;
 
+extern void retro_poll_event();
 extern int retro_ui_finalized;
 extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
@@ -3059,6 +3060,9 @@ void retro_run(void)
       runstate = RUNSTATE_RUNNING;
    } 
 
+   /* Input poll */
+   retro_poll_event();
+
    /* Measure frame-time and time between frames to render as much frames as possible when warp is enabled. Does not work
       perfectly as the time needed by the framework cannot be accounted, but should not reduce amount of actually rendered
       frames too much. */
@@ -3103,6 +3107,7 @@ void retro_run(void)
       retroXS_offset = 0;
       retroYS_offset = 0;
    }
+
 #if defined(__X64__) || defined(__X64SC__) || defined(__VIC20__)
    if (zoom_mode_id != zoom_mode_id_prev)
    {

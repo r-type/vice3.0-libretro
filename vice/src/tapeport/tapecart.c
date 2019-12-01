@@ -70,8 +70,17 @@ static int tapecart_loglevel      = 0;
 
 /* ------------------------------------------------------------------------- */
 
+#ifdef __LIBRETRO__
+#ifndef max
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
+#else
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 /* tapecart major modes */
 typedef enum {

@@ -10,10 +10,11 @@
 #include "sound.h"
 
 extern void retro_audiocb(signed short int *sound_buffer, int sndbufsize);
+extern int RETROSOUNDSAMPLERATE;
 
 static int retro_sound_init(const char *param, int *speed, int *fragsize, int *fragnr, int *channels)
 {
-    //*speed = 44100;
+    *speed = RETROSOUNDSAMPLERATE;
     *fragsize = 1;
     *fragnr = 0;
     //*channels = 1;

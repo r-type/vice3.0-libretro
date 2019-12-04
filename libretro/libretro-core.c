@@ -1004,6 +1004,8 @@ void retro_set_environment(retro_environment_t cb)
          "SID Model",
          "ReSID is accurate but slower. The original C64 uses 6581, C64C uses 8580.",
          {
+            { "DefaultF", "Default FastSID" },
+            { "DefaultR", "Default ReSID" },
             { "6581F", "6581 FastSID" },
             { "6581R", "6581 ReSID" },
             { "8580F", "8580 FastSID" },
@@ -1011,7 +1013,7 @@ void retro_set_environment(retro_environment_t cb)
             { "8580RD", "8580 ReSID + Digi Boost" },
             { NULL, NULL },
          },
-         "6581R"
+         "DefaultR"
       },
       {
          "vice_resid_sampling",
@@ -1667,45 +1669,6 @@ static void update_variables(void)
    }
 #endif
 
-   var.key = "vice_sid_model";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      int eng=0,modl=0,sidmdl=0;
-
-      if (strcmp(var.value, "6581F") == 0) { eng=0; modl=0; }
-      else if (strcmp(var.value, "8580F") == 0) { eng=0; modl=1; }
-      else if (strcmp(var.value, "6581R") == 0) { eng=1; modl=0; }
-      else if (strcmp(var.value, "8580R") == 0) { eng=1; modl=1; }
-      else if (strcmp(var.value, "8580RD") == 0) { eng=1; modl=2; }
-
-      sidmdl=((eng << 8) | modl);
-
-      if (retro_ui_finalized)
-         if (RETROSIDMODL != sidmdl)
-            sid_set_engine_model(eng, modl);
-
-      RETROSIDMODL=sidmdl;
-   }
-
-   var.key = "vice_resid_sampling";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      int resid=0;
-      
-      if (strcmp(var.value, "Fast") == 0) { resid=0; }
-      else if (strcmp(var.value, "Interpolation") == 0) { resid=1; }
-      else if (strcmp(var.value, "Resampling") == 0) { resid=2; }
-      else if (strcmp(var.value, "Fast resampling") == 0) { resid=3; }
-
-      if (retro_ui_finalized)
-         if (RETRORESIDSAMPLING != resid)
-            log_resources_set_int("SidResidSampling", resid);
-
-      RETRORESIDSAMPLING=resid;
-   }
-
 #if defined(__VIC20__)
    var.key = "vice_vic20_model";
    var.value = NULL;
@@ -1913,6 +1876,67 @@ static void update_variables(void)
       RETROC64MODL=modl;
       if (retro_ui_finalized)
         c64model_set(modl);
+   }
+#endif
+
+#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+   // Set if change of machine model caused change of SID model
+   bool resid_model_changed = false;
+
+   if (retro_ui_finalized)
+   {
+      int eng=0,modl=0,sidmdl=0;
+      resources_get_int("SidEngine",&eng);
+      resources_get_int("SidModel",&modl);
+      sidmdl=((eng << 8) | modl);
+      resid_model_changed = (RETROSIDMODL != sidmdl);
+   }
+
+   var.key = "vice_sid_model";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int eng=0,modl=0,sidmdl=0;
+
+      if (strcmp(var.value, "6581F") == 0) { eng=0; modl=0; }
+      else if (strcmp(var.value, "8580F") == 0) { eng=0; modl=1; }
+      else if (strcmp(var.value, "6581R") == 0) { eng=1; modl=0; }
+      else if (strcmp(var.value, "8580R") == 0) { eng=1; modl=1; }
+      else if (strcmp(var.value, "8580RD") == 0) { eng=1; modl=2; }
+      else if (strcmp(var.value, "DefaultF") == 0) { eng=0; modl=-1; }
+      else if (strcmp(var.value, "DefaultR") == 0) { eng=1; modl=-1; }
+
+      if (modl<0)
+         if (retro_ui_finalized)
+            resources_get_int("SidModel",&modl);
+         else
+            modl=1;
+
+      sidmdl=((eng << 8) | modl);
+      if (retro_ui_finalized)
+         if (RETROSIDMODL != sidmdl || resid_model_changed)
+            sid_set_engine_model(eng, modl);
+
+      RETROSIDMODL=sidmdl;
+   }
+
+   var.key = "vice_resid_sampling";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int resid=0;
+
+      if (strcmp(var.value, "Fast") == 0) { resid=0; }
+      else if (strcmp(var.value, "Interpolation") == 0) { resid=1; }
+      else if (strcmp(var.value, "Resampling") == 0) { resid=2; }
+      else if (strcmp(var.value, "Fast resampling") == 0) { resid=3; }
+
+      if (retro_ui_finalized)
+         if (RETRORESIDSAMPLING != resid)
+            log_resources_set_int("SidResidSampling", resid);
+
+      RETRORESIDSAMPLING=resid;
    }
 #endif
 

@@ -40,6 +40,8 @@
 
 #include "libretro.h"
 #include "libretro-core.h"
+#include "file/file_path.h"
+#include "retro_miscellaneous.h"
 
 #include "joystick.h"
 #include "archdep.h"
@@ -188,19 +190,13 @@ static int drive_empty = 0;
 
 void display_current_image(const char *image)
 {
-    char imagepath[100] = "\0";
-    char imagename[40] = "\0";
+    char imagename[PATH_MAX_LENGTH] = {0};
 
-    imagename_timer = 200;
+    imagename_timer = 150;
     if (strcmp(image, "") != 0)
     {
         drive_empty = 0;
-        strcpy(imagepath, image);
-        char *ptr = strtok(imagepath, FSDEV_DIR_SEP_STR);
-        while (ptr != NULL) {
-            sprintf(imagename, "%.36s", ptr);
-            ptr = strtok(NULL, FSDEV_DIR_SEP_STR);
-        }
+        snprintf(imagename, sizeof(imagename), "%.36s", path_basename(image));
     }
     else
     {

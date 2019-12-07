@@ -78,7 +78,7 @@ int maincpu_stretch;
 #include "../shared/archdep_atexit.c"
 #include "../shared/archdep_extra_title_text.c"
 
-
+extern unsigned int opt_read_vicerc;
 
 static char *argv0 = NULL;
 static char *boot_path = NULL;
@@ -296,7 +296,10 @@ char *archdep_default_resource_file_name(void)
       home = archdep_home_path();
       return util_concat(home, "/.vice/vicerc", NULL);
     } else {
-      return util_concat(archdep_pref_path, "/vicerc", NULL);
+        if (opt_read_vicerc)
+            return util_concat(archdep_pref_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
+        else
+            return NULL;
     }
 }
 

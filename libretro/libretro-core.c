@@ -1896,18 +1896,6 @@ static void update_variables(void)
 #endif
 
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
-   // Set if change of machine model caused change of SID model
-   bool resid_model_changed = false;
-
-   if (retro_ui_finalized)
-   {
-      int eng=0,modl=0,sidmdl=0;
-      resources_get_int("SidEngine",&eng);
-      resources_get_int("SidModel",&modl);
-      sidmdl=((eng << 8) | modl);
-      resid_model_changed = (RETROSIDMODL != sidmdl);
-   }
-
    var.key = "vice_sid_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1923,15 +1911,24 @@ static void update_variables(void)
       else if (strcmp(var.value, "DefaultR") == 0) { eng=1; modl=-1; }
 
       if (modl<0)
-         if (retro_ui_finalized)
-            resources_get_int("SidModel",&modl);
-         else
-            modl=0;
+      {
+         switch (RETROC64MODL)
+         {
+            case C64MODEL_C64_GS:
+            case C64MODEL_C64C_NTSC: // intentional fall through
+            case C64MODEL_C64C_PAL: // intentional fall through
+               modl=1;
+               break;
+            default:
+               modl=0;
+               break;
+         }
+      }
 
       sidmdl=((eng << 8) | modl);
       if (retro_ui_finalized)
-         if (RETROSIDMODL != sidmdl || resid_model_changed)
-            sid_set_engine_model(eng, modl);
+        if (RETROSIDMODL != sidmdl)
+           sid_set_engine_model(eng, modl);
 
       RETROSIDMODL=sidmdl;
    }

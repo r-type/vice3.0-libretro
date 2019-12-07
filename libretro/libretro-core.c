@@ -110,6 +110,10 @@ unsigned int opt_zoom_mode_id = 0;
 unsigned int zoomed_width;
 unsigned int zoomed_height;
 
+unsigned int opt_read_vicerc = 0;
+static unsigned int opt_read_vicerc_prev = 0;
+static unsigned int request_reload_restart = 0;
+
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
 extern int cur_port_locked;
@@ -927,6 +931,17 @@ void retro_set_environment(retro_environment_t cb)
          "C64 PAL"
       },
 #endif
+      {
+         "vice_read_vicerc",
+         "Read 'vicerc'",
+         "Process 'system/vice/vicerc'. The config file can be used to set other options, such as cartridges.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
       {
          "vice_reset",
          "Reset Type",
@@ -1894,7 +1909,6 @@ static void update_variables(void)
 
    var.key = "vice_sid_model";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int eng=0,modl=0,sidmdl=0;
@@ -2281,6 +2295,22 @@ static void update_variables(void)
       else if (strcmp(var.value, "enabled") == 0) opt_mapping_options_display=1;
    }
 
+   var.key = "vice_read_vicerc";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) opt_read_vicerc=0;
+      else if (strcmp(var.value, "enabled") == 0) opt_read_vicerc=1;
+
+      if (opt_read_vicerc != opt_read_vicerc_prev)
+         request_reload_restart = 1;
+      else
+         request_reload_restart = 0;
+
+      opt_read_vicerc_prev = opt_read_vicerc;
+   }
+
+
 
    /* Mapper */
    var.key = "vice_mapper_select";
@@ -2588,6 +2618,10 @@ void emu_reset(void)
    // Always stop datasette or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
 
+   /* Changing opt_read_vicerc requires reloading */
+   if (request_reload_restart)
+      reload_restart();
+
    switch (RETRORESET)
    {
       case 0:
@@ -2611,6 +2645,10 @@ void retro_reset(void)
 
    // Always stop datasette, or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
+
+   /* Changing opt_read_vicerc requires reloading */
+   if (request_reload_restart)
+      reload_restart();
 
    /* Retro reset should always autostart */
    if (autostartString != NULL && autostartString[0] != '\0')

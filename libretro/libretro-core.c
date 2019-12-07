@@ -1896,6 +1896,17 @@ static void update_variables(void)
 #endif
 
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+   // Check if change of machine model caused change of SID model?
+   bool sid_model_changed = false;
+
+   if (retro_ui_finalized)
+   {
+       int eng=0,modl=0;
+       resources_get_int("SidEngine",&eng);
+       resources_get_int("SidModel",&modl);
+       sid_model_changed = (RETROSIDMODL != ((eng << 8) | modl));
+   }
+
    var.key = "vice_sid_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1935,7 +1946,7 @@ static void update_variables(void)
 
       sidmdl=((eng << 8) | modl);
       if (retro_ui_finalized)
-        if (RETROSIDMODL != sidmdl)
+        if ((RETROSIDMODL != sidmdl) || sid_model_changed)
            sid_set_engine_model(eng, modl);
 
       RETROSIDMODL=sidmdl;

@@ -1897,17 +1897,6 @@ static void update_variables(void)
 #endif
 
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
-   // Check if change of machine model caused change of SID model?
-   bool sid_model_changed = false;
-
-   if (retro_ui_finalized)
-   {
-       int eng=0,modl=0;
-       resources_get_int("SidEngine",&eng);
-       resources_get_int("SidModel",&modl);
-       sid_model_changed = (RETROSIDMODL != ((eng << 8) | modl));
-   }
-
    var.key = "vice_sid_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -1919,36 +1908,16 @@ static void update_variables(void)
       else if (strcmp(var.value, "6581R") == 0) { eng=1; modl=0; }
       else if (strcmp(var.value, "8580R") == 0) { eng=1; modl=1; }
       else if (strcmp(var.value, "8580RD") == 0) { eng=1; modl=2; }
-      else if (strcmp(var.value, "DefaultF") == 0) { eng=0; modl=-1; }
-      else if (strcmp(var.value, "DefaultR") == 0) { eng=1; modl=-1; }
-
-      if (modl<0)
-      {
-         switch (RETROC64MODL)
-         {
-#if defined(__CBM2__)
-#elif defined(__X128__)
-            case C128MODEL_C128DCR_PAL:
-            case C128MODEL_C128DCR_NTSC:
-               modl=1;
-               break;
-#else
-            case C64MODEL_C64_GS:
-            case C64MODEL_C64C_PAL:
-            case C64MODEL_C64C_NTSC:
-               modl=1;
-               break;
-#endif
-            default:
-               modl=0;
-               break;
-         }
-      }
+      else if (strcmp(var.value, "DefaultF") == 0) { eng=0; modl=0xff; }
+      else if (strcmp(var.value, "DefaultR") == 0) { eng=1; modl=0xff; }
 
       sidmdl=((eng << 8) | modl);
       if (retro_ui_finalized)
-        if ((RETROSIDMODL != sidmdl) || sid_model_changed)
-           sid_set_engine_model(eng, modl);
+         if (RETROSIDMODL != sidmdl)
+            if (modl == 0xff)
+               resources_set_int("SidEngine", eng);
+            else
+               sid_set_engine_model(eng, modl);
 
       RETROSIDMODL=sidmdl;
    }

@@ -164,6 +164,9 @@ int ui_init_finalize(void)
    log_resources_set_int("Mouse", 0);
    log_resources_set_int("AutostartPrgMode", 1);
 
+   /* Mute sound at startup to hide 6581 ReSID init pop, and set back to 100 in retro_run() after 3 frames */
+   log_resources_set_int("SoundVolume", 0);
+
 #if defined(__CBM2__) || defined(__PET__)
    log_resources_set_int("CrtcFilter", 0);
    log_resources_set_int("CrtcStretchVertical", 0);

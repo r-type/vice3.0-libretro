@@ -9,23 +9,21 @@
 
 #include "sound.h"
 
-extern void retro_audiocb(signed short int *sound_buffer,int sndbufsize);
+extern void retro_audiocb(signed short int *sound_buffer, int sndbufsize);
 
-static int retro_sound_init(const char *param, int *speed,
-            int *fragsize, int *fragnr, int *channels)
+static int retro_sound_init(const char *param, int *speed, int *fragsize, int *fragnr, int *channels)
 {
-  *speed = 44100;
-  *fragsize = (*speed)/50;
-  *channels = 1;
-
-  //int buffer_size = (*fragnr) * (*channels) * (*fragsize) + 1;
-
-  return 0;
+    //*speed = 44100;
+    *fragsize = 1;
+    *fragnr = 0;
+    //*channels = 1;
+    //printf("speed:%d fragsize:%d fragnr:%d channels:%d\n", *speed, *fragsize, *fragnr, *channels);
+    return 0;
 }
 
 static int retro_write(SWORD *pbuf, size_t nr)
 {
-    //printf("nr:%d ",nr);
+    //printf("pbuf:%d nr:%d\n", *pbuf, nr);
     retro_audiocb(pbuf, nr);
     return 0;
 }

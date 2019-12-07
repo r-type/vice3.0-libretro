@@ -88,9 +88,8 @@
 #define archdep_signals_pipe_set()
 #define archdep_signals_pipe_unset()
 
-#define ARCHDEP_SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_MEDIUM
-
 #else
+
 /* Filesystem dependant operators.  */
 #define FSDEVICE_DEFAULT_DIR   "."
 #define FSDEV_DIR_SEP_STR      "/"
@@ -141,9 +140,11 @@
 #define archdep_signals_pipe_set()
 #define archdep_signals_pipe_unset()
 
-/* Default sound fragment size */
-#define ARCHDEP_SOUND_FRAGMENT_SIZE 1
 #endif
+
+/* Default sound fragment size */
+#define ARCHDEP_SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_VERY_SMALL
+
 /* Video chip scaling.  */
 #define ARCHDEP_VICII_DSIZE   1
 #define ARCHDEP_VICII_DSCAN   1

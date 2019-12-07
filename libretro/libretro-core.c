@@ -113,6 +113,7 @@ unsigned int zoomed_height;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int request_reload_restart = 0;
+static unsigned int sound_volume_counter = 3;
 
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
@@ -3156,12 +3157,22 @@ void retro_run(void)
    retro_blit();
    if (SHOWKEY==1) app_render();
 
+   /* Virtual keyboard mouse position reset */
    if (request_reset_mouse_pos)
    {
       request_reset_mouse_pos = false;
       reset_mouse_pos();
    }
 
+   /* Set volume back to maximum after starting with mute, due to ReSID 6581 init pop */
+   if (sound_volume_counter > 0)
+   {
+       sound_volume_counter--;
+       if (sound_volume_counter == 0)
+           log_resources_set_int("SoundVolume", 100);
+   }
+
+   /* Zoom mode init */
    if (zoom_mode_id_prev == -1)
    {
       zoomed_width = retroW;

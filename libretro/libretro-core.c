@@ -1911,7 +1911,7 @@ static void update_variables(void)
          if (retro_ui_finalized)
             resources_get_int("SidModel",&modl);
          else
-            modl=1;
+            modl=0;
 
       sidmdl=((eng << 8) | modl);
       if (retro_ui_finalized)

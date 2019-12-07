@@ -705,6 +705,7 @@ void reload_restart()
     initcmdline_cleanup();
 
     /* Update resources from environment just like on fresh start of core */
+    sound_volume_counter = 3;
     retro_ui_finalized = 0;
     update_variables();
     /* Some resources are not set until we call this */

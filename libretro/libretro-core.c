@@ -1914,11 +1914,19 @@ static void update_variables(void)
       {
          switch (RETROC64MODL)
          {
-            case C64MODEL_C64_GS:
-            case C64MODEL_C64C_NTSC: // intentional fall through
-            case C64MODEL_C64C_PAL: // intentional fall through
+#if defined(__CBM2__)
+#elif defined(__X128__)
+            case C128MODEL_C128DCR_PAL:
+            case C128MODEL_C128DCR_NTSC:
                modl=1;
                break;
+#else
+            case C64MODEL_C64_GS:
+            case C64MODEL_C64C_PAL:
+            case C64MODEL_C64C_NTSC:
+               modl=1;
+               break;
+#endif
             default:
                modl=0;
                break;

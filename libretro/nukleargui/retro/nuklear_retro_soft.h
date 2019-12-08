@@ -256,19 +256,17 @@ nk_retro_draw_text(RSDL_Surface *surface, short x, short y, unsigned short w, un
     for (i = 0; i < len; i++) {
         //characterRGBA(surface, x, y, text[i], cfg.r, cfg.g, cfg.b, cfg.a);
 #ifdef M16B
+        if (cfg.r == 1)
+            Retro_Draw_char(surface, x+1, y+1, text[i], 1, 1, 180<<8|180<<3|180>>3, 0);
+        else if (cfg.r == 254)
+            Retro_Draw_char(surface, x-1, y-1, text[i], 1, 1, 40<<8|40<<3|40>>3, 0);
 
-	Retro_Draw_char(surface,  x,  y,  text[i],  1, 1,cfg.r<<8|cfg.g<<3|cfg.b>>3,0);
-
-//	Retro_Draw_char(surface,  x,  y,  text[i],  1, 1,/*cfg.a<<8|*/cfg.r<<8|cfg.g<<3|cfg.b>>3, /*cbg.a<<24|*/cbg.r<<8|cbg.g<<3|cbg.b>>3);
+        Retro_Draw_char(surface, x, y, text[i], 1, 1, cfg.r<<8|cfg.g<<3|cfg.b>>3, 0);
 #else
-	Retro_Draw_char(surface,  x,  y,  text[i],  1, 1,cfg.a<<24|cfg.r<<16|cfg.g<<8|cfg.b, cbg.a<<24|cbg.r<<16|cbg.g<<8|cbg.b);
+        Retro_Draw_char(surface, x, y, text[i], 1, 1, cfg.a<<24|cfg.r<<16|cfg.g<<8|cfg.b, cbg.a<<24|cbg.r<<16|cbg.g<<8|cbg.b);
 #endif
         x += font->width;
     }
-
-//FIXME TODO
-// Retro_Draw_string(surface,  x,  y,  text, len, 1, 1,cfg.a<<24|cfg.r<<16|cfg.g<<8|cfg.b, cbg.a<<24|cbg.r<<16|cbg.g<<8|cbg.b);
-
 }
 static void
 interpolate_color(struct nk_color c1, struct nk_color c2, struct nk_color *result, float fraction)

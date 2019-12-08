@@ -535,9 +535,32 @@ unsigned int color_f, color_b;
     /* Placement on bottom + inside VICII */
     int x, y;
     int border = 0;
-#if !defined(__PET__) && !defined(__CBM2__)
-#if defined(__PLUS4__)
+#if defined(__CBM2__)
+    x=32;
+    y=226;
+#elif defined(__PET__)
+    x=32;
+    y=226;
+#elif defined(__PLUS4__)
     resources_get_int("TEDBorderMode", &border);
+    switch (border)
+    {
+        default:
+        case 0:
+            x=32;
+            y=232;
+            if (retro_get_region() == RETRO_REGION_NTSC)
+            {
+                x=32;
+                y=210;
+            }
+            break;
+
+        case 3:
+            x=0;
+            y=192;
+            break;
+    }
 #elif defined(__VIC20__)
     resources_get_int("VICBorderMode", &border);
     switch (border)
@@ -578,7 +601,6 @@ unsigned int color_f, color_b;
 #endif
     x -= retroXS_offset;
     y -= retroYS_offset;
-#endif
 
     if (imagename_timer > 0)
         imagename_timer--;

@@ -267,7 +267,10 @@ int ui_init_finalize(void)
 #endif
 
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
-   sid_set_engine_model((RETROSIDMODL >> 8), (RETROSIDMODL & 0xff));
+   if ((RETROSIDMODL & 0xff) == 0xff)
+      resources_set_int("SidEngine", RETROSIDMODL >> 8);
+   else
+      sid_set_engine_model((RETROSIDMODL >> 8), (RETROSIDMODL & 0xff));
    log_resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
 #endif
 

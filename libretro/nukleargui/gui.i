@@ -65,6 +65,10 @@ static int gui(struct nk_context *ctx)
                         offset.x -= 16;
                         offset.y -= 26;
                     }
+#elif defined(__PLUS4__)
+                    offset.y += 5;
+                    if (retro_get_region() == RETRO_REGION_NTSC)
+                        offset.y -= 22;
 #else
                     if (retro_get_region() == RETRO_REGION_NTSC)
                         offset.y -= 12;

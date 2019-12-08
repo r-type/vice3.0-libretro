@@ -30,9 +30,13 @@
 #define uint32 uint32_t
 #define uint8 uint8_t
 
-#define WINDOW_WIDTH 1024
-#define WINDOW_HEIGHT 768
-#define WINDOW_SIZE (1024*768)
+#if defined(__X128__)
+#define WINDOW_WIDTH 856
+#else
+#define WINDOW_WIDTH 720
+#endif
+#define WINDOW_HEIGHT 576
+#define WINDOW_SIZE (WINDOW_WIDTH*WINDOW_HEIGHT)
 
 #ifdef FRONTEND_SUPPORTS_RGB565
 #define M16B

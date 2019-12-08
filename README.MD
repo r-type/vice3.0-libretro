@@ -9,6 +9,7 @@ https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
 
 ## Recent improvements
 
+- Zoom mode
 - Savestates
 - Vice 3.3 update
 - x64sc / xpet
@@ -20,7 +21,7 @@ https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
 - C64 joystick disabled while using virtual keyboard
 - Cursor keys disabled while using C64 joystick
 - New settings:
-  - Drive Sound Emulation + Volume
+  - Drive sound emulation
   - Reset type (autostart, soft, hard)
   - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset, datasette controls)
   - Analog sticks mappable

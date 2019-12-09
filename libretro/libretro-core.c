@@ -74,6 +74,7 @@ int retroW=WINDOW_WIDTH;
 int retroH=WINDOW_HEIGHT;
 int lastW=0;
 int lastH=0;
+int last_audio_sample_rate=0;
 
 int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
@@ -1072,7 +1073,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sound_sample_rate",
          "Sound Output Sample Rate",
-         "Slightly higher quality or higher performance (Requires restart).",
+         "Slightly higher quality or higher performance.",
          {
             { "22050", NULL },
             { "44100", NULL },
@@ -3552,6 +3553,19 @@ void retro_run(void)
    bool updated = false;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
+
+   /* Update samplerate if changed by core option */
+   if (last_audio_sample_rate != RETROSOUNDSAMPLERATE)
+   {
+      last_audio_sample_rate = RETROSOUNDSAMPLERATE;
+
+      /* Ensure audio rendering is reinitialized on next use. */
+      sound_close();
+
+      struct retro_system_av_info system_av_info;
+      retro_get_system_av_info(&system_av_info);
+      environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
+   }
 
    /* Update geometry if model or zoom mode changes */
    if (lastW != retroW || lastH != retroH)

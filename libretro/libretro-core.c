@@ -117,6 +117,7 @@ unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
+unsigned int opt_audio_leak_volume = 0;
 
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
@@ -1046,7 +1047,16 @@ void retro_set_environment(retro_environment_t cb)
          "",
          {
             { "disabled", NULL },
-            { "enabled", NULL },
+            { "1", "100\% volume" },
+            { "2", "200\% volume" },
+            { "3", "300\% volume" },
+            { "4", "400\% volume" },
+            { "5", "500\% volume" },
+            { "6", "600\% volume" },
+            { "7", "700\% volume" },
+            { "8", "800\% volume" },
+            { "9", "900\% volume" },
+            { "10", "1000\% volume" },
             { NULL, NULL },
          },
          "disabled"
@@ -1727,7 +1737,11 @@ static void update_variables(void)
       int audioleak=0;
 
       if (strcmp(var.value, "disabled") == 0) audioleak=0;
-      else if (strcmp(var.value, "enabled") == 0) audioleak=1;
+      else
+      {
+          audioleak=1;
+          opt_audio_leak_volume=atoi(var.value);
+      }
 
       if (retro_ui_finalized && RETROAUDIOLEAK != audioleak)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)

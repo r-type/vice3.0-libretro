@@ -1,3 +1,5 @@
+COMMONFLAGS += -D__X64__
+
 INCFLAGS += \
 		-I$(EMU)/sid \
 		-I$(EMU) \

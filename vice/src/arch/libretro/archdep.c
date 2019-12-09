@@ -485,12 +485,17 @@ int archdep_expand_path(char **return_path, const char *orig_name)
     return 0;
 }
 
+char archdep_startup_error[4096];
+
 void archdep_startup_log_error(const char *format, ...)
 {
     va_list ap;
 
+    char *begin=archdep_startup_error+strlen(archdep_startup_error);
+    char *end=archdep_startup_error+sizeof(archdep_startup_error);
+
     va_start(ap, format);
-    vfprintf(stderr, format, ap);
+    begin+=vsnprintf(begin, end-begin, format, ap);
 }
 
 char *archdep_filename_parameter(const char *name)

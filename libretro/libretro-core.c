@@ -117,6 +117,7 @@ unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
+unsigned int opt_audio_leak_volume = 0;
 
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
@@ -1046,7 +1047,16 @@ void retro_set_environment(retro_environment_t cb)
          "",
          {
             { "disabled", NULL },
-            { "enabled", NULL },
+            { "1", "100\% volume" },
+            { "2", "200\% volume" },
+            { "3", "300\% volume" },
+            { "4", "400\% volume" },
+            { "5", "500\% volume" },
+            { "6", "600\% volume" },
+            { "7", "700\% volume" },
+            { "8", "800\% volume" },
+            { "9", "900\% volume" },
+            { "10", "1000\% volume" },
             { NULL, NULL },
          },
          "disabled"
@@ -1189,26 +1199,27 @@ void retro_set_environment(retro_environment_t cb)
          "Color Palette",
          "Colodore is recommended for most accurate colors.",
          {
-            { "Default", NULL },
-            { "Colodore", NULL },
-            { "Community Colors", NULL },
-            { "Pepto PAL", NULL },
-            { "Pepto PAL old", NULL },
-            { "Pepto NTSC", NULL },
-            { "Pepto NTSC Sony", NULL },
-            { "C64HQ", NULL },
-            { "C64S", NULL },
-            { "CCS64", NULL },
-            //{ "Deekay", NULL },
-            { "Frodo", NULL },
-            { "Godot", NULL },
-            { "PC64", NULL },
-            //{ "Ptoing", NULL },
-            { "RGB", NULL },
-            { "Vice", NULL },
+            { "default", "Default" },
+            { "colodore", "Colodore (PAL)" },
+            { "pepto-pal", "Pepto (PAL)" },
+            //{ "pepto-palold", "Pepto (old PAL)" },
+            { "pepto-ntsc", "Pepto (NTSC)" },
+            { "pepto-ntsc-sony", "Pepto (NTSC, Sony)" },
+            { "cjam", "ChristopherJam" },
+            { "c64hq", "C64HQ" },
+            { "c64s", "C64S" },
+            { "ccs64", "CCS64" },
+            { "community-colors", "Community Colors" },
+            { "deekay", "Deekay" },
+            { "frodo", "Frodo" },
+            { "godot", "Godot" },
+            { "pc64", "PC64" },
+            { "ptoing", "Ptoing" },
+            { "rgb", "RGB" },
+            { "vice", "VICE" },
             { NULL, NULL },
          },
-         "Default"
+         "default"
       },
 #endif
       {
@@ -1726,7 +1737,11 @@ static void update_variables(void)
       int audioleak=0;
 
       if (strcmp(var.value, "disabled") == 0) audioleak=0;
-      else if (strcmp(var.value, "enabled") == 0) audioleak=1;
+      else
+      {
+          audioleak=1;
+          opt_audio_leak_volume=atoi(var.value);
+      }
 
       if (retro_ui_finalized && RETROAUDIOLEAK != audioleak)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
@@ -2195,47 +2210,24 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      char extpal[20] = "";
-      if (strcmp(var.value, "Default") == 0) sprintf(extpal, "%s", "");
-      else if (strcmp(var.value, "Pepto PAL") == 0) sprintf(extpal, "%s", "pepto-pal");
-      else if (strcmp(var.value, "Pepto PAL old") == 0) sprintf(extpal, "%s", "pepto-palold");
-      else if (strcmp(var.value, "Pepto NTSC Sony") == 0) sprintf(extpal, "%s", "pepto-ntsc-sony");
-      else if (strcmp(var.value, "Pepto NTSC") == 0) sprintf(extpal, "%s", "pepto-ntsc");
-      else if (strcmp(var.value, "Colodore") == 0) sprintf(extpal, "%s", "colodore");
-      else if (strcmp(var.value, "Vice") == 0) sprintf(extpal, "%s", "vice");
-      else if (strcmp(var.value, "C64HQ") == 0) sprintf(extpal, "%s", "c64hq");
-      else if (strcmp(var.value, "C64S") == 0) sprintf(extpal, "%s", "c64s");
-      else if (strcmp(var.value, "CCS64") == 0) sprintf(extpal, "%s", "ccs64");
-      else if (strcmp(var.value, "Frodo") == 0) sprintf(extpal, "%s", "frodo");
-      else if (strcmp(var.value, "Godot") == 0) sprintf(extpal, "%s", "godot");
-      else if (strcmp(var.value, "PC64") == 0) sprintf(extpal, "%s", "pc64");
-      else if (strcmp(var.value, "RGB") == 0) sprintf(extpal, "%s", "rgb");
-      else if (strcmp(var.value, "Deekay") == 0) sprintf(extpal, "%s", "deekay");
-      else if (strcmp(var.value, "Ptoing") == 0) sprintf(extpal, "%s", "ptoing");
-      else if (strcmp(var.value, "Community Colors") == 0) sprintf(extpal, "%s", "community-colors");
-
       if (retro_ui_finalized)
       {
-         if (!*extpal)
-         {
+         if (strcmp(var.value, "default") == 0)
             log_resources_set_int("VICIIExternalPalette", 0);
-         }
          else
          {
             log_resources_set_int("VICIIExternalPalette", 1);
-            log_resources_set_string("VICIIPaletteFile", extpal);
+            log_resources_set_string("VICIIPaletteFile", var.value);
          }
       }
       else
       {
-         if (!*extpal)
-         {
+         if (strcmp(var.value, "default") == 0)
             RETROEXTPAL=-1;
-         }
          else
          {
             RETROEXTPAL=1;
-            sprintf(RETROEXTPALNAME, "%s", extpal);
+            sprintf(RETROEXTPALNAME, "%s", var.value);
          }
       }
    }

@@ -43,7 +43,13 @@
 #include "video-sound.h"
 #include "video.h"
 
+#ifdef __LIBRETRO__
+extern unsigned int opt_audio_leak_volume;
+#define TOTAL_VOLUME            (1.50f * opt_audio_leak_volume)
+#else
 #define TOTAL_VOLUME            (1.50f)
+#endif // __LIBRETRO__
+
 #define NOISE_VOLUME            (0.15f * TOTAL_VOLUME)
 #define LUMALINES_VOLUME        (1.00f * TOTAL_VOLUME)
 

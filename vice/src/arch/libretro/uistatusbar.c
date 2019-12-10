@@ -496,33 +496,29 @@ void uistatusbar_close(void)
 #include "keyboard.h"
 #include "RSDL_wrapper.h"
 #include "libretro-core.h"
-
-#ifdef M16B
-extern void Retro_Draw_string(RSDL_Surface *surface, signed short int x, signed short int y, const  char *string,unsigned short maxstrlen,unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
-#else
-extern void Retro_Draw_string(RSDL_Surface *surface, signed short int x, signed short int y, const  char *string,unsigned short maxstrlen,unsigned short xscale, unsigned short yscale, unsigned  fg, unsigned  bg);
-#endif
+extern void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
+extern void Retro_Draw_string32(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned fg, unsigned bg);
 
 void uistatusbar_draw(void)
 {
     int i;
     BYTE c;
-#ifdef M16B
-unsigned short int color_f, color_b;
-    color_f = 0xffff;
-    color_b = 0x0020;
-#else
-unsigned int color_f, color_b;
-    color_f = 0xffffffff;
-    color_b = 0x00000000;
-#endif
+
+    unsigned short int color_f_16, color_b_16;
+    color_f_16 = 0xffff;
+    color_b_16 = 0x0020;
+
+    unsigned int color_f_32, color_b_32;
+    color_f_32 = 0xffffffff;
+    color_b_32 = 0x00010101;
+
     unsigned int char_width;
     unsigned int char_offset;
 
     char tmpstr[512];
 
     RSDL_Surface fake;
-    fake.pixels=&bmp[0];
+    fake.pixels=&Retro_Screen[0];
     fake.h=retroh;
     fake.w=retrow;
     fake.clip_rect.h=retroh;
@@ -621,13 +617,19 @@ unsigned int color_f, color_b;
         if (c & 0x80)
         {
             sprintf(tmpstr,"%c",c&0x7f);
-            Retro_Draw_string(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b, color_f);
+            if (pix_bytes == 2)
+                Retro_Draw_string16(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b_16, color_f_16);
+            else
+                Retro_Draw_string32(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b_32, color_f_32);
             //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
         }
         else
         {
             sprintf(tmpstr,"%c",c);
-            Retro_Draw_string(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f, color_b);
+            if (pix_bytes == 2)
+                Retro_Draw_string16(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f_16, color_b_16);
+            else
+                Retro_Draw_string32(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f_32, color_b_32);
             //  uistatusbar_putchar(c, i, 0, color_f, color_b);
         }
     }

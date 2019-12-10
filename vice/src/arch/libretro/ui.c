@@ -75,6 +75,13 @@ int RETROTHEME=0;
 int RETROKEYRAHKEYPAD=0;
 int RETROKEYBOARDPASSTHROUGH=0;
 char RETROEXTPALNAME[512]="pepto-pal";
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+int RETROVICIICOLORGAMMA=2200;
+int RETROVICIICOLORSATURATION=1250;
+int RETROVICIICOLORCONTRAST=1250;
+int RETROVICIICOLORBRIGHTNESS=1000;
+#endif
+
 int retro_ui_finalized = 0;
 int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
 
@@ -214,6 +221,13 @@ int ui_init_finalize(void)
       log_resources_set_int("VICIIExternalPalette", 1);
       log_resources_set_string("VICIIPaletteFile", RETROEXTPALNAME);
    }
+#endif
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   log_resources_set_int("VICIIColorGamma", RETROVICIICOLORGAMMA);
+   log_resources_set_int("VICIIColorSaturation", RETROVICIICOLORSATURATION);
+   log_resources_set_int("VICIIColorContrast", RETROVICIICOLORCONTRAST);
+   log_resources_set_int("VICIIColorBrightness", RETROVICIICOLORBRIGHTNESS);
 #endif
 
    if (RETROUSERPORTJOY==-1)

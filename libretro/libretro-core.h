@@ -11,7 +11,7 @@
 
 #define MATRIX(a,b) (((a) << 3) | (b))
 
-// DEVICE VICE
+//DEVICES
 #define RETRO_DEVICE_VICE_KEYBOARD RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_KEYBOARD, 0)
 #define RETRO_DEVICE_VICE_JOYSTICK RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
 
@@ -38,24 +38,9 @@
 #define WINDOW_HEIGHT 576
 #define WINDOW_SIZE (WINDOW_WIDTH*WINDOW_HEIGHT)
 
-#ifdef FRONTEND_SUPPORTS_RGB565
-#define M16B
-#endif
-
-#ifdef FRONTEND_SUPPORTS_RGB565
-	extern uint16_t *Retro_Screen;
-	extern uint16_t bmp[WINDOW_SIZE];
-	#define PIXEL_BYTES 1
-	#define PIXEL_TYPE UINT16
-	#define PITCH 2	
-#else
-	extern unsigned int *Retro_Screen;
-	extern unsigned int bmp[WINDOW_SIZE];
-	#define PIXEL_BYTES 2
-	#define PIXEL_TYPE UINT32
-	#define PITCH 4	
-#endif 
-
+//SCREEN
+extern unsigned short int *Retro_Screen;
+extern int pix_bytes;
 
 //VKBD
 #define NPLGN 11
@@ -69,21 +54,6 @@ typedef struct {
 } Mvk;
 
 extern Mvk MVk[NPLGN*NLIGN*2];
-
-//STRUCTURES
-typedef struct{
-     signed short x, y;
-     unsigned short w, h;
-} retro_Rect;
-
-typedef struct{
-     unsigned char *pixels;
-     unsigned short w, h,pitch;
-} retro_Surface;
-
-typedef struct{
-     unsigned char r,g,b;
-} retro_pal;
 
 //VARIABLES
 extern int VIRTUAL_WIDTH;

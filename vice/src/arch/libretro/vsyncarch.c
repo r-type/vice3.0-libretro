@@ -104,11 +104,11 @@ void vsyncarch_presync(void)
     RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
 #endif
     video_canvas_render(
-        RCANVAS, (BYTE *)bmp,
+        RCANVAS, (BYTE *)Retro_Screen,
         retroW, retroH,
         retroXS+retroXS_offset, retroYS+retroYS_offset,
         0, 0, //xi, yi,
-        retrow*PITCH, 8*PITCH
+        retrow*pix_bytes, 8*pix_bytes
     );
                         
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {

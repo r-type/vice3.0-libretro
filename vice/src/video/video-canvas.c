@@ -140,13 +140,10 @@ void video_canvas_refresh_all(video_canvas_t *canvas)
                          MIN(canvas->draw_buffer->canvas_height,
                              viewport->last_line - viewport->first_line + 1));
 #endif
-	retroXS=viewport->first_x
-                         + geometry->extra_offscreen_border_left;
+	retroXS=viewport->first_x + geometry->extra_offscreen_border_left;
 	retroYS=viewport->first_line;
-	retroH=MIN(canvas->draw_buffer->canvas_height,
-                             viewport->last_line - viewport->first_line + 1);
-	retroW=MIN(canvas->draw_buffer->canvas_width,
-                             geometry->screen_size.width - viewport->first_x);
+	retroW=MIN(canvas->draw_buffer->canvas_width, geometry->screen_size.width - viewport->first_x);
+	retroH=MIN(canvas->draw_buffer->canvas_height, viewport->last_line - viewport->first_line + 1);
 #endif
     video_canvas_refresh(canvas,
                          viewport->first_x

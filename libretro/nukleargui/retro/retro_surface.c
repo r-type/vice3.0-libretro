@@ -26,57 +26,65 @@ static const char *cross[] = {
   "                                ",
 };
 
-#ifdef M16B
-void DrawPointBmp(unsigned short int *buffer,int x, int y, unsigned short int color,int rwidth,int rheight)
-#else
-void DrawPointBmp(unsigned int *buffer,int x, int y, unsigned int color,int rwidth,int rheight)
-#endif
-
+void DrawPointBmp16(unsigned short int *buffer, int x, int y, unsigned short int color, int rwidth, int rheight)
 {
-   int idx;
+    int idx;
 
-   idx=x+y*rwidth;
-   if(idx>=0 && idx<rwidth*rheight)
-   	buffer[idx]=color;	
+    idx=x+y*rwidth;
+    if(idx>=0 && idx<rwidth*rheight)
+        buffer[idx]=color;
 }
 
-void draw_cross(RSDL_Surface *surface,int x,int y) {
+void DrawPointBmp32(unsigned int *buffer, int x, int y, unsigned int color, int rwidth, int rheight)
+{
+    int idx;
 
-	int i,j,idx;
-	int dx=32,dy=20;
-#ifdef M16B
-	unsigned short int col=0xffff;
-#else
-	unsigned int col=0xffffffff;
-#endif
-	int w=surface->w;
-	int h=surface->h;
-
-	for(j=y;j<y+dy;j++){
-		idx=0;
-		for(i=x;i<x+dx;i++){
-
-			if(cross[j-y][idx]=='.')DrawPointBmp(surface->pixels,i,j,col,w,h);
-			else if(cross[j-y][idx]=='X')DrawPointBmp(surface->pixels,i,j,0,w,h);
-			idx++;			
-		}
-	}
+    idx=x+y*rwidth;
+    if(idx>=0 && idx<rwidth*rheight)
+        buffer[idx]=color;
 }
 
-unsigned int Retro_MapRGB(RSDL_PixelFormat *a, int r, int g, int b){
+void draw_cross(RSDL_Surface *surface, int x, int y)
+{
+    int i, j, idx;
+    int dx=32, dy=20;
+    unsigned short int col_16=0xffff;
+    unsigned int col_32=0xffffffff;
+    int w = surface->w;
+    int h = surface->h;
 
-	return (r >> a->Rloss) << a->Rshift
-		       | (g >> a->Gloss) << a->Gshift
-		       | (b >> a->Bloss) << a->Bshift
-		       | a->Amask;
+    for(j=y;j<y+dy;j++){
+        idx=0;
+        for(i=x;i<x+dx;i++){
+            if (pix_bytes == 2)
+            {
+                if(cross[j-y][idx]=='.')DrawPointBmp16(surface->pixels,i,j,col_16,w,h);
+                else if(cross[j-y][idx]=='X')DrawPointBmp16(surface->pixels,i,j,0,w,h);
+            }
+            else
+            {
+                if(cross[j-y][idx]=='.')DrawPointBmp32(surface->pixels,i,j,col_32,w,h);
+                else if(cross[j-y][idx]=='X')DrawPointBmp32(surface->pixels,i,j,0,w,h);
+            }
+            idx++;
+        }
+    }
 }
 
-unsigned int Retro_MapRGBA(RSDL_PixelFormat *a, int r, int g, int b,int alpha){
+unsigned int Retro_MapRGB(RSDL_PixelFormat *a, int r, int g, int b)
+{
+    return (r >> a->Rloss) << a->Rshift
+         | (g >> a->Gloss) << a->Gshift
+         | (b >> a->Bloss) << a->Bshift
+         | a->Amask;
+}
 
-        return (r >> a->Rloss) << a->Rshift
-		    | (g >> a->Gloss) << a->Gshift
-		    | (b >> a->Bloss) << a->Bshift
-		    | ((alpha >> a->Aloss) << a->Ashift & a->Amask);
+unsigned int Retro_MapRGBA(RSDL_PixelFormat *a, int r, int g, int b, int alpha)
+{
+    return (r >> a->Rloss) << a->Rshift
+         | (g >> a->Gloss) << a->Gshift
+         | (b >> a->Bloss) << a->Bshift
+         | ((alpha >> a->Aloss) << a->Ashift & a->Amask);
 }
 
 static __inline__
@@ -362,218 +370,321 @@ RSDL_Surface *Retro_CreateRGBSurface16( int w,int h, int d, int rm,int rg,int rb
 
 #include "font2.i"
 
-#ifdef M16B
-void Retro_Draw_string(RSDL_Surface *surface, signed short int x, signed short int y, const  char *string,unsigned short maxstrlen,unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg)
-#else
-void Retro_Draw_string(RSDL_Surface *surface, signed short int x, signed short int y, const  char *string,unsigned short maxstrlen,unsigned short xscale, unsigned short yscale, unsigned  fg, unsigned  bg)
-#endif
+void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short int y,
+    const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg)
 {
-    	int k,strlen;
-    	unsigned char *linesurf;
+    int k, strlen;
+    unsigned char *linesurf;
 
-    	int col, bit;
-    	unsigned char b;
+    int col, bit;
+    unsigned char b;
 
-    	int xrepeat, yrepeat;
-#ifdef M16B
-    	signed short int ypixel;
-   	unsigned short *yptr; 
+    int xrepeat, yrepeat;
+    signed short int ypixel;
+    unsigned short *yptr;
+    unsigned short *mbuffer = (unsigned short*)surface->pixels;
 
-	unsigned short*mbuffer=(unsigned short*)surface->pixels;
-#else
-    	signed  int ypixel;
-   	unsigned  *yptr; 
+    #define VIRTUAL_WIDTH surface->w
 
-	unsigned *mbuffer=(unsigned*)surface->pixels;
-#endif
+    if ((surface->clip_rect.w == 0) || (surface->clip_rect.h == 0)) {
+        return;
+    }
 
+    #define charWidthLocal 8
+    #define charHeightLocal 8
 
-	#define VIRTUAL_WIDTH surface->w
+    Sint16 left, right, top, bottom;
+    Sint16 x1, y1, x2, y2;
 
-	if ((surface->clip_rect.w==0) || (surface->clip_rect.h==0)) {
-		return;
-	}
+    left = surface->clip_rect.x;
+    x2 = x + charWidthLocal;
+    if (x2 < left) {
+        return;
+    }
+    right = surface->clip_rect.x + surface->clip_rect.w - 1;
+    x1 = x;
+    if (x1 > right) {
+        return;
+    }
+    top = surface->clip_rect.y;
+    y2 = y + charHeightLocal;
+    if (y2 < top) {
+        return;
+    }
+    bottom = surface->clip_rect.y + surface->clip_rect.h - 1;
+    y1 = y;
+    if (y1 > bottom) {
+        return;
+    }
 
-	#define charWidthLocal 8
-	#define charHeightLocal 8
+    if(string == NULL) return;
+    for(strlen = 0; strlen < maxstrlen && string[strlen]; strlen++) {}
 
-	Sint16 left, right, top, bottom;
-	Sint16 x1, y1, x2, y2;
+    int surfw = strlen * 7 * xscale;
+    int surfh = 8 * yscale;
 
-	left = surface->clip_rect.x;
-	x2 = x + charWidthLocal;
-	if (x2<left) {
-		return;
-	} 
-	right = surface->clip_rect.x + surface->clip_rect.w - 1;
-	x1 = x;
-	if (x1>right) {
-		return;
-	} 
-	top = surface->clip_rect.y;
-	y2 = y + charHeightLocal;
-	if (y2<top) {
-		return;
-	} 
-	bottom = surface->clip_rect.y + surface->clip_rect.h - 1;
-	y1 = y;
-	if (y1>bottom) {
-		return;
-	} 
+    linesurf = (unsigned char *)malloc(sizeof(unsigned short)*surfw*surfh);
+    yptr = (unsigned short *)&linesurf[0];
 
+    for(ypixel = 0; ypixel < 8; ypixel++) {
+        for(col = 0; col < strlen; col++) {
+            b = font_array[(string[col]^0x80)*8 + ypixel];
 
-    	if(string==NULL)return;
-    	for(strlen = 0; strlen<maxstrlen && string[strlen]; strlen++) {}
+            for(bit = 0; bit < 7; bit++, yptr++) {
+                *yptr = (b & (1<<(7-bit))) ? fg : bg;
+                for(xrepeat = 1; xrepeat < xscale; xrepeat++, yptr++)
+                    yptr[1] = *yptr;
+            }
+        }
 
+        for(yrepeat = 1; yrepeat < yscale; yrepeat++)
+            for(xrepeat = 0; xrepeat < surfw; xrepeat++, yptr++)
+                *yptr = yptr[-surfw];
+    }
 
-	int surfw=strlen * 7 * xscale;
-	int surfh=8 * yscale;
+    yptr = (unsigned short *)&linesurf[0];
 
-#ifdef M16B	
-        linesurf =(unsigned char *)malloc(sizeof(unsigned short)*surfw*surfh );
-    	yptr = (unsigned short *)&linesurf[0];
+    for(yrepeat = y; yrepeat < y + surfh; yrepeat++)
+        for(xrepeat = x; xrepeat < x + surfw; xrepeat++, yptr++)
+            if(*yptr != 0 && (xrepeat + yrepeat*VIRTUAL_WIDTH) < surface->w*surface->h)
+                mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = *yptr;
 
-#else
-        linesurf =(unsigned char *)malloc(sizeof(unsigned )*surfw*surfh );
-    	yptr = (unsigned *)&linesurf[0];
-
-#endif
-
-	for(ypixel = 0; ypixel<8; ypixel++) {
-
-        	for(col=0; col<strlen; col++) {
-
-            		b = font_array[(string[col]^0x80)*8 + ypixel];
-
-            		for(bit=0; bit<7; bit++, yptr++) {              
-				*yptr = (b & (1<<(7-bit))) ? fg : bg;
-                		for(xrepeat = 1; xrepeat < xscale; xrepeat++, yptr++)
-                    			yptr[1] = *yptr;
-                        }
-        	}
-
-        	for(yrepeat = 1; yrepeat < yscale; yrepeat++) 
-            		for(xrepeat = 0; xrepeat<surfw; xrepeat++, yptr++)
-                		*yptr = yptr[-surfw];
-           
-    	}
-
-#ifdef M16B
-    	yptr = (unsigned short*)&linesurf[0];
-#else
-    	yptr = (unsigned *)&linesurf[0];
-#endif
-
-    	for(yrepeat = y; yrepeat < y+ surfh; yrepeat++) 
-        	for(xrepeat = x; xrepeat< x+surfw; xrepeat++,yptr++)
-             		if(*yptr!=0 && (xrepeat+yrepeat*VIRTUAL_WIDTH) < surface->w*surface->h )mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = *yptr;
-
-	free(linesurf);
-
+    free(linesurf);
 }
 
-#ifdef M16B
-void Retro_Draw_char(RSDL_Surface *surface, signed short int x, signed short int y,  char string,unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg)
-#else
-void Retro_Draw_char(RSDL_Surface *surface, signed short int x, signed short int y,  char string,unsigned short xscale, unsigned short yscale, unsigned  fg, unsigned  bg)
-#endif
+void Retro_Draw_string32(RSDL_Surface *surface, signed short int x, signed short int y,
+    const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned fg, unsigned bg)
 {
-    	int k,strlen;
-    	unsigned char *linesurf;
-    	int col, bit;
-    	unsigned char b;
+    int k, strlen;
+    unsigned char *linesurf;
 
-    	int xrepeat, yrepeat;
+    int col, bit;
+    unsigned char b;
 
-#ifdef M16B
-    	signed short int ypixel;
-   	unsigned short *yptr; 
+    int xrepeat, yrepeat;
+    signed int ypixel;
+    unsigned *yptr;
+    unsigned *mbuffer = (unsigned *)surface->pixels;
 
-	unsigned short*mbuffer=(unsigned short*)surface->pixels;
-#else
-    	signed  int ypixel;
-   	unsigned  *yptr; 
+    #define VIRTUAL_WIDTH surface->w
 
-	unsigned *mbuffer=(unsigned*)surface->pixels;
-#endif
+    if ((surface->clip_rect.w==0) || (surface->clip_rect.h==0)) {
+        return;
+    }
 
-	#define VIRTUAL_WIDTH surface->w
+    #define charWidthLocal 8
+    #define charHeightLocal 8
 
-	if ((surface->clip_rect.w==0) || (surface->clip_rect.h==0)) {
-		return;
-	}
+    Sint16 left, right, top, bottom;
+    Sint16 x1, y1, x2, y2;
 
+    left = surface->clip_rect.x;
+    x2 = x + charWidthLocal;
+    if (x2 < left) {
+        return;
+    }
+    right = surface->clip_rect.x + surface->clip_rect.w - 1;
+    x1 = x;
+    if (x1 > right) {
+        return;
+    }
+    top = surface->clip_rect.y;
+    y2 = y + charHeightLocal;
+    if (y2 < top) {
+        return;
+    }
+    bottom = surface->clip_rect.y + surface->clip_rect.h - 1;
+    y1 = y;
+    if (y1 > bottom) {
+        return;
+    }
 
-	#define charWidthLocal2 7*xscale
-	#define charHeightLocal2 8*yscale
+    if(string == NULL) return;
+    for(strlen = 0; strlen < maxstrlen && string[strlen]; strlen++) {}
 
-	Sint16 left, right, top, bottom;
-	Sint16 x1, y1, x2, y2;
+    int surfw = strlen * 7 * xscale;
+    int surfh = 8 * yscale;
 
-	left = surface->clip_rect.x;
-	x2 = x + charWidthLocal2;
-	if (x2<left) {
-		return;
-	} 
-	right = surface->clip_rect.x + surface->clip_rect.w - 1;
-	x1 = x;
-	if (x1>right) {
-		return;
-	} 
-	top = surface->clip_rect.y;
-	y2 = y + charHeightLocal2;
-	if (y2<top) {
-		return;
-	} 
-	bottom = surface->clip_rect.y + surface->clip_rect.h - 1;
-	y1 = y;
-	if (y1>bottom) {
-		return;
-	} 
+    linesurf = (unsigned char *)malloc(sizeof(unsigned)*surfw*surfh);
+    yptr = (unsigned *)&linesurf[0];
 
-        strlen = 1;
+    for(ypixel = 0; ypixel < 8; ypixel++) {
+        for(col = 0; col < strlen; col++) {
+            b = font_array[(string[col]^0x80)*8 + ypixel];
+            for(bit = 0; bit < 7; bit++, yptr++) {
+                *yptr = (b & (1<<(7-bit))) ? fg : bg;
+                for(xrepeat = 1; xrepeat < xscale; xrepeat++, yptr++)
+                    yptr[1] = *yptr;
+            }
+        }
 
-	int surfw=strlen * 7 * xscale;
-	int surfh=8 * yscale;
+        for(yrepeat = 1; yrepeat < yscale; yrepeat++)
+            for(xrepeat = 0; xrepeat < surfw; xrepeat++, yptr++)
+                *yptr = yptr[-surfw];
+    }
 
-#ifdef M16B	
-        linesurf =(unsigned char *)malloc(sizeof(unsigned short)*surfw*surfh );
-    	yptr = (unsigned short *)&linesurf[0];
+    yptr = (unsigned *)&linesurf[0];
 
-#else
-        linesurf =(unsigned char *)malloc(sizeof(unsigned )*surfw*surfh );
-    	yptr = (unsigned *)&linesurf[0];
+    for(yrepeat = y; yrepeat < y + surfh; yrepeat++)
+        for(xrepeat = x; xrepeat < x + surfw; xrepeat++, yptr++)
+            if(*yptr != 0 && (xrepeat + yrepeat*VIRTUAL_WIDTH) < surface->w*surface->h)
+                mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = *yptr;
 
-#endif
-
-	for(ypixel = 0; ypixel<8; ypixel++) {
-
-            		b = font_array[(string^0x80)*8 + ypixel];
-
-            		for(bit=0; bit<7; bit++, yptr++) {              
-				*yptr = (b & (1<<(7-bit))) ? fg : bg;
-                		for(xrepeat = 1; xrepeat < xscale; xrepeat++, yptr++)
-                    			yptr[1] = *yptr;
-                        }
-
-        	for(yrepeat = 1; yrepeat < yscale; yrepeat++) 
-            		for(xrepeat = 0; xrepeat<surfw; xrepeat++, yptr++)
-                		*yptr = yptr[-surfw];
-           
-    	}
-
-
-#ifdef M16B
-    	yptr = (unsigned short*)&linesurf[0];
-#else
-    	yptr = (unsigned *)&linesurf[0];
-#endif
-
-    	for(yrepeat = y; yrepeat < y+ surfh; yrepeat++) 
-        	for(xrepeat = x; xrepeat< x+surfw; xrepeat++,yptr++)
-             		if(*yptr!=0 && (xrepeat+yrepeat*VIRTUAL_WIDTH) < surface->w*surface->h )mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = *yptr;
-
-	free(linesurf);
-
+    free(linesurf);
 }
 
+void Retro_Draw_char16(RSDL_Surface *surface, signed short int x, signed short int y,
+    char string, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg)
+{
+    int k, strlen;
+    unsigned char *linesurf;
+    int col, bit;
+    unsigned char b;
+
+    int xrepeat, yrepeat;
+
+    signed short int ypixel;
+    unsigned short *yptr;
+    unsigned short *mbuffer = (unsigned short*)surface->pixels;
+
+    #define VIRTUAL_WIDTH surface->w
+
+    if ((surface->clip_rect.w==0) || (surface->clip_rect.h==0)) {
+        return;
+    }
+
+    #define charWidthLocal2 7*xscale
+    #define charHeightLocal2 8*yscale
+
+    Sint16 left, right, top, bottom;
+    Sint16 x1, y1, x2, y2;
+
+    left = surface->clip_rect.x;
+    x2 = x + charWidthLocal2;
+    if (x2 < left) {
+        return;
+    }
+    right = surface->clip_rect.x + surface->clip_rect.w - 1;
+    x1 = x;
+    if (x1 > right) {
+        return;
+    }
+    top = surface->clip_rect.y;
+    y2 = y + charHeightLocal2;
+    if (y2 < top) {
+        return;
+    }
+    bottom = surface->clip_rect.y + surface->clip_rect.h - 1;
+    y1 = y;
+    if (y1 > bottom) {
+        return;
+    }
+
+    strlen = 1;
+
+    int surfw = strlen * 7 * xscale;
+    int surfh = 8 * yscale;
+
+    linesurf = (unsigned char *)malloc(sizeof(unsigned short)*surfw*surfh);
+    yptr = (unsigned short *)&linesurf[0];
+
+    for(ypixel = 0; ypixel < 8; ypixel++) {
+        b = font_array[(string^0x80)*8 + ypixel];
+        for(bit = 0; bit < 7; bit++, yptr++) {
+            *yptr = (b & (1<<(7-bit))) ? fg : bg;
+            for(xrepeat = 1; xrepeat < xscale; xrepeat++, yptr++)
+                yptr[1] = *yptr;
+        }
+
+        for(yrepeat = 1; yrepeat < yscale; yrepeat++)
+            for(xrepeat = 0; xrepeat<surfw; xrepeat++, yptr++)
+                *yptr = yptr[-surfw];
+    }
+
+    yptr = (unsigned short*)&linesurf[0];
+
+    for(yrepeat = y; yrepeat < y + surfh; yrepeat++)
+        for(xrepeat = x; xrepeat < x + surfw; xrepeat++, yptr++)
+            if(*yptr != 0 && (xrepeat + yrepeat*VIRTUAL_WIDTH) < surface->w*surface->h)
+                mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = *yptr;
+
+    free(linesurf);
+}
+
+void Retro_Draw_char32(RSDL_Surface *surface, signed short int x, signed short int y,
+    char string, unsigned short xscale, unsigned short yscale, unsigned fg, unsigned bg)
+{
+    int k, strlen;
+    unsigned char *linesurf;
+    int col, bit;
+    unsigned char b;
+
+    int xrepeat, yrepeat;
+
+    signed int ypixel;
+    unsigned *yptr;
+    unsigned *mbuffer = (unsigned*)surface->pixels;
+
+    #define VIRTUAL_WIDTH surface->w
+
+    if ((surface->clip_rect.w==0) || (surface->clip_rect.h==0)) {
+        return;
+    }
+
+    #define charWidthLocal2 7*xscale
+    #define charHeightLocal2 8*yscale
+
+    Sint16 left, right, top, bottom;
+    Sint16 x1, y1, x2, y2;
+
+    left = surface->clip_rect.x;
+    x2 = x + charWidthLocal2;
+    if (x2 < left) {
+        return;
+    }
+    right = surface->clip_rect.x + surface->clip_rect.w - 1;
+    x1 = x;
+    if (x1 > right) {
+        return;
+    }
+    top = surface->clip_rect.y;
+    y2 = y + charHeightLocal2;
+    if (y2 < top) {
+        return;
+    }
+    bottom = surface->clip_rect.y + surface->clip_rect.h - 1;
+    y1 = y;
+    if (y1 > bottom) {
+        return;
+    }
+
+    strlen = 1;
+
+    int surfw = strlen * 7 * xscale;
+    int surfh = 8 * yscale;
+
+    linesurf = (unsigned char *)malloc(sizeof(unsigned)*surfw*surfh);
+    yptr = (unsigned *)&linesurf[0];
+
+    for(ypixel = 0; ypixel < 8; ypixel++) {
+        b = font_array[(string^0x80)*8 + ypixel];
+        for(bit = 0; bit < 7; bit++, yptr++) {
+            *yptr = (b & (1<<(7-bit))) ? fg : bg;
+            for(xrepeat = 1; xrepeat < xscale; xrepeat++, yptr++)
+                yptr[1] = *yptr;
+        }
+
+        for(yrepeat = 1; yrepeat < yscale; yrepeat++)
+            for(xrepeat = 0; xrepeat < surfw; xrepeat++, yptr++)
+                *yptr = yptr[-surfw];
+    }
+
+    yptr = (unsigned *)&linesurf[0];
+
+    for(yrepeat = y; yrepeat < y + surfh; yrepeat++)
+        for(xrepeat = x; xrepeat < x + surfw; xrepeat++, yptr++)
+            if(*yptr != 0 && (xrepeat + yrepeat*VIRTUAL_WIDTH) < surface->w*surface->h)
+                mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = *yptr;
+
+    free(linesurf);
+}

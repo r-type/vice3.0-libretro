@@ -152,13 +152,9 @@ typedef enum {
 extern void draw_cross(RSDL_Surface *surface,int x,int y);
 extern void RSDL_GetClipRect(RSDL_Surface *surface, RSDL_Rect *rect);
 extern RSDL_bool RSDL_SetClipRect(RSDL_Surface *surface, const RSDL_Rect *rect);
-#ifdef M16B
-extern void Retro_Draw_char(RSDL_Surface *surface, signed short int x, signed short int y,  char string,unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
-#else
-extern void Retro_Draw_char(RSDL_Surface *surface, signed short int x, signed short int y,  char string,unsigned short xscale, unsigned short yscale, unsigned  fg, unsigned  bg);
-#endif
-//extern void Retro_Draw_char(RSDL_Surface *surface, signed short int x, signed short int y,  char string,unsigned short xscale, unsigned short yscale, unsigned  fg, unsigned  bg);
-extern void Retro_FreeSurface(RSDL_Surface *surf );
+extern void Retro_Draw_char16(RSDL_Surface *surface, signed short int x, signed short int y, char string, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
+extern void Retro_Draw_char32(RSDL_Surface *surface, signed short int x, signed short int y, char string, unsigned short xscale, unsigned short yscale, unsigned fg, unsigned bg);
+extern void Retro_FreeSurface(RSDL_Surface *surf);
 extern RSDL_Surface *Retro_CreateRGBSurface32( int w,int h, int d, int rm,int rg,int rb,int ra);
 extern RSDL_Surface *Retro_CreateRGBSurface16( int w,int h, int d, int rm,int rg,int rb,int ra);
 extern unsigned int Retro_MapRGB(RSDL_PixelFormat *a, int r, int g, int b);

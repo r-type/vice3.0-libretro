@@ -17,7 +17,6 @@ extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
 
 extern void emu_reset(void);
-extern void Screen_SetFullUpdate(int scr);
 extern unsigned int vice_devices[5];
 
 //EMU FLAGS

@@ -21,6 +21,7 @@
 #include <string.h>
 
 #include "libretro-core.h"
+#define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
 
 struct video_canvas_s *RCANVAS;
 
@@ -58,7 +59,7 @@ video_canvas_t *video_canvas_create(video_canvas_t *canvas,
 
    //printf ("canvas width wants to be : %d\ncanvas height wants to be : %d\ncanvas depth wants to be : %d\n", canvas->width, canvas->height, canvas->depth);
 
-   canvas->depth = 8*PITCH;
+   canvas->depth = 8*pix_bytes;
 
    //printf ("canvas set to %d x %d :%d\n", canvas->width, canvas->height,canvas->depth);
 
@@ -131,23 +132,20 @@ int video_canvas_set_palette(struct video_canvas_s *canvas,
    canvas->palette = palette;
 
    for (i = 0; i < palette->num_entries; i++) {
-#ifdef FRONTEND_SUPPORTS_RGB565
-#define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
-      col = RGB565(palette->entries[i].red, palette->entries[i].green, palette->entries[i].blue);
-#else
-      col = palette->entries[i].red<<16| palette->entries[i].green<<8| palette->entries[i].blue;
-#endif
+      if (pix_bytes == 2)
+         col = RGB565(palette->entries[i].red, palette->entries[i].green, palette->entries[i].blue);
+      else
+         col = palette->entries[i].red<<16 | palette->entries[i].green<<8 | palette->entries[i].blue;
+
       video_render_setphysicalcolor(canvas->videoconfig, i, col, canvas->depth);
    }
    for (i = 0; i < 256; i++) {
-#ifdef FRONTEND_SUPPORTS_RGB565
-      video_render_setrawrgb(i, RGB565(i, 0, 0), RGB565(0, i, 0) , RGB565(0, 0, i) );
-#else
-      video_render_setrawrgb(i, i, i, i);
-#endif
+      if (pix_bytes == 2)
+         video_render_setrawrgb(i, RGB565(i, 0, 0), RGB565(0, i, 0), RGB565(0, 0, i));
+      else
+         video_render_setrawrgb(i, i, i, i);
    }
    video_render_initraw(canvas->videoconfig);
-
 
    return 0;
 }

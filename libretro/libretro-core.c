@@ -51,10 +51,14 @@ static int save_trap_happened = 0;
 int mapper_keys[36] = { 0 };
 unsigned int vice_devices[5];
 unsigned int opt_mapping_options_display;
+unsigned int opt_video_options_display;
+unsigned int opt_audio_options_display;
 unsigned int retro_region;
 
 extern void retro_poll_event();
 extern int retro_ui_finalized;
+static int prev_ui_finalized = 0;
+
 extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
 
@@ -71,15 +75,9 @@ int retroH=WINDOW_HEIGHT;
 int lastW=0;
 int lastH=0;
 
-#ifdef FRONTEND_SUPPORTS_RGB565
-uint16_t *Retro_Screen;
-uint16_t bmp[WINDOW_SIZE];
-//uint16_t save_Screen[WINDOW_SIZE];
-#else
-unsigned int *Retro_Screen;
-unsigned int bmp[WINDOW_SIZE];
-//unsigned int save_Screen[WINDOW_SIZE];
-#endif
+int pix_bytes = 2;
+static bool pix_bytes_initialized = false;
+unsigned short int *Retro_Screen;
 
 // Core options
 extern int RETROTDE;
@@ -104,6 +102,12 @@ extern int RETROTHEME;
 extern int RETROKEYRAHKEYPAD;
 extern int RETROKEYBOARDPASSTHROUGH;
 extern char RETROEXTPALNAME[512];
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+extern int RETROVICIICOLORGAMMA;
+extern int RETROVICIICOLORSATURATION;
+extern int RETROVICIICOLORCONTRAST;
+extern int RETROVICIICOLORBRIGHTNESS;
+#endif
 
 unsigned int zoom_mode_id = 0;
 int zoom_mode_id_prev = -1;
@@ -773,14 +777,6 @@ long GetTicks(void) {
    return microSecCounter;
 }
 
-void Screen_SetFullUpdate(int scr)
-{
-   if (scr==0 || scr>1)
-      memset(&Retro_Screen, 0, sizeof(Retro_Screen));
-   if (scr>0)
-      memset(&bmp, 0, sizeof(bmp));
-}
-
 #include "vkbd.i"
 int keyId(const char *val)
 {
@@ -1017,6 +1013,17 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
       {
+         "vice_audio_options_display",
+         "Show Audio Options",
+         "Core options page refresh required.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
          "vice_drive_sound_emulation",
          "Drive Sound Emulation",
          "Emulates the iconic floppy drive sounds.\nTrue Drive Emulation & D64 disk image required.",
@@ -1108,6 +1115,17 @@ void retro_set_environment(retro_environment_t cb)
          "Resampling"
       },
 #endif
+      {
+         "vice_video_options_display",
+         "Show Video Options",
+         "Core options page refresh required.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
 #if !defined(__PET__) && !defined(__CBM2__)
       {
          "vice_border",
@@ -1136,6 +1154,17 @@ void retro_set_environment(retro_environment_t cb)
          "none"
       },
 #endif
+      {
+         "vice_gfx_colors",
+         "Color Depth",
+         "24-bit is slower and not available on all platforms. Restart required.",
+         {
+            { "16bit", "Thousands (16-bit)" },
+            { "24bit", "Millions (24-bit)" },
+            { NULL, NULL },
+         },
+         "16bit"
+      },
 #if defined(__VIC20__)
       {
          "vice_vic20_external_palette",
@@ -1221,6 +1250,158 @@ void retro_set_environment(retro_environment_t cb)
          },
          "default"
       },
+      {
+         "vice_vicii_color_gamma",
+         "VIC-II Color Gamma",
+         "Gamma for the internal default palette.",
+         {
+            { "800", "20\%" },
+            { "1000", "25\%" },
+            { "1200", "30\%" },
+            { "1400", "35\%" },
+            { "1600", "40\%" },
+            { "1800", "45\%" },
+            { "2000", "50\%" },
+            { "2200", "55\%" },
+            { "2400", "60\%" },
+            { "2600", "65\%" },
+            { "2800", "70\%" },
+            { "3000", "75\%" },
+            { "3200", "80\%" },
+            { "3400", "85\%" },
+            { "3600", "90\%" },
+            { "3800", "95\%" },
+            { "4000", "100\%" },
+            { NULL, NULL },
+         },
+         "2200"
+      },
+      {
+         "vice_vicii_color_saturation",
+         "VIC-II Color Saturation",
+         "Saturation for the internal default palette.",
+         {
+            { "400", "20\%" },
+            { "450", "22.5\%" },
+            { "500", "25\%" },
+            { "550", "27.5\%" },
+            { "600", "30\%" },
+            { "650", "32.5\%" },
+            { "700", "35\%" },
+            { "750", "37.5\%" },
+            { "800", "40\%" },
+            { "850", "42.5\%" },
+            { "900", "45\%" },
+            { "950", "47.5\%" },
+            { "1000", "50\%" },
+            { "1050", "52.5\%" },
+            { "1100", "55\%" },
+            { "1150", "57.5\%" },
+            { "1200", "60\%" },
+            { "1250", "62.5\%" },
+            { "1300", "65\%" },
+            { "1350", "67.5\%" },
+            { "1400", "70\%" },
+            { "1450", "72.5\%" },
+            { "1500", "75\%" },
+            { "1550", "77.5\%" },
+            { "1600", "80\%" },
+            { "1650", "82.5\%" },
+            { "1700", "85\%" },
+            { "1750", "87.5\%" },
+            { "1800", "90\%" },
+            { "1850", "92.5\%" },
+            { "1900", "95\%" },
+            { "1950", "97.5\%" },
+            { "2000", "100\%" },
+            { NULL, NULL },
+         },
+         "1250"
+      },
+      {
+         "vice_vicii_color_contrast",
+         "VIC-II Color Contrast",
+         "Contrast for the internal default palette.",
+         {
+            { "400", "20\%" },
+            { "450", "22.5\%" },
+            { "500", "25\%" },
+            { "550", "27.5\%" },
+            { "600", "30\%" },
+            { "650", "32.5\%" },
+            { "700", "35\%" },
+            { "750", "37.5\%" },
+            { "800", "40\%" },
+            { "850", "42.5\%" },
+            { "900", "45\%" },
+            { "950", "47.5\%" },
+            { "1000", "50\%" },
+            { "1050", "52.5\%" },
+            { "1100", "55\%" },
+            { "1150", "57.5\%" },
+            { "1200", "60\%" },
+            { "1250", "62.5\%" },
+            { "1300", "65\%" },
+            { "1350", "67.5\%" },
+            { "1400", "70\%" },
+            { "1450", "72.5\%" },
+            { "1500", "75\%" },
+            { "1550", "77.5\%" },
+            { "1600", "80\%" },
+            { "1650", "82.5\%" },
+            { "1700", "85\%" },
+            { "1750", "87.5\%" },
+            { "1800", "90\%" },
+            { "1850", "92.5\%" },
+            { "1900", "95\%" },
+            { "1950", "97.5\%" },
+            { "2000", "100\%" },
+            { NULL, NULL },
+         },
+         "1250"
+      },
+      {
+         "vice_vicii_color_brightness",
+         "VIC-II Color Brightness",
+         "Brightness for the internal default palette.",
+         {
+            { "400", "20\%" },
+            { "450", "22.5\%" },
+            { "500", "25\%" },
+            { "550", "27.5\%" },
+            { "600", "30\%" },
+            { "650", "32.5\%" },
+            { "700", "35\%" },
+            { "750", "37.5\%" },
+            { "800", "40\%" },
+            { "850", "42.5\%" },
+            { "900", "45\%" },
+            { "950", "47.5\%" },
+            { "1000", "50\%" },
+            { "1050", "52.5\%" },
+            { "1100", "55\%" },
+            { "1150", "57.5\%" },
+            { "1200", "60\%" },
+            { "1250", "62.5\%" },
+            { "1300", "65\%" },
+            { "1350", "67.5\%" },
+            { "1400", "70\%" },
+            { "1450", "72.5\%" },
+            { "1500", "75\%" },
+            { "1550", "77.5\%" },
+            { "1600", "80\%" },
+            { "1650", "82.5\%" },
+            { "1700", "85\%" },
+            { "1750", "87.5\%" },
+            { "1800", "90\%" },
+            { "1850", "92.5\%" },
+            { "1900", "95\%" },
+            { "1950", "97.5\%" },
+            { "2000", "100\%" },
+            { NULL, NULL },
+         },
+         "1000"
+      },
 #endif
       {
          "vice_theme",
@@ -1292,7 +1473,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapping_options_display",
          "Show Mapping Options",
-         "Show options for hotkeys & RetroPad mappings.\nCore option page refresh required.",
+         "Show options for hotkeys & RetroPad mappings.\nCore options page refresh required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1313,7 +1494,7 @@ void retro_set_environment(retro_environment_t cb)
          "Hotkey: Toggle Statusbar",
          "Press the mapped key to toggle the statusbar.",
          {{ NULL, NULL }},
-         "RETROK_F10"
+         "RETROK_F12"
       },
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
       {
@@ -1449,7 +1630,7 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad R",
          "",
          {{ NULL, NULL }},
-         "RETROK_F10"
+         "RETROK_F12"
       },
       {
          "vice_mapper_l2",
@@ -2060,6 +2241,19 @@ static void update_variables(void)
    }
 #endif
 
+   var.key = "vice_gfx_colors";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      // Only allow screenmode change after restart
+      if (!pix_bytes_initialized)
+      {
+         if (strcmp(var.value, "16bit") == 0) pix_bytes=2;
+         else if (strcmp(var.value, "24bit") == 0) pix_bytes=4;
+         pix_bytes_initialized = true;
+      }
+   }
+
 #if defined(__VIC20__)
    var.key = "vice_vic20_external_palette";
    var.value = NULL;
@@ -2231,13 +2425,60 @@ static void update_variables(void)
          }
       }
    }
+
+   var.key = "vice_vicii_color_gamma";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int color_gamma = atoi(var.value);
+
+      if (retro_ui_finalized)
+         log_resources_set_int("VICIIColorGamma", color_gamma);
+
+      RETROVICIICOLORGAMMA=color_gamma;
+   }
+
+   var.key = "vice_vicii_color_saturation";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int color_saturation = atoi(var.value);
+
+      if (retro_ui_finalized)
+         log_resources_set_int("VICIIColorSaturation", color_saturation);
+
+      RETROVICIICOLORSATURATION=color_saturation;
+   }
+
+   var.key = "vice_vicii_color_contrast";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int color_contrast = atoi(var.value);
+
+      if (retro_ui_finalized)
+         log_resources_set_int("VICIIColorContrast", color_contrast);
+
+      RETROVICIICOLORCONTRAST=color_contrast;
+   }
+
+   var.key = "vice_vicii_color_brightness";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int color_brightness = atoi(var.value);
+
+      if (retro_ui_finalized)
+         log_resources_set_int("VICIIColorBrightness", color_brightness);
+
+      RETROVICIICOLORBRIGHTNESS=color_brightness;
+   }
 #endif
 
    var.key = "vice_userport_joytype";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-
       int joyadaptertype=-1;
       if (strcmp(var.value, "None") == 0) joyadaptertype=-1;
       else if (strcmp(var.value, "Protovision CGA") == 0) joyadaptertype=USERPORT_JOYSTICK_CGA;
@@ -2344,6 +2585,22 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "disabled") == 0) opt_mapping_options_display=0;
       else if (strcmp(var.value, "enabled") == 0) opt_mapping_options_display=1;
+   }
+
+   var.key = "vice_audio_options_display";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) opt_audio_options_display=0;
+      else if (strcmp(var.value, "enabled") == 0) opt_audio_options_display=1;
+   }
+
+   var.key = "vice_video_options_display";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) opt_video_options_display=0;
+      else if (strcmp(var.value, "enabled") == 0) opt_video_options_display=1;
    }
 
    var.key = "vice_read_vicerc";
@@ -2593,7 +2850,9 @@ static void update_variables(void)
    }
 
 
-   /* Options display */
+   /*** Options display ***/
+
+   /* Mapping options */
    option_display.visible = opt_mapping_options_display;
 
    option_display.key = "vice_mapper_select";
@@ -2661,6 +2920,64 @@ static void update_variables(void)
    option_display.key = "vice_mapper_datasette_forward";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_datasette_reset";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+
+   /* Audio options */
+   option_display.visible = opt_audio_options_display;
+
+   option_display.key = "vice_drive_sound_emulation";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
+   option_display.key = "vice_audio_leak_emulation";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
+   option_display.key = "vice_sound_sample_rate";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+   option_display.key = "vice_sid_model";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_resid_sampling";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
+
+   /* Video options */
+   option_display.visible = opt_video_options_display;
+
+#if !defined(__PET__) && !defined(__CBM2__)
+   option_display.key = "vice_border";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
+   option_display.key = "vice_zoom_mode";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
+   option_display.key = "vice_gfx_colors";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#if defined(__VIC20__)
+   option_display.key = "vice_vic20_external_palette";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#elif defined(__PLUS4__)
+   option_display.key = "vice_plus4_external_palette";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#elif defined(__PET__)
+   option_display.key = "vice_pet_external_palette";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#elif defined(__CBM2__)
+   option_display.key = "vice_cbm2_external_palette";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#else
+   option_display.key = "vice_external_palette";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vicii_color_gamma",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vicii_color_saturation",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vicii_color_contrast",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vicii_color_brightness",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
+   option_display.key = "vice_theme";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 }
 
@@ -2926,15 +3243,10 @@ void retro_init(void)
    snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%svice", RETRO_DIR, FSDEV_DIR_SEP_STR);
    archdep_mkdir(retro_system_data_directory, 0);
 
-#ifdef FRONTEND_SUPPORTS_RGB565
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
-#else
-   enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
-#endif
-
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
-      log_cb(RETRO_LOG_ERROR, "PIXEL FORMAT is not supported.\n");
+      log_cb(RETRO_LOG_ERROR, "PIXEL FORMAT RGB565 is not supported.\n");
       environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
       return;
    }
@@ -3177,6 +3489,23 @@ void update_geometry(int mode)
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
+   /* need to do this here because core option values are not available in retro_init */
+   if (pix_bytes == 4)
+   {
+      enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
+      if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
+      {
+         log_cb(RETRO_LOG_INFO, "XRGB8888 is not supported. Trying RGB565.\n");
+         fmt = RETRO_PIXEL_FORMAT_RGB565;
+         pix_bytes = 2;
+         if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
+         {
+            log_cb(RETRO_LOG_INFO, "RGB565 is not supported.\n");
+            exit(0);//return false;
+         }
+      }
+   }
+
    info->geometry.max_width = retrow;
    info->geometry.max_height = retroh;
    info->geometry.base_width = retroW;
@@ -3227,12 +3556,7 @@ void retro_audiocb(signed short int *sound_buffer, int sndbufsize)
    for (x=0; x<sndbufsize; x++) audio_cb(sound_buffer[x], sound_buffer[x]);
 }
 
-void retro_blit(void)
-{
-   memcpy(Retro_Screen, bmp, PITCH*WINDOW_SIZE);
-}
 
-static int prev_ui_finalized = 0;
 
 void retro_run(void)
 {
@@ -3319,7 +3643,7 @@ void retro_run(void)
       }
    }
 
-   retro_blit();
+   /* Show VKBD */
    if (SHOWKEY==1) app_render();
 
    /* Finalize zoom offsets */
@@ -3344,7 +3668,7 @@ void retro_run(void)
            log_resources_set_int("SoundVolume", 100);
    }
 
-   video_cb(Retro_Screen, zoomed_width, zoomed_height, retrow<<PIXEL_BYTES);
+   video_cb(Retro_Screen, zoomed_width, zoomed_height, retrow<<(pix_bytes / 2));
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 

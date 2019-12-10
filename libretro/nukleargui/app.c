@@ -13,7 +13,6 @@
 #include <libretro.h>
 #include <libretro-core.h>
 
-extern void Screen_SetFullUpdate(int scr);
 extern void app_vkb_handle();
 
 extern char core_key_state[512];
@@ -69,14 +68,11 @@ static nk_retro_Font *RSDL_font;
 
 int app_init()
 {
-
-#ifdef FRONTEND_SUPPORTS_RGB565
-    screen_surface = Retro_CreateRGBSurface16(retrow, retroh, 16, 0, 0, 0, 0);
-    Retro_Screen = (unsigned short int *)screen_surface->pixels;
-#else
-    screen_surface = Retro_CreateRGBSurface32(retrow, retroh, 32, 0, 0, 0, 0);
-    Retro_Screen = (unsigned int *)screen_surface->pixels;
-#endif
+    if (pix_bytes == 2)
+        screen_surface = Retro_CreateRGBSurface16(retrow, retroh, 16, 0, 0, 0, 0);
+    else
+        screen_surface = Retro_CreateRGBSurface32(retrow, retroh, 32, 0, 0, 0, 0);
+    Retro_Screen = screen_surface->pixels;
 
     RSDL_font = (nk_retro_Font*)calloc(1, sizeof(nk_retro_Font));
     RSDL_font->width = 6;

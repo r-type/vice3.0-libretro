@@ -337,8 +337,6 @@ OBJECTS     :=
  
 include Makefile.common
 
-COMMONFLAGS += -DFRONTEND_SUPPORTS_RGB565
-
 COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
 
 OBJECTS     += $(SOURCES_CC:.cc=.o) $(SOURCES_C:.c=.o)

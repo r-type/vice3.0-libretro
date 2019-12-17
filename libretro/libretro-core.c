@@ -74,6 +74,7 @@ int retroW=WINDOW_WIDTH;
 int retroH=WINDOW_HEIGHT;
 int lastW=0;
 int lastH=0;
+int last_audio_sample_rate=0;
 
 int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
@@ -1071,18 +1072,16 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_sound_sample_rate",
-         "Sound Output Samplerate",
+         "Sound Output Sample Rate",
          "Slightly higher quality or higher performance.",
          {
-            { "8000", NULL },
-            { "11025", NULL },
             { "22050", NULL },
             { "44100", NULL },
             { "48000", NULL },
             { "96000", NULL },
             { NULL, NULL },
          },
-         "44100"
+         "48000"
       },
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
       {
@@ -1965,16 +1964,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int rate=44100;
-
-      if (strcmp(var.value, "8000") == 0) { rate=8000; }
-      else if (strcmp(var.value, "11025") == 0) { rate=11025; }
-      else if (strcmp(var.value, "22050") == 0) { rate=22050; }
-      else if (strcmp(var.value, "44100") == 0) { rate=44100; }
-      else if (strcmp(var.value, "48000") == 0) { rate=48000; }
-      else if (strcmp(var.value, "96000") == 0) { rate=96000; }
-
-      RETROSOUNDSAMPLERATE = rate;
+      RETROSOUNDSAMPLERATE=atoi(var.value);
    }
 
 #if defined(__VIC20__)
@@ -3594,6 +3584,19 @@ void retro_run(void)
    bool updated = false;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
+
+   /* Update samplerate if changed by core option */
+   if (last_audio_sample_rate != RETROSOUNDSAMPLERATE)
+   {
+      last_audio_sample_rate = RETROSOUNDSAMPLERATE;
+
+      /* Ensure audio rendering is reinitialized on next use. */
+      sound_close();
+
+      struct retro_system_av_info system_av_info;
+      retro_get_system_av_info(&system_av_info);
+      environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
+   }
 
    /* Update geometry if model or zoom mode changes */
    if (lastW != retroW || lastH != retroH)

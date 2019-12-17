@@ -42,7 +42,7 @@ bool retro_load_ok = false;
 static bool noautostart = false;
 static char* autostartString = NULL;
 char RETRO_DIR[512];
-static char buf[64][4096] = { 0 };
+static char* core_options_legacy_strings = NULL;
 
 static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
@@ -1782,33 +1782,60 @@ void retro_set_environment(retro_environment_t cb)
    cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
    unsigned version = 0;
-   if (cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && (version == 1))
+   if (!cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version))
+   {
+      /* Only log the error if we were not called after retro_deinit */
+      if (log_cb)
+         log_cb(RETRO_LOG_WARN,"retro_set_environment: GET_CORE_OPTIONS_VERSION failed, not setting core-options now.\n");
+   }
+   else if (version == 1)
       cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, core_options);
    else
    {
       /* Fallback for older API */
-      static struct retro_variable variables[64] = { 0 };
-      i = 0;
-      while (core_options[i].key) 
+
+      /* Use define because C doesn't care about const. */
+#define NUM_CORE_OPTIONS ( sizeof(core_options)/sizeof(core_options[0])-1 )
+      static struct retro_variable variables[NUM_CORE_OPTIONS+1];
+
+      /* Only generate variables once, it's as static as core_options */
+      if (!core_options_legacy_strings)
       {
-         buf[i][0] = 0;
-         variables[i].key = core_options[i].key;
-         strcpy(buf[i], core_options[i].desc);
-         strcat(buf[i], "; ");
-         strcat(buf[i], core_options[i].default_value);
-         j = 0;
-         while (core_options[i].values[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX)
+         /* First pass: Calculate size of string-buffer required */
+         unsigned buf_len;
+         char *buf;
          {
-            strcat(buf[i], "|");
-            strcat(buf[i], core_options[i].values[j].value);
-            ++j;
-         };
-         variables[i].value = buf[i];
-         ++i;
-      };
-      variables[i].key = NULL;
-      variables[i].value = NULL;      
+            unsigned alloc_len=0;
+            struct retro_core_option_definition *o=core_options+NUM_CORE_OPTIONS-1;
+            struct retro_variable *rv=variables+NUM_CORE_OPTIONS-1;
+            for (; o>=core_options; --o, --rv)
+            {
+               int l=snprintf(0,0,"%s; %s",o->desc,o->default_value);
+               for (struct retro_core_option_value *v=o->values;v->value;++v)
+                  l+=snprintf(0,0,"|%s",v->value);
+               alloc_len+=l+1;
+            }
+            buf=core_options_legacy_strings=(char *)malloc(alloc_len);
+            buf_len=alloc_len;
+         }
+         /* Second pass: Fill string-buffer */
+         struct retro_core_option_definition *o=core_options+NUM_CORE_OPTIONS-1;
+         struct retro_variable *rv=variables+NUM_CORE_OPTIONS;
+         rv->key = rv->value = 0;
+         --rv;
+         for (; o>=core_options; --o, --rv)
+         {
+            int l=snprintf(buf,buf_len,"%s; %s",o->desc,o->default_value);
+            for (struct retro_core_option_value *v=o->values;v->value;++v)
+               l+=snprintf(buf+l,buf_len,"|%s",v->value);
+            rv->key = o->key;
+            rv->value = buf;
+            ++l;
+            buf+=l, buf_len-=l;
+         }
+      }
       cb( RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+#undef NUM_CORE_OPTIONS
    }
 
    allowNoGameMode = true;
@@ -3300,6 +3327,10 @@ void retro_deinit(void)
    /* Clean the disk control context */
    if (dc)
       dc_free(dc);
+   if (core_options_legacy_strings)
+   {
+	   free(core_options_legacy_strings);
+   }
 }
 
 unsigned retro_api_version(void)

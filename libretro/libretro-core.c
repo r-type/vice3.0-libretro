@@ -21,6 +21,10 @@
 #include "vsync.h"
 #include "log.h"
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 // Our virtual time counter, increased by retro_run()
 long microSecCounter=0;
 int cpuloop=1;

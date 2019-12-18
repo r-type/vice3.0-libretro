@@ -3660,7 +3660,7 @@ void retro_run(void)
       static retro_time_t t_frame=1, t_end_prev=0;
 
       retro_time_t t_begin=pcb.get_time_usec();
-      retro_time_t t_interframe=min((t_end_prev ? t_begin-t_end_prev : 0), 20000-t_frame);
+      retro_time_t t_interframe=MIN((t_end_prev ? t_begin-t_end_prev : 0), 20000-t_frame);
 
       for (int frame_count=0;frame_count<(retro_warp_mode_enabled() ? (t_interframe+t_frame)/t_frame : 1);++frame_count)
       {
@@ -3672,7 +3672,7 @@ void retro_run(void)
          {
             retro_time_t t_end=pcb.get_time_usec();
             t_end_prev=t_end;
-            t_frame=min(t_end-t_begin, 20000);
+            t_frame=MIN(t_end-t_begin, 20000);
          }
       }
    }

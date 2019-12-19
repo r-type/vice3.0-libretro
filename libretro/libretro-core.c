@@ -3676,7 +3676,10 @@ void retro_run(void)
          {
             retro_time_t t_end=pcb.get_time_usec();
             t_end_prev=t_end;
-            t_frame=MIN(t_end-t_begin, 20000);
+            if (!(t_frame=MIN(t_end-t_begin, 20000)))
+               /* It was seen with x64 that mainloop actually returned within one nanosecond, so make sure
+               we don't end up with 0 here. */
+               t_frame=20000;
          }
       }
    }

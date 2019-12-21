@@ -88,6 +88,7 @@ unsigned short int *Retro_Screen;
 extern int RETROTDE;
 extern int RETRODSE;
 extern int RETRORESET;
+extern int RETROSIDENGINE;
 extern int RETROSIDMODL;
 extern int RETRORESIDSAMPLING;
 extern int RETROSOUNDSAMPLERATE;
@@ -1128,20 +1129,28 @@ void retro_set_environment(retro_environment_t cb)
       },
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
       {
+         "vice_sid_engine",
+         "SID Engine",
+         "ReSID is accurate but slower.",
+         {
+            { "FastSID", NULL },
+            { "ReSID", NULL },
+            { NULL, NULL },
+         },
+         "ReSID"
+      },
+      {
          "vice_sid_model",
          "SID Model",
-         "ReSID is accurate but slower. The original C64 uses 6581, C64C uses 8580.",
+         "The original C64 uses 6581, C64C uses 8580.",
          {
-            { "DefaultF", "Default FastSID" },
-            { "DefaultR", "Default ReSID" },
-            { "6581F", "6581 FastSID" },
-            { "6581R", "6581 ReSID" },
-            { "8580F", "8580 FastSID" },
-            { "8580R", "8580 ReSID" },
+            { "Default", NULL },
+            { "6581", NULL },
+            { "8580", NULL },
             { "8580RD", "8580 ReSID + Digi Boost" },
             { NULL, NULL },
          },
-         "DefaultR"
+         "Default"
       },
       {
          "vice_resid_sampling",
@@ -2248,29 +2257,40 @@ static void update_variables(void)
 #endif
 
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+   var.key = "vice_sid_engine";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int eng=0;
+
+      if (strcmp(var.value, "ReSID") == 0) { eng=1; }
+
+      if (retro_ui_finalized)
+         if (RETROSIDENGINE != eng)
+            if (RETROSIDMODL == 0xff)
+               resources_set_int("SidEngine", eng);
+            else
+               sid_set_engine_model(eng, RETROSIDMODL);
+
+      RETROSIDENGINE=eng;
+   }
+
    var.key = "vice_sid_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int eng=0,modl=0,sidmdl=0;
+      int modl=0xff;
 
-      if (strcmp(var.value, "6581F") == 0) { eng=0; modl=0; }
-      else if (strcmp(var.value, "8580F") == 0) { eng=0; modl=1; }
-      else if (strcmp(var.value, "6581R") == 0) { eng=1; modl=0; }
-      else if (strcmp(var.value, "8580R") == 0) { eng=1; modl=1; }
-      else if (strcmp(var.value, "8580RD") == 0) { eng=1; modl=2; }
-      else if (strcmp(var.value, "DefaultF") == 0) { eng=0; modl=0xff; }
-      else if (strcmp(var.value, "DefaultR") == 0) { eng=1; modl=0xff; }
+      if (strcmp(var.value, "6581") == 0) { modl=0; }
+      else if (strcmp(var.value, "8580") == 0) { modl=1; }
+      /* There is no digiboost for FastSID (and it's not needed either) */
+      else if (strcmp(var.value, "8580RD") == 0) { modl=(!RETROSIDENGINE ? 1 : 2); }
 
-      sidmdl=((eng << 8) | modl);
       if (retro_ui_finalized)
-         if (RETROSIDMODL != sidmdl)
-            if (modl == 0xff)
-               resources_set_int("SidEngine", eng);
-            else
-               sid_set_engine_model(eng, modl);
+         if (modl != 0xff)
+            sid_set_engine_model(RETROSIDENGINE, modl);
 
-      RETROSIDMODL=sidmdl;
+      RETROSIDMODL=modl;
    }
 
    var.key = "vice_resid_sampling";
@@ -3020,6 +3040,8 @@ static void update_variables(void)
    option_display.key = "vice_sound_sample_rate";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+   option_display.key = "vice_sid_engine";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_sid_model";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_resid_sampling";

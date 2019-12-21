@@ -56,6 +56,7 @@
 int RETROTDE=0;
 int RETRODSE=0;
 int RETRORESET=0;
+int RETROSIDENGINE=0;
 int RETROSIDMODL=0;
 int RETRORESIDSAMPLING=0;
 int RETROSOUNDSAMPLERATE=0;
@@ -283,10 +284,10 @@ int ui_init_finalize(void)
 #endif
 
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
-   if ((RETROSIDMODL & 0xff) == 0xff)
-      resources_set_int("SidEngine", RETROSIDMODL >> 8);
+   if (RETROSIDMODL == 0xff)
+      resources_set_int("SidEngine", RETROSIDENGINE);
    else
-      sid_set_engine_model((RETROSIDMODL >> 8), (RETROSIDMODL & 0xff));
+      sid_set_engine_model(RETROSIDENGINE, RETROSIDMODL);
    log_resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
 #endif
 

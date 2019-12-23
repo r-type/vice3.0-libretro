@@ -3808,7 +3808,7 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 static void save_trap(uint16_t addr, void *success)
 {
    /* params: stream, save_roms, save_disks, event_mode */
-   if (machine_write_snapshot_to_stream(snapshot_stream, 0, 0, 0) >= 0) 
+   if (machine_write_snapshot_to_stream(snapshot_stream, 1, 0, 0) >= 0)
       *((int *)success) = 1;
    else
       *((int *)success) = 0;

@@ -3881,6 +3881,7 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
+      resources_set_int("WarpMode", 0);
       snapshot_stream = snapshot_memory_read_fopen(data_, size);
       int success = 0;
       interrupt_maincpu_trigger_trap(load_trap, (void *)&success);

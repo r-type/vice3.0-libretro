@@ -59,6 +59,9 @@ NK_API struct nk_retro_event* nk_retro_event_ptr();
 #define VKBD_MIN_HOLDING_TIME 200
 #define VKBD_MOVE_DELAY 50
 
+/* VKBD_STICKY_HOLDING_TIME: Button press longer than this triggers sticky key */
+#define VKBD_STICKY_HOLDING_TIME 1000
+
 extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
 extern struct nk_vec2 offset; /* needed for correct wraparound in vkbd */
@@ -78,6 +81,8 @@ struct nk_retro_event {
     int margin_bottom;
     int mouse_wu;
     int mouse_wd;
+    int let_go_of_button;
+    long last_press_time_button;
     int let_go_of_direction;
     long last_move_time;
     long last_press_time;
@@ -519,6 +524,8 @@ static void retro_init_event()
     revent.JOYPAD_PRESSED=0;
     revent.mouse_wu=0;
     revent.mouse_wd=0;
+    revent.let_go_of_button=1;
+    revent.last_press_time_button=0;
     revent.let_go_of_direction=1;
     revent.last_move_time=0;
     revent.last_press_time=0;
@@ -585,6 +592,7 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
     if (poll)
         input_poll_cb();
 
+    static long now;
     static int lmx=0,lmy=0;
     static int mmbL=0,mmbR=0,mmbM=0;
     static int mouse_l,mouse_m,mouse_r=0;
@@ -602,9 +610,25 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
 
     if (!mouse_l && !mouse_r && !mouse_m)
     {
-       // Mouse buttons
-       mouse_l = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
-       mouse_r = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
+        // Mouse buttons
+        mouse_l = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+        mouse_r = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
+    }
+
+    // Sticky keys
+    if (mouse_l)
+    {
+        now = GetTicks() / 1000;
+        if (revent.let_go_of_button)
+            revent.last_press_time_button = now;
+        if (now-revent.last_press_time_button>VKBD_STICKY_HOLDING_TIME)
+            vkey_sticky = 1;
+        revent.let_go_of_button = 0;
+    }
+    else
+    {
+        revent.let_go_of_button = 1;
+        vkey_sticky = 0;
     }
 
     // Relative
@@ -639,7 +663,7 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
 
         if (revent.JOYPAD_PRESSED)
         {
-            long now = GetTicks() / 1000;
+            now = GetTicks() / 1000;
             if (revent.let_go_of_direction)
                /* just pressing down */
                revent.last_press_time = now;

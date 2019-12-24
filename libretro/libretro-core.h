@@ -54,6 +54,8 @@ typedef struct {
 } Mvk;
 
 extern Mvk MVk[NPLGN*NLIGN*2];
+extern int vkey_pressed;
+extern int vkey_sticky;
 
 //VARIABLES
 extern int VIRTUAL_WIDTH;

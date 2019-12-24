@@ -26,41 +26,45 @@ nk_button_set_behavior(ctx, NK_BUTTON_REPEATER);
 
 vkey_pressed = -1;
 
-for(y=0; y<NLIGN; y++)
+for (y=0; y<NLIGN; y++)
 {
-    for(x=0; x<NPLGN; x++)
+    for (x=0; x<NPLGN; x++)
     {
         /* Reset default color */
         ctx->style.button.normal = key_color_default;
 
         /* Function key color */
-        if(strcmp(MVk[(y*NPLGN)+x].norml, "F1") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "F3") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "F5") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "F7") == 0
+        if (strcmp(MVk[(y*NPLGN)+x].norml, "F1") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "F3") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "F5") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "F7") == 0
         )
             ctx->style.button.normal = key_color_function;
 
         /* Hotkey color */
-        if(strcmp(MVk[(y*NPLGN)+x].norml, "Joy") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "Stb") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "Rst") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "Ttf") == 0
+        if (strcmp(MVk[(y*NPLGN)+x].norml, "Joy") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "Stb") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "Rst") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "Ttf") == 0
         )
             ctx->style.button.normal = key_color_hotkey;
 
         /* Datasette color */
-        if(strcmp(MVk[(y*NPLGN)+x].norml, "DRe") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "DSt") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "DFw") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "DRs") == 0
-        || strcmp(MVk[(y*NPLGN)+x].norml, "DPl") == 0
+        if (strcmp(MVk[(y*NPLGN)+x].norml, "DRe") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "DSt") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "DFw") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "DRs") == 0
+         || strcmp(MVk[(y*NPLGN)+x].norml, "DPl") == 0
         )
             ctx->style.button.normal = key_color_datasette;
 
         /* Reset color */
-        if(strcmp(MVk[(y*NPLGN)+x].norml, "Rst") == 0)
+        if (strcmp(MVk[(y*NPLGN)+x].norml, "Rst") == 0)
             ctx->style.button.normal = key_color_reset;
+
+        /* Sticky color */
+        if (MVk[(y*NPLGN)+x].val == vkey_sticky1 || MVk[(y*NPLGN)+x].val == vkey_sticky2)
+            ctx->style.button.normal = ctx->style.button.active;
 
         if (nk_button_text(ctx, SHIFTON == -1 ? MVk[(y*NPLGN)+x].norml : MVk[(y*NPLGN)+x].shift, \
             SHIFTON == -1 ? strlen(MVk[(y*NPLGN)+x].norml) : strlen(MVk[(y*NPLGN)+x].shift)))

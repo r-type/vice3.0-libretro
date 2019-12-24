@@ -1258,26 +1258,25 @@ void retro_set_environment(retro_environment_t cb)
          "VIC-II Color Gamma",
          "Gamma for the internal default palette.",
          {
-            { "800", "20\%" },
-            { "1000", "25\%" },
-            { "1200", "30\%" },
-            { "1400", "35\%" },
-            { "1600", "40\%" },
-            { "1800", "45\%" },
-            { "2000", "50\%" },
-            { "2200", "55\%" },
-            { "2400", "60\%" },
-            { "2600", "65\%" },
-            { "2800", "70\%" },
-            { "3000", "75\%" },
-            { "3200", "80\%" },
-            { "3400", "85\%" },
-            { "3600", "90\%" },
-            { "3800", "95\%" },
-            { "4000", "100\%" },
+            { "1000", "1.00" },
+            { "1200", "1.20" },
+            { "1400", "1.40" },
+            { "1600", "1.60" },
+            { "1800", "1.80" },
+            { "2000", "2.00" },
+            { "2200", "2.20" },
+            { "2400", "2.40" },
+            { "2600", "2.60" },
+            { "2800", "2.80" },
+            { "3000", "3.00" },
+            { "3200", "3.20" },
+            { "3400", "3.40" },
+            { "3600", "3.60" },
+            { "3800", "3.80" },
+            { "4000", "4.00" },
             { NULL, NULL },
          },
-         "2200"
+         "2800"
       },
       {
          "vice_vicii_color_saturation",
@@ -1319,7 +1318,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1250"
+         "1000"
       },
       {
          "vice_vicii_color_contrast",
@@ -1361,7 +1360,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1250"
+         "1000"
       },
       {
          "vice_vicii_color_brightness",
@@ -3808,7 +3807,7 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 static void save_trap(uint16_t addr, void *success)
 {
    /* params: stream, save_roms, save_disks, event_mode */
-   if (machine_write_snapshot_to_stream(snapshot_stream, 0, 0, 0) >= 0) 
+   if (machine_write_snapshot_to_stream(snapshot_stream, 1, 0, 0) >= 0)
       *((int *)success) = 1;
    else
       *((int *)success) = 0;
@@ -3882,6 +3881,7 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
+      resources_set_int("WarpMode", 0);
       snapshot_stream = snapshot_memory_read_fopen(data_, size);
       int success = 0;
       interrupt_maincpu_trigger_trap(load_trap, (void *)&success);

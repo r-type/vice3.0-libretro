@@ -24,6 +24,9 @@ int SHOWKEY=-1;
 int SHIFTON=-1;
 int TABON=-1;
 int vkey_pressed=-1;
+int vkey_sticky=-1;
+int vkey_sticky1=-1;
+int vkey_sticky2=-1;
 char core_key_state[512];
 char core_old_key_state[512];
 bool num_locked = false;
@@ -159,10 +162,37 @@ void Keymap_KeyDown(int symkey)
 void app_vkb_handle(void)
 {
     static int last_vkey_pressed = -1;
+    static int vkey_sticky1_release = 0;
+    static int vkey_sticky2_release = 0;
+
+    if (vkey_sticky && last_vkey_pressed != -1)
+    {
+        if (vkey_sticky1 > -1 && vkey_sticky1 != last_vkey_pressed)
+        {
+            if (vkey_sticky2 > -1 && vkey_sticky2 != last_vkey_pressed)
+                kbd_handle_keyup(vkey_sticky2);
+            vkey_sticky2 = last_vkey_pressed;
+        }
+        else
+            vkey_sticky1 = last_vkey_pressed;
+    }
 
     /* key up */
-    if (vkey_pressed == -1 && last_vkey_pressed >= 0)
+    if (vkey_pressed == -1 && last_vkey_pressed >= 0 && last_vkey_pressed != vkey_sticky1 && last_vkey_pressed != vkey_sticky2)
         kbd_handle_keyup(last_vkey_pressed);
+
+    if (vkey_sticky1_release)
+    {
+        vkey_sticky1_release=0;
+        vkey_sticky1=-1;
+        kbd_handle_keyup(vkey_sticky1);
+    }
+    if (vkey_sticky2_release)
+    {
+        vkey_sticky2_release=0;
+        vkey_sticky2=-1;
+        kbd_handle_keyup(vkey_sticky2);
+    }
 
     /* key down */
     if (vkey_pressed != -1 && last_vkey_pressed == -1)
@@ -217,11 +247,16 @@ void app_vkb_handle(void)
                 break;
 
             default:
+                if (vkey_pressed == vkey_sticky1)
+                    vkey_sticky1_release = 1;
+                if (vkey_pressed == vkey_sticky2)
+                    vkey_sticky2_release = 1;
                 kbd_handle_keydown(vkey_pressed);
                 break;
         }
     }
     last_vkey_pressed = vkey_pressed;
+    //printf("vkey:%d sticky:%d sticky1:%d sticky2:%d\n", vkey_pressed, vkey_sticky, vkey_sticky1, vkey_sticky2);
 }
 
 // Core input Key(not GUI) 

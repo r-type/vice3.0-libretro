@@ -3806,8 +3806,13 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 static void save_trap(uint16_t addr, void *success)
 {
+   static unsigned int save_disks;
+   static unsigned int drive_type;
+   resources_get_int("Drive8Type", &drive_type);
+   save_disks = (drive_type < 1550) ? 1 : 0;
+
    /* params: stream, save_roms, save_disks, event_mode */
-   if (machine_write_snapshot_to_stream(snapshot_stream, 1, 0, 0) >= 0)
+   if (machine_write_snapshot_to_stream(snapshot_stream, 0, save_disks, 0) >= 0)
       *((int *)success) = 1;
    else
       *((int *)success) = 0;

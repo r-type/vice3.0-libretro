@@ -92,6 +92,10 @@ extern int RETROSIDENGINE;
 extern int RETROSIDMODL;
 extern int RETRORESIDSAMPLING;
 extern int RETROSOUNDSAMPLERATE;
+extern int RETRORESIDPASSBAND;
+extern int RETRORESIDGAIN;
+extern int RETRORESIDFILTERBIAS;
+extern int RETRORESID8580FILTERBIAS;
 extern int RETROAUDIOLEAK;
 extern int RETROC64MODL;
 #if defined(__X128__)
@@ -1165,6 +1169,105 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "Resampling"
+      },
+      {
+         "vice_resid_passband",
+         "ReSID Filter Passband",
+         "Parameters for SID Filter",
+         {
+            { "0", NULL },
+            { "10", NULL },
+            { "20", NULL },
+            { "30", NULL },
+            { "40", NULL },
+            { "50", NULL },
+            { "60", NULL },
+            { "70", NULL },
+            { "80", NULL },
+            { "90", NULL },
+            { NULL, NULL },
+         },
+         "90"
+      },
+      {
+         "vice_resid_gain",
+         "ReSID Filter Gain",
+         "Parameters for SID Filter",
+         {
+            { "90", NULL },
+            { "91", NULL },
+            { "92", NULL },
+            { "93", NULL },
+            { "94", NULL },
+            { "95", NULL },
+            { "96", NULL },
+            { "97", NULL },
+            { "98", NULL },
+            { "99", NULL },
+            { "100", NULL },
+            { NULL, NULL },
+         },
+         "97"
+      },
+      {
+         "vice_resid_filterbias",
+         "ReSID Filter Bias",
+         "Parameters for SID Filter",
+         {
+            { "-5000", NULL },
+            { "-4500", NULL },
+            { "-4000", NULL },
+            { "-3500", NULL },
+            { "-3000", NULL },
+            { "-2500", NULL },
+            { "-2000", NULL },
+            { "-1500", NULL },
+            { "-1000", NULL },
+            { "-500", NULL },
+            { "0", NULL },
+            { "500", NULL },
+            { "1000", NULL },
+            { "1500", NULL },
+            { "2000", NULL },
+            { "2500", NULL },
+            { "3000", NULL },
+            { "3500", NULL },
+            { "4000", NULL },
+            { "4500", NULL },
+            { "5000", NULL },
+            { NULL, NULL },
+         },
+         "500"
+      },
+      {
+         "vice_resid_8580filterbias",
+         "ReSID Filter 8580 Bias",
+         "Parameters for SID Filter",
+         {
+            { "-5000", NULL },
+            { "-4500", NULL },
+            { "-4000", NULL },
+            { "-3500", NULL },
+            { "-3000", NULL },
+            { "-2500", NULL },
+            { "-2000", NULL },
+            { "-1500", NULL },
+            { "-1000", NULL },
+            { "-500", NULL },
+            { "0", NULL },
+            { "500", NULL },
+            { "1000", NULL },
+            { "1500", NULL },
+            { "2000", NULL },
+            { "2500", NULL },
+            { "3000", NULL },
+            { "3500", NULL },
+            { "4000", NULL },
+            { "4500", NULL },
+            { "5000", NULL },
+            { NULL, NULL },
+         },
+         "1500"
       },
 #endif
       {
@@ -2312,6 +2415,64 @@ static void update_variables(void)
 
       RETRORESIDSAMPLING=resid;
    }
+
+   var.key = "vice_resid_passband";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int val = atoi(var.value);
+
+      if (retro_ui_finalized)
+         if (RETRORESIDPASSBAND != val)
+         {
+            log_resources_set_int("SidResidPassband", val);
+            log_resources_set_int("SidResid8580Passband", val);
+         }
+         RETRORESIDPASSBAND=val;
+   }
+
+   var.key = "vice_resid_gain";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int val = atoi(var.value);
+
+      if (retro_ui_finalized)
+         if (RETRORESIDGAIN != val)
+         {
+            log_resources_set_int("SidResidGain", val);
+            log_resources_set_int("SidResid8580Gain", val);
+         }
+         RETRORESIDGAIN=val;
+   }
+
+   var.key = "vice_resid_filterbias";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int val = atoi(var.value);
+
+      if (retro_ui_finalized)
+         if (RETRORESIDFILTERBIAS != val)
+            log_resources_set_int("SidResidFilterBias", val);
+         RETRORESIDFILTERBIAS=val;
+   }
+
+   var.key = "vice_resid_8580filterbias";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int val = atoi(var.value);
+
+      if (retro_ui_finalized)
+         if (RETRORESID8580FILTERBIAS != val)
+            log_resources_set_int("SidResid8580FilterBias", val);
+         RETRORESID8580FILTERBIAS=val;
+   }
 #endif
 
 #if !defined(__PET__) && !defined(__CBM2__)
@@ -3047,6 +3208,14 @@ static void update_variables(void)
    option_display.key = "vice_sid_model";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_resid_sampling";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_resid_passband";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_resid_gain";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_resid_filterbias";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_resid_8580filterbias";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
 

@@ -93,6 +93,9 @@ static int set_sid_engine(int set_engine, void *param)
         case SID_ENGINE_FASTSID:
 #ifdef HAVE_RESID
         case SID_ENGINE_RESID:
+#ifdef __LIBRETRO__
+        case SID_ENGINE_RESID33:
+#endif
 #endif
 #ifdef HAVE_CATWEASELMKIII
         case SID_ENGINE_CATWEASELMKIII:
@@ -582,6 +585,11 @@ static int sid_check_engine_model(int engine, int model)
         case SID_RESID_6581:
         case SID_RESID_8580:
         case SID_RESID_8580D:
+#ifdef __LIBRETRO__
+        case SID_RESID33_6581:
+        case SID_RESID33_8580:
+        case SID_RESID33_8580D:
+#endif
 #endif
             return 0;
 #ifdef HAVE_RESID_DTV

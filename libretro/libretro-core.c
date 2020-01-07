@@ -107,7 +107,7 @@ extern int RETROTHEME;
 extern int RETROKEYRAHKEYPAD;
 extern int RETROKEYBOARDPASSTHROUGH;
 extern char RETROEXTPALNAME[512];
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
 extern int RETROVICIICOLORGAMMA;
 extern int RETROVICIICOLORSATURATION;
 extern int RETROVICIICOLORCONTRAST;

@@ -20,7 +20,7 @@ REVISION  = 0
 
 CXXFLAGS += $(CPPFLAGS)
 
-SOURCES_CC :=
+SOURCES_CXX :=
 SOURCES_C  := \
 				 $(CORE_DIR)/libretro/libretro-core.c \
 				 $(CORE_DIR)/libretro/retro_strings.c \
@@ -52,7 +52,7 @@ else
 include $(CORE_DIR)/Makefile.x64
 endif
 
-SOURCES_CC += $(LOCAL_SRC_CC_FILES)
+SOURCES_CXX += $(LOCAL_SRC_CC_FILES)
 
 SOURCES_C += \
 				 $(LOCAL_SRC_FILES) \

@@ -33,7 +33,7 @@ INCFLAGS += \
 		-I$(EMU)/vicii \
 		-I$(EMU)/video
 
-SOURCES_CC += \
+SOURCES_CXX += \
 		$(EMU)/resid/dac.cc  \
 		$(EMU)/resid/envelope.cc  \
 		$(EMU)/resid/extfilt.cc  \

@@ -9,13 +9,13 @@
 
 #include "sound.h"
 
-extern void retro_audiocb(signed short int *sound_buffer, int sndbufsize);
+extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
 extern int RETROSOUNDSAMPLERATE;
 
 static int retro_sound_init(const char *param, int *speed, int *fragsize, int *fragnr, int *channels)
 {
     *speed = RETROSOUNDSAMPLERATE;
-    //*fragsize = 1;
+    //*fragsize = 32;
     *fragnr = 0;
     //*channels = 1;
     //printf("speed:%d fragsize:%d fragnr:%d channels:%d\n", *speed, *fragsize, *fragnr, *channels);
@@ -25,7 +25,7 @@ static int retro_sound_init(const char *param, int *speed, int *fragsize, int *f
 static int retro_write(SWORD *pbuf, size_t nr)
 {
     //printf("pbuf:%d nr:%d\n", *pbuf, nr);
-    retro_audiocb(pbuf, nr);
+    retro_audio_render(pbuf, nr);
     return 0;
 }
 

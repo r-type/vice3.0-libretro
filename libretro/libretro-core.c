@@ -3582,19 +3582,14 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    }
 }
 
-void retro_set_audio_sample(retro_audio_sample_t cb)
-{
-   audio_cb = cb;
-}
-
-void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb)
-{
-   audio_batch_cb = cb;
-}
-
 void retro_set_video_refresh(retro_video_refresh_t cb)
 {
    video_cb = cb;
+}
+
+void retro_set_audio_sample(retro_audio_sample_t cb)
+{
+   audio_cb = cb;
 }
 
 void retro_audio_cb(short l, short r)
@@ -3602,10 +3597,24 @@ void retro_audio_cb(short l, short r)
    audio_cb(l, r);
 }
 
-void retro_audiocb(signed short int *sound_buffer, int sndbufsize)
+void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb)
+{
+   audio_batch_cb = cb;
+}
+
+void retro_audio_batch_cb(const int16_t *data, size_t frames)
+{
+   audio_batch_cb(data, frames);
+}
+
+void retro_audio_render(signed short int *sound_buffer, int sndbufsize)
 {
    int x;
+#if 1
    for (x=0; x<sndbufsize; x++) audio_cb(sound_buffer[x], sound_buffer[x]);
+#else
+   //FIXME audio_batch_cb(sound_buffer, sndbufsize);
+#endif
 }
 
 

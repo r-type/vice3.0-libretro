@@ -574,14 +574,30 @@ nk_retro_set_font(nk_retro_Font *xfont)
     nk_style_set_font(&retro.ctx, font);
 }
 
+extern void kbd_handle_keydown(int kcode);
+extern void kbd_handle_keyup(int kcode);
+
 static void mousebut(int but, int down, int x, int y)
 {
     struct nk_context *ctx = &retro.ctx;
+    static int vkey_sticky_prev;
 
     if (but==1) nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
     //else if (but==2) nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
     else if (but==2 && down) retro_toggle_theme();
     //else if (but==3) nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
+    else if (but==3 && down)
+    {
+        kbd_handle_keydown(RETROK_RETURN);
+        vkey_sticky_prev = vkey_sticky2;
+        vkey_sticky2 = RETROK_RETURN;
+    }
+    else if (but==3 && !down)
+    {
+        kbd_handle_keyup(RETROK_RETURN);
+        vkey_sticky2 = vkey_sticky_prev;
+        vkey_sticky_prev = -1;
+    }
     //else if (but==4) nk_input_scroll(ctx,(float)down);
 }
 
@@ -589,8 +605,8 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
 {
     struct nk_context *ctx = &retro.ctx;
 
-    if (poll)
-        input_poll_cb();
+    //if (poll)
+        //input_poll_cb();
 
     static long now;
     static int lmx=0,lmy=0;
@@ -601,6 +617,7 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
     // Joypad buttons
     mouse_l = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
     mouse_r = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
+    mouse_m = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START);
        
     if (!mouse_l && !mouse_r && !mouse_m)
     {
@@ -613,6 +630,7 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
         // Mouse buttons
         mouse_l = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
         mouse_r = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
+        mouse_m = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE);
     }
 
     // Sticky keys

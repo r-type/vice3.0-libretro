@@ -782,7 +782,7 @@ long GetTicks(void) {
    return microSecCounter;
 }
 
-#include "vkbd.i"
+#include "nukleargui/vkbd.i"
 int keyId(const char *val)
 {
    int i=0;
@@ -1035,14 +1035,23 @@ void retro_set_environment(retro_environment_t cb)
          {
             { "disabled", NULL },
             { "10\%", "10\% volume" },
+            { "15\%", "15\% volume" },
             { "20\%", "20\% volume" },
+            { "25\%", "25\% volume" },
             { "30\%", "30\% volume" },
+            { "35\%", "35\% volume" },
             { "40\%", "40\% volume" },
+            { "45\%", "45\% volume" },
             { "50\%", "50\% volume" },
+            { "55\%", "55\% volume" },
             { "60\%", "60\% volume" },
+            { "65\%", "65\% volume" },
             { "70\%", "70\% volume" },
+            { "75\%", "75\% volume" },
             { "80\%", "80\% volume" },
+            { "85\%", "85\% volume" },
             { "90\%", "90\% volume" },
+            { "95\%", "95\% volume" },
             { "100\%", "100\% volume" },
             { NULL, NULL },
          },
@@ -1259,20 +1268,35 @@ void retro_set_environment(retro_environment_t cb)
          "Gamma for the internal default palette.",
          {
             { "1000", "1.00" },
+            { "1100", "1.10" },
             { "1200", "1.20" },
+            { "1300", "1.30" },
             { "1400", "1.40" },
+            { "1500", "1.50" },
             { "1600", "1.60" },
+            { "1700", "1.70" },
             { "1800", "1.80" },
+            { "1900", "1.90" },
             { "2000", "2.00" },
+            { "2100", "2.10" },
             { "2200", "2.20" },
+            { "2300", "2.30" },
             { "2400", "2.40" },
+            { "2500", "2.50" },
             { "2600", "2.60" },
+            { "2700", "2.70" },
             { "2800", "2.80" },
+            { "2900", "2.90" },
             { "3000", "3.00" },
+            { "3100", "3.10" },
             { "3200", "3.20" },
+            { "3300", "3.30" },
             { "3400", "3.40" },
+            { "3500", "3.50" },
             { "3600", "3.60" },
+            { "3700", "3.70" },
             { "3800", "3.80" },
+            { "3900", "3.90" },
             { "4000", "4.00" },
             { NULL, NULL },
          },
@@ -1408,7 +1432,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_theme",
          "Virtual Keyboard Theme",
-         "By default, the keyboard comes up with L button or F11 key.",
+         "By default, the keyboard comes up with SELECT button or F11 key.",
          {
             { "C64", NULL },
             { "C64 transparent", NULL },
@@ -1528,7 +1552,7 @@ void retro_set_environment(retro_environment_t cb)
          "Hotkey: Hold Warp Mode",
          "Hold the mapped key for warp mode.",
          {{ NULL, NULL }},
-         "RETROK_PAGEDOWN"
+         ""
       },
       /* Datasette controls */
       {
@@ -1590,7 +1614,7 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad Select",
          "",
          {{ NULL, NULL }},
-         "---"
+         "RETROK_F11"
       },
       {
          "vice_mapper_start",
@@ -1625,14 +1649,14 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad L",
          "",
          {{ NULL, NULL }},
-         "RETROK_F11"
+         "---"
       },
       {
          "vice_mapper_r",
          "RetroPad R",
          "",
          {{ NULL, NULL }},
-         "RETROK_F12"
+         "---"
       },
       {
          "vice_mapper_l2",

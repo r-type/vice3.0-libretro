@@ -55,6 +55,7 @@ enum EMU_FUNCTIONS
     EMU_JOYPORT,
     EMU_RESET,
     EMU_ZOOM_MODE,
+    EMU_TURBO_FIRE,
     EMU_WARP,
     EMU_DATASETTE_HOTKEYS,
     EMU_DATASETTE_STOP,
@@ -91,6 +92,23 @@ void emu_function(int function)
                 zoom_mode_id = 0;
             else if (zoom_mode_id == 0)
                 zoom_mode_id = opt_zoom_mode_id;
+            break;
+        case EMU_TURBO_FIRE:
+            if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
+                break;
+            else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
+                turbo_fire_button_disabled = -1;
+
+            if (turbo_fire_button_disabled != -1)
+            {
+                turbo_fire_button = turbo_fire_button_disabled;
+                turbo_fire_button_disabled = -1;
+            }
+            else
+            {
+                turbo_fire_button_disabled = turbo_fire_button;
+                turbo_fire_button = -1;
+            }
             break;
         case EMU_WARP:
             warpmode = (warpmode) ? 0 : 1;
@@ -213,21 +231,7 @@ void app_vkb_handle(void)
                 Keymap_KeyUp(RETROK_CAPSLOCK);
                 break;
             case -20:
-                if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
-                    break;
-                else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
-                    turbo_fire_button_disabled = -1;
-
-                if (turbo_fire_button_disabled != -1)
-                {
-                    turbo_fire_button = turbo_fire_button_disabled;
-                    turbo_fire_button_disabled = -1;
-                }
-                else
-                {
-                    turbo_fire_button_disabled = turbo_fire_button;
-                    turbo_fire_button = -1;
-                }
+                emu_function(EMU_TURBO_FIRE);
                 break;
 
             case -11:
@@ -416,8 +420,8 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                 int just_released = 0;
                 if (i > 0 && (i<4 || i>7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad + B */
                 {
-                    /* Skip the transparency toggle button if vkbd is visible */
-                    if (SHOWKEY==1 && i==RETRO_DEVICE_ID_JOYPAD_A)
+                    /* Skip the transparency toggle button and RetroPad START if vkbd is visible */
+                    if (SHOWKEY==1 && (i==RETRO_DEVICE_ID_JOYPAD_A || i==RETRO_DEVICE_ID_JOYPAD_START))
                         continue;
 
                     if (input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) && jbt[j][i]==0 && i!=turbo_fire_button)

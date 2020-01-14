@@ -71,44 +71,19 @@ static char statusbar_text[MAX_STATUSBAR_LEN] = "                               
 char* joystick_value_human(char val)
 {
     static char str[6] = {0};
-    switch (val)
-    {
-        default:
-            sprintf(str, "%3s", "   ");
-            break;
-        case 1:
-        case 17:
-            sprintf(str, "%3s", " ^ ");
-            break;
-        case 2:
-        case 18:
-            sprintf(str, "%3s", " v ");
-            break;
-        case 4:
-        case 20:
-            sprintf(str, "%3s", "<  ");
-            break;
-        case 5:
-        case 21:
-            sprintf(str, "%3s", "<^ ");
-            break;
-        case 6:
-        case 22:
-            sprintf(str, "%3s", "<v ");
-            break;
-        case 8:
-        case 24:
-            sprintf(str, "%3s", "  >");
-            break;
-        case 9:
-        case 25:
-            sprintf(str, "%3s", " ^>");
-            break;
-        case 10:
-        case 26:
-            sprintf(str, "%3s", " v>");
-            break;
-    }
+    sprintf(str, "%3s", "   ");
+
+    if (val & 1) // UP
+        str[1] = 30;
+
+    else if (val & 2) // DOWN
+        str[1] = 28;
+
+    if (val & 4) // LEFT
+        str[0] = 27;
+
+    else if (val & 8) // RIGHT
+        str[2] = 29;
 
     str[1] = (val >= 16) ? (str[1] | 0x80) : str[1];
     return str;

@@ -1442,7 +1442,7 @@ void retro_set_environment(retro_environment_t cb)
             { "Light transparent", NULL },
             { NULL, NULL },
          },
-         "C64"
+         "C64 transparent"
       },
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
       {

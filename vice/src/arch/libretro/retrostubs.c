@@ -55,7 +55,6 @@ enum EMU_FUNCTIONS
     EMU_JOYPORT,
     EMU_RESET,
     EMU_ZOOM_MODE,
-    EMU_TURBO_FIRE,
     EMU_WARP,
     EMU_DATASETTE_HOTKEYS,
     EMU_DATASETTE_STOP,
@@ -92,23 +91,6 @@ void emu_function(int function)
                 zoom_mode_id = 0;
             else if (zoom_mode_id == 0)
                 zoom_mode_id = opt_zoom_mode_id;
-            break;
-        case EMU_TURBO_FIRE:
-            if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
-                break;
-            else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
-                turbo_fire_button_disabled = -1;
-
-            if (turbo_fire_button_disabled != -1)
-            {
-                turbo_fire_button = turbo_fire_button_disabled;
-                turbo_fire_button_disabled = -1;
-            }
-            else
-            {
-                turbo_fire_button_disabled = turbo_fire_button;
-                turbo_fire_button = -1;
-            }
             break;
         case EMU_WARP:
             warpmode = (warpmode) ? 0 : 1;
@@ -231,7 +213,21 @@ void app_vkb_handle(void)
                 Keymap_KeyUp(RETROK_CAPSLOCK);
                 break;
             case -20:
-                emu_function(EMU_TURBO_FIRE);
+                if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
+                    break;
+                else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
+                    turbo_fire_button_disabled = -1;
+
+                if (turbo_fire_button_disabled != -1)
+                {
+                    turbo_fire_button = turbo_fire_button_disabled;
+                    turbo_fire_button_disabled = -1;
+                }
+                else
+                {
+                    turbo_fire_button_disabled = turbo_fire_button;
+                    turbo_fire_button = -1;
+                }
                 break;
 
             case -11:

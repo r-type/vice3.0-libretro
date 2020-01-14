@@ -416,8 +416,8 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                 int just_released = 0;
                 if (i > 0 && (i<4 || i>7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad + B */
                 {
-                    /* Skip the transparency toggle button if vkbd is visible */
-                    if (SHOWKEY==1 && i==RETRO_DEVICE_ID_JOYPAD_A)
+                    /* Skip the transparency toggle button and RetroPad START if vkbd is visible */
+                    if (SHOWKEY==1 && (i==RETRO_DEVICE_ID_JOYPAD_A || i==RETRO_DEVICE_ID_JOYPAD_START))
                         continue;
 
                     if (input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) && jbt[j][i]==0 && i!=turbo_fire_button)

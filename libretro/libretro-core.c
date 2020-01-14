@@ -58,6 +58,7 @@ unsigned int opt_mapping_options_display;
 unsigned int opt_video_options_display;
 unsigned int opt_audio_options_display;
 unsigned int retro_region;
+unsigned int last_audio_sample_rate=0;
 
 extern void retro_poll_event();
 extern int retro_ui_finalized;
@@ -78,7 +79,6 @@ int retroW=WINDOW_WIDTH;
 int retroH=WINDOW_HEIGHT;
 int lastW=0;
 int lastH=0;
-int last_audio_sample_rate=0;
 
 int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
@@ -782,7 +782,7 @@ long GetTicks(void) {
    return microSecCounter;
 }
 
-#include "vkbd.i"
+#include "nukleargui/vkbd.i"
 int keyId(const char *val)
 {
    int i=0;
@@ -1035,14 +1035,23 @@ void retro_set_environment(retro_environment_t cb)
          {
             { "disabled", NULL },
             { "10\%", "10\% volume" },
+            { "15\%", "15\% volume" },
             { "20\%", "20\% volume" },
+            { "25\%", "25\% volume" },
             { "30\%", "30\% volume" },
+            { "35\%", "35\% volume" },
             { "40\%", "40\% volume" },
+            { "45\%", "45\% volume" },
             { "50\%", "50\% volume" },
+            { "55\%", "55\% volume" },
             { "60\%", "60\% volume" },
+            { "65\%", "65\% volume" },
             { "70\%", "70\% volume" },
+            { "75\%", "75\% volume" },
             { "80\%", "80\% volume" },
+            { "85\%", "85\% volume" },
             { "90\%", "90\% volume" },
+            { "95\%", "95\% volume" },
             { "100\%", "100\% volume" },
             { NULL, NULL },
          },
@@ -1259,20 +1268,35 @@ void retro_set_environment(retro_environment_t cb)
          "Gamma for the internal default palette.",
          {
             { "1000", "1.00" },
+            { "1100", "1.10" },
             { "1200", "1.20" },
+            { "1300", "1.30" },
             { "1400", "1.40" },
+            { "1500", "1.50" },
             { "1600", "1.60" },
+            { "1700", "1.70" },
             { "1800", "1.80" },
+            { "1900", "1.90" },
             { "2000", "2.00" },
+            { "2100", "2.10" },
             { "2200", "2.20" },
+            { "2300", "2.30" },
             { "2400", "2.40" },
+            { "2500", "2.50" },
             { "2600", "2.60" },
+            { "2700", "2.70" },
             { "2800", "2.80" },
+            { "2900", "2.90" },
             { "3000", "3.00" },
+            { "3100", "3.10" },
             { "3200", "3.20" },
+            { "3300", "3.30" },
             { "3400", "3.40" },
+            { "3500", "3.50" },
             { "3600", "3.60" },
+            { "3700", "3.70" },
             { "3800", "3.80" },
+            { "3900", "3.90" },
             { "4000", "4.00" },
             { NULL, NULL },
          },
@@ -1408,7 +1432,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_theme",
          "Virtual Keyboard Theme",
-         "By default, the keyboard comes up with L button or F11 key.",
+         "By default, the keyboard comes up with SELECT button or F11 key.",
          {
             { "C64", NULL },
             { "C64 transparent", NULL },
@@ -1418,7 +1442,7 @@ void retro_set_environment(retro_environment_t cb)
             { "Light transparent", NULL },
             { NULL, NULL },
          },
-         "C64"
+         "C64 transparent"
       },
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
       {
@@ -1528,7 +1552,7 @@ void retro_set_environment(retro_environment_t cb)
          "Hotkey: Hold Warp Mode",
          "Hold the mapped key for warp mode.",
          {{ NULL, NULL }},
-         "RETROK_PAGEDOWN"
+         ""
       },
       /* Datasette controls */
       {
@@ -1590,7 +1614,7 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad Select",
          "",
          {{ NULL, NULL }},
-         "---"
+         "RETROK_F11"
       },
       {
          "vice_mapper_start",
@@ -1625,14 +1649,14 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad L",
          "",
          {{ NULL, NULL }},
-         "RETROK_F11"
+         "---"
       },
       {
          "vice_mapper_r",
          "RetroPad R",
          "",
          {{ NULL, NULL }},
-         "RETROK_F12"
+         "---"
       },
       {
          "vice_mapper_l2",
@@ -3354,6 +3378,28 @@ void retro_get_system_info(struct retro_system_info *info)
    info->block_extract    = false;
 }
 
+double retro_get_aspect_ratio(unsigned int width, unsigned int height)
+{
+   static double ar;
+   #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+      if (retro_region == RETRO_REGION_NTSC)
+         ar = ((float)width / (float)height) * (float)0.75000000;
+      else
+         ar = ((float)width / (float)height) * (float)0.93650794;
+   #elif defined(__VIC20__)
+      if (retro_region == RETRO_REGION_NTSC)
+         ar = ((float)width / (float)height) * ((float)1.50411479 / (float)2.0);
+      else
+         ar = ((float)width / (float)height) * ((float)1.66574035 / (float)2.0);
+   #elif defined(__PLUS4__)
+      if (retro_region == RETRO_REGION_NTSC)
+         ar = ((float)width / (float)height) * (float)0.85760931;
+      else
+         ar = ((float)width / (float)height) * (float)1.03743478;
+   #endif
+   return ar;
+}
+
 void update_geometry(int mode)
 {
    struct retro_system_av_info system_av_info;
@@ -3378,6 +3424,9 @@ void update_geometry(int mode)
          retroXS_offset = 0;
          retroYS_offset = 0;
 
+         system_av_info.geometry.base_width = retroW;
+         system_av_info.geometry.base_height = retroH;
+
          /* Update av_info only when PAL/NTSC change occurs */
          if (retro_region != retro_get_region())
          {
@@ -3387,24 +3436,21 @@ void update_geometry(int mode)
             return;
          }
 
-         system_av_info.geometry.base_width = retroW;
-         system_av_info.geometry.base_height = retroH;
-
          if (retro_get_borders())
             // When borders are disabled, each system has a different aspect ratio.
             // For example, C64 & C128 have 320 / 200 pixel resolution with a 15 / 16
             // pixel aspect ratio leading to a total aspect of 320 / 200 * 15 / 16 = 1.5
-   #if defined(__VIC20__)
+         #if defined(__VIC20__)
             system_av_info.geometry.aspect_ratio = (float)1.6;
-   #elif defined(__PLUS4__)
+         #elif defined(__PLUS4__)
             system_av_info.geometry.aspect_ratio = (float)1.65;
-   #elif defined(__PET__)
+         #elif defined(__PET__)
             system_av_info.geometry.aspect_ratio = (float)4.0/3.0;
-   #else
+         #else
             system_av_info.geometry.aspect_ratio = (float)1.5;
-   #endif
+         #endif
          else
-            system_av_info.geometry.aspect_ratio = (float)4.0/3.0;
+            system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retroW, retroH);
          break;
 
       case 1:
@@ -3487,23 +3533,7 @@ void update_geometry(int mode)
 
             system_av_info.geometry.base_width = zoomed_width;
             system_av_info.geometry.base_height = zoomed_height;
-
-         #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-            if (retro_region == RETRO_REGION_NTSC)
-               system_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.75000000;
-            else
-               system_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.93650794;
-         #elif defined(__VIC20__)
-            if (retro_region == RETRO_REGION_NTSC)
-               system_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * ((float)1.50411479 / (float)2.0);
-            else
-               system_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * ((float)1.66574035 / (float)2.0);
-         #elif defined(__PLUS4__)
-            if (retro_region == RETRO_REGION_NTSC)
-               system_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)0.85760931;
-            else
-               system_av_info.geometry.aspect_ratio = ((float)zoomed_width / (float)zoomed_height) * (float)1.03743478;
-         #endif
+            system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(zoomed_width, zoomed_height);
          }
 #endif
          break;
@@ -3534,9 +3564,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.max_height = retroh;
    info->geometry.base_width = retroW;
    info->geometry.base_height = retroH;
-
-   info->geometry.aspect_ratio = 4.0 / 3.0;
-
+   info->geometry.aspect_ratio = retro_get_aspect_ratio(retroW, retroH);
    info->timing.sample_rate = RETROSOUNDSAMPLERATE;
 
    // Remember region for av_info update
@@ -3596,17 +3624,19 @@ void retro_run(void)
       /* Ensure audio rendering is reinitialized on next use. */
       sound_close();
 
+      /* Reset zoom for proper aspect ratio after av_info change */
+      zoom_mode_id_prev = -1;
+
       struct retro_system_av_info system_av_info;
       retro_get_system_av_info(&system_av_info);
       environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
    }
 
    /* Update geometry if model or zoom mode changes */
-   if (lastW != retroW || lastH != retroH)
-      update_geometry(0);
-
    if (retroW != retrow && retroH != retroh && zoom_mode_id != zoom_mode_id_prev)
       update_geometry(1);
+   else if (lastW != retroW || lastH != retroH)
+      update_geometry(0);
 
    if (retro_ui_finalized && !prev_ui_finalized)
    {

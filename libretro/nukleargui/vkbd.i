@@ -37,7 +37,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "j"  ,"J"   ,RETROK_j},
 	{ "k"  ,"K"   ,RETROK_k},	
 	{ "l"  ,"L"   ,RETROK_l},
-	{ "Pnd","Pnd" ,RETROK_INSERT},
+	{ {31} ,{31}  ,RETROK_INSERT},
 	{ "F5" ,"F6"  ,RETROK_F5},
 
 	// 33
@@ -75,7 +75,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "RST","RST" ,RETROK_PAGEUP},
 	{ "CLR","CLR" ,RETROK_HOME},
 	{ "DEL","DEL" ,RETROK_BACKSPACE},
-	{ "Cr^","Cr^" ,RETROK_UP},
+	{ {30} ,{30}  ,RETROK_UP},
 	{ "RET","RET" ,RETROK_RETURN},
 	{ "Joy","Joy" ,-4},
 
@@ -87,9 +87,9 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "DFw","DFw" ,-13},
 	{ "DSt","DSt" ,-11},
 	{ "SPC","SPC" ,RETROK_SPACE},
-	{ "Cr<","Cr<" ,RETROK_LEFT},
-	{ "Crv","Crv" ,RETROK_DOWN},
-	{ "Cr>","Cr>" ,RETROK_RIGHT},
+	{ {27} ,{27}  ,RETROK_LEFT},
+	{ {28} ,{28}  ,RETROK_DOWN},
+	{ {29} ,{29}  ,RETROK_RIGHT},
 	{ "Ttf","Ttf" ,-20},
 };
 

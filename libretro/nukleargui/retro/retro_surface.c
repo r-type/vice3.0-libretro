@@ -368,7 +368,7 @@ RSDL_Surface *Retro_CreateRGBSurface16( int w,int h, int d, int rm,int rg,int rb
    return bitmp;
 }
 
-#include "font2.i"
+#include "font2.c"
 
 void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short int y,
     const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg)
@@ -429,7 +429,6 @@ void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short
     for(ypixel = 0; ypixel < 8; ypixel++) {
         for(col = 0; col < strlen; col++) {
             b = font_array[(string[col]^0x80)*8 + ypixel];
-
             for(bit = 0; bit < 7; bit++, yptr++) {
                 *yptr = (b & (1<<(7-bit))) ? fg : bg;
                 for(xrepeat = 1; xrepeat < xscale; xrepeat++, yptr++)
@@ -597,7 +596,7 @@ void Retro_Draw_char16(RSDL_Surface *surface, signed short int x, signed short i
         }
 
         for(yrepeat = 1; yrepeat < yscale; yrepeat++)
-            for(xrepeat = 0; xrepeat<surfw; xrepeat++, yptr++)
+            for(xrepeat = 0; xrepeat < surfw; xrepeat++, yptr++)
                 *yptr = yptr[-surfw];
     }
 

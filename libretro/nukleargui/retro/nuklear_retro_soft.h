@@ -484,7 +484,7 @@ void reset_mouse_pos()
     switch (retro_get_borders())
     {
         case 0: /* Normal borders */
-            revent.gmx = 324;
+            revent.gmx = 330;
             revent.gmy = 138;
             break;
 
@@ -498,8 +498,8 @@ void reset_mouse_pos()
     if (retro_get_region() == RETRO_REGION_NTSC)
         revent.gmy -= 12;
 #endif
-    revent.gmx -= retroXS_offset;
-    revent.gmy -= retroYS_offset;
+    //revent.gmx -= retroXS_offset;
+    //revent.gmy -= retroYS_offset;
 }
 
 static void retro_init_event()
@@ -514,7 +514,7 @@ static void retro_init_event()
     revent.margin_bottom=15;
 #else
     revent.MOUSE_PAS_X=28;
-    revent.MOUSE_PAS_Y=28;
+    revent.MOUSE_PAS_Y=27;
     revent.margin_left=10;
     revent.margin_right=10;
     revent.margin_top=5;
@@ -609,10 +609,11 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
         //input_poll_cb();
 
     static long now;
-    static int lmx=0,lmy=0;
-    static int mmbL=0,mmbR=0,mmbM=0;
-    static int mouse_l,mouse_m,mouse_r=0;
-    int16_t mouse_x=0,mouse_y=0;
+    static int lmx=0, lmy=0;
+    static int mmbL=0, mmbR=0, mmbM=0;
+    static int mouse_l, mouse_m, mouse_r=0;
+    static int16_t mouse_x=0, mouse_y=0;
+    mouse_x = mouse_y = 0;
 
     // Joypad buttons
     mouse_l = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
@@ -690,22 +691,23 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
                 || revent.let_go_of_direction)
             {
                 revent.last_move_time = now;
-
                 revent.showpointer = 0;
-
                 revent.gmx+=mouse_x;
                 revent.gmy+=mouse_y;
 
                 // Joypad wraparound
                 // Offset changes depending on whether borders are on or off
                 if (revent.gmx < offset.x + revent.margin_left)
-                    revent.gmx = offset.x + GUI_W - (revent.margin_right * 2);
-                if (revent.gmx > offset.x + GUI_W - revent.margin_right)
-                    revent.gmx = offset.x + (revent.margin_left * 2);
+                    revent.gmx = offset.x - (revent.margin_right*2) + GUI_W;
+                else
+                if (revent.gmx > offset.x - revent.margin_right + GUI_W)
+                    revent.gmx = offset.x + (revent.margin_left*2);
+
                 if (revent.gmy < offset.y + revent.margin_top)
-                    revent.gmy = offset.y + GUI_H - (revent.margin_bottom * 2);
-                if (revent.gmy > offset.y + GUI_H - revent.margin_bottom)
-                    revent.gmy = offset.y + (revent.margin_top * 2);
+                    revent.gmy = offset.y - (revent.margin_bottom*2) + GUI_H;
+                else
+                if (revent.gmy > offset.y - revent.margin_bottom + GUI_H)
+                    revent.gmy = offset.y + (revent.margin_top*2);
             }
             revent.let_go_of_direction = 0;
         }
@@ -726,12 +728,12 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
             // Mouse corners
             if (revent.gmx < offset.x)
                 revent.gmx = offset.x;
-            if (revent.gmx > zoomed_width - offset.x - 1)
-                revent.gmx = zoomed_width - offset.x - 1;
+            if (revent.gmx > zoomed_width - offset.x + (retroXS_offset*2))
+                revent.gmx = zoomed_width - offset.x + (retroXS_offset*2);
             if (revent.gmy < offset.y)
                 revent.gmy = offset.y;
-            if (revent.gmy > zoomed_height - offset.y - 3)
-                revent.gmy = zoomed_height - offset.y - 3;
+            if (revent.gmy > zoomed_height - offset.y - 2 + (retroYS_offset*2))
+                revent.gmy = zoomed_height - offset.y - 2 + (retroYS_offset*2);
         }
     }
     else

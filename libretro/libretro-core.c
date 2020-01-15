@@ -3521,7 +3521,7 @@ void update_geometry(int mode)
                   break;
                case 3:
                   zoomed_width        = (retro_region == RETRO_REGION_NTSC) ? retroW : 392;
-                  zoomed_XS_offset    = (retro_region == RETRO_REGION_NTSC) ? 8 : 14;
+                  zoomed_XS_offset    = (retro_region == RETRO_REGION_NTSC) ? 8 : 28;
                   zoomed_height       = 184;
                   zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 22 : 48;
                   break;
@@ -3776,7 +3776,7 @@ void retro_run(void)
    if (imagename_timer > 0)
       imagename_timer--;
 
-   video_cb(Retro_Screen+(retroXS_offset*pix_bytes)+(retroYS_offset*(retrow<<(pix_bytes/4))), zoomed_width, zoomed_height, retrow<<(pix_bytes/2));
+   video_cb(Retro_Screen+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retrow<<(pix_bytes/4))), zoomed_width, zoomed_height, retrow<<(pix_bytes/2));
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 

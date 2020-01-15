@@ -78,8 +78,6 @@ xvic -memory 1 /path/to/rom/some-8k-game.d64
 
 LIBDIR set to retro_system_dir
 
-Add WANT_RGB565=1 to make for RGB565 16 bits depth (32 bits depth default)
-
 ### Linux
 ```
 CC=gcc make -f Makefile.libretro -j10

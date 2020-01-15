@@ -258,35 +258,34 @@ nk_retro_draw_text(RSDL_Surface *surface, short x, short y, unsigned short w, un
     int i;
     //nk_retro_fill_rect(surface, x, y, len * font->width, font->height, 0, cbg);
 
-    double dim = 0.50;
-    if (cfg.r == 1)
-        dim = 0.80;
+    double dim;
+    dim = (cfg.r == 4) ? 0.75 : 0.60;
 
-    if (dim * cbg.r > cbg.r) cbg.r = 0;
+    if (dim*cbg.r > cbg.r) cbg.r = 0;
     else cbg.r *= dim;
 
-    if (dim * cbg.g > cbg.g) cbg.g = 0;
+    if (dim*cbg.g > cbg.g) cbg.g = 0;
     else cbg.g *= dim;
 
-    if (dim * cbg.b > cbg.b) cbg.b = 0;
+    if (dim*cbg.b > cbg.b) cbg.b = 0;
     else cbg.b *= dim;
 
     for (i = 0; i < len; i++) {
         //characterRGBA(surface, x, y, text[i], cfg.r, cfg.g, cfg.b, cfg.a);
         if (pix_bytes == 2)
         {
-            if (cfg.r == 1)
-                Retro_Draw_char16(surface, x+1, y+1, text[i], 1, 1, cbg.r<<8|cbg.g<<3|cbg.b>>3, 0);
-            else if (cfg.r == 254)
-                Retro_Draw_char16(surface, x-1, y-1, text[i], 1, 1, cbg.r<<8|cbg.g<<3|cbg.b>>3, 0);
+            if (cfg.r == 4)
+                Retro_Draw_char16(surface, x+1, y+1, text[i], 1, 1, cbg.r>>3<<11|cbg.g>>2<<5|cbg.b>>3, 0);
+            else if (cfg.r == 250)
+                Retro_Draw_char16(surface, x-1, y-1, text[i], 1, 1, cbg.r>>3<<11|cbg.g>>2<<5|cbg.b>>3, 0);
 
-            Retro_Draw_char16(surface, x, y, text[i], 1, 1, cfg.r<<8|cfg.g<<3|cfg.b>>3, 0);
+            Retro_Draw_char16(surface, x, y, text[i], 1, 1, cfg.r>>3<<11|cfg.g>>2<<5|cfg.b>>3, 0);
         }
         else
         {
-            if (cfg.r == 1)
+            if (cfg.r == 4)
                 Retro_Draw_char32(surface, x+1, y+1, text[i], 1, 1, cbg.r<<16|cbg.g<<8|cbg.b, 0);
-            else if (cfg.r == 254)
+            else if (cfg.r == 250)
                 Retro_Draw_char32(surface, x-1, y-1, text[i], 1, 1, cbg.r<<16|cbg.g<<8|cbg.b, 0);
 
             Retro_Draw_char32(surface, x, y, text[i], 1, 1, cfg.a<<24|cfg.r<<16|cfg.g<<8|cfg.b, 0);

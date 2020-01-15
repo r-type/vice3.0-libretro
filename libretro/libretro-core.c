@@ -98,6 +98,7 @@ extern int RETROC128COLUMNKEY;
 #endif
 #if defined(__VIC20__)
 extern int RETROVIC20MEM;
+extern int vic20mem_forced;
 #endif
 extern int RETROUSERPORTJOY;
 extern int RETROEXTPAL;
@@ -454,6 +455,30 @@ static int process_cmdline(const char* argv)
             Add_Option("-cartA");
         else if (strendswith(argv, ".b0"))
             Add_Option("-cartB");
+
+        char vic20buf1[6]   = "\0";
+        char vic20buf2[6]   = "\0";
+        int vic20mem        = 0;
+        int vic20mems[5]    = {0, 3, 8, 16, 24};
+
+        for (int i = 0; i < 5; i++)
+        {
+            vic20mem = vic20mems[i];
+            snprintf(vic20buf1, 6, "%c%d%c%c", '(', vic20mem, 'k', ')');
+            snprintf(vic20buf2, 6, "%c%d%c%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k', FSDEV_DIR_SEP_CHR);
+            if (strcasestr(argv, vic20buf1))
+            {
+                vic20mem_forced = i;
+                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dKB\n", argv, vic20mem);
+                break;
+            }
+            else if (strcasestr(argv, vic20buf2))
+            {
+                vic20mem_forced = i;
+                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dKB\n", argv, vic20mem);
+                break;
+            }
+        }
 #endif
 
         if (strendswith(argv, ".m3u"))
@@ -849,7 +874,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_vic20_memory_expansions",
-         "Memory expansions",
+         "Memory Expansions",
          "",
          {
             { "none", "disabled" },

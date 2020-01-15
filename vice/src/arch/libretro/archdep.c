@@ -410,6 +410,20 @@ int archdep_path_is_relative(const char *path)
           return 0;
     }
     return 1;
+#elif defined(WIIU)
+    if (path == NULL)
+        return 0;
+    if (*path == '/')
+        return 0;
+    // WIIU might also use "sd:" for absolute paths
+    for (int i = 0; i <= 4; i++)
+    {
+        if (path[i] == '\0')
+          return 1;
+        if (path[i] == ':')
+          return 0;
+    }
+    return 1;
 #else
     if (path == NULL)
         return 0;

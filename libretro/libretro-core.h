@@ -70,6 +70,7 @@ extern int retroH;
 extern int retroW;
 extern unsigned int zoomed_width;
 extern unsigned int zoomed_height;
+extern int imagename_timer;
 
 //FUNCS
 extern void maincpu_mainloop_retro(void);

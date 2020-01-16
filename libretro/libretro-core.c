@@ -98,6 +98,7 @@ extern int RETROC128COLUMNKEY;
 #endif
 #if defined(__VIC20__)
 extern int RETROVIC20MEM;
+extern int vic20mem_forced;
 #endif
 extern int RETROUSERPORTJOY;
 extern int RETROEXTPAL;
@@ -454,6 +455,30 @@ static int process_cmdline(const char* argv)
             Add_Option("-cartA");
         else if (strendswith(argv, ".b0"))
             Add_Option("-cartB");
+
+        char vic20buf1[6]   = "\0";
+        char vic20buf2[6]   = "\0";
+        int vic20mem        = 0;
+        int vic20mems[5]    = {0, 3, 8, 16, 24};
+
+        for (int i = 0; i < 5; i++)
+        {
+            vic20mem = vic20mems[i];
+            snprintf(vic20buf1, 6, "%c%d%c%c", '(', vic20mem, 'k', ')');
+            snprintf(vic20buf2, 6, "%c%d%c%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k', FSDEV_DIR_SEP_CHR);
+            if (strcasestr(argv, vic20buf1))
+            {
+                vic20mem_forced = i;
+                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dKB\n", argv, vic20mem);
+                break;
+            }
+            else if (strcasestr(argv, vic20buf2))
+            {
+                vic20mem_forced = i;
+                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dKB\n", argv, vic20mem);
+                break;
+            }
+        }
 #endif
 
         if (strendswith(argv, ".m3u"))
@@ -849,7 +874,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_vic20_memory_expansions",
-         "Memory expansions",
+         "Memory Expansions",
          "",
          {
             { "none", "disabled" },
@@ -3582,19 +3607,14 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    }
 }
 
-void retro_set_audio_sample(retro_audio_sample_t cb)
-{
-   audio_cb = cb;
-}
-
-void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb)
-{
-   audio_batch_cb = cb;
-}
-
 void retro_set_video_refresh(retro_video_refresh_t cb)
 {
    video_cb = cb;
+}
+
+void retro_set_audio_sample(retro_audio_sample_t cb)
+{
+   audio_cb = cb;
 }
 
 void retro_audio_cb(short l, short r)
@@ -3602,10 +3622,24 @@ void retro_audio_cb(short l, short r)
    audio_cb(l, r);
 }
 
-void retro_audiocb(signed short int *sound_buffer, int sndbufsize)
+void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb)
+{
+   audio_batch_cb = cb;
+}
+
+void retro_audio_batch_cb(const int16_t *data, size_t frames)
+{
+   audio_batch_cb(data, frames);
+}
+
+void retro_audio_render(signed short int *sound_buffer, int sndbufsize)
 {
    int x;
+#if 1
    for (x=0; x<sndbufsize; x++) audio_cb(sound_buffer[x], sound_buffer[x]);
+#else
+   //FIXME audio_batch_cb(sound_buffer, sndbufsize);
+#endif
 }
 
 
@@ -3738,7 +3772,11 @@ void retro_run(void)
            log_resources_set_int("SoundVolume", 100);
    }
 
-   video_cb(Retro_Screen, zoomed_width, zoomed_height, retrow<<(pix_bytes / 2));
+   /* Statusbar disk display timer */
+   if (imagename_timer > 0)
+      imagename_timer--;
+
+   video_cb(Retro_Screen+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retrow<<(pix_bytes/4))), zoomed_width, zoomed_height, retrow<<(pix_bytes/2));
    microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 

@@ -106,7 +106,7 @@ void vsyncarch_presync(void)
     video_canvas_render(
         RCANVAS, (BYTE *)Retro_Screen,
         retroW, retroH,
-        retroXS+retroXS_offset, retroYS+retroYS_offset,
+        retroXS, retroYS,
         0, 0, //xi, yi,
         retrow*pix_bytes, 8*pix_bytes
     );

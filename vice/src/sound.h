@@ -69,14 +69,14 @@
 #endif
 
 #define SOUND_CHANNELS_MAX 2
-#define SOUND_BUFSIZE 32768
+#define SOUND_BUFSIZE 4096
 #define SOUND_SIDS_MAX 4
 
 #ifdef __OS2__
 # define SOUND_SAMPLE_BUFFER_SIZE       400
 #endif
 #ifndef SOUND_SAMPLE_BUFFER_SIZE
-# define SOUND_SAMPLE_BUFFER_SIZE       100
+# define SOUND_SAMPLE_BUFFER_SIZE       20
 #endif
 
 /* largest value in the UIs. also used by VSID as default */

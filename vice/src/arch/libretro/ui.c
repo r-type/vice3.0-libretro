@@ -66,6 +66,7 @@ int RETROC128COLUMNKEY=1;
 #endif
 #if defined(__VIC20__)
 int RETROVIC20MEM=0;
+int vic20mem_forced=-1;
 #endif
 int RETROUSERPORTJOY=-1;
 int RETROEXTPAL=-1;
@@ -304,7 +305,9 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__VIC20__)
-   switch (RETROVIC20MEM)
+   static unsigned int vic20mem = 0;
+   vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : RETROVIC20MEM;
+   switch (vic20mem)
    {
       case 0:
          log_resources_set_int("RAMBlock0", 0);

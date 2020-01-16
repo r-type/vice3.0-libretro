@@ -57,8 +57,8 @@ static int gui(struct nk_context *ctx)
                 }
                 else
                 {
-                    offset.x = GUIRECT.x - retroXS_offset;
-                    offset.y = GUIRECT.y - retroYS_offset;
+                    offset.x = GUIRECT.x;// - retroXS_offset;
+                    offset.y = GUIRECT.y;// - retroYS_offset;
 #if defined(__VIC20__)
                     if (retro_get_region() == RETRO_REGION_NTSC)
                     {

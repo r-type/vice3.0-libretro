@@ -72,7 +72,7 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_TAB_HEADER] = nk_rgba(48, 83, 111, 255);
         nk_style_from_table(ctx, table);
     } else if (theme == THEME_C64_TRANSPARENT) {
-        table[NK_COLOR_TEXT] = nk_rgba(254, 254, 254, 255);
+        table[NK_COLOR_TEXT] = nk_rgba(250, 250, 250, 255);
         table[NK_COLOR_WINDOW] = nk_rgba(0, 0, 0, 0);
         table[NK_COLOR_HEADER] = nk_rgba(123, 127, 130, 180); // function keys
         table[NK_COLOR_BORDER] = nk_rgba(0, 0, 0, 0);
@@ -102,7 +102,7 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_TAB_HEADER] = nk_rgba(48, 83, 111, 255);
         nk_style_from_table(ctx, table);
     } else if (theme == THEME_C64C_TRANSPARENT) {
-        table[NK_COLOR_TEXT] = nk_rgba(1, 1, 1, 255);
+        table[NK_COLOR_TEXT] = nk_rgba(4, 4, 4, 255);
         table[NK_COLOR_WINDOW] = nk_rgba(0, 0, 0, 0);
         table[NK_COLOR_HEADER] = nk_rgba(157, 152, 149, 180); // function keys
         table[NK_COLOR_BORDER] = nk_rgba(0, 0, 0, 0);
@@ -132,7 +132,7 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_TAB_HEADER] = nk_rgba(48, 83, 111, 255);
         nk_style_from_table(ctx, table);
     } else if (theme == THEME_DARK_TRANSPARENT) {
-        table[NK_COLOR_TEXT] = nk_rgba(254, 254, 254, 255);
+        table[NK_COLOR_TEXT] = nk_rgba(250, 250, 250, 255);
         table[NK_COLOR_WINDOW] = nk_rgba(0, 0, 0, 0);
         table[NK_COLOR_HEADER] = nk_rgba(80, 80, 80, 180); // function keys
         table[NK_COLOR_BORDER] = nk_rgba(0, 0, 0, 0);
@@ -162,7 +162,7 @@ set_style(struct nk_context *ctx, enum theme theme)
         table[NK_COLOR_TAB_HEADER] = nk_rgba(48, 83, 111, 255);
         nk_style_from_table(ctx, table);
     } else if (theme == THEME_LIGHT_TRANSPARENT) {
-        table[NK_COLOR_TEXT] = nk_rgba(1, 1, 1, 255);
+        table[NK_COLOR_TEXT] = nk_rgba(4, 4, 4, 255);
         table[NK_COLOR_WINDOW] = nk_rgba(0, 0, 0, 0);
         table[NK_COLOR_HEADER] = nk_rgba(180, 180, 180, 180); // function keys
         table[NK_COLOR_BORDER] = nk_rgba(0, 0, 0, 0);

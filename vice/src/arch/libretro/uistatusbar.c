@@ -159,7 +159,7 @@ static void display_speed(void)
     }
 }
 
-static int imagename_timer = 0;
+int imagename_timer = 0;
 static int drive_enabled = 0;
 static int drive_empty = 0;
 
@@ -570,12 +570,10 @@ void uistatusbar_draw(void)
             break;
     }
 #endif
-    x -= retroXS_offset;
-    y -= retroYS_offset;
+    //x -= retroXS_offset;
+    //y -= retroYS_offset;
 
-    if (imagename_timer > 0)
-        imagename_timer--;
-    else
+    if (imagename_timer == 0)
         display_joyport();
 
     for (i = 0; i < MAX_STATUSBAR_LEN; ++i)

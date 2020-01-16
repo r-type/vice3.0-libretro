@@ -76,7 +76,7 @@ int RETROTHEME=0;
 int RETROKEYRAHKEYPAD=0;
 int RETROKEYBOARDPASSTHROUGH=0;
 char RETROEXTPALNAME[512]="pepto-pal";
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
 int RETROVICIICOLORGAMMA=2200;
 int RETROVICIICOLORSATURATION=1250;
 int RETROVICIICOLORCONTRAST=1250;

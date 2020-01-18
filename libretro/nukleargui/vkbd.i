@@ -15,39 +15,39 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "f1" ,"f2"  ,RETROK_F1},
 
 	// 11
-	{ "q"  ,"Q"   ,RETROK_q},
-	{ "w"  ,"W"   ,RETROK_w},
-	{ "e"  ,"E"   ,RETROK_e},
-	{ "r"  ,"R"   ,RETROK_r},
-	{ "t"  ,"T"   ,RETROK_t},
-	{ "y"  ,"Y"   ,RETROK_y},
-	{ "u"  ,"U"   ,RETROK_u},
-	{ "i"  ,"I"   ,RETROK_i},
-	{ "o"  ,"O"   ,RETROK_o},
-	{ "p"  ,"P"   ,RETROK_p},
+	{ "Q"  ,"q"   ,RETROK_q},
+	{ "W"  ,"w"   ,RETROK_w},
+	{ "E"  ,"e"   ,RETROK_e},
+	{ "R"  ,"r"   ,RETROK_r},
+	{ "T"  ,"t"   ,RETROK_t},
+	{ "Y"  ,"y"   ,RETROK_y},
+	{ "U"  ,"u"   ,RETROK_u},
+	{ "I"  ,"i"   ,RETROK_i},
+	{ "O"  ,"o"   ,RETROK_o},
+	{ "P"  ,"p"   ,RETROK_p},
 	{ "f3" ,"f4"  ,RETROK_F3},
 
 	// 22
-	{ "a"  ,"A"   ,RETROK_a},
-	{ "s"  ,"S"   ,RETROK_s},
-	{ "d"  ,"D"   ,RETROK_d},
-	{ "f"  ,"F"   ,RETROK_f},
-	{ "g"  ,"G"   ,RETROK_g},
-	{ "h"  ,"H"   ,RETROK_h},
-	{ "j"  ,"J"   ,RETROK_j},
-	{ "k"  ,"K"   ,RETROK_k},	
-	{ "l"  ,"L"   ,RETROK_l},
+	{ "A"  ,"a"   ,RETROK_a},
+	{ "S"  ,"s"   ,RETROK_s},
+	{ "D"  ,"d"   ,RETROK_d},
+	{ "F"  ,"f"   ,RETROK_f},
+	{ "G"  ,"g"   ,RETROK_g},
+	{ "H"  ,"h"   ,RETROK_h},
+	{ "J"  ,"j"   ,RETROK_j},
+	{ "K"  ,"k"   ,RETROK_k},
+	{ "L"  ,"l"   ,RETROK_l},
 	{ {31} ,{31}  ,RETROK_INSERT},
 	{ "f5" ,"f6"  ,RETROK_F5},
 
 	// 33
-	{ "z"  ,"Z"   ,RETROK_z},
-	{ "x"  ,"X"   ,RETROK_x},
-	{ "c"  ,"C"   ,RETROK_c},
-	{ "v"  ,"V"   ,RETROK_v},
-	{ "b"  ,"B"   ,RETROK_b},
-	{ "n"  ,"N"   ,RETROK_n},
-	{ "m"  ,"M"   ,RETROK_m},
+	{ "Z"  ,"z"   ,RETROK_z},
+	{ "X"  ,"x"   ,RETROK_x},
+	{ "C"  ,"c"   ,RETROK_c},
+	{ "V"  ,"v"   ,RETROK_v},
+	{ "B"  ,"b"   ,RETROK_b},
+	{ "N"  ,"n"   ,RETROK_n},
+	{ "M"  ,"m"   ,RETROK_m},
 	{ ","  ,"<"   ,RETROK_COMMA},
 	{ "."  ,">"   ,RETROK_PERIOD},
 	{ "/"  ,"?"   ,RETROK_SLASH},
@@ -80,13 +80,13 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "JOY","JOY" ,-4},
 
 	// 66
-	{ "RST","RST" ,-2},
+	{ {17} ,{17}  ,-2},  // Reset
 	{ {19} ,{19}  ,-15}, // Datasette RESET
 	{ {20} ,{20}  ,-12}, // Datasette PLAY
 	{ {21} ,{21}  ,-14}, // Datasette RWD
 	{ {22} ,{22}  ,-13}, // Datasette FWD
 	{ {23} ,{23}  ,-11}, // Datasette STOP
-	{ "SPC","SPC" ,RETROK_SPACE},
+	{ {18} ,{18}  ,RETROK_SPACE},
 	{ {27} ,{27}  ,RETROK_LEFT},
 	{ {28} ,{28}  ,RETROK_DOWN},
 	{ {29} ,{29}  ,RETROK_RIGHT},

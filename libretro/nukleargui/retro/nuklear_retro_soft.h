@@ -596,7 +596,7 @@ static void mousebut(int but, int down, int x, int y)
 
     if (but==1) nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
     //else if (but==2) nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
-    else if (but==2 && down) retro_toggle_theme();
+    else if (but==2 && down) retro_toggle_vkbd_theme();
     //else if (but==3) nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
     else if (but==3 && down)
     {

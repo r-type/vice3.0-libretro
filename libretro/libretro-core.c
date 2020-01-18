@@ -31,7 +31,7 @@ int cpuloop=1;
 
 // VKBD 
 extern int SHOWKEY;
-unsigned int opt_theme;
+unsigned int opt_vkbd_theme;
 extern void reset_mouse_pos();
 static bool request_reset_mouse_pos = false;
 
@@ -128,6 +128,7 @@ static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
+unsigned int opt_statusbar;
 
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
@@ -208,10 +209,10 @@ unsigned int retro_get_borders(void)
    return RETROBORDERS;
 }
 
-unsigned int retro_toggle_theme(void)
+unsigned int retro_toggle_vkbd_theme(void)
 {
-   opt_theme = (opt_theme % 2) ? opt_theme-1 : opt_theme+1;
-   return opt_theme;
+   opt_vkbd_theme = (opt_vkbd_theme % 2) ? opt_vkbd_theme-1 : opt_vkbd_theme+1;
+   return opt_vkbd_theme;
 }
 
 void retro_set_input_state(retro_input_state_t cb)
@@ -1192,6 +1193,34 @@ void retro_set_environment(retro_environment_t cb)
       },
 #endif
       {
+         "vice_theme",
+         "Virtual Keyboard Theme",
+         "By default, the keyboard comes up with SELECT button or F11 key.",
+         {
+            { "C64", NULL },
+            { "C64 transparent", NULL },
+            { "C64C", NULL },
+            { "C64C transparent", NULL },
+            { "Dark transparent", NULL },
+            { "Light transparent", NULL },
+            { NULL, NULL },
+         },
+         "C64 transparent"
+      },
+      {
+         "vice_statusbar",
+         "Statusbar Mode",
+         "",
+         {
+            { "full", "Full" },
+            { "full_minimal", "Full Minimal" },
+            { "basic", "Basic" },
+            { "basic_minimal", "Basic Minimal" },
+            { NULL, NULL },
+         },
+         "full"
+      },
+      {
          "vice_gfx_colors",
          "Color Depth",
          "24-bit is slower and not available on all platforms. Restart required.",
@@ -1454,21 +1483,6 @@ void retro_set_environment(retro_environment_t cb)
          "1000"
       },
 #endif
-      {
-         "vice_theme",
-         "Virtual Keyboard Theme",
-         "By default, the keyboard comes up with SELECT button or F11 key.",
-         {
-            { "C64", NULL },
-            { "C64 transparent", NULL },
-            { "C64C", NULL },
-            { "C64C transparent", NULL },
-            { "Dark transparent", NULL },
-            { "Light transparent", NULL },
-            { NULL, NULL },
-         },
-         "C64 transparent"
-      },
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
       {
          "vice_joyport",
@@ -2645,7 +2659,17 @@ static void update_variables(void)
       else if (strcmp(var.value, "Dark transparent") == 0) RETROTHEME=4;
       else if (strcmp(var.value, "Light transparent") == 0) RETROTHEME=5;
 
-      opt_theme=RETROTHEME;
+      opt_vkbd_theme=RETROTHEME;
+   }
+
+   var.key = "vice_statusbar";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "full") == 0) opt_statusbar=0;
+      else if (strcmp(var.value, "full_minimal") == 0) opt_statusbar=1;
+      else if (strcmp(var.value, "basic") == 0) opt_statusbar=2;
+      else if (strcmp(var.value, "basic_minimal") == 0) opt_statusbar=3;
    }
 
    var.key = "vice_mapping_options_display";

@@ -69,7 +69,10 @@ for (y=0; y<NLIGN; y++)
             ctx->style.button.normal = key_color_reset;
 
         /* Sticky color */
-        if (MVk[(y*NPLGN)+x].val == vkey_sticky1 || MVk[(y*NPLGN)+x].val == vkey_sticky2)
+        if (MVk[(y*NPLGN)+x].val == vkey_sticky1
+         || MVk[(y*NPLGN)+x].val == vkey_sticky2
+         || (MVk[(y*NPLGN)+x].val == -5 && SHIFTON==1)
+        )
         {
             ctx->style.button.normal = key_color_sticky;
             ctx->style.button.active = key_color_sticky;

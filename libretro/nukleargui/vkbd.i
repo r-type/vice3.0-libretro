@@ -12,7 +12,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "8"  ,"("   ,RETROK_8},
 	{ "9"  ,")"   ,RETROK_9},
 	{ "0"  ,"0"   ,RETROK_0},
-	{ "F1" ,"F2"  ,RETROK_F1},
+	{ "f1" ,"f2"  ,RETROK_F1},
 
 	// 11
 	{ "q"  ,"Q"   ,RETROK_q},
@@ -25,7 +25,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "i"  ,"I"   ,RETROK_i},
 	{ "o"  ,"O"   ,RETROK_o},
 	{ "p"  ,"P"   ,RETROK_p},
-	{ "F3" ,"F4"  ,RETROK_F3},
+	{ "f3" ,"f4"  ,RETROK_F3},
 
 	// 22
 	{ "a"  ,"A"   ,RETROK_a},
@@ -38,7 +38,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "k"  ,"K"   ,RETROK_k},	
 	{ "l"  ,"L"   ,RETROK_l},
 	{ {31} ,{31}  ,RETROK_INSERT},
-	{ "F5" ,"F6"  ,RETROK_F5},
+	{ "f5" ,"f6"  ,RETROK_F5},
 
 	// 33
 	{ "z"  ,"Z"   ,RETROK_z},
@@ -51,46 +51,46 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ ","  ,"<"   ,RETROK_COMMA},
 	{ "."  ,">"   ,RETROK_PERIOD},
 	{ "/"  ,"?"   ,RETROK_SLASH},
-	{ "F7" ,"F8"  ,RETROK_F7},
+	{ "f7" ,"f8"  ,RETROK_F7},
 
 	// 44
-	{ "<-" ,"<-"  ,RETROK_BACKQUOTE},
+	{ {25} ,{25}  ,RETROK_BACKQUOTE},
 	{ "CTR","CTR" ,RETROK_TAB},
 	{ "+"  ,"+"   ,RETROK_MINUS},
 	{ "-"  ,"-"   ,RETROK_EQUALS},
 	{ "@"  ,"@"   ,RETROK_LEFTBRACKET},
 	{ "*"  ,"*"   ,RETROK_RIGHTBRACKET},
-	{ "^"  ,"^"   ,RETROK_DELETE},
+	{ {26} ,{26}  ,RETROK_DELETE},
 	{ ":"  ,"["   ,RETROK_SEMICOLON},
 	{ ";"  ,"]"   ,RETROK_QUOTE},
 	{ "="  ,"="   ,RETROK_BACKSLASH},
-	{ "Stb","Stb" ,-3},
+	{ "STB","STB" ,-3},
 
 	// 55
-	{ "C=" ,"C="  ,RETROK_LCTRL},
+	{ {24} ,{24}  ,RETROK_LCTRL},
 	{ "R/S","R/S" ,RETROK_ESCAPE},	
-	{ "ShL","ShL" ,-5},
-	{ "LSh","LSh" ,RETROK_LSHIFT},
-	{ "RSh","RSh" ,RETROK_RSHIFT},
+	{ "S/L","S/L" ,-5},
+	{ "LSH","LSH" ,RETROK_LSHIFT},
+	{ "RSH","RSH" ,RETROK_RSHIFT},
 	{ "RST","RST" ,RETROK_PAGEUP},
 	{ "CLR","CLR" ,RETROK_HOME},
 	{ "DEL","DEL" ,RETROK_BACKSPACE},
 	{ {30} ,{30}  ,RETROK_UP},
 	{ "RET","RET" ,RETROK_RETURN},
-	{ "Joy","Joy" ,-4},
+	{ "JOY","JOY" ,-4},
 
 	// 66
-	{ "Rst","Rst" ,-2},
-	{ "DRs","DRs" ,-15},
-	{ "DPl","DPl" ,-12},
-	{ "DRe","DRe" ,-14},
-	{ "DFw","DFw" ,-13},
-	{ "DSt","DSt" ,-11},
+	{ "RST","RST" ,-2},
+	{ {19} ,{19}  ,-15}, // Datasette RESET
+	{ {20} ,{20}  ,-12}, // Datasette PLAY
+	{ {21} ,{21}  ,-14}, // Datasette RWD
+	{ {22} ,{22}  ,-13}, // Datasette FWD
+	{ {23} ,{23}  ,-11}, // Datasette STOP
 	{ "SPC","SPC" ,RETROK_SPACE},
 	{ {27} ,{27}  ,RETROK_LEFT},
 	{ {28} ,{28}  ,RETROK_DOWN},
 	{ {29} ,{29}  ,RETROK_RIGHT},
-	{ "Ttf","Ttf" ,-20},
+	{ "TTF","TTF" ,-20},
 };
 
 const char* keyDesc[] = {

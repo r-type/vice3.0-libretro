@@ -26,7 +26,7 @@ static int gui(struct nk_context *ctx)
         case GUI_VKBD:
             if (nk_begin(ctx, "Vice Keyboard", GUIRECT, NK_WINDOW_NO_SCROLLBAR))
             {
-                switch (opt_theme)
+                switch (opt_vkbd_theme)
                 {
                     default:
                     case 0:

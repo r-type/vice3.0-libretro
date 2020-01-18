@@ -68,7 +68,7 @@ static char statusbar_text[MAX_STATUSBAR_LEN] = "                               
 
 
 
-char* joystick_value_human(char val)
+static char* joystick_value_human(char val)
 {
     static char str[6] = {0};
     sprintf(str, "%3s", "   ");
@@ -89,6 +89,7 @@ char* joystick_value_human(char val)
     return str;
 }
 
+extern unsigned int opt_statusbar;
 extern unsigned int cur_port;
 extern int RETROUSERPORTJOY;
 
@@ -126,6 +127,9 @@ static void display_joyport(void)
     sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
 #endif
 
+    if (opt_statusbar > 1)
+        sprintf(tmpstr, "%20s", "");
+
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-36s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
 
@@ -145,7 +149,8 @@ static void display_speed(void)
     //char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';
     char fps_str[3];
     sprintf(fps_str, "%2d", fps);
-    if (warp)
+    //sprintf(fps_str, "%2s", "");
+    //if (warp)
     {
         fps_str[0] = (fps_str[0] | 0x80);
         fps_str[1] = (fps_str[1] | 0x80);
@@ -178,6 +183,9 @@ void display_current_image(const char *image)
         drive_empty = 1;
         sprintf(imagename, "%-36s", "Eject");
     }
+
+    if (opt_statusbar > 1)
+        sprintf(imagename, "%-36s", "");
 
     int len;
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-36s", imagename);
@@ -290,11 +298,15 @@ void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, 
     }
 }
 
+static int drive_pwm = 0;
+
 /* The pwm value will vary between 0 and 1000.  */
 void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_pwm2)
 {
-    char c;
+    drive_pwm = pwm1;
+    return;
 
+    char c;
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s: drive %i, pwm1 = %i, led_pwm2 = %u\n", __func__, drive_number, pwm1, led_pwm2);
 #endif
@@ -474,18 +486,32 @@ void uistatusbar_close(void)
 extern void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
 extern void Retro_Draw_string32(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned fg, unsigned bg);
 
+
+
 void uistatusbar_draw(void)
 {
     int i;
     BYTE c;
 
     unsigned short int color_f_16, color_b_16;
-    color_f_16 = 0xffff;
-    color_b_16 = 0x0020;
+    unsigned short int color_black_16, color_white_16, color_red_16, color_green_16, color_brown_16;
+    color_white_16  = RGB565(255, 255, 255);
+    color_black_16  = RGB565(0, 4, 0);
+    color_red_16    = RGB565(204, 0 , 0);
+    color_green_16  = RGB565(0, 204 , 0);
+    color_brown_16  = RGB565(100, 100, 100);
+    color_f_16      = color_white_16;
+    color_b_16      = color_black_16;
 
     unsigned int color_f_32, color_b_32;
-    color_f_32 = 0xffffffff;
-    color_b_32 = 0x00010101;
+    unsigned int color_black_32, color_white_32, color_red_32, color_green_32, color_brown_32;
+    color_white_32  = 0xffffffff;
+    color_black_32  = 0x00010101;
+    color_red_32    = 0xffcc0000;
+    color_green_32  = 0xff00cc00;
+    color_brown_32  = 0xff646464;
+    color_f_32      = color_white_32;
+    color_b_32      = color_black_32;
 
     unsigned int char_width;
     unsigned int char_offset;
@@ -583,9 +609,98 @@ void uistatusbar_draw(void)
         if (c == 0)
             break;
         
-        /* Trickery to balance uneven character width with VICII area width */
+        /* Trickery to balance uneven character width with VIC-II area width */
         char_width = 7;
         char_offset = (MAX_STATUSBAR_LEN - i <= 4) ? -2 : 0;
+
+        /* Default background */
+        color_b_16 = color_black_16;
+        color_b_32 = color_black_32;
+
+        /* Transparent background */
+        switch (opt_statusbar)
+        {
+            case 2: // Basic
+            case 3: // Basic Minimal
+                color_b_16 = 0;
+                color_b_32 = 0;
+                break;
+        }
+
+        /* Drive/tape LED color */
+        if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 2)
+        {
+            if (drive_enabled)
+            {
+                color_f_16 = color_green_16;
+                color_f_32 = color_green_32;
+            }
+            else if (tape_enabled)
+            {
+                color_b_16 = color_brown_16;
+                color_b_32 = color_brown_32;
+                color_f_16 = color_black_16;
+                color_f_32 = color_black_32;
+            }
+        }
+        else if (i >= STATUSBAR_TAPE_POS && tape_enabled)
+        {
+            color_b_16 = color_black_16;
+            color_b_32 = color_black_32;
+        }
+        /* Drive loading */
+        if ((i == STATUSBAR_DRIVE8_TRACK_POS || i == STATUSBAR_DRIVE8_TRACK_POS + 1) && drive_enabled)
+        {
+            if (drive_pwm > 500)
+            {
+                c = c | 0x80;
+                color_b_16 = color_white_16;
+                color_b_32 = color_white_32;
+
+                switch (opt_statusbar)
+                {
+                    case 1: // Full Minimal
+                    case 3: // Basic Minimal
+                        c = ' ';
+                        color_b_16 = color_green_16;
+                        color_b_32 = color_green_32;
+                        break;
+                }
+            }
+            else
+            {
+                switch (opt_statusbar)
+                {
+                    case 1: // Full Minimal
+                    case 3: // Basic Minimal
+                        c = ' ';
+                        break;
+
+                    case 2: // Basic
+                        color_b_16 = color_black_16;
+                        color_b_32 = color_black_32;
+                        break;
+                }
+            }
+        }
+        /* Power LED color */
+        else if (i == STATUSBAR_SPEED_POS || i == STATUSBAR_SPEED_POS + 1)
+        {
+            color_f_16 = color_red_16;
+            color_f_32 = color_red_32;
+            color_b_16 = color_white_16;
+            color_b_32 = color_white_32;
+
+            switch (opt_statusbar)
+            {
+                case 1: // Full Minimal
+                case 3: // Basic Minimal
+                    c = ' ';
+                    color_b_16 = color_red_16;
+                    color_b_32 = color_red_32;
+                    break;
+            }
+        }
 
         if (c & 0x80)
         {

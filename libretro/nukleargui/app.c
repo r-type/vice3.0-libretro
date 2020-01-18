@@ -22,7 +22,7 @@ extern int SHOWKEY;
 extern int SHIFTON;
 extern int vkey_sticky1;
 extern int vkey_sticky2;
-extern int opt_theme;
+extern int opt_vkbd_theme;
 extern unsigned int retro_get_borders(void);
 extern int retroXS_offset;
 extern int retroYS_offset;

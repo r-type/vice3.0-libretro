@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 #define MATRIX(a,b) (((a) << 3) | (b))
+#define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
 
 //DEVICES
 #define RETRO_DEVICE_VICE_KEYBOARD RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_KEYBOARD, 0)
@@ -76,5 +77,5 @@ extern int imagename_timer;
 extern void maincpu_mainloop_retro(void);
 extern long GetTicks(void);
 extern unsigned int retro_get_borders(void);
-extern unsigned int retro_toggle_theme(void);
+extern unsigned int retro_toggle_vkbd_theme(void);
 #endif

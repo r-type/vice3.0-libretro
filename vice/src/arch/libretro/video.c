@@ -21,7 +21,6 @@
 #include <string.h>
 
 #include "libretro-core.h"
-#define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
 
 struct video_canvas_s *RCANVAS;
 

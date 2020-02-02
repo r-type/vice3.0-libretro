@@ -165,31 +165,38 @@ static void display_speed(void)
 }
 
 int imagename_timer = 0;
+static char imagename_prev[PATH_MAX_LENGTH] = {0};
 static int drive_enabled = 0;
 static int drive_empty = 0;
 
-void display_current_image(const char *image)
+void display_current_image(const char *image, bool inserted)
 {
     char imagename[PATH_MAX_LENGTH] = {0};
 
     imagename_timer = 150;
-    if (strcmp(image, "") != 0)
+    if (strcmp(image, ""))
     {
-        drive_empty = 0;
-        snprintf(imagename, sizeof(imagename), "%.36s", path_basename(image));
+        drive_empty = (inserted) ? 0 : 1;
+        snprintf(imagename, sizeof(imagename), "%s%.36s", " ", path_basename(image));
+        snprintf(imagename_prev, sizeof(imagename_prev), "%.37s", imagename);
     }
     else
     {
         drive_empty = 1;
-        sprintf(imagename, "%-36s", "Eject");
+        snprintf(imagename, sizeof(imagename), "%.37s", imagename_prev);
     }
 
     if (opt_statusbar > 1)
-        sprintf(imagename, "%-36s", "");
+        sprintf(imagename, "%-37s", "");
 
     int len;
-    len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-36s", imagename);
+    len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-37s", imagename);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
+
+    if (inserted)
+        statusbar_text[0] = 8 | 0x80;
+    else if (!strcmp(image, ""))
+        statusbar_text[0] = 9 | 0x80;
 
     if (drive_empty)
     {
@@ -323,7 +330,7 @@ void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_
 void ui_display_drive_current_image(unsigned int drive_number, const char *image)
 {
     //printf("d%d -> %s\n", drive_number, image);
-    display_current_image(image);
+    display_current_image(image, strcmp(image, ""));
 
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s\n", __func__);
@@ -388,7 +395,7 @@ void ui_display_tape_counter(int counter)
 
 void ui_display_tape_current_image(const char *image)
 {
-    display_current_image(image);
+    display_current_image(image, strcmp(image, ""));
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s: %s\n", __func__, image);
 #endif

@@ -262,6 +262,7 @@ static int show_queued_msg = 0;
 extern int skel_main(int argc, char *argv[]);
 
 static void log_disk_in_tray(bool display);
+extern void display_current_image(const char *image, bool inserted);
 
 static void Add_Option(const char* option)
 {
@@ -379,7 +380,7 @@ static void log_disk_in_tray(bool display)
         else
             snprintf(queued_msg, sizeof(queued_msg), "Drive %d: ", unit);
         pos = strlen(queued_msg);
-        snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "%d/%d: %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
+        snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "(%d/%d) %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
         pos += strlen(queued_msg + pos);
         label = dc->labels[dc->index];
         if (label && label[0])
@@ -388,7 +389,10 @@ static void log_disk_in_tray(bool display)
         }
         log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
         if (display)
-            show_queued_msg = 180;
+            show_queued_msg = 150;
+
+        // Statusbar notification
+        display_current_image(dc->files[dc->index], false);
     }
 }
 
@@ -1197,15 +1201,15 @@ void retro_set_environment(retro_environment_t cb)
          "Virtual Keyboard Theme",
          "By default, the keyboard comes up with SELECT button or F11 key.",
          {
-            { "C64", NULL },
-            { "C64 transparent", NULL },
-            { "C64C", NULL },
-            { "C64C transparent", NULL },
-            { "Dark transparent", NULL },
-            { "Light transparent", NULL },
+            { "0", "C64" },
+            { "1", "C64 Transparent" },
+            { "2", "C64C" },
+            { "3", "C64C Transparent" },
+            { "4", "Dark Transparent" },
+            { "5", "Light Transparent" },
             { NULL, NULL },
          },
-         "C64 transparent"
+         "1"
       },
       {
          "vice_statusbar",
@@ -1354,7 +1358,7 @@ void retro_set_environment(retro_environment_t cb)
             { "4000", "4.00" },
             { NULL, NULL },
          },
-         "2800"
+         "2600"
       },
       {
          "vice_vicii_color_saturation",
@@ -2631,12 +2635,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "2") == 0) turbo_pulse=2;
-      else if (strcmp(var.value, "4") == 0) turbo_pulse=4;
-      else if (strcmp(var.value, "6") == 0) turbo_pulse=6;
-      else if (strcmp(var.value, "8") == 0) turbo_pulse=8;
-      else if (strcmp(var.value, "10") == 0) turbo_pulse=10;
-      else if (strcmp(var.value, "12") == 0) turbo_pulse=12;
+      turbo_pulse=atoi(var.value);
    }
 
    var.key = "vice_reset";
@@ -2652,13 +2651,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "C64") == 0) RETROTHEME=0;
-      else if (strcmp(var.value, "C64 transparent") == 0) RETROTHEME=1;
-      else if (strcmp(var.value, "C64C") == 0) RETROTHEME=2;
-      else if (strcmp(var.value, "C64C transparent") == 0) RETROTHEME=3;
-      else if (strcmp(var.value, "Dark transparent") == 0) RETROTHEME=4;
-      else if (strcmp(var.value, "Light transparent") == 0) RETROTHEME=5;
-
+      RETROTHEME=atoi(var.value);
       opt_vkbd_theme=RETROTHEME;
    }
 
@@ -3138,6 +3131,7 @@ static bool retro_set_eject_state(bool ejected)
                 else
                     file_system_detach_disk(unit);
 
+                display_current_image("", false);
                 return true;
             }
             else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)

@@ -52,6 +52,7 @@ else ifeq ($(platform), crosspi)
    CFLAGS += -march=armv7-a -mfloat-abi=hard -mfpu=vfpv3 -O2 -pipe -fstack-protector 
 
    CFLAGS +=-I~/RPI/usr/include/arm-linux-gnueabihf -I/home/tech/RPI/usr/include
+   CXXFLAGS += $(CFLAGS)
  LDFLAGS += -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -L/home/tech/RPI/usr/lib
 #-I./../sources/src/include
 
@@ -111,11 +112,13 @@ else ifeq ($(platform), classic_armv8_a35)
 else ifeq ($(platform), libnx)
    include $(DEVKITPRO)/libnx/switch_rules
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
-   CFLAGS += -O3 -fomit-frame-pointer -ffast-math -I$(DEVKITPRO)/libnx/include/ -fPIE -Wl,--allow-multiple-definition
+   CFLAGS += -O3 -fomit-frame-pointer -ffast-math -I$(DEVKITPRO)/libnx/include/ -Wl,--allow-multiple-definition
    CFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs
    CFLAGS += -D__SWITCH__ -DHAVE_LIBNX -DHAVE_GETPWUID=0 -DHAVE_GETCWD=1
    CFLAGS += -march=armv8-a -mtune=cortex-a57 -mtp=soft -ffast-math -mcpu=cortex-a57+crc+fp+simd -ffunction-sections
    CFLAGS += -Ifrontend/switch -ftree-vectorize
+   CXXFLAGS += $(CFLAGS)
+   fpic = -fPIE
    STATIC_LINKING=1
 
 else ifeq ($(platform), osx)
@@ -203,6 +206,7 @@ else ifeq ($(platform), androidstc)
    CC = arm-linux-androideabi-gcc
    CXX = arm-linux-androideabi-g++
    
+   CXXFLAGS += $(CFLAGS)
    fpic = -fPIC
 # ANDROID
 else ifeq ($(platform), android)
@@ -232,6 +236,7 @@ endif
    LDFLAGS += -L$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm/usr/lib  --sysroot=$(ANDROID_NDK_ROOT)/platforms/android-19/arch-arm -march=armv7-a -mthumb -shared
    LDFLAGS += -lc -ldl -lm -landroid -llog -lsupc++ $(ANDROID_NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/thumb/libgnustl_static.a -lgcc
 
+   CXXFLAGS += $(CFLAGS)
    fpic = -fPIC
 
 # PSP
@@ -242,6 +247,7 @@ else ifeq ($(platform), psp1)
    AR = psp-ar$(EXE_EXT)
    COMMONFLAGS += -DPSP -G0 -I$(shell psp-config --pspsdk-path)/include
    CFLAGS += -std=c99
+   CXXFLAGS += -std=c99
 	STATIC_LINKING = 1
 
 # Vita

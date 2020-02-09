@@ -363,24 +363,19 @@ else
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
 ifeq ($(STATIC_LINKING), 1)
-	@echo $(AR): $@
-	@$(AR) rcs $@ $(OBJECTS)
+	$(AR) rcs $@ $(OBJECTS)
 else
-	@echo $(CXX): $@
-	@$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
 endif
 
 %.o: %.c
-	@echo $(CC): $^
-	@$(CC) $(CFLAGS) -c $^ -o $@
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 %.o: %.cpp
-	@echo $(CXX): $^
-	@$(CXX) $(CXXFLAGS) -c $^ -o $@
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 %.o: %.cc
-	@echo $(CC): $^
-	@$(CC) $(CFLAGS) -c $^ -o $@
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)

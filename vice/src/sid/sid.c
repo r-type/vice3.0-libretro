@@ -56,6 +56,9 @@
 
 #ifdef HAVE_RESID
 #include "resid.h"
+#ifdef __LIBRETRO__
+extern sid_engine_t resid33_hooks;
+#endif
 #endif
 
 /* SID engine hooks. */
@@ -342,6 +345,11 @@ sound_t *sid_sound_machine_open(int chipno)
     if (sidengine == SID_ENGINE_RESID) {
         sid_engine = resid_hooks;
     }
+#ifdef __LIBRETRO__
+    if (sidengine == SID_ENGINE_RESID33) {
+        sid_engine = resid33_hooks;
+    }
+#endif
 #endif
 
     return sid_engine.open(siddata[chipno]);
@@ -556,6 +564,9 @@ int sid_sound_machine_cycle_based(void)
             return 0;
 #ifdef HAVE_RESID
         case SID_ENGINE_RESID:
+#ifdef __LIBRETRO__
+        case SID_ENGINE_RESID33:
+#endif
             return 1;
 #endif
 #ifdef HAVE_CATWEASELMKIII
@@ -602,6 +613,13 @@ static void set_sound_func(void)
             sid_store_func = sound_store;
             sid_dump_func = sound_dump;
         }
+#ifdef __LIBRETRO__
+        if (sid_engine_type == SID_ENGINE_RESID33) {
+            sid_read_func = sound_read;
+            sid_store_func = sound_store;
+            sid_dump_func = sound_dump;
+        }
+#endif
 #endif
 #ifdef HAVE_CATWEASELMKIII
         if (sid_engine_type == SID_ENGINE_CATWEASELMKIII) {

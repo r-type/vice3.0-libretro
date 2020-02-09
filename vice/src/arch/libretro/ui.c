@@ -56,9 +56,14 @@
 int RETROTDE=0;
 int RETRODSE=0;
 int RETRORESET=0;
+int RETROSIDENGINE=0;
 int RETROSIDMODL=0;
 int RETRORESIDSAMPLING=0;
 int RETROSOUNDSAMPLERATE=0;
+int RETRORESIDPASSBAND=0;
+int RETRORESIDGAIN=0;
+int RETRORESIDFILTERBIAS=0;
+int RETRORESID8580FILTERBIAS=0;
 int RETROAUDIOLEAK=0;
 int RETROC64MODL=0;
 #if defined(__X128__)
@@ -283,11 +288,17 @@ int ui_init_finalize(void)
 #endif
 
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
-   if ((RETROSIDMODL & 0xff) == 0xff)
-      resources_set_int("SidEngine", RETROSIDMODL >> 8);
+   if (RETROSIDMODL == 0xff)
+      resources_set_int("SidEngine", RETROSIDENGINE);
    else
-      sid_set_engine_model((RETROSIDMODL >> 8), (RETROSIDMODL & 0xff));
+      sid_set_engine_model(RETROSIDENGINE, RETROSIDMODL);
    log_resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
+   log_resources_set_int("SidResidPassband", RETRORESIDPASSBAND);
+   log_resources_set_int("SidResidGain", RETRORESIDGAIN);
+   log_resources_set_int("SidResidFilterBias", RETRORESIDFILTERBIAS);
+   log_resources_set_int("SidResid8580Passband", RETRORESIDPASSBAND);
+   log_resources_set_int("SidResid8580Gain", RETRORESIDGAIN);
+   log_resources_set_int("SidResid8580FilterBias", RETRORESID8580FILTERBIAS);
 #endif
 
 #if !defined(__PET__) && !defined(__CBM2__)

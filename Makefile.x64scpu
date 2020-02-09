@@ -44,6 +44,7 @@ SOURCES_CXX += \
         $(EMU)/resid/version.cc \
         $(EMU)/resid/voice.cc \
         $(EMU)/resid/wave.cc \
+        $(EMU)/sid/resid-33.cc \
         $(EMU)/sid/resid.cc
 
 SOURCES_C += \

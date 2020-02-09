@@ -213,8 +213,8 @@ static model_filter_init_t model_filter_init[2] = {
     9.09,
     0.80,
     26.0e-3,
-    1.0,
-    50e-6, // 10e-6,
+    1.3, // FIXME this is just a hack, k must be less than one, likely around 0.7
+    55e-6, // FIXME measure
     // FIXME: 6581 only
     0,
     0,

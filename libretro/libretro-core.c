@@ -1140,6 +1140,7 @@ void retro_set_environment(retro_environment_t cb)
             { "FastSID", NULL },
             { "ReSID", NULL },
             { "ReSID-3.3", NULL },
+            { "ReSID-FP", NULL },
             { NULL, NULL },
          },
          "ReSID"
@@ -2369,6 +2370,7 @@ static void update_variables(void)
 
       if (strcmp(var.value, "ReSID") == 0) { eng=1; }
       else if (strcmp(var.value, "ReSID-3.3") == 0) { eng=6; }
+      else if (strcmp(var.value, "ReSID-FP") == 0) { eng=7; }
 
       if (retro_ui_finalized)
          if (RETROSIDENGINE != eng)

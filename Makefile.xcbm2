@@ -22,6 +22,8 @@ INCFLAGS += \
         -I$(EMU)/monitor \
         -I$(EMU)/raster \
         -I$(EMU)/resid \
+        -I$(EMU)/residfp \
+        -I$(EMU)/residfp/builders/residfp-builder/residfp \
         -I$(EMU)/rtc \
         -I$(EMU)/samplerdrv \
         -I$(EMU)/socketdrv \
@@ -44,7 +46,25 @@ SOURCES_CXX += \
 		$(EMU)/resid/voice.cc \
 		$(EMU)/resid/wave.cc \
 		$(EMU)/sid/resid-33.cc \
-		$(EMU)/sid/resid.cc
+		$(EMU)/sid/resid.cc \
+		$(EMU)/sid/resid-fp.cc \
+		$(EMU)/residfp/builders/residfp-builder/residfp/version.cc \
+		$(EMU)/residfp/builders/residfp-builder/residfp/Dac.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/EnvelopeGenerator.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/ExternalFilter.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/Filter.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/Filter6581.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/Filter8580.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/FilterModelConfig.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/FilterModelConfig8580.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/Integrator.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/Integrator8580.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/OpAmp.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/resample/SincResampler.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/SID.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/Spline.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/WaveformCalculator.cpp \
+		$(EMU)/residfp/builders/residfp-builder/residfp/WaveformGenerator.cpp
 
 SOURCES_C += \
 		$(EMU)/alarm.c \

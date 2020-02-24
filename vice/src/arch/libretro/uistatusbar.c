@@ -165,19 +165,19 @@ static void display_speed(void)
 }
 
 int imagename_timer = 0;
-static char imagename_prev[PATH_MAX_LENGTH] = {0};
 static int drive_enabled = 0;
 static int drive_empty = 0;
 
 void display_current_image(const char *image, bool inserted)
 {
-    char imagename[PATH_MAX_LENGTH] = {0};
+    static char imagename[PATH_MAX_LENGTH] = {0};
+    static char imagename_prev[PATH_MAX_LENGTH] = {0};
 
     imagename_timer = 150;
     if (strcmp(image, ""))
     {
         drive_empty = (inserted) ? 0 : 1;
-        snprintf(imagename, sizeof(imagename), "%s%.36s", " ", path_basename(image));
+        snprintf(imagename, sizeof(imagename), "%2s%.35s", "  ", path_basename(image));
         snprintf(imagename_prev, sizeof(imagename_prev), "%.37s", imagename);
     }
     else
@@ -330,7 +330,7 @@ void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_
 void ui_display_drive_current_image(unsigned int drive_number, const char *image)
 {
     //printf("d%d -> %s\n", drive_number, image);
-    display_current_image(image, strcmp(image, ""));
+    //display_current_image(image, strcmp(image, ""));
 
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s\n", __func__);
@@ -395,7 +395,7 @@ void ui_display_tape_counter(int counter)
 
 void ui_display_tape_current_image(const char *image)
 {
-    display_current_image(image, strcmp(image, ""));
+    //display_current_image(image, strcmp(image, ""));
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s: %s\n", __func__, image);
 #endif
@@ -492,8 +492,8 @@ void uistatusbar_close(void)
 #include "libretro-core.h"
 extern void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
 extern void Retro_Draw_string32(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned fg, unsigned bg);
-
-
+extern void DrawFBoxBmp16(RSDL_Surface *surface, int x, int y, int dx, int dy, uint32_t color, unsigned int alpha);
+extern void DrawFBoxBmp32(RSDL_Surface *surface, int x, int y, int dx, int dy, uint32_t color, unsigned int alpha);
 
 void uistatusbar_draw(void)
 {
@@ -503,7 +503,7 @@ void uistatusbar_draw(void)
     unsigned short int color_f_16, color_b_16;
     unsigned short int color_black_16, color_white_16, color_red_16, color_green_16, color_brown_16;
     color_white_16  = RGB565(255, 255, 255);
-    color_black_16  = RGB565(0, 4, 0);
+    color_black_16  = 0;//RGB565(0, 4, 0);
     color_red_16    = RGB565(204, 0 , 0);
     color_green_16  = RGB565(0, 204 , 0);
     color_brown_16  = RGB565(100, 100, 100);
@@ -512,27 +512,28 @@ void uistatusbar_draw(void)
 
     unsigned int color_f_32, color_b_32;
     unsigned int color_black_32, color_white_32, color_red_32, color_green_32, color_brown_32;
-    color_white_32  = 0xffffffff;
-    color_black_32  = 0x00010101;
-    color_red_32    = 0xffcc0000;
-    color_green_32  = 0xff00cc00;
-    color_brown_32  = 0xff646464;
+    color_white_32  = ARGB888(255, 255, 255, 255);
+    color_black_32  = 0;//0x00010101;
+    color_red_32    = ARGB888(255, 204, 0 , 0) << 0;//0xffcc0000;
+    color_green_32  = ARGB888(255, 0, 204 , 0) << 0;//0xff00cc00;
+    color_brown_32  = ARGB888(255, 100, 100 , 100) << 0;//0xff646464;
     color_f_32      = color_white_32;
     color_b_32      = color_black_32;
 
-    unsigned int char_width;
-    unsigned int char_offset;
+    unsigned int char_width = 7;
+    unsigned int char_offset = 0;
 
     char tmpstr[512];
 
     RSDL_Surface fake;
-    fake.pixels=&Retro_Screen[0];
-    fake.h=retroh;
-    fake.w=retrow;
-    fake.clip_rect.h=retroh;
-    fake.clip_rect.w=retrow;
-    fake.clip_rect.x=0;
-    fake.clip_rect.y=0;
+    fake.pixels = &Retro_Screen[0];
+    fake.h = retroh;
+    fake.w = retrow;
+    fake.clip_rect.h = retroh;
+    fake.clip_rect.w = retrow;
+    fake.clip_rect.x = 0;
+    fake.clip_rect.y = 0;
+
 
     /* Statusbar location with or without borders */
     /* 0 : normal, 1: full, 2: debug, 3: none */
@@ -603,8 +604,14 @@ void uistatusbar_draw(void)
             break;
     }
 #endif
-    //x -= retroXS_offset;
-    //y -= retroYS_offset;
+    // Char settings
+    x++;
+
+    // Statusbar background
+    if (pix_bytes == 2)
+        DrawFBoxBmp16(&fake,x-1,y-1,(char_width*MAX_STATUSBAR_LEN)-char_width-2,char_width+2,0,255);
+    else
+        DrawFBoxBmp32(&fake,x-1,y-1,(char_width*MAX_STATUSBAR_LEN)-char_width-2,char_width+2,0,255);
 
     if (imagename_timer == 0)
         display_joyport();
@@ -612,13 +619,11 @@ void uistatusbar_draw(void)
     for (i = 0; i < MAX_STATUSBAR_LEN; ++i)
     {
         c = statusbar_text[i];
-
         if (c == 0)
             break;
         
         /* Trickery to balance uneven character width with VIC-II area width */
-        char_width = 7;
-        char_offset = (MAX_STATUSBAR_LEN - i <= 4) ? -2 : 0;
+        char_offset = (MAX_STATUSBAR_LEN - i <= 4) ? -4 : 0;
 
         /* Default background */
         color_b_16 = color_black_16;

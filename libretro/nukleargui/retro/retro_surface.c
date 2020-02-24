@@ -368,7 +368,86 @@ RSDL_Surface *Retro_CreateRGBSurface16( int w,int h, int d, int rm,int rg,int rb
    return bitmp;
 }
 
-#include "font2.c"
+
+unsigned short blend(unsigned short fg, unsigned short bg, unsigned int alpha)
+{
+   // Split foreground into components
+   unsigned fg_r = fg >> 11;
+   unsigned fg_g = (fg >> 5) & ((1u << 6) - 1);
+   unsigned fg_b = fg & ((1u << 5) - 1);
+
+   // Split background into components
+   unsigned bg_r = bg >> 11;
+   unsigned bg_g = (bg >> 5) & ((1u << 6) - 1);
+   unsigned bg_b = bg & ((1u << 5) - 1);
+
+   // Alpha blend components
+   unsigned out_r = (fg_r * alpha + bg_r * (255 - alpha)) / 255;
+   unsigned out_g = (fg_g * alpha + bg_g * (255 - alpha)) / 255;
+   unsigned out_b = (fg_b * alpha + bg_b * (255 - alpha)) / 255;
+
+   // Pack result
+   return (unsigned short) ((out_r << 11) | (out_g << 5) | out_b);
+}
+
+uint32_t blend32(uint32_t fg, uint32_t bg, unsigned int alpha)
+{
+   // Split foreground into components
+   unsigned fg_r = (fg >> 16) & 0xFF;
+   unsigned fg_g = (fg >> 8) & 0xFF;
+   unsigned fg_b = (fg >> 0) & 0xFF;
+
+   // Split background into components
+   unsigned bg_r = (bg >> 16) & 0xFF;
+   unsigned bg_g = (bg >> 8) & 0xFF;
+   unsigned bg_b = (bg >> 0) & 0xFF;
+
+   // Alpha blend components
+   unsigned out_r = (fg_r * alpha + bg_r * (255 - alpha)) / 255;
+   unsigned out_g = (fg_g * alpha + bg_g * (255 - alpha)) / 255;
+   unsigned out_b = (fg_b * alpha + bg_b * (255 - alpha)) / 255;
+
+   // Pack result
+   return (uint32_t) ((out_r << 16) | (out_g << 8) | out_b);
+}
+
+void DrawFBoxBmp16(RSDL_Surface *surface, int x, int y, int dx, int dy, unsigned short color, unsigned int alpha)
+{
+   int i,j,idx;
+   unsigned short *mbuffer = (unsigned short*)surface->pixels;
+
+   for(i=x;i<x+dx;i++)
+   {
+      for(j=y;j<y+dy;j++)
+      {
+         idx=i+j*retrow;
+         if (alpha < 255)
+            mbuffer[idx]=blend(color, mbuffer[idx], alpha);
+         else
+            mbuffer[idx]=color;
+      }
+   }
+}
+
+void DrawFBoxBmp32(RSDL_Surface *surface, int x, int y, int dx, int dy, uint32_t color, unsigned int alpha)
+{
+   int i,j,idx;
+   unsigned *mbuffer = (unsigned *)surface->pixels;
+
+   for(i=x;i<x+dx;i++)
+   {
+      for(j=y;j<y+dy;j++)
+      {
+         idx=i+j*retrow;
+         if (alpha < 255)
+            mbuffer[idx]=blend32(color, mbuffer[idx], alpha);
+         else
+            mbuffer[idx]=color;
+      }
+   }
+}
+
+#include "font.c"
 
 void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short int y,
     const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg)
@@ -425,6 +504,9 @@ void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short
 
     linesurf = (unsigned char *)malloc(sizeof(unsigned short)*surfw*surfh);
     yptr = (unsigned short *)&linesurf[0];
+
+    // Skip the last row
+    surfh--;
 
     for(ypixel = 0; ypixel < 8; ypixel++) {
         for(col = 0; col < strlen; col++) {
@@ -506,6 +588,9 @@ void Retro_Draw_string32(RSDL_Surface *surface, signed short int x, signed short
 
     linesurf = (unsigned char *)malloc(sizeof(unsigned)*surfw*surfh);
     yptr = (unsigned *)&linesurf[0];
+
+    // Skip the last row
+    surfh--;
 
     for(ypixel = 0; ypixel < 8; ypixel++) {
         for(col = 0; col < strlen; col++) {

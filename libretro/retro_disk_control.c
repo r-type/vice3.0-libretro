@@ -138,9 +138,14 @@ static char* get_label(const char* filename)
         }
     }
 
-    // Nothing found
+    // Nothing found, fallback to short pathname
     if (!have_disk_label && !have_tape_label)
-        return NULL;
+    {
+        char image_label[512];
+        image_label[0] = '\0';
+        fill_short_pathname_representation(image_label, filename, sizeof(image_label));
+        return strdup((char*)image_label);
+    }
 
     // Special processing for disk label - sanity check and trimming
     if (have_disk_label)

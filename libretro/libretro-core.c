@@ -26,8 +26,8 @@
 #endif
 
 // Our virtual time counter, increased by retro_run()
-long microSecCounter=0;
-int cpuloop=1;
+long microSecCounter = 0;
+int cpuloop = 1;
 
 // VKBD 
 extern int SHOWKEY;
@@ -58,7 +58,7 @@ unsigned int opt_mapping_options_display;
 unsigned int opt_video_options_display;
 unsigned int opt_audio_options_display;
 unsigned int retro_region;
-unsigned int last_audio_sample_rate=0;
+unsigned int last_audio_sample_rate = 0;
 
 extern void retro_poll_event();
 extern int retro_ui_finalized;
@@ -68,7 +68,6 @@ extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
 
 // Core geometry
-int VIRTUAL_WIDTH;
 int retroXS=0;
 int retroYS=0;
 int retroXS_offset=0;
@@ -395,9 +394,6 @@ static void log_disk_in_tray(bool display)
         log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
         if (display)
             show_queued_msg = 150;
-
-        // Statusbar notification
-        display_current_image(dc->files[dc->index], false);
     }
 }
 
@@ -698,7 +694,13 @@ void update_from_vice()
     dc->index = 0;
     // If vice has image attached to drive, tell libretro that the 'tray' is closed
     if (attachedImage != NULL)
+    {
         dc->eject_state = false;
+        char image_label[512];
+        image_label[0] = '\0';
+        fill_short_pathname_representation(image_label, attachedImage, sizeof(image_label));
+        display_current_image(image_label, true);
+    }
     else
         dc->eject_state = true;
 }
@@ -1173,7 +1175,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_passband",
          "ReSID Filter Passband",
-         "Parameters for SID Filter",
+         "Parameters for SID Filter.",
          {
             { "0", NULL },
             { "10", NULL },
@@ -1192,7 +1194,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_gain",
          "ReSID Filter Gain",
-         "Parameters for SID Filter",
+         "Parameters for SID Filter.",
          {
             { "90", NULL },
             { "91", NULL },
@@ -1212,7 +1214,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_filterbias",
          "ReSID Filter Bias",
-         "Parameters for SID Filter",
+         "Parameters for SID Filter.",
          {
             { "-5000", NULL },
             { "-4500", NULL },
@@ -1242,7 +1244,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_8580filterbias",
          "ReSID Filter 8580 Bias",
-         "Parameters for SID Filter",
+         "Parameters for SID Filter.",
          {
             { "-5000", NULL },
             { "-4500", NULL },
@@ -3335,6 +3337,7 @@ static bool retro_set_eject_state(bool ejected)
                 else
                     file_system_attach_disk(unit, dc->files[dc->index]);
 
+                display_current_image(dc->labels[dc->index], true);
                 return true;
             }
         }
@@ -3379,8 +3382,8 @@ static bool retro_set_image_index(unsigned index)
             if ((index < dc->count) && (dc->files[index]))
             {
                 log_disk_in_tray(display_disk_name);
+                display_current_image(dc->labels[dc->index], false);
             }
-
             return true;
         }
     }

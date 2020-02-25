@@ -34,9 +34,12 @@
 #include "ui.h"
 #include "vsyncapi.h"
 
+extern unsigned int opt_mouse_speed;
+
 int mouse_x, mouse_y;
 int mouse_accelx = 1, mouse_accely = 1;
 static unsigned long mouse_timestamp = 0;
+static mouse_func_t mouse_funcs;
 
 void mousedrv_mouse_changed(void)
 {
@@ -45,6 +48,11 @@ void mousedrv_mouse_changed(void)
 
 int mousedrv_resources_init(mouse_func_t *funcs)
 {
+    mouse_funcs.mbl = funcs->mbl;
+    mouse_funcs.mbr = funcs->mbr;
+    mouse_funcs.mbm = funcs->mbm;
+    mouse_funcs.mbu = funcs->mbu;
+    mouse_funcs.mbd = funcs->mbd;
     return 0;
 }
 
@@ -65,70 +73,50 @@ void mousedrv_init(void)
 
 void mouse_button_left(int pressed)
 {
-    //mouse_funcs.mbl(pressed);
+    mouse_funcs.mbl(pressed);
 }
-
 
 void mouse_button_right(int pressed)
 {
-   // mouse_funcs.mbr(pressed);
+    mouse_funcs.mbr(pressed);
+}
+
+void mouse_button_middle(int pressed)
+{
+    mouse_funcs.mbm(pressed);
 }
 
 void mouse_button(int bnumber, int state)
 {
-
 	switch (bnumber) {
-
-    case 0: //_LEFT:
-        mouse_button_left(state);
-        break;
-    case 1: //RIGHT:
-        mouse_button_right(state);
-        break;
-    default:
-        break;
+        case 0:
+            mouse_button_left(state);
+            break;
+        case 1:
+            mouse_button_right(state);
+            break;
+        case 2:
+            mouse_button_middle(state);
+            break;
+        default:
+            break;
     }
-
-/*
-    switch (bnumber) {
-    case SDL_BUTTON_LEFT:
-        mouse_button_left(state);
-        break;
-    case SDL_BUTTON_MIDDLE:
-        mouse_button_middle(state);
-        break;
-    case SDL_BUTTON_RIGHT:
-        mouse_button_right(state);
-        break;
-    case SDL_BUTTON_WHEELUP:
-        mouse_button_up(state);
-        break;
-    case SDL_BUTTON_WHEELDOWN:
-        mouse_button_down(state);
-        break;
-    default:
-        break;
-    }
-*/
 }
-
 
 int mousedrv_get_x(void)
 {
-    return mouse_x >> 1;
+    return mouse_x;
 }
 
 int mousedrv_get_y(void)
 {
-    return mouse_y >> 1;
+    return mouse_y;
 }
 
 void mouse_move(int x, int y)
 {
-//printf("(%d,%d)-",x,y);
-    mouse_x += x * mouse_accelx;
-    mouse_y -= y * mouse_accely;
-//printf("(%d,%d)\n",mouse_x,mouse_y);
+    mouse_x = mouse_x + (int)(x * (float)opt_mouse_speed / 200);
+    mouse_y = mouse_y - (int)(y * (float)opt_mouse_speed / 200);
     mouse_timestamp = vsyncarch_gettime();
 }
 

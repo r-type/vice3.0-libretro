@@ -46,6 +46,9 @@
 #include "joystick.h"
 #include "archdep.h"
 
+extern unsigned int opt_joyport_type;
+extern unsigned int mouse_value[2];
+
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
 
@@ -66,24 +69,32 @@
 
 static char statusbar_text[MAX_STATUSBAR_LEN] = "                                              ";
 
-static char* joystick_value_human(char val)
+static char* joystick_value_human(char val, int vice_device)
 {
     static char str[6] = {0};
     sprintf(str, "%3s", "   ");
 
-    if (val & 1) // UP
+    if (val & 0x01) // UP
         str[1] = 30;
 
-    else if (val & 2) // DOWN
+    else if (val & 0x02) // DOWN
         str[1] = 28;
 
-    if (val & 4) // LEFT
+    if (val & 0x04) // LEFT
         str[0] = 27;
 
-    else if (val & 8) // RIGHT
+    else if (val & 0x08) // RIGHT
         str[2] = 29;
 
-    str[1] = (val >= 16) ? (str[1] | 0x80) : str[1];
+    str[1] = (val & 0x10) ? (str[1] | 0x80) : str[1];
+
+    if (vice_device > 0)
+    {
+        str[1] = (val & 0x10) ? ('L' | 0x80) : str[1];
+        str[1] = (val & 0x20) ? ('R' | 0x80) : str[1];
+        str[1] = (val & 0x40) ? ('M' | 0x80) : str[1];
+    }
+
     return str;
 }
 
@@ -101,13 +112,31 @@ static void display_joyport(void)
         joy1[0] = (joy1[0] | 0x80);
     else if(cur_port == 2)
         joy2[0] = (joy2[0] | 0x80);
-    
-    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
-    sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2]));
+
+    // Mouse
+    if (opt_joyport_type > 2 && cur_port == 1)
+        sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+    // Paddles
+    else if (opt_joyport_type == 2 && cur_port == 1)
+        sprintf(tmpstr, "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+    // Joystick
+    else
+        sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
+
+    // Mouse
+    if (opt_joyport_type > 2 && cur_port == 2)
+        sprintf(tmpstr + strlen(tmpstr), "M%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
+    // Paddles
+    else if (opt_joyport_type == 2 && cur_port == 2)
+        sprintf(tmpstr + strlen(tmpstr), "P%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
+    // Joystick
+    else
+        sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2], 0));
+
     if (RETROUSERPORTJOY != -1)
     {
-        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3]));
-        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4]));
+        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3], 0));
+        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4], 0));
     }
     else
     {
@@ -118,7 +147,7 @@ static void display_joyport(void)
     char joy1[2];
     sprintf(joy1, "%s", "1");
 
-    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
+    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 #endif
 
     if (opt_statusbar & STATUSBAR_BASIC)

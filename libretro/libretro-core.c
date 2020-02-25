@@ -134,6 +134,12 @@ static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
 unsigned int opt_statusbar = 0;
 unsigned int opt_retropad_options = 0;
+unsigned int opt_joyport_type = 0;
+unsigned int opt_dpadmouse_speed = 6;
+unsigned int opt_mouse_speed = 100;
+unsigned int opt_analogmouse = 0;
+unsigned int opt_analogmouse_deadzone = 15;
+float opt_analogmouse_speed = 1.0;
 
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
@@ -1623,6 +1629,113 @@ void retro_set_environment(retro_environment_t cb)
          },
          "Port 2"
       },
+      {
+         "vice_joyport_type",
+         "RetroPad Port Type",
+         "Non-joysticks will be plugged into current port only and are controlled with the left analog stick or a real mouse.",
+         {
+            { "1", "Joystick" },
+            { "2", "Paddles" },
+            { "3", "Mouse (1351)" },
+            { "4", "Mouse (NEOS)" },
+            { "5", "Mouse (Amiga)" },
+            { "6", "Trackball (Atari CX-22)" },
+            { "7", "Mouse (Atari ST)" },
+            { "8", "Mouse (SmartMouse)" },
+            { "9", "Mouse (Micromys)" },
+            { "10", "Koalapad" },
+            { NULL, NULL },
+         },
+         "1"
+      },
+      {
+         "vice_analogmouse_deadzone",
+         "Analog Stick Mouse Deadzone",
+         "",
+         {
+            { "0", "0\%" },
+            { "5", "5\%" },
+            { "10", "10\%" },
+            { "15", "15\%" },
+            { "20", "20\%" },
+            { "25", "25\%" },
+            { "30", "30\%" },
+            { "35", "35\%" },
+            { "40", "40\%" },
+            { "45", "45\%" },
+            { "50", "50\%" },
+            { NULL, NULL },
+         },
+         "15"
+      },
+      {
+         "vice_analogmouse_speed",
+         "Analog Stick Mouse Speed",
+         "",
+         {
+            { "0.5", "50\%" },
+            { "0.6", "60\%" },
+            { "0.7", "70\%" },
+            { "0.8", "80\%" },
+            { "0.9", "90\%" },
+            { "1.0", "100\%" },
+            { "1.1", "110\%" },
+            { "1.2", "120\%" },
+            { "1.3", "130\%" },
+            { "1.4", "140\%" },
+            { "1.5", "150\%" },
+            { NULL, NULL },
+         },
+         "1.0"
+      },
+      {
+         "vice_dpadmouse_speed",
+         "D-Pad Mouse Speed",
+         "",
+         {
+            { "3", "50\%" },
+            { "4", "66\%" },
+            { "5", "83\%" },
+            { "6", "100\%" },
+            { "7", "116\%" },
+            { "8", "133\%" },
+            { "9", "150\%" },
+            { "10", "166\%" },
+            { "11", "183\%" },
+            { "12", "200\%" },
+            { NULL, NULL },
+         },
+         "6"
+      },
+      {
+         "vice_mouse_speed",
+         "Mouse Speed",
+         "Affects mouse speed globally.",
+         {
+            { "10", "10\%" },
+            { "20", "20\%" },
+            { "30", "30\%" },
+            { "40", "40\%" },
+            { "50", "50\%" },
+            { "60", "60\%" },
+            { "70", "70\%" },
+            { "80", "80\%" },
+            { "90", "90\%" },
+            { "100", "100\%" },
+            { "110", "110\%" },
+            { "120", "120\%" },
+            { "130", "130\%" },
+            { "140", "140\%" },
+            { "150", "150\%" },
+            { "160", "160\%" },
+            { "170", "170\%" },
+            { "180", "180\%" },
+            { "190", "190\%" },
+            { "200", "200\%" },
+            { NULL, NULL },
+         },
+         "100"
+      },
 #endif
       {
          "vice_userport_joytype",
@@ -2840,6 +2953,42 @@ static void update_variables(void)
       if (strcmp(var.value, "Port 2") == 0 && !cur_port_locked) cur_port=2;
       else if (strcmp(var.value, "Port 1") == 0 && !cur_port_locked) cur_port=1;
    }
+
+   var.key = "vice_joyport_type";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_joyport_type = atoi(var.value);
+   }
+
+   var.key = "vice_analogmouse_deadzone";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_analogmouse_deadzone = atoi(var.value);
+   }
+
+   var.key = "vice_analogmouse_speed";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_analogmouse_speed = atof(var.value);
+   }
+
+   var.key = "vice_dpadmouse_speed";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_dpadmouse_speed = atoi(var.value);
+   }
+
+   var.key = "vice_mouse_speed";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_mouse_speed = atoi(var.value);
+   }
+
 #endif
 
    var.key = "vice_keyrah_keypad_mappings";

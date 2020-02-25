@@ -175,7 +175,7 @@ extern int log_resources_set_string(const char *name, const char* value);
 int ui_init_finalize(void)
 {
    /* Sensible defaults */
-   log_resources_set_int("Mouse", 0);
+   log_resources_set_int("Mouse", 1);
    log_resources_set_int("AutostartPrgMode", 1);
 
    /* Mute sound at startup to hide 6581 ReSID init pop, and set back to 100 in retro_run() after 3 frames */

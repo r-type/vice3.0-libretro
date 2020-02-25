@@ -734,8 +734,8 @@ NK_API void nk_retro_handle_event(int *evt, int poll)
             if (mouse_x || mouse_y)
                 revent.showpointer = 1;
 
-            revent.gmx+=mouse_x;
-            revent.gmy+=mouse_y;
+            revent.gmx += mouse_x / 2;
+            revent.gmy += mouse_y / 2;
 
             // Mouse corners
             if (revent.gmx < offset.x)

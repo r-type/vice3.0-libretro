@@ -66,8 +66,6 @@
 
 static char statusbar_text[MAX_STATUSBAR_LEN] = "                                              ";
 
-
-
 static char* joystick_value_human(char val)
 {
     static char str[6] = {0};
@@ -88,10 +86,6 @@ static char* joystick_value_human(char val)
     str[1] = (val >= 16) ? (str[1] | 0x80) : str[1];
     return str;
 }
-
-extern unsigned int opt_statusbar;
-extern unsigned int cur_port;
-extern int RETROUSERPORTJOY;
 
 static void display_joyport(void)
 {
@@ -127,8 +121,8 @@ static void display_joyport(void)
     sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
 #endif
 
-    if (opt_statusbar > 1)
-        sprintf(tmpstr, "%20s", "");
+    if (opt_statusbar & STATUSBAR_BASIC)
+        snprintf(tmpstr, sizeof(tmpstr), "%24s", "");
 
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-36s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
@@ -186,9 +180,6 @@ void display_current_image(const char *image, bool inserted)
         snprintf(imagename, sizeof(imagename), "%.37s", imagename_prev);
     }
 
-    if (opt_statusbar > 1)
-        sprintf(imagename, "%-37s", "");
-
     int len;
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-37s", imagename);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
@@ -203,7 +194,7 @@ void display_current_image(const char *image, bool inserted)
         statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = ' ';
         statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = ' ';
     }
-    else
+    else if (drive_enabled)
     {
         statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = '0';
         statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = '0';
@@ -607,11 +598,36 @@ void uistatusbar_draw(void)
     // Char settings
     x++;
 
-    // Statusbar background
-    if (pix_bytes == 2)
-        DrawFBoxBmp16(&fake,x-1,y-1,(char_width*MAX_STATUSBAR_LEN)-char_width-2,char_width+2,0,255);
+    // Statusbar vertical position
+    if (opt_statusbar & STATUSBAR_TOP)
+        y = zoomed_YS_offset + 1;
     else
-        DrawFBoxBmp32(&fake,x-1,y-1,(char_width*MAX_STATUSBAR_LEN)-char_width-2,char_width+2,0,255);
+        y = zoomed_height + zoomed_YS_offset - char_width - 1;
+
+    // Statusbar background
+    int bkg_x = x - 1;
+    int bkg_y = y - 1;
+    int max_width = (char_width * MAX_STATUSBAR_LEN) - char_width - 2;
+    int bkg_width = max_width;
+    int bkg_height = char_width + 2;
+
+    // Basic mode statusbar background
+    if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)
+    {
+        if (drive_enabled)
+            bkg_width = (char_width * 6) - 2;
+        else if (tape_enabled)
+            bkg_width = (char_width * 9) - 2;
+        else
+            bkg_width = (char_width * 2) + 2;
+
+        bkg_x = x + max_width - bkg_width - 1;
+    }
+
+    if (pix_bytes == 2)
+        DrawFBoxBmp16(&fake, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
+    else
+        DrawFBoxBmp32(&fake, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
 
     if (imagename_timer == 0)
         display_joyport();
@@ -628,16 +644,6 @@ void uistatusbar_draw(void)
         /* Default background */
         color_b_16 = color_black_16;
         color_b_32 = color_black_32;
-
-        /* Transparent background */
-        switch (opt_statusbar)
-        {
-            case 2: // Basic
-            case 3: // Basic Minimal
-                color_b_16 = 0;
-                color_b_32 = 0;
-                break;
-        }
 
         /* Drive/tape LED color */
         if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 2)
@@ -666,62 +672,37 @@ void uistatusbar_draw(void)
             if (drive_pwm > 500)
             {
                 c = c | 0x80;
-                color_b_16 = color_white_16;
-                color_b_32 = color_white_32;
-
-                switch (opt_statusbar)
+                if (opt_statusbar & STATUSBAR_MINIMAL)
                 {
-                    case 1: // Full Minimal
-                    case 3: // Basic Minimal
-                        c = ' ';
-                        color_b_16 = color_green_16;
-                        color_b_32 = color_green_32;
-                        break;
+                    color_b_16 = color_green_16;
+                    color_b_32 = color_green_32;
                 }
             }
-            else
-            {
-                switch (opt_statusbar)
-                {
-                    case 1: // Full Minimal
-                    case 3: // Basic Minimal
-                        c = ' ';
-                        break;
 
-                    case 2: // Basic
-                        color_b_16 = color_black_16;
-                        color_b_32 = color_black_32;
-                        break;
-                }
-            }
+            if (opt_statusbar & STATUSBAR_MINIMAL)
+                c = ' ';
         }
         /* Power LED color */
         else if (i == STATUSBAR_SPEED_POS || i == STATUSBAR_SPEED_POS + 1)
         {
             color_f_16 = color_red_16;
             color_f_32 = color_red_32;
-            color_b_16 = color_white_16;
-            color_b_32 = color_white_32;
 
-            switch (opt_statusbar)
+            if (opt_statusbar & STATUSBAR_MINIMAL)
             {
-                case 1: // Full Minimal
-                case 3: // Basic Minimal
-                    c = ' ';
-                    color_b_16 = color_red_16;
-                    color_b_32 = color_red_32;
-                    break;
+                c = ' ';
+                color_b_16 = color_red_16;
+                color_b_32 = color_red_32;
             }
         }
 
         if (c & 0x80)
         {
-            sprintf(tmpstr,"%c",c&0x7f);
+            sprintf(tmpstr, "%c", c & 0x7f);
             if (pix_bytes == 2)
                 Retro_Draw_string16(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b_16, color_f_16);
             else
                 Retro_Draw_string32(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b_32, color_f_32);
-            //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
         }
         else
         {
@@ -730,7 +711,6 @@ void uistatusbar_draw(void)
                 Retro_Draw_string16(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f_16, color_b_16);
             else
                 Retro_Draw_string32(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f_32, color_b_32);
-            //  uistatusbar_putchar(c, i, 0, color_f, color_b);
         }
     }
 }

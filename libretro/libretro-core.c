@@ -132,7 +132,8 @@ static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
-unsigned int opt_statusbar;
+unsigned int opt_statusbar = 0;
+unsigned int opt_retropad_options = 0;
 
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
@@ -1170,7 +1171,11 @@ void retro_set_environment(retro_environment_t cb)
             { "Fast resampling", NULL },
             { NULL, NULL },
          },
+#if defined(PSP) || defined(VITA) || defined(__SWITCH__)
+         "Fast"
+#else
          "Resampling"
+#endif
       },
       {
          "vice_resid_passband",
@@ -1287,7 +1292,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_border",
          "Display Borders",
-         "All cores except 'x64sc' will reset when changing this option.\nWARNING: Toggling this multiple times in 'x64sc' will crash eventually!",
+         "All cores except 'x64sc' will reset when this option is changed.\nWARNING: Toggling this multiple times in 'x64sc' will crash eventually!",
          {
             { "enabled", NULL },
             { "disabled", NULL },
@@ -1329,15 +1334,19 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_statusbar",
          "Statusbar Mode",
-         "",
+         "- Full: Joyports + Current image + LEDs\n- Basic: Current image + LEDs\n- Minimal: Track number + FPS hidden",
          {
-            { "full", "Full" },
-            { "full_minimal", "Full Minimal" },
-            { "basic", "Basic" },
-            { "basic_minimal", "Basic Minimal" },
+            { "bottom", "Bottom Full" },
+            { "bottom__minimal", "Bottom Full Minimal" },
+            { "bottom_basic", "Bottom Basic" },
+            { "bottom_basic_minimal", "Bottom Basic Minimal" },
+            { "top", "Top Full" },
+            { "top_minimal", "Top Full Minimal" },
+            { "top_basic", "Top Basic" },
+            { "top_basic_minimal", "Top Basic Minimal" },
             { NULL, NULL },
          },
-         "full"
+         "bottom"
       },
       {
          "vice_gfx_colors",
@@ -1772,12 +1781,19 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad Select",
          "",
          {{ NULL, NULL }},
-         "RETROK_F11"
+         "TOGGLE_VKBD"
       },
       {
          "vice_mapper_start",
          "RetroPad Start",
          "",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_b",
+         "RetroPad B",
+         "Unmapped defaults to fire button.",
          {{ NULL, NULL }},
          "---"
       },
@@ -1935,6 +1951,19 @@ void retro_set_environment(retro_environment_t cb)
          },
          "4"
       },
+      {
+         "vice_retropad_options",
+         "RetroPad Face Button Options",
+         "Rotate face buttons clockwise and/or make 2nd fire press up.",
+         {
+            { "disabled", "B = Fire" },
+            { "jump", "B = Fire, A = Up" },
+            { "rotate", "Y = Fire" },
+            { "rotate_jump", "Y = Fire, B = Up" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
 
       { NULL, NULL, NULL, {{0}}, NULL },
    };
@@ -1942,27 +1971,55 @@ void retro_set_environment(retro_environment_t cb)
    /* fill in the values for all the mappers */
    int i = 0;
    int j = 0;
+   int hotkey = 0;
    while (core_options[i].key) 
    {
       if (strstr(core_options[i].key, "vice_mapper_"))
       {
+         /* Show different key list for hotkeys (special negatives removed) */
+         if (  strstr(core_options[i].key, "vice_mapper_vkbd")
+            || strstr(core_options[i].key, "vice_mapper_statusbar")
+            || strstr(core_options[i].key, "vice_mapper_joyport_switch")
+            || strstr(core_options[i].key, "vice_mapper_reset")
+            || strstr(core_options[i].key, "vice_mapper_zoom_mode_toggle")
+            || strstr(core_options[i].key, "vice_mapper_warp_mode")
+            || strstr(core_options[i].key, "vice_mapper_datasette_toggle_hotkeys")
+            || strstr(core_options[i].key, "vice_mapper_datasette_start")
+            || strstr(core_options[i].key, "vice_mapper_datasette_stop")
+            || strstr(core_options[i].key, "vice_mapper_datasette_rewind")
+            || strstr(core_options[i].key, "vice_mapper_datasette_forward")
+            || strstr(core_options[i].key, "vice_mapper_datasette_reset")
+            )
+            hotkey = 1;
+         else
+            hotkey = 0;
+
          j = 0;
-         while (keyDesc[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+         if (hotkey)
          {
-            core_options[i].values[j].value = keyDesc[j];
-            core_options[i].values[j].label = NULL;
-            ++j;
-         };
+             while (keyDescHotkeys[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+             {
+                core_options[i].values[j].value = keyDescHotkeys[j];
+                core_options[i].values[j].label = NULL;
+                ++j;
+             };
+         }
+         else
+         {
+             while (keyDesc[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+             {
+                core_options[i].values[j].value = keyDesc[j];
+                core_options[i].values[j].label = NULL;
+                ++j;
+             };
+         }
          core_options[i].values[j].value = NULL;
          core_options[i].values[j].label = NULL;
       };
       ++i;
    }
 
-   static bool allowNoGameMode;
-
    environ_cb = cb;
-
    cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
    unsigned version = 0;
@@ -2022,6 +2079,7 @@ void retro_set_environment(retro_environment_t cb)
 #undef NUM_CORE_OPTIONS
    }
 
+   static bool allowNoGameMode;
    allowNoGameMode = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
 }
@@ -2800,6 +2858,16 @@ static void update_variables(void)
       else if (strcmp(var.value, "enabled") == 0) RETROKEYBOARDPASSTHROUGH=1;
    }
 
+   var.key = "vice_retropad_options";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) opt_retropad_options=0;
+      else if (strcmp(var.value, "rotate") == 0) opt_retropad_options=1;
+      else if (strcmp(var.value, "jump") == 0) opt_retropad_options=2;
+      else if (strcmp(var.value, "rotate_jump") == 0) opt_retropad_options=3;
+   }
+
    var.key = "vice_turbo_fire_button";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2844,10 +2912,18 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "full") == 0) opt_statusbar=0;
-      else if (strcmp(var.value, "full_minimal") == 0) opt_statusbar=1;
-      else if (strcmp(var.value, "basic") == 0) opt_statusbar=2;
-      else if (strcmp(var.value, "basic_minimal") == 0) opt_statusbar=3;
+      opt_statusbar = 0;
+
+      if (strstr(var.value, "top"))
+         opt_statusbar |= STATUSBAR_TOP;
+      else
+         opt_statusbar |= STATUSBAR_BOTTOM;
+
+      if (strstr(var.value, "basic"))
+         opt_statusbar |= STATUSBAR_BASIC;
+
+      if (strstr(var.value, "minimal"))
+         opt_statusbar |= STATUSBAR_MINIMAL;
    }
 
    var.key = "vice_mapping_options_display";
@@ -2904,6 +2980,13 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       mapper_keys[RETRO_DEVICE_ID_JOYPAD_START] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_b";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_B] = keyId(var.value);
    }
 
    var.key = "vice_mapper_a";
@@ -3129,6 +3212,8 @@ static void update_variables(void)
    option_display.key = "vice_mapper_select";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_start";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_b";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_a";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);

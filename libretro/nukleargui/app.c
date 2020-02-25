@@ -24,6 +24,7 @@ extern int vkey_sticky1;
 extern int vkey_sticky2;
 extern int opt_vkbd_theme;
 extern unsigned int retro_get_borders(void);
+extern unsigned int zoom_mode_id;
 extern int retroXS_offset;
 extern int retroYS_offset;
 
@@ -56,6 +57,7 @@ struct nk_vec2 offset = {0, 0};
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #define LEN(a) (sizeof(a)/sizeof(a)[0])
+#define NUMB(a) (sizeof(a) / sizeof(*a))
 
 /* Platform */
 float bg[4];

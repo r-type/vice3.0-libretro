@@ -60,6 +60,12 @@ extern Mvk MVk[NPLGN*NLIGN*2];
 extern int vkey_pressed;
 extern int vkey_sticky;
 
+//STATUSBAR
+#define STATUSBAR_BOTTOM    0x01
+#define STATUSBAR_TOP       0x02
+#define STATUSBAR_BASIC     0x04
+#define STATUSBAR_MINIMAL   0x08
+
 //VARIABLES
 extern int retrow; 
 extern int retroh;
@@ -72,7 +78,12 @@ extern int retroH;
 extern int retroW;
 extern unsigned int zoomed_width;
 extern unsigned int zoomed_height;
+extern unsigned int zoomed_XS_offset;
+extern unsigned int zoomed_YS_offset;
 extern int imagename_timer;
+extern unsigned int opt_statusbar;
+extern unsigned int cur_port;
+extern int RETROUSERPORTJOY;
 
 //FUNCS
 extern void maincpu_mainloop_retro(void);

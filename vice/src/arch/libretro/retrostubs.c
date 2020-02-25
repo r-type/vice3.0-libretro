@@ -36,6 +36,7 @@ unsigned int datasette_hotkeys;
 unsigned int cur_port=2;
 extern int cur_port_locked;
 extern int mapper_keys[36];
+extern int opt_retropad_options;
 extern unsigned int zoom_mode_id;
 extern unsigned int opt_zoom_mode_id;
 extern int RETROKEYRAHKEYPAD;
@@ -414,10 +415,10 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             {
                 int just_pressed = 0;
                 int just_released = 0;
-                if (i > 0 && (i<4 || i>7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad + B */
+                if ((i < 4 || i > 7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad */
                 {
-                    /* Skip the transparency toggle button and RetroPad START if vkbd is visible */
-                    if (SHOWKEY==1 && (i==RETRO_DEVICE_ID_JOYPAD_A || i==RETRO_DEVICE_ID_JOYPAD_START))
+                    /* Skip the press, transparency toggle and start-enter if VKBD is visible */
+                    if (SHOWKEY==1 && (i==RETRO_DEVICE_ID_JOYPAD_B || i==RETRO_DEVICE_ID_JOYPAD_A || i==RETRO_DEVICE_ID_JOYPAD_START))
                         continue;
 
                     if (input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) && jbt[j][i]==0 && i!=turbo_fire_button)
@@ -496,6 +497,10 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                         emu_function(EMU_DATASETTE_REWIND);
                     else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[35]) /* Datasette reset */
                         emu_function(EMU_DATASETTE_RESET);
+                    else if (mapper_keys[i] == -11) /* Virtual keyboard */
+                        emu_function(EMU_VKBD);
+                    else if (mapper_keys[i] == -12) /* Statusbar */
+                        emu_function(EMU_STATUSBAR);
                     else
                         Keymap_KeyDown(mapper_keys[i]);
                 }
@@ -528,6 +533,10 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                     else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[34])
                         ; /* nop */
                     else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[35])
+                        ; /* nop */
+                    else if (mapper_keys[i] == -11) /* Virtual keyboard */
+                        ; /* nop */
+                    else if (mapper_keys[i] == -12) /* Statusbar */
                         ; /* nop */
                     else
                         Keymap_KeyUp(mapper_keys[i]);
@@ -656,13 +665,44 @@ void retro_poll_event()
                 else
                     j &= ~0x08;
                     
-                if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ||
+                /* Fire button */
+                int fire_button = (opt_retropad_options == 1 || opt_retropad_options == 3) ? RETRO_DEVICE_ID_JOYPAD_Y : RETRO_DEVICE_ID_JOYPAD_B;
+                if (mapper_keys[fire_button] != 0)
+                    fire_button = -1;
+
+                if ((fire_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, fire_button)) ||
                     (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port != cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP0)) ||
                     (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP5))
                 )
                     j |= (SHOWKEY==-1) ? 0x10 : j;
                 else
                     j &= ~0x10;
+
+                /* Jump button */
+                int jump_button = -1;
+                switch (opt_retropad_options)
+                {
+                    case 2:
+                        jump_button = RETRO_DEVICE_ID_JOYPAD_A;
+                        break;
+                    case 3:
+                        jump_button = RETRO_DEVICE_ID_JOYPAD_B;
+                        break;
+                }
+
+                if (mapper_keys[jump_button] != 0)
+                    jump_button = -1;
+
+                if (jump_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, jump_button))
+                {
+                    j |= (SHOWKEY==-1) ? 0x01 : j;
+                    j &= ~0x02;
+                }
+                else if (!input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) &&
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port != cur_port && !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP9)) &&
+                    (RETROKEYRAHKEYPAD && vice_port < 3 && vice_port == cur_port && !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP8))
+                )
+                    j &= ~0x01;
 
                 /* Turbo fire */
                 if (turbo_fire_button != -1)

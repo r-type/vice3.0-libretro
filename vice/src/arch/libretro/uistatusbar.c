@@ -46,6 +46,9 @@
 #include "joystick.h"
 #include "archdep.h"
 
+extern unsigned int opt_joyport_type;
+extern unsigned int mouse_value[2];
+
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
 
@@ -66,32 +69,34 @@
 
 static char statusbar_text[MAX_STATUSBAR_LEN] = "                                              ";
 
-
-
-static char* joystick_value_human(char val)
+static char* joystick_value_human(char val, int vice_device)
 {
     static char str[6] = {0};
     sprintf(str, "%3s", "   ");
 
-    if (val & 1) // UP
+    if (val & 0x01) // UP
         str[1] = 30;
 
-    else if (val & 2) // DOWN
+    else if (val & 0x02) // DOWN
         str[1] = 28;
 
-    if (val & 4) // LEFT
+    if (val & 0x04) // LEFT
         str[0] = 27;
 
-    else if (val & 8) // RIGHT
+    else if (val & 0x08) // RIGHT
         str[2] = 29;
 
-    str[1] = (val >= 16) ? (str[1] | 0x80) : str[1];
+    str[1] = (val & 0x10) ? (str[1] | 0x80) : str[1];
+
+    if (vice_device > 0)
+    {
+        str[1] = (val & 0x10) ? ('L' | 0x80) : str[1];
+        str[1] = (val & 0x20) ? ('R' | 0x80) : str[1];
+        str[1] = (val & 0x40) ? ('M' | 0x80) : str[1];
+    }
+
     return str;
 }
-
-extern unsigned int opt_statusbar;
-extern unsigned int cur_port;
-extern int RETROUSERPORTJOY;
 
 static void display_joyport(void)
 {
@@ -107,13 +112,31 @@ static void display_joyport(void)
         joy1[0] = (joy1[0] | 0x80);
     else if(cur_port == 2)
         joy2[0] = (joy2[0] | 0x80);
-    
-    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
-    sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2]));
+
+    // Mouse
+    if (opt_joyport_type > 2 && cur_port == 1)
+        sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+    // Paddles
+    else if (opt_joyport_type == 2 && cur_port == 1)
+        sprintf(tmpstr, "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+    // Joystick
+    else
+        sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
+
+    // Mouse
+    if (opt_joyport_type > 2 && cur_port == 2)
+        sprintf(tmpstr + strlen(tmpstr), "M%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
+    // Paddles
+    else if (opt_joyport_type == 2 && cur_port == 2)
+        sprintf(tmpstr + strlen(tmpstr), "P%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
+    // Joystick
+    else
+        sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2], 0));
+
     if (RETROUSERPORTJOY != -1)
     {
-        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3]));
-        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4]));
+        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3], 0));
+        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4], 0));
     }
     else
     {
@@ -124,11 +147,11 @@ static void display_joyport(void)
     char joy1[2];
     sprintf(joy1, "%s", "1");
 
-    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1]));
+    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 #endif
 
-    if (opt_statusbar > 1)
-        sprintf(tmpstr, "%20s", "");
+    if (opt_statusbar & STATUSBAR_BASIC)
+        snprintf(tmpstr, sizeof(tmpstr), "%24s", "");
 
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-36s", tmpstr);
     statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
@@ -165,19 +188,19 @@ static void display_speed(void)
 }
 
 int imagename_timer = 0;
-static char imagename_prev[PATH_MAX_LENGTH] = {0};
 static int drive_enabled = 0;
 static int drive_empty = 0;
 
 void display_current_image(const char *image, bool inserted)
 {
-    char imagename[PATH_MAX_LENGTH] = {0};
+    static char imagename[PATH_MAX_LENGTH] = {0};
+    static char imagename_prev[PATH_MAX_LENGTH] = {0};
 
     imagename_timer = 150;
     if (strcmp(image, ""))
     {
         drive_empty = (inserted) ? 0 : 1;
-        snprintf(imagename, sizeof(imagename), "%s%.36s", " ", path_basename(image));
+        snprintf(imagename, sizeof(imagename), "%2s%.35s", "  ", path_basename(image));
         snprintf(imagename_prev, sizeof(imagename_prev), "%.37s", imagename);
     }
     else
@@ -185,9 +208,6 @@ void display_current_image(const char *image, bool inserted)
         drive_empty = 1;
         snprintf(imagename, sizeof(imagename), "%.37s", imagename_prev);
     }
-
-    if (opt_statusbar > 1)
-        sprintf(imagename, "%-37s", "");
 
     int len;
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-37s", imagename);
@@ -203,7 +223,7 @@ void display_current_image(const char *image, bool inserted)
         statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = ' ';
         statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = ' ';
     }
-    else
+    else if (drive_enabled)
     {
         statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = '0';
         statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = '0';
@@ -330,7 +350,7 @@ void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_
 void ui_display_drive_current_image(unsigned int drive_number, const char *image)
 {
     //printf("d%d -> %s\n", drive_number, image);
-    display_current_image(image, strcmp(image, ""));
+    //display_current_image(image, strcmp(image, ""));
 
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s\n", __func__);
@@ -395,7 +415,7 @@ void ui_display_tape_counter(int counter)
 
 void ui_display_tape_current_image(const char *image)
 {
-    display_current_image(image, strcmp(image, ""));
+    //display_current_image(image, strcmp(image, ""));
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s: %s\n", __func__, image);
 #endif
@@ -492,8 +512,8 @@ void uistatusbar_close(void)
 #include "libretro-core.h"
 extern void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
 extern void Retro_Draw_string32(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned fg, unsigned bg);
-
-
+extern void DrawFBoxBmp16(RSDL_Surface *surface, int x, int y, int dx, int dy, uint32_t color, unsigned int alpha);
+extern void DrawFBoxBmp32(RSDL_Surface *surface, int x, int y, int dx, int dy, uint32_t color, unsigned int alpha);
 
 void uistatusbar_draw(void)
 {
@@ -503,7 +523,7 @@ void uistatusbar_draw(void)
     unsigned short int color_f_16, color_b_16;
     unsigned short int color_black_16, color_white_16, color_red_16, color_green_16, color_brown_16;
     color_white_16  = RGB565(255, 255, 255);
-    color_black_16  = RGB565(0, 4, 0);
+    color_black_16  = 0;//RGB565(0, 4, 0);
     color_red_16    = RGB565(204, 0 , 0);
     color_green_16  = RGB565(0, 204 , 0);
     color_brown_16  = RGB565(100, 100, 100);
@@ -512,27 +532,28 @@ void uistatusbar_draw(void)
 
     unsigned int color_f_32, color_b_32;
     unsigned int color_black_32, color_white_32, color_red_32, color_green_32, color_brown_32;
-    color_white_32  = 0xffffffff;
-    color_black_32  = 0x00010101;
-    color_red_32    = 0xffcc0000;
-    color_green_32  = 0xff00cc00;
-    color_brown_32  = 0xff646464;
+    color_white_32  = ARGB888(255, 255, 255, 255);
+    color_black_32  = 0;//0x00010101;
+    color_red_32    = ARGB888(255, 204, 0 , 0) << 0;//0xffcc0000;
+    color_green_32  = ARGB888(255, 0, 204 , 0) << 0;//0xff00cc00;
+    color_brown_32  = ARGB888(255, 100, 100 , 100) << 0;//0xff646464;
     color_f_32      = color_white_32;
     color_b_32      = color_black_32;
 
-    unsigned int char_width;
-    unsigned int char_offset;
+    unsigned int char_width = 7;
+    unsigned int char_offset = 0;
 
     char tmpstr[512];
 
     RSDL_Surface fake;
-    fake.pixels=&Retro_Screen[0];
-    fake.h=retroh;
-    fake.w=retrow;
-    fake.clip_rect.h=retroh;
-    fake.clip_rect.w=retrow;
-    fake.clip_rect.x=0;
-    fake.clip_rect.y=0;
+    fake.pixels = &Retro_Screen[0];
+    fake.h = retroh;
+    fake.w = retrow;
+    fake.clip_rect.h = retroh;
+    fake.clip_rect.w = retrow;
+    fake.clip_rect.x = 0;
+    fake.clip_rect.y = 0;
+
 
     /* Statusbar location with or without borders */
     /* 0 : normal, 1: full, 2: debug, 3: none */
@@ -603,8 +624,39 @@ void uistatusbar_draw(void)
             break;
     }
 #endif
-    //x -= retroXS_offset;
-    //y -= retroYS_offset;
+    // Char settings
+    x++;
+
+    // Statusbar vertical position
+    if (opt_statusbar & STATUSBAR_TOP)
+        y = zoomed_YS_offset + 1;
+    else
+        y = zoomed_height + zoomed_YS_offset - char_width - 1;
+
+    // Statusbar background
+    int bkg_x = x - 1;
+    int bkg_y = y - 1;
+    int max_width = (char_width * MAX_STATUSBAR_LEN) - char_width - 2;
+    int bkg_width = max_width;
+    int bkg_height = char_width + 2;
+
+    // Basic mode statusbar background
+    if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)
+    {
+        if (drive_enabled)
+            bkg_width = (char_width * 6) - 2;
+        else if (tape_enabled)
+            bkg_width = (char_width * 9) - 2;
+        else
+            bkg_width = (char_width * 2) + 2;
+
+        bkg_x = x + max_width - bkg_width - 1;
+    }
+
+    if (pix_bytes == 2)
+        DrawFBoxBmp16(&fake, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
+    else
+        DrawFBoxBmp32(&fake, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
 
     if (imagename_timer == 0)
         display_joyport();
@@ -612,27 +664,15 @@ void uistatusbar_draw(void)
     for (i = 0; i < MAX_STATUSBAR_LEN; ++i)
     {
         c = statusbar_text[i];
-
         if (c == 0)
             break;
         
         /* Trickery to balance uneven character width with VIC-II area width */
-        char_width = 7;
-        char_offset = (MAX_STATUSBAR_LEN - i <= 4) ? -2 : 0;
+        char_offset = (MAX_STATUSBAR_LEN - i <= 4) ? -4 : 0;
 
         /* Default background */
         color_b_16 = color_black_16;
         color_b_32 = color_black_32;
-
-        /* Transparent background */
-        switch (opt_statusbar)
-        {
-            case 2: // Basic
-            case 3: // Basic Minimal
-                color_b_16 = 0;
-                color_b_32 = 0;
-                break;
-        }
 
         /* Drive/tape LED color */
         if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 2)
@@ -661,62 +701,37 @@ void uistatusbar_draw(void)
             if (drive_pwm > 500)
             {
                 c = c | 0x80;
-                color_b_16 = color_white_16;
-                color_b_32 = color_white_32;
-
-                switch (opt_statusbar)
+                if (opt_statusbar & STATUSBAR_MINIMAL)
                 {
-                    case 1: // Full Minimal
-                    case 3: // Basic Minimal
-                        c = ' ';
-                        color_b_16 = color_green_16;
-                        color_b_32 = color_green_32;
-                        break;
+                    color_b_16 = color_green_16;
+                    color_b_32 = color_green_32;
                 }
             }
-            else
-            {
-                switch (opt_statusbar)
-                {
-                    case 1: // Full Minimal
-                    case 3: // Basic Minimal
-                        c = ' ';
-                        break;
 
-                    case 2: // Basic
-                        color_b_16 = color_black_16;
-                        color_b_32 = color_black_32;
-                        break;
-                }
-            }
+            if (opt_statusbar & STATUSBAR_MINIMAL)
+                c = ' ';
         }
         /* Power LED color */
         else if (i == STATUSBAR_SPEED_POS || i == STATUSBAR_SPEED_POS + 1)
         {
             color_f_16 = color_red_16;
             color_f_32 = color_red_32;
-            color_b_16 = color_white_16;
-            color_b_32 = color_white_32;
 
-            switch (opt_statusbar)
+            if (opt_statusbar & STATUSBAR_MINIMAL)
             {
-                case 1: // Full Minimal
-                case 3: // Basic Minimal
-                    c = ' ';
-                    color_b_16 = color_red_16;
-                    color_b_32 = color_red_32;
-                    break;
+                c = ' ';
+                color_b_16 = color_red_16;
+                color_b_32 = color_red_32;
             }
         }
 
         if (c & 0x80)
         {
-            sprintf(tmpstr,"%c",c&0x7f);
+            sprintf(tmpstr, "%c", c & 0x7f);
             if (pix_bytes == 2)
                 Retro_Draw_string16(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b_16, color_f_16);
             else
                 Retro_Draw_string32(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_b_32, color_f_32);
-            //  uistatusbar_putchar((BYTE)(c & 0x7f), i, 0, color_b, color_f);
         }
         else
         {
@@ -725,7 +740,6 @@ void uistatusbar_draw(void)
                 Retro_Draw_string16(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f_16, color_b_16);
             else
                 Retro_Draw_string32(&fake, x+char_offset+i*char_width, y, tmpstr,1,1,1, color_f_32, color_b_32);
-            //  uistatusbar_putchar(c, i, 0, color_f, color_b);
         }
     }
 }

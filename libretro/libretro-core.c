@@ -26,8 +26,8 @@
 #endif
 
 // Our virtual time counter, increased by retro_run()
-long microSecCounter=0;
-int cpuloop=1;
+long microSecCounter = 0;
+int cpuloop = 1;
 
 // VKBD 
 extern int SHOWKEY;
@@ -58,7 +58,7 @@ unsigned int opt_mapping_options_display;
 unsigned int opt_video_options_display;
 unsigned int opt_audio_options_display;
 unsigned int retro_region;
-unsigned int last_audio_sample_rate=0;
+unsigned int last_audio_sample_rate = 0;
 
 extern void retro_poll_event();
 extern int retro_ui_finalized;
@@ -68,7 +68,6 @@ extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
 
 // Core geometry
-int VIRTUAL_WIDTH;
 int retroXS=0;
 int retroYS=0;
 int retroXS_offset=0;
@@ -133,7 +132,14 @@ static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
-unsigned int opt_statusbar;
+unsigned int opt_statusbar = 0;
+unsigned int opt_retropad_options = 0;
+unsigned int opt_joyport_type = 0;
+unsigned int opt_dpadmouse_speed = 6;
+unsigned int opt_mouse_speed = 100;
+unsigned int opt_analogmouse = 0;
+unsigned int opt_analogmouse_deadzone = 15;
+float opt_analogmouse_speed = 1.0;
 
 extern unsigned int datasette_hotkeys;
 extern unsigned int cur_port;
@@ -395,9 +401,6 @@ static void log_disk_in_tray(bool display)
         log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
         if (display)
             show_queued_msg = 150;
-
-        // Statusbar notification
-        display_current_image(dc->files[dc->index], false);
     }
 }
 
@@ -698,7 +701,13 @@ void update_from_vice()
     dc->index = 0;
     // If vice has image attached to drive, tell libretro that the 'tray' is closed
     if (attachedImage != NULL)
+    {
         dc->eject_state = false;
+        char image_label[512];
+        image_label[0] = '\0';
+        fill_short_pathname_representation(image_label, attachedImage, sizeof(image_label));
+        display_current_image(image_label, true);
+    }
     else
         dc->eject_state = true;
 }
@@ -1168,12 +1177,16 @@ void retro_set_environment(retro_environment_t cb)
             { "Fast resampling", NULL },
             { NULL, NULL },
          },
+#if defined(PSP) || defined(VITA) || defined(__SWITCH__)
+         "Fast"
+#else
          "Resampling"
+#endif
       },
       {
          "vice_resid_passband",
          "ReSID Filter Passband",
-         "Parameters for SID Filter",
+         "Parameters for SID Filter.",
          {
             { "0", NULL },
             { "10", NULL },
@@ -1192,7 +1205,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_gain",
          "ReSID Filter Gain",
-         "Parameters for SID Filter",
+         "Parameters for SID Filter.",
          {
             { "90", NULL },
             { "91", NULL },
@@ -1212,7 +1225,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_filterbias",
          "ReSID Filter Bias",
-         "Parameters for SID Filter",
+         "Parameters for SID Filter.",
          {
             { "-5000", NULL },
             { "-4500", NULL },
@@ -1242,7 +1255,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_8580filterbias",
          "ReSID Filter 8580 Bias",
-         "Parameters for SID Filter",
+         "Parameters for SID Filter.",
          {
             { "-5000", NULL },
             { "-4500", NULL },
@@ -1285,7 +1298,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_border",
          "Display Borders",
-         "All cores except 'x64sc' will reset when changing this option.\nWARNING: Toggling this multiple times in 'x64sc' will crash eventually!",
+         "All cores except 'x64sc' will reset when this option is changed.\nWARNING: Toggling this multiple times in 'x64sc' will crash eventually!",
          {
             { "enabled", NULL },
             { "disabled", NULL },
@@ -1327,15 +1340,19 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_statusbar",
          "Statusbar Mode",
-         "",
+         "- Full: Joyports + Current image + LEDs\n- Basic: Current image + LEDs\n- Minimal: Track number + FPS hidden",
          {
-            { "full", "Full" },
-            { "full_minimal", "Full Minimal" },
-            { "basic", "Basic" },
-            { "basic_minimal", "Basic Minimal" },
+            { "bottom", "Bottom Full" },
+            { "bottom__minimal", "Bottom Full Minimal" },
+            { "bottom_basic", "Bottom Basic" },
+            { "bottom_basic_minimal", "Bottom Basic Minimal" },
+            { "top", "Top Full" },
+            { "top_minimal", "Top Full Minimal" },
+            { "top_basic", "Top Basic" },
+            { "top_basic_minimal", "Top Basic Minimal" },
             { NULL, NULL },
          },
-         "full"
+         "bottom"
       },
       {
          "vice_gfx_colors",
@@ -1612,6 +1629,113 @@ void retro_set_environment(retro_environment_t cb)
          },
          "Port 2"
       },
+      {
+         "vice_joyport_type",
+         "RetroPad Port Type",
+         "Non-joysticks will be plugged into current port only and are controlled with the left analog stick or a real mouse.",
+         {
+            { "1", "Joystick" },
+            { "2", "Paddles" },
+            { "3", "Mouse (1351)" },
+            { "4", "Mouse (NEOS)" },
+            { "5", "Mouse (Amiga)" },
+            { "6", "Trackball (Atari CX-22)" },
+            { "7", "Mouse (Atari ST)" },
+            { "8", "Mouse (SmartMouse)" },
+            { "9", "Mouse (Micromys)" },
+            { "10", "Koalapad" },
+            { NULL, NULL },
+         },
+         "1"
+      },
+      {
+         "vice_analogmouse_deadzone",
+         "Analog Stick Mouse Deadzone",
+         "",
+         {
+            { "0", "0\%" },
+            { "5", "5\%" },
+            { "10", "10\%" },
+            { "15", "15\%" },
+            { "20", "20\%" },
+            { "25", "25\%" },
+            { "30", "30\%" },
+            { "35", "35\%" },
+            { "40", "40\%" },
+            { "45", "45\%" },
+            { "50", "50\%" },
+            { NULL, NULL },
+         },
+         "15"
+      },
+      {
+         "vice_analogmouse_speed",
+         "Analog Stick Mouse Speed",
+         "",
+         {
+            { "0.5", "50\%" },
+            { "0.6", "60\%" },
+            { "0.7", "70\%" },
+            { "0.8", "80\%" },
+            { "0.9", "90\%" },
+            { "1.0", "100\%" },
+            { "1.1", "110\%" },
+            { "1.2", "120\%" },
+            { "1.3", "130\%" },
+            { "1.4", "140\%" },
+            { "1.5", "150\%" },
+            { NULL, NULL },
+         },
+         "1.0"
+      },
+      {
+         "vice_dpadmouse_speed",
+         "D-Pad Mouse Speed",
+         "",
+         {
+            { "3", "50\%" },
+            { "4", "66\%" },
+            { "5", "83\%" },
+            { "6", "100\%" },
+            { "7", "116\%" },
+            { "8", "133\%" },
+            { "9", "150\%" },
+            { "10", "166\%" },
+            { "11", "183\%" },
+            { "12", "200\%" },
+            { NULL, NULL },
+         },
+         "6"
+      },
+      {
+         "vice_mouse_speed",
+         "Mouse Speed",
+         "Affects mouse speed globally.",
+         {
+            { "10", "10\%" },
+            { "20", "20\%" },
+            { "30", "30\%" },
+            { "40", "40\%" },
+            { "50", "50\%" },
+            { "60", "60\%" },
+            { "70", "70\%" },
+            { "80", "80\%" },
+            { "90", "90\%" },
+            { "100", "100\%" },
+            { "110", "110\%" },
+            { "120", "120\%" },
+            { "130", "130\%" },
+            { "140", "140\%" },
+            { "150", "150\%" },
+            { "160", "160\%" },
+            { "170", "170\%" },
+            { "180", "180\%" },
+            { "190", "190\%" },
+            { "200", "200\%" },
+            { NULL, NULL },
+         },
+         "100"
+      },
 #endif
       {
          "vice_userport_joytype",
@@ -1770,12 +1894,19 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad Select",
          "",
          {{ NULL, NULL }},
-         "RETROK_F11"
+         "TOGGLE_VKBD"
       },
       {
          "vice_mapper_start",
          "RetroPad Start",
          "",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_b",
+         "RetroPad B",
+         "Unmapped defaults to fire button.",
          {{ NULL, NULL }},
          "---"
       },
@@ -1933,6 +2064,19 @@ void retro_set_environment(retro_environment_t cb)
          },
          "4"
       },
+      {
+         "vice_retropad_options",
+         "RetroPad Face Button Options",
+         "Rotate face buttons clockwise and/or make 2nd fire press up.",
+         {
+            { "disabled", "B = Fire" },
+            { "jump", "B = Fire, A = Up" },
+            { "rotate", "Y = Fire" },
+            { "rotate_jump", "Y = Fire, B = Up" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
 
       { NULL, NULL, NULL, {{0}}, NULL },
    };
@@ -1940,27 +2084,55 @@ void retro_set_environment(retro_environment_t cb)
    /* fill in the values for all the mappers */
    int i = 0;
    int j = 0;
+   int hotkey = 0;
    while (core_options[i].key) 
    {
       if (strstr(core_options[i].key, "vice_mapper_"))
       {
+         /* Show different key list for hotkeys (special negatives removed) */
+         if (  strstr(core_options[i].key, "vice_mapper_vkbd")
+            || strstr(core_options[i].key, "vice_mapper_statusbar")
+            || strstr(core_options[i].key, "vice_mapper_joyport_switch")
+            || strstr(core_options[i].key, "vice_mapper_reset")
+            || strstr(core_options[i].key, "vice_mapper_zoom_mode_toggle")
+            || strstr(core_options[i].key, "vice_mapper_warp_mode")
+            || strstr(core_options[i].key, "vice_mapper_datasette_toggle_hotkeys")
+            || strstr(core_options[i].key, "vice_mapper_datasette_start")
+            || strstr(core_options[i].key, "vice_mapper_datasette_stop")
+            || strstr(core_options[i].key, "vice_mapper_datasette_rewind")
+            || strstr(core_options[i].key, "vice_mapper_datasette_forward")
+            || strstr(core_options[i].key, "vice_mapper_datasette_reset")
+            )
+            hotkey = 1;
+         else
+            hotkey = 0;
+
          j = 0;
-         while (keyDesc[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+         if (hotkey)
          {
-            core_options[i].values[j].value = keyDesc[j];
-            core_options[i].values[j].label = NULL;
-            ++j;
-         };
+             while (keyDescHotkeys[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+             {
+                core_options[i].values[j].value = keyDescHotkeys[j];
+                core_options[i].values[j].label = NULL;
+                ++j;
+             };
+         }
+         else
+         {
+             while (keyDesc[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+             {
+                core_options[i].values[j].value = keyDesc[j];
+                core_options[i].values[j].label = NULL;
+                ++j;
+             };
+         }
          core_options[i].values[j].value = NULL;
          core_options[i].values[j].label = NULL;
       };
       ++i;
    }
 
-   static bool allowNoGameMode;
-
    environ_cb = cb;
-
    cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
    unsigned version = 0;
@@ -2020,6 +2192,7 @@ void retro_set_environment(retro_environment_t cb)
 #undef NUM_CORE_OPTIONS
    }
 
+   static bool allowNoGameMode;
    allowNoGameMode = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
 }
@@ -2780,6 +2953,42 @@ static void update_variables(void)
       if (strcmp(var.value, "Port 2") == 0 && !cur_port_locked) cur_port=2;
       else if (strcmp(var.value, "Port 1") == 0 && !cur_port_locked) cur_port=1;
    }
+
+   var.key = "vice_joyport_type";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_joyport_type = atoi(var.value);
+   }
+
+   var.key = "vice_analogmouse_deadzone";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_analogmouse_deadzone = atoi(var.value);
+   }
+
+   var.key = "vice_analogmouse_speed";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_analogmouse_speed = atof(var.value);
+   }
+
+   var.key = "vice_dpadmouse_speed";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_dpadmouse_speed = atoi(var.value);
+   }
+
+   var.key = "vice_mouse_speed";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_mouse_speed = atoi(var.value);
+   }
+
 #endif
 
    var.key = "vice_keyrah_keypad_mappings";
@@ -2796,6 +3005,16 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "disabled") == 0) RETROKEYBOARDPASSTHROUGH=0;
       else if (strcmp(var.value, "enabled") == 0) RETROKEYBOARDPASSTHROUGH=1;
+   }
+
+   var.key = "vice_retropad_options";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) opt_retropad_options=0;
+      else if (strcmp(var.value, "rotate") == 0) opt_retropad_options=1;
+      else if (strcmp(var.value, "jump") == 0) opt_retropad_options=2;
+      else if (strcmp(var.value, "rotate_jump") == 0) opt_retropad_options=3;
    }
 
    var.key = "vice_turbo_fire_button";
@@ -2842,10 +3061,18 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "full") == 0) opt_statusbar=0;
-      else if (strcmp(var.value, "full_minimal") == 0) opt_statusbar=1;
-      else if (strcmp(var.value, "basic") == 0) opt_statusbar=2;
-      else if (strcmp(var.value, "basic_minimal") == 0) opt_statusbar=3;
+      opt_statusbar = 0;
+
+      if (strstr(var.value, "top"))
+         opt_statusbar |= STATUSBAR_TOP;
+      else
+         opt_statusbar |= STATUSBAR_BOTTOM;
+
+      if (strstr(var.value, "basic"))
+         opt_statusbar |= STATUSBAR_BASIC;
+
+      if (strstr(var.value, "minimal"))
+         opt_statusbar |= STATUSBAR_MINIMAL;
    }
 
    var.key = "vice_mapping_options_display";
@@ -2902,6 +3129,13 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       mapper_keys[RETRO_DEVICE_ID_JOYPAD_START] = keyId(var.value);
+   }
+
+   var.key = "vice_mapper_b";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_B] = keyId(var.value);
    }
 
    var.key = "vice_mapper_a";
@@ -3128,6 +3362,8 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_start";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_b";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_a";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_y";
@@ -3335,6 +3571,7 @@ static bool retro_set_eject_state(bool ejected)
                 else
                     file_system_attach_disk(unit, dc->files[dc->index]);
 
+                display_current_image(dc->labels[dc->index], true);
                 return true;
             }
         }
@@ -3379,8 +3616,8 @@ static bool retro_set_image_index(unsigned index)
             if ((index < dc->count) && (dc->files[index]))
             {
                 log_disk_in_tray(display_disk_name);
+                display_current_image(dc->labels[dc->index], false);
             }
-
             return true;
         }
     }

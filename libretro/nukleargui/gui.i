@@ -1,12 +1,4 @@
 /* nuklear - v1.00 - public domain */
-
-/* VICE HEADER */
-#include "ui.h"
-#include "log.h"
-#include "resources.h"
-
-#define NUMB(a) (sizeof(a) / sizeof(*a))
-
 typedef enum
 {
     GUI_NONE = 0,
@@ -57,8 +49,8 @@ static int gui(struct nk_context *ctx)
                 }
                 else
                 {
-                    offset.x = GUIRECT.x;// - retroXS_offset;
-                    offset.y = GUIRECT.y;// - retroYS_offset;
+                    offset.x = GUIRECT.x;
+                    offset.y = GUIRECT.y;
 #if defined(__VIC20__)
                     if (retro_get_region() == RETRO_REGION_NTSC)
                     {
@@ -73,7 +65,13 @@ static int gui(struct nk_context *ctx)
                     if (retro_get_region() == RETRO_REGION_NTSC)
                         offset.y -= 12;
 #endif
+                    if (zoom_mode_id < 3)
+                        offset.y += 4;
                 }
+
+                if (opt_statusbar & STATUSBAR_TOP && (zoom_mode_id == 3 || retro_get_borders()))
+                    offset.y += 8;
+
                 nk_window_set_position(ctx, offset);
                 #include "vkboard.i"
                 nk_end(ctx);

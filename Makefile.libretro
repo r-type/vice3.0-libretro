@@ -351,7 +351,9 @@ CFLAGS      += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 LDFLAGS     += -lm $(fpic)
 
 # Ensure only a language version supported by all compilers is used
-CFLAGS      += -std=c99
+# Do not enforce C99 as some gcc-versions appear to not handle system-headers
+# properly in that case.
+#CFLAGS      += -std=c99
 CXXFLAGS    += -std=c++98
 
 ifeq ($(platform), theos_ios)

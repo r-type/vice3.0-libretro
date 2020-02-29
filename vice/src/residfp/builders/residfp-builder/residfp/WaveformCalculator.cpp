@@ -21,7 +21,10 @@
 
 #include "WaveformCalculator.h"
 
+#ifdef __LIBRETRO__
+#else
 #include <cmath>
+#endif
 
 namespace reSIDfp
 {

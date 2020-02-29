@@ -22,12 +22,15 @@
 
 #include "SincResampler.h"
 
+#ifdef __LIBRETRO__
+#else
 #include <cassert>
 #include <cstring>
 #include <cmath>
 #include <iostream>
 #include <sstream>
 #include <limits>
+#endif
 
 #include "siddefs-fp.h"
 
@@ -35,8 +38,11 @@
 #  include "config.h"
 #endif
 
+#ifdef __LIBRETRO__
+#else
 #ifdef HAVE_MMINTRIN_H
 #  include <mmintrin.h>
+#endif
 #endif
 
 namespace reSIDfp

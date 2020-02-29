@@ -350,8 +350,9 @@ CXXFLAGS    += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 CFLAGS      += -D__LIBRETRO__ $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 LDFLAGS     += -lm $(fpic)
 
-$(info CFLAGS: $(CFLAGS))
-$(info -------)
+# Ensure only a language version supported by all compilers is used
+CFLAGS      += -std=c99
+CXXFLAGS    += -std=c++98
 
 ifeq ($(platform), theos_ios)
 COMMON_FLAGS := -DIOS -DARM $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error
@@ -375,7 +376,7 @@ endif
 	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 %.o: %.cc
-	$(CC) $(CFLAGS) -c $^ -o $@
+	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)

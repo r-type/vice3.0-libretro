@@ -21,7 +21,10 @@
 
 #include "OpAmp.h"
 
+#ifdef __LIBRETRO__
+#else
 #include <cmath>
+#endif
 
 #include "siddefs-fp.h"
 

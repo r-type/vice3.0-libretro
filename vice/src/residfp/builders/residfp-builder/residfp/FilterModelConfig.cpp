@@ -22,8 +22,11 @@
 
 #include "FilterModelConfig.h"
 
+#ifdef __LIBRETRO__
+#else
 #include <cmath>
 #include <cassert>
+#endif
 
 #include "Integrator.h"
 #include "OpAmp.h"

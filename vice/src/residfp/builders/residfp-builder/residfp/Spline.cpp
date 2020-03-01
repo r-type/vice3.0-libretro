@@ -21,8 +21,11 @@
 
 #include "Spline.h"
 
+#ifdef __LIBRETRO__
+#else
 #include <cassert>
 #include <limits>
+#endif
 
 namespace reSIDfp
 {

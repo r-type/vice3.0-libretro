@@ -22,7 +22,10 @@
 
 #include "FilterModelConfig8580.h"
 
+#ifdef __LIBRETRO__
+#else
 #include <cassert>
+#endif
 
 #include "Integrator8580.h"
 #include "OpAmp.h"

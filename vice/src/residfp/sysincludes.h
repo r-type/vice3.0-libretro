@@ -8,9 +8,16 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <cstring>
+#include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
+#ifdef HAVE_MMINTRIN_H
+#  include <mmintrin.h>
+#endif
 #include <stdint.h>
+#include <sstream>
 #include <string>
 #include <vector>
 #endif

@@ -24,7 +24,10 @@
 
 #include "SID.h"
 
+#ifdef __LIBRETRO__
+#else
 #include <limits>
+#endif
 
 #include "array.h"
 #include "Filter6581.h"

@@ -1,4 +1,4 @@
-int x = 0,y = 0;
+int x = 0, y = 0;
 
 #if defined(__VIC20__)
 ctx->style.window.padding   = nk_vec2(0,1);
@@ -10,14 +10,6 @@ ctx->style.window.spacing   = nk_vec2(2,2);
 ctx->style.button.padding   = nk_vec2(0,0);
 ctx->style.button.border    = 0;
 ctx->style.button.rounding  = 0;
-
-struct nk_style_item key_color_default      = ctx->style.button.normal;
-struct nk_style_item key_color_active       = ctx->style.button.active;
-struct nk_style_item key_color_function     = ctx->style.window.header.normal;
-struct nk_style_item key_color_hotkey       = ctx->style.property.normal;
-struct nk_style_item key_color_sticky       = ctx->style.slider.cursor_normal;
-struct nk_style_item key_color_datasette    = ctx->style.slider.cursor_hover;
-struct nk_style_item key_color_reset        = ctx->style.slider.cursor_active;
 
 #if defined(__VIC20__)
 nk_layout_row_dynamic(ctx, 23, NPLGN);
@@ -42,8 +34,12 @@ for (y=0; y<NLIGN; y++)
     for (x=0; x<NPLGN; x++)
     {
         /* Reset default color */
-        ctx->style.button.normal = key_color_default;
-        ctx->style.button.active = key_color_active;
+        ctx->style.button.text_normal   = key_color_text_normal;
+        ctx->style.button.text_hover    = key_color_text_hover;
+        ctx->style.button.text_active   = key_color_text_active;
+        ctx->style.button.normal        = key_color_default;
+        ctx->style.button.hover         = key_color_hover;
+        ctx->style.button.active        = key_color_active;
 
         /* Function key color */
         if (MVk[(y*NPLGN)+x].val == RETROK_F1

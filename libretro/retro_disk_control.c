@@ -139,13 +139,11 @@ static char* get_label(const char* filename)
     }
 
     // Nothing found, fallback to short pathname
+    char image_label[512];
+    image_label[0] = '\0';
+    fill_short_pathname_representation(image_label, filename, sizeof(image_label));
     if (!have_disk_label && !have_tape_label)
-    {
-        char image_label[512];
-        image_label[0] = '\0';
-        fill_short_pathname_representation(image_label, filename, sizeof(image_label));
         return strdup((char*)image_label);
-    }
 
     // Special processing for disk label - sanity check and trimming
     if (have_disk_label)
@@ -158,7 +156,7 @@ static char* get_label(const char* filename)
             unsigned char c = label[i];
             if (c != PETSCII_NBSP && (c < PETSCII_SPACE || c > PETSCII_SHIFTED_Z))
             {
-                return NULL;
+                return strdup((char*)image_label);
             }
         }
 #endif
@@ -185,7 +183,7 @@ static char* get_label(const char* filename)
         if (c >= PETSCII_SHIFTED_A)
         {
 #if defined(DISK_LABEL_FORBID_SHIFTED)
-            return NULL;
+            return strdup((char*)image_label);
 #endif
             // Have shifted chars
             have_shifted = true;
@@ -234,7 +232,7 @@ static char* get_label(const char* filename)
 
     if (is_ugly((char*)label))
     {
-        return NULL;
+        return strdup((char*)image_label);
     }
 
     return strdup((char*)label);

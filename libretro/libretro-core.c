@@ -32,6 +32,8 @@ int cpuloop = 1;
 // VKBD 
 extern int SHOWKEY;
 unsigned int opt_vkbd_theme;
+unsigned int opt_vkbd_alpha = 204;
+unsigned int vkbd_alpha = 204;
 extern void reset_mouse_pos();
 static bool request_reset_mouse_pos = false;
 
@@ -220,10 +222,10 @@ unsigned int retro_get_borders(void)
    return RETROBORDERS;
 }
 
-unsigned int retro_toggle_vkbd_theme(void)
+unsigned int retro_toggle_vkbd_alpha(void)
 {
-   opt_vkbd_theme = (opt_vkbd_theme % 2) ? opt_vkbd_theme-1 : opt_vkbd_theme+1;
-   return opt_vkbd_theme;
+   vkbd_alpha = (vkbd_alpha == 255) ? opt_vkbd_alpha : 255;
+   return vkbd_alpha;
 }
 
 void retro_set_input_state(retro_input_state_t cb)
@@ -703,10 +705,7 @@ void update_from_vice()
     if (attachedImage != NULL)
     {
         dc->eject_state = false;
-        char image_label[512];
-        image_label[0] = '\0';
-        fill_short_pathname_representation(image_label, attachedImage, sizeof(image_label));
-        display_current_image(image_label, true);
+        display_current_image(attachedImage, true);
     }
     else
         dc->eject_state = true;
@@ -1324,21 +1323,6 @@ void retro_set_environment(retro_environment_t cb)
       },
 #endif
       {
-         "vice_theme",
-         "Virtual Keyboard Theme",
-         "By default, the keyboard comes up with SELECT button or F11 key.",
-         {
-            { "0", "C64" },
-            { "1", "C64 Transparent" },
-            { "2", "C64C" },
-            { "3", "C64C Transparent" },
-            { "4", "Dark Transparent" },
-            { "5", "Light Transparent" },
-            { NULL, NULL },
-         },
-         "1"
-      },
-      {
          "vice_statusbar",
          "Statusbar Mode",
          "- Full: Joyports + Current image + LEDs\n- Basic: Current image + LEDs\n- Minimal: Track number + FPS hidden",
@@ -1354,6 +1338,48 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "bottom"
+      },
+      {
+         "vice_vkbd_theme",
+         "Virtual Keyboard Theme",
+         "By default, the keyboard comes up with SELECT button or F11 key.",
+         {
+            { "0", "C64" },
+            { "1", "C64C" },
+            { "2", "Dark" },
+            { "3", "Light" },
+            { NULL, NULL },
+         },
+         "0"
+      },
+      {
+         "vice_vkbd_alpha",
+         "Virtual Keyboard Transparency",
+         "",
+         {
+            { "0\%", NULL },
+            { "5\%", NULL },
+            { "10\%", NULL },
+            { "15\%", NULL },
+            { "20\%", NULL },
+            { "25\%", NULL },
+            { "30\%", NULL },
+            { "35\%", NULL },
+            { "40\%", NULL },
+            { "45\%", NULL },
+            { "50\%", NULL },
+            { "55\%", NULL },
+            { "60\%", NULL },
+            { "65\%", NULL },
+            { "70\%", NULL },
+            { "75\%", NULL },
+            { "80\%", NULL },
+            { "85\%", NULL },
+            { "90\%", NULL },
+            { "95\%", NULL },
+            { NULL, NULL },
+         },
+         "20\%"
       },
       {
          "vice_gfx_colors",
@@ -1489,7 +1515,7 @@ void retro_set_environment(retro_environment_t cb)
             { "4000", "4.00" },
             { NULL, NULL },
          },
-         "2600"
+         "2500"
       },
       {
          "vice_vicii_color_saturation",
@@ -3051,12 +3077,20 @@ static void update_variables(void)
       else if (strcmp(var.value, "Hard") == 0) RETRORESET=2;
    }
 
-   var.key = "vice_theme";
+   var.key = "vice_vkbd_theme";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       RETROTHEME=atoi(var.value);
       opt_vkbd_theme=RETROTHEME;
+   }
+
+   var.key = "vice_vkbd_alpha";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_vkbd_alpha = 255 - (255 * atoi(var.value) / 100);
+      vkbd_alpha = opt_vkbd_alpha;
    }
 
    var.key = "vice_statusbar";
@@ -3494,7 +3528,11 @@ static void update_variables(void)
    option_display.key = "vice_vicii_color_brightness",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-   option_display.key = "vice_theme";
+   option_display.key = "vice_vkbd_theme";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vkbd_alpha";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 }
 
@@ -3573,7 +3611,7 @@ static bool retro_set_eject_state(bool ejected)
                 else
                     file_system_attach_disk(unit, dc->files[dc->index]);
 
-                display_current_image(dc->labels[dc->index], true);
+                display_current_image(dc->files[dc->index], true);
                 return true;
             }
         }
@@ -3618,7 +3656,7 @@ static bool retro_set_image_index(unsigned index)
             if ((index < dc->count) && (dc->files[index]))
             {
                 log_disk_in_tray(display_disk_name);
-                display_current_image(dc->labels[dc->index], false);
+                display_current_image(dc->files[dc->index], false);
             }
             return true;
         }

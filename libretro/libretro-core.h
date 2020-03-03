@@ -89,5 +89,5 @@ extern int RETROUSERPORTJOY;
 extern void maincpu_mainloop_retro(void);
 extern long GetTicks(void);
 extern unsigned int retro_get_borders(void);
-extern unsigned int retro_toggle_vkbd_theme(void);
+extern unsigned int retro_toggle_vkbd_alpha(void);
 #endif

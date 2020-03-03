@@ -692,6 +692,10 @@ void update_from_vice()
         }
     }
 
+    // Disable autostart only with disks or tapes
+    if (noautostart && attachedImage != NULL)
+       autostart_disable();
+
     // If there an image attached, but autostart is empty, autostart from the image
     if (autostartString == NULL && attachedImage != NULL && !noautostart)
     {
@@ -1029,7 +1033,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_reset",
          "Reset Type",
-         "Soft keeps some code in memory, hard erases all memory.",
+         "'Soft' keeps some code in memory, 'Hard' erases all memory.",
          {
             { "Autostart", NULL },
             { "Soft", NULL },
@@ -1039,15 +1043,16 @@ void retro_set_environment(retro_environment_t cb)
          "Autostart"
       },
       {
-         "vice_autostart_warp",
-         "Autostart Warp",
-         "Automatically turns on warp mode between load and run for faster startup.",
+         "vice_autostart",
+         "Autostart",
+         "'Enabled' always runs content, 'Disabled' runs only PRG/CRT, 'Warp' turns warp mode on during autostart loading.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
+            { "warp", "Warp" },
             { NULL, NULL },
          },
-         "disabled"
+         "enabled"
       },
       {
          "vice_drive_true_emulation",
@@ -1074,7 +1079,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_emulation",
          "Drive Sound Emulation",
-         "Emulates the iconic floppy drive sounds.\nTrue Drive Emulation & D64 disk image required.",
+         "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 disk image required.",
          {
             { "disabled", NULL },
             { "10\%", "10\% volume" },
@@ -1298,7 +1303,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_border",
          "Display Borders",
-         "All cores except 'x64sc' will reset when this option is changed.\nWARNING: Toggling this multiple times in 'x64sc' will crash eventually!",
+         "All cores except 'x64sc' will reset when this option is changed.",
          {
             { "enabled", NULL },
             { "disabled", NULL },
@@ -1311,7 +1316,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode",
          "Zoom Mode",
-         "Zoom will be ignored without borders.\nRequirements in RetroArch settings:\nAspect Ratio: Core provided,\nInteger Scale: Off.",
+         "Zoom will be ignored without borders.\nRequirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
          {
             { "none", "disabled" },
             { "small", "Small" },
@@ -1384,7 +1389,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_gfx_colors",
          "Color Depth",
-         "24-bit is slower and not available on all platforms. Restart required.",
+         "24-bit is slower and not available on all platforms. Full restart required.",
          {
             { "16bit", "Thousands (16-bit)" },
             { "24bit", "Millions (24-bit)" },
@@ -2243,22 +2248,27 @@ static void update_variables(void)
 
    log_cb(RETRO_LOG_INFO, "Updating variables, UI finalized = %d\n", retro_ui_finalized);
 
-   var.key = "vice_autostart_warp";
+   var.key = "vice_autostart";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (retro_ui_finalized)
       {
-         if (strcmp(var.value, "enabled") == 0)
+         if (strcmp(var.value, "warp") == 0)
             log_resources_set_int("AutostartWarp", 1);
-         if (strcmp(var.value, "disabled") == 0)
+         else
             log_resources_set_int("AutostartWarp", 0);
       }
       else
       {
-         if (strcmp(var.value, "enabled") == 0) RETROAUTOSTARTWARP=1;
-         if (strcmp(var.value, "disabled") == 0) RETROAUTOSTARTWARP=0;
+         if (strcmp(var.value, "warp") == 0) RETROAUTOSTARTWARP=1;
+         else RETROAUTOSTARTWARP=0;
       }
+
+      if (strcmp(var.value, "disabled") == 0)
+         noautostart = true;
+      else
+         noautostart = false;
    }
 
    var.key = "vice_drive_true_emulation";
@@ -3541,6 +3551,9 @@ void emu_reset(void)
    // Always stop datasette or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
 
+   // Always disable Warp
+   resources_set_int("WarpMode", 0);
+
    /* Changing opt_read_vicerc requires reloading */
    if (request_reload_restart)
       reload_restart();
@@ -3548,7 +3561,7 @@ void emu_reset(void)
    switch (RETRORESET)
    {
       case 0:
-         if (autostartString != NULL && autostartString[0] != '\0')
+         if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
             autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
          else
             machine_trigger_reset(MACHINE_RESET_MODE_HARD);
@@ -3569,12 +3582,15 @@ void retro_reset(void)
    // Always stop datasette, or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
 
+   // Always disable Warp
+   resources_set_int("WarpMode", 0);
+
    /* Changing opt_read_vicerc requires reloading */
    if (request_reload_restart)
       reload_restart();
 
    /* Retro reset should always autostart */
-   if (autostartString != NULL && autostartString[0] != '\0')
+   if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
       autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
    else
       machine_trigger_reset(MACHINE_RESET_MODE_HARD);

@@ -175,7 +175,7 @@ void app_vkb_handle(void)
     static int vkey_sticky1_release = 0;
     static int vkey_sticky2_release = 0;
 
-    if (vkey_sticky && last_vkey_pressed != -1)
+    if (vkey_sticky && last_vkey_pressed != -1 && last_vkey_pressed > 0)
     {
         if (vkey_sticky1 > -1 && vkey_sticky1 != last_vkey_pressed)
         {

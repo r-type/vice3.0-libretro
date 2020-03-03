@@ -32,6 +32,8 @@ int cpuloop = 1;
 // VKBD 
 extern int SHOWKEY;
 unsigned int opt_vkbd_theme;
+unsigned int opt_vkbd_alpha = 204;
+unsigned int vkbd_alpha = 204;
 extern void reset_mouse_pos();
 static bool request_reset_mouse_pos = false;
 
@@ -220,10 +222,10 @@ unsigned int retro_get_borders(void)
    return RETROBORDERS;
 }
 
-unsigned int retro_toggle_vkbd_theme(void)
+unsigned int retro_toggle_vkbd_alpha(void)
 {
-   opt_vkbd_theme = (opt_vkbd_theme % 2) ? opt_vkbd_theme-1 : opt_vkbd_theme+1;
-   return opt_vkbd_theme;
+   vkbd_alpha = (vkbd_alpha == 255) ? opt_vkbd_alpha : 255;
+   return vkbd_alpha;
 }
 
 void retro_set_input_state(retro_input_state_t cb)
@@ -690,6 +692,10 @@ void update_from_vice()
         }
     }
 
+    // Disable autostart only with disks or tapes
+    if (noautostart && attachedImage != NULL)
+       autostart_disable();
+
     // If there an image attached, but autostart is empty, autostart from the image
     if (autostartString == NULL && attachedImage != NULL && !noautostart)
     {
@@ -703,10 +709,7 @@ void update_from_vice()
     if (attachedImage != NULL)
     {
         dc->eject_state = false;
-        char image_label[512];
-        image_label[0] = '\0';
-        fill_short_pathname_representation(image_label, attachedImage, sizeof(image_label));
-        display_current_image(image_label, true);
+        display_current_image(attachedImage, true);
     }
     else
         dc->eject_state = true;
@@ -1030,7 +1033,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_reset",
          "Reset Type",
-         "Soft keeps some code in memory, hard erases all memory.",
+         "'Soft' keeps some code in memory, 'Hard' erases all memory.",
          {
             { "Autostart", NULL },
             { "Soft", NULL },
@@ -1040,15 +1043,16 @@ void retro_set_environment(retro_environment_t cb)
          "Autostart"
       },
       {
-         "vice_autostart_warp",
-         "Autostart Warp",
-         "Automatically turns on warp mode between load and run for faster startup.",
+         "vice_autostart",
+         "Autostart",
+         "'Enabled' always runs content, 'Disabled' runs only PRG/CRT, 'Warp' turns warp mode on during autostart loading.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
+            { "warp", "Warp" },
             { NULL, NULL },
          },
-         "disabled"
+         "enabled"
       },
       {
          "vice_drive_true_emulation",
@@ -1075,7 +1079,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_emulation",
          "Drive Sound Emulation",
-         "Emulates the iconic floppy drive sounds.\nTrue Drive Emulation & D64 disk image required.",
+         "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 disk image required.",
          {
             { "disabled", NULL },
             { "10\%", "10\% volume" },
@@ -1299,7 +1303,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_border",
          "Display Borders",
-         "All cores except 'x64sc' will reset when this option is changed.\nWARNING: Toggling this multiple times in 'x64sc' will crash eventually!",
+         "All cores except 'x64sc' will reset when this option is changed.",
          {
             { "enabled", NULL },
             { "disabled", NULL },
@@ -1312,7 +1316,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode",
          "Zoom Mode",
-         "Zoom will be ignored without borders.\nRequirements in RetroArch settings:\nAspect Ratio: Core provided,\nInteger Scale: Off.",
+         "Zoom will be ignored without borders.\nRequirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
          {
             { "none", "disabled" },
             { "small", "Small" },
@@ -1323,21 +1327,6 @@ void retro_set_environment(retro_environment_t cb)
          "none"
       },
 #endif
-      {
-         "vice_theme",
-         "Virtual Keyboard Theme",
-         "By default, the keyboard comes up with SELECT button or F11 key.",
-         {
-            { "0", "C64" },
-            { "1", "C64 Transparent" },
-            { "2", "C64C" },
-            { "3", "C64C Transparent" },
-            { "4", "Dark Transparent" },
-            { "5", "Light Transparent" },
-            { NULL, NULL },
-         },
-         "1"
-      },
       {
          "vice_statusbar",
          "Statusbar Mode",
@@ -1356,9 +1345,51 @@ void retro_set_environment(retro_environment_t cb)
          "bottom"
       },
       {
+         "vice_vkbd_theme",
+         "Virtual Keyboard Theme",
+         "By default, the keyboard comes up with SELECT button or F11 key.",
+         {
+            { "0", "C64" },
+            { "1", "C64C" },
+            { "2", "Dark" },
+            { "3", "Light" },
+            { NULL, NULL },
+         },
+         "0"
+      },
+      {
+         "vice_vkbd_alpha",
+         "Virtual Keyboard Transparency",
+         "",
+         {
+            { "0\%", NULL },
+            { "5\%", NULL },
+            { "10\%", NULL },
+            { "15\%", NULL },
+            { "20\%", NULL },
+            { "25\%", NULL },
+            { "30\%", NULL },
+            { "35\%", NULL },
+            { "40\%", NULL },
+            { "45\%", NULL },
+            { "50\%", NULL },
+            { "55\%", NULL },
+            { "60\%", NULL },
+            { "65\%", NULL },
+            { "70\%", NULL },
+            { "75\%", NULL },
+            { "80\%", NULL },
+            { "85\%", NULL },
+            { "90\%", NULL },
+            { "95\%", NULL },
+            { NULL, NULL },
+         },
+         "20\%"
+      },
+      {
          "vice_gfx_colors",
          "Color Depth",
-         "24-bit is slower and not available on all platforms. Restart required.",
+         "24-bit is slower and not available on all platforms. Full restart required.",
          {
             { "16bit", "Thousands (16-bit)" },
             { "24bit", "Millions (24-bit)" },
@@ -1489,7 +1520,7 @@ void retro_set_environment(retro_environment_t cb)
             { "4000", "4.00" },
             { NULL, NULL },
          },
-         "2600"
+         "2500"
       },
       {
          "vice_vicii_color_saturation",
@@ -2217,22 +2248,27 @@ static void update_variables(void)
 
    log_cb(RETRO_LOG_INFO, "Updating variables, UI finalized = %d\n", retro_ui_finalized);
 
-   var.key = "vice_autostart_warp";
+   var.key = "vice_autostart";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (retro_ui_finalized)
       {
-         if (strcmp(var.value, "enabled") == 0)
+         if (strcmp(var.value, "warp") == 0)
             log_resources_set_int("AutostartWarp", 1);
-         if (strcmp(var.value, "disabled") == 0)
+         else
             log_resources_set_int("AutostartWarp", 0);
       }
       else
       {
-         if (strcmp(var.value, "enabled") == 0) RETROAUTOSTARTWARP=1;
-         if (strcmp(var.value, "disabled") == 0) RETROAUTOSTARTWARP=0;
+         if (strcmp(var.value, "warp") == 0) RETROAUTOSTARTWARP=1;
+         else RETROAUTOSTARTWARP=0;
       }
+
+      if (strcmp(var.value, "disabled") == 0)
+         noautostart = true;
+      else
+         noautostart = false;
    }
 
    var.key = "vice_drive_true_emulation";
@@ -3051,12 +3087,20 @@ static void update_variables(void)
       else if (strcmp(var.value, "Hard") == 0) RETRORESET=2;
    }
 
-   var.key = "vice_theme";
+   var.key = "vice_vkbd_theme";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       RETROTHEME=atoi(var.value);
       opt_vkbd_theme=RETROTHEME;
+   }
+
+   var.key = "vice_vkbd_alpha";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      opt_vkbd_alpha = 255 - (255 * atoi(var.value) / 100);
+      vkbd_alpha = opt_vkbd_alpha;
    }
 
    var.key = "vice_statusbar";
@@ -3494,7 +3538,11 @@ static void update_variables(void)
    option_display.key = "vice_vicii_color_brightness",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-   option_display.key = "vice_theme";
+   option_display.key = "vice_vkbd_theme";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vkbd_alpha";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 }
 
@@ -3503,6 +3551,9 @@ void emu_reset(void)
    // Always stop datasette or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
 
+   // Always disable Warp
+   resources_set_int("WarpMode", 0);
+
    /* Changing opt_read_vicerc requires reloading */
    if (request_reload_restart)
       reload_restart();
@@ -3510,7 +3561,7 @@ void emu_reset(void)
    switch (RETRORESET)
    {
       case 0:
-         if (autostartString != NULL && autostartString[0] != '\0')
+         if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
             autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
          else
             machine_trigger_reset(MACHINE_RESET_MODE_HARD);
@@ -3531,12 +3582,15 @@ void retro_reset(void)
    // Always stop datasette, or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
 
+   // Always disable Warp
+   resources_set_int("WarpMode", 0);
+
    /* Changing opt_read_vicerc requires reloading */
    if (request_reload_restart)
       reload_restart();
 
    /* Retro reset should always autostart */
-   if (autostartString != NULL && autostartString[0] != '\0')
+   if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
       autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
    else
       machine_trigger_reset(MACHINE_RESET_MODE_HARD);
@@ -3573,7 +3627,7 @@ static bool retro_set_eject_state(bool ejected)
                 else
                     file_system_attach_disk(unit, dc->files[dc->index]);
 
-                display_current_image(dc->labels[dc->index], true);
+                display_current_image(dc->files[dc->index], true);
                 return true;
             }
         }
@@ -3618,7 +3672,7 @@ static bool retro_set_image_index(unsigned index)
             if ((index < dc->count) && (dc->files[index]))
             {
                 log_disk_in_tray(display_disk_name);
-                display_current_image(dc->labels[dc->index], false);
+                display_current_image(dc->files[dc->index], false);
             }
             return true;
         }

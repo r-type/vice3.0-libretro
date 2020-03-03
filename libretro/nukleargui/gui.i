@@ -13,35 +13,82 @@ static int gui(struct nk_context *ctx)
     if (SHOWKEY==1)
         GUISTATE = GUI_VKBD;
 
+    struct nk_color key_color_text_normal       = ctx->style.button.text_normal;
+    struct nk_color key_color_text_hover        = ctx->style.button.text_hover;
+    struct nk_color key_color_text_active       = ctx->style.button.text_active;
+    struct nk_style_item key_color_default      = ctx->style.button.normal;
+    struct nk_style_item key_color_hover        = ctx->style.button.hover;
+    struct nk_style_item key_color_active       = ctx->style.button.active;
+    struct nk_style_item key_color_function     = ctx->style.window.header.normal;
+    struct nk_style_item key_color_hotkey       = ctx->style.property.normal;
+    struct nk_style_item key_color_sticky       = ctx->style.slider.cursor_normal;
+    struct nk_style_item key_color_datasette    = ctx->style.slider.cursor_hover;
+    struct nk_style_item key_color_reset        = ctx->style.slider.cursor_active;
+
+    key_color_reset = nk_style_item_color(nk_rgba(128,   0,   0, vkbd_alpha));
+
     switch (GUISTATE)
     {
         case GUI_VKBD:
-            if (nk_begin(ctx, "Vice Keyboard", GUIRECT, NK_WINDOW_NO_SCROLLBAR))
+            switch (opt_vkbd_theme)
             {
-                switch (opt_vkbd_theme)
-                {
-                    default:
-                    case 0:
-                        set_style(ctx, THEME_C64);
-                        break;
-                    case 1:
-                        set_style(ctx, THEME_C64_TRANSPARENT);
-                        break;
-                    case 2:
-                        set_style(ctx, THEME_C64C);
-                        break;
-                    case 3:
-                        set_style(ctx, THEME_C64C_TRANSPARENT);
-                        break;
-                    case 4:
-                        set_style(ctx, THEME_DARK_TRANSPARENT);
-                        break;
-                    case 5:
-                        set_style(ctx, THEME_LIGHT_TRANSPARENT);
-                        break;
-                }
-                
-                /* ensure vkbd is centered regardless of border setting */
+                default:
+                case 0: // C64
+                    key_color_text_normal   = nk_rgba(250, 250, 250, 255);
+                    key_color_text_hover    = nk_rgba(  4,   4,   4, 255);
+                    key_color_text_active   = nk_rgba(255, 255, 255, 255);
+                    key_color_default       = nk_style_item_color(nk_rgba( 69,  59,  58, vkbd_alpha));
+                    key_color_hover         = nk_style_item_color(nk_rgba(160, 160, 160, vkbd_alpha));
+                    key_color_active        = nk_style_item_color(nk_rgba( 48,  44,  45, vkbd_alpha));
+                    key_color_function      = nk_style_item_color(nk_rgba(123, 127, 130, vkbd_alpha));
+                    key_color_hotkey        = nk_style_item_color(nk_rgba(144, 141, 129, vkbd_alpha));
+                    key_color_sticky        = nk_style_item_color(nk_rgba( 40,  36,  37, 240));
+                    key_color_datasette     = nk_style_item_color(nk_rgba( 89,  79,  78, vkbd_alpha));
+                    break;
+
+                case 1: // C64C
+                    key_color_text_normal   = nk_rgba(  4,   4,   4, 255);
+                    key_color_text_hover    = nk_rgba(250, 250, 250, 255);
+                    key_color_text_active   = nk_rgba(  8,   8,   8, 255);
+                    key_color_default       = nk_style_item_color(nk_rgba(216, 209, 201, vkbd_alpha));
+                    key_color_hover         = nk_style_item_color(nk_rgba( 60,  60,  60, vkbd_alpha));
+                    key_color_active        = nk_style_item_color(nk_rgba(250, 250, 250, vkbd_alpha));
+                    key_color_function      = nk_style_item_color(nk_rgba(157, 152, 149, vkbd_alpha));
+                    key_color_hotkey        = nk_style_item_color(nk_rgba(144, 141, 129, vkbd_alpha));
+                    key_color_sticky        = nk_style_item_color(nk_rgba(255, 255, 255, 240));
+                    key_color_datasette     = nk_style_item_color(nk_rgba(109,  99,  98, vkbd_alpha));
+                    break;
+
+                case 2: // Dark
+                    key_color_text_normal   = nk_rgba(250, 250, 250, 255);
+                    key_color_text_hover    = nk_rgba(  4,   4,   4, 255);
+                    key_color_text_active   = nk_rgba(255, 255, 255, 255);
+                    key_color_default       = nk_style_item_color(nk_rgba( 32,  32,  32, vkbd_alpha));
+                    key_color_hover         = nk_style_item_color(nk_rgba(140, 140, 140, vkbd_alpha));
+                    key_color_active        = nk_style_item_color(nk_rgba( 16,  16,  16, 224));
+                    key_color_function      = nk_style_item_color(nk_rgba( 80,  80,  80, vkbd_alpha));
+                    key_color_hotkey        = nk_style_item_color(nk_rgba( 16,  16,  16, vkbd_alpha));
+                    key_color_sticky        = nk_style_item_color(nk_rgba(  8,   8,   8, 240));
+                    key_color_datasette     = nk_style_item_color(nk_rgba( 50,  50,  50, vkbd_alpha));
+                    break;
+
+                case 3: // Light
+                    key_color_text_normal   = nk_rgba(  4,   4,   4, 255);
+                    key_color_text_hover    = nk_rgba(250, 250, 250, 255);
+                    key_color_text_active   = nk_rgba(  8,   8,   8, 255);
+                    key_color_default       = nk_style_item_color(nk_rgba(220, 220, 220, vkbd_alpha));
+                    key_color_hover         = nk_style_item_color(nk_rgba(140, 140, 140, vkbd_alpha));
+                    key_color_active        = nk_style_item_color(nk_rgba(255, 255, 255, 224));
+                    key_color_function      = nk_style_item_color(nk_rgba(180, 180, 180, vkbd_alpha));
+                    key_color_hotkey        = nk_style_item_color(nk_rgba(160, 160, 160, vkbd_alpha));
+                    key_color_sticky        = nk_style_item_color(nk_rgba(255, 255, 255, 240));
+                    key_color_datasette     = nk_style_item_color(nk_rgba(190, 190, 190, vkbd_alpha));
+                    break;
+            }
+
+            if (nk_begin(ctx, "VKBD", GUIRECT, NK_WINDOW_NO_SCROLLBAR))
+            {
+                /* Ensure VKBD is centered regardless of border setting */
                 if (retro_get_borders())
                 {
                     offset.x = 0;

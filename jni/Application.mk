@@ -6,3 +6,5 @@ APP_ABI := all
 # because the crash didn't happen with those builds, and the resulting .so was also ~700 kb larger in size.
 # This should be investigated more in the future.
 APP_CFLAGS += -Wno-error=format-security -Ofast
+APP_STL := c++_static
+APP_PLATFORM := android-16

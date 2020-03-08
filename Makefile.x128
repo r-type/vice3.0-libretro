@@ -103,7 +103,6 @@ SOURCES_C += \
 		$(EMU)/c64/cart/clockport-rrnet.c  \
 		$(EMU)/c64/cart/clockport.c  \
 		$(EMU)/c64/cart/comal80.c  \
-		$(EMU)/c64/cart/cpmcart.c  \
 		$(EMU)/c64/cart/crt.c  \
 		$(EMU)/c64/cart/cs8900io.c  \
 		$(EMU)/c64/cart/daa.c  \

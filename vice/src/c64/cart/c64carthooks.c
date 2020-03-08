@@ -443,11 +443,13 @@ int cart_cmdline_options_init(void)
         return -1;
     }
 
+#ifndef __X128__
     if (machine_class == VICE_MACHINE_C64 || machine_class == VICE_MACHINE_C64SC) {
         if (cpmcart_cmdline_options_init() < 0) {
             return -1;
         }
     }
+#endif
 
     return cmdline_register_options(cmdline_options);
 }
@@ -502,11 +504,13 @@ int cart_resources_init(void)
         return -1;
     }
 
+#ifndef __X128__
     if (machine_class == VICE_MACHINE_C64 || machine_class == VICE_MACHINE_C64SC) {
         if (cpmcart_resources_init() < 0) {
             return -1;
         }
     }
+#endif
 
     return 0;
 }
@@ -2041,9 +2045,11 @@ void cartridge_reset(void)
     if (mmc64_cart_enabled()) {
         mmc64_reset();
     }
+#ifndef __X128__
     if (cpmcart_cart_enabled()) {
         cpmcart_reset();
     }
+#endif
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2561,9 +2567,11 @@ int cartridge_snapshot_write_modules(struct snapshot_s *s)
         switch (cart_ids[i]) {
             /* "Slot 0" */
             case CARTRIDGE_CPM:
+#ifndef __X128__
                 if (cpmcart_snapshot_write_module(s) < 0) {
                     return -1;
                 }
+#endif
                 break;
             case CARTRIDGE_MMC64:
                 if (mmc64_snapshot_write_module(s) < 0) {
@@ -3052,9 +3060,13 @@ int cartridge_snapshot_read_modules(struct snapshot_s *s)
         switch (cart_ids[i]) {
             /* "Slot 0" */
             case CARTRIDGE_CPM:
+#ifndef __X128__
                 if (cpmcart_snapshot_read_module(s) < 0) {
                     goto fail2;
                 }
+#else
+		goto fail2;
+#endif
                 break;
             case CARTRIDGE_MMC64:
                 if (mmc64_snapshot_read_module(s) < 0) {

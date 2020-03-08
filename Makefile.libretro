@@ -260,6 +260,12 @@ else ifeq ($(platform), vita)
   COMMONFLAGS += -DHAVE_STRTOUL -DVITA
 	STATIC_LINKING = 1
 
+else ifeq ($(platform), emscripten)
+   TARGET := $(TARGET_NAME)_libretro_emscripten.bc
+   fpic := -fPIC
+   SHARED := -shared -s TOTAL_MEMORY=67108864
+   STATIC_LINKING = 1
+   COMMONFLAGS += -DHAVE_TIME_T_IN_TIME_H
 else ifeq ($(platform), wii)
    TARGET := $(TARGET_NAME)_libretro_wii.a
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
@@ -365,7 +371,9 @@ include $(THEOS_MAKE_PATH)/library.mk
 else
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
-ifeq ($(STATIC_LINKING), 1)
+ifeq ($(platform), emscripten)
+	$(CXX) -r $(SHARED) -o $@ $(OBJECTS) $(LDFLAGS)
+else  ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
 else
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)

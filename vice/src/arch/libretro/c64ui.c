@@ -64,9 +64,9 @@ int c64ui_init(void)
 {
     return 0;
 }
-int c64ui_shutdown(void)
+
+void c64ui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -74,9 +74,8 @@ int c128ui_init(void)
 {
     return 0;
 }
-int c128ui_shutdown(void)
+void c128ui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -84,9 +83,8 @@ int c64dtvui_init(void)
 {
     return 0;
 }
-int c64dtvui_shutdown(void)
+void c64dtvui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -94,9 +92,8 @@ int c64scui_init(void)
 {
     return 0;
 }
-int c64scui_shutdown(void)
+void c64scui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -104,9 +101,8 @@ int scpu64ui_init(void)
 {
     return 0;
 }
-int scpu64ui_shutdown(void)
+void scpu64ui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -114,9 +110,8 @@ int plus4ui_init(void)
 {
     return 0;
 }
-int plus4ui_shutdown(void)
+void plus4ui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -124,9 +119,8 @@ int vic20ui_init(void)
 {
     return 0;
 }
-int vic20ui_shutdown(void)
+void vic20ui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -134,9 +128,8 @@ int cbm5x0ui_init(void)
 {
     return 0;
 }
-int cbm5x0ui_shutdown(void)
+void cbm5x0ui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -144,9 +137,8 @@ int cbm2ui_init(void)
 {
     return 0;
 }
-int cbm2ui_shutdown(void)
+void cbm2ui_shutdown(void)
 {
-    return 0;
 }
 
 
@@ -154,8 +146,7 @@ int petui_init(void)
 {
     return 0;
 }
-int petui_shutdown(void)
+void petui_shutdown(void)
 {
-    return 0;
 }
 

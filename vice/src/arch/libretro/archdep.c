@@ -64,17 +64,6 @@
 #include "util.h"
 #include "keyboard.h"
 
-#define LIBRETROHACK 1
-#ifdef LIBRETROHACK
-//FIXME remove me!
-BYTE plus4tcbm_outputa[2], plus4tcbm_outputb[2], plus4tcbm_outputc[2];
-BYTE tpid_outputa[2], tpid_outputb[2], tpid_outputc[2];
-/* 8502 cycle stretch indicator */
-int maincpu_stretch;
-/* 8502 memory refresh alarm */
- CLOCK c128cpu_memory_refresh_clk;
-#endif
-
 #include "../shared/archdep_atexit.c"
 #include "../shared/archdep_extra_title_text.c"
 

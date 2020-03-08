@@ -108,7 +108,7 @@ void ui_resources_shutdown(void)
 
 }
 
-int ui_init(void)
+int ui_init(int argc, char **argv)
 {
     return 0;
 }
@@ -140,7 +140,7 @@ int ui_emulation_is_paused(void)
     return 0;
 }
 
-void ui_pause_emulation(void)
+void ui_pause_emulation(int flag)
 {
 }
 

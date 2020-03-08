@@ -179,7 +179,7 @@ void video_arch_resources_shutdown()
 
 }
 
-void fullscreen_capability()
+void fullscreen_capability(struct cap_fullscreen_s *cap_fullscreen)
 {
 }
 

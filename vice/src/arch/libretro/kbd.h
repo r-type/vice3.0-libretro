@@ -38,8 +38,8 @@ extern void kbd_initialize_numpad_joykeys(int *joykeys);
 
 extern int kbd_arch_get_host_mapping(void);
 
-extern int kbd_handle_keydown(int kcode);
-extern int kbd_handle_keyup(int kcode);
+extern void kbd_handle_keydown(int kcode);
+extern void kbd_handle_keyup(int kcode);
 
 
 #endif

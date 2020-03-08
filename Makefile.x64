@@ -499,7 +499,6 @@ SOURCES_C += \
         $(EMU)/vdrive/vdrive.c \
         $(EMU)/vicefeatures.c \
         $(EMU)/vicii/vicii-badline.c \
-        $(EMU)/vicii/vicii-clock-stretch.c \
         $(EMU)/vicii/vicii-cmdline-options.c \
         $(EMU)/vicii/vicii-color.c \
         $(EMU)/vicii/vicii-draw.c \

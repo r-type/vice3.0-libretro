@@ -30,8 +30,8 @@
 //TYPES
 #define UINT16 uint16_t
 #define UINT32 uint32_t
-#define uint32 uint32_t
-#define uint8 uint8_t
+typedef uint32_t uint32;
+typedef uint8_t uint8;
 
 #if defined(__X128__)
 #define WINDOW_WIDTH 856

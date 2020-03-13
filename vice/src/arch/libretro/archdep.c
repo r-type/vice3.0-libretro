@@ -117,7 +117,7 @@ int archdep_rtc_get_centisecond(void)
 {
     struct timespec dtm;
     int status;
-#if defined(PSP) || defined(VITA)
+#if defined(PSP) || defined(VITA) || defined(_3DS)
     struct timeval tm;
     status = gettimeofday(&tm, NULL);
     if(status==0)

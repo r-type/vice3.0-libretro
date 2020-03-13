@@ -39,7 +39,8 @@ struct dc_storage
 {
 	char* command;
 	char* files[DC_MAX_SIZE];
-    char* labels[DC_MAX_SIZE];
+	char* labels[DC_MAX_SIZE];
+	char* names[DC_MAX_SIZE];
 	unsigned unit;
 	unsigned count;
 	int index;

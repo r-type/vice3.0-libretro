@@ -285,6 +285,8 @@ void dc_reset(dc_storage* dc)
         dc->files[i] = NULL;
         free(dc->labels[i]);
         dc->labels[i] = NULL;
+        free(dc->names[i]);
+        dc->names[i] = NULL;
     }
 
     dc->unit = 0;
@@ -309,19 +311,21 @@ dc_storage* dc_create(void)
         {
             dc->files[i] = NULL;
             dc->labels[i] = NULL;
+            dc->names[i] = NULL;
         }
     }
 
     return dc;
 }
 
-bool dc_add_file_int(dc_storage* dc, char* filename, char* label)
+bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* name)
 {
     // Verify
     if (filename == NULL || dc == NULL || dc->count > DC_MAX_SIZE)
     {
         free(filename);
         free(label);
+        free(name);
 
         return false;
     }
@@ -330,6 +334,7 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label)
     dc->count++;
     dc->files[dc->count-1] = filename;
     dc->labels[dc->count-1] = label;
+    dc->names[dc->count-1] = name;
     return true;
 }
 
@@ -352,8 +357,16 @@ bool dc_add_file(dc_storage* dc, const char* filename)
         }
     }
 
+    // Get 'name' - just the filename without extension
+    // > It would be nice to make use of the image label
+    //   here, but this often bears no relationship to
+    //   the actual file content...
+    char image_name[512];
+    image_name[0] = '\0';
+    fill_short_pathname_representation(image_name, filename, sizeof(image_name));
+
     // Copy and return
-    return dc_add_file_int(dc, strdup(filename), get_label(filename));
+    return dc_add_file_int(dc, strdup(filename), get_label(filename), strdup(image_name));
 }
 
 bool dc_remove_file(dc_storage* dc, int index)
@@ -369,10 +382,16 @@ bool dc_remove_file(dc_storage* dc, int index)
     dc->files[index] = NULL;
     free(dc->labels[index]);
     dc->labels[index] = NULL;
+    free(dc->names[index]);
+    dc->names[index] = NULL;
 
     // Shift all entries after index one slot up
     if (index != dc->count - 1)
+    {
         memmove(dc->files + index, dc->files + index + 1, (dc->count - 1 - index) * sizeof(dc->files[0]));
+        memmove(dc->labels + index, dc->labels + index + 1, (dc->count - 1 - index) * sizeof(dc->labels[0]));
+        memmove(dc->names + index, dc->names + index + 1, (dc->count - 1 - index) * sizeof(dc->names[0]));
+    }
 
     dc->count--;
 
@@ -398,6 +417,8 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
     dc->files[index] = NULL;
     free(dc->labels[index]);
     dc->labels[index] = NULL;
+    free(dc->names[index]);
+    dc->names[index] = NULL;
 
     if (filename == NULL)
     {
@@ -405,8 +426,14 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
     }
     else
     {
+        char image_name[512];
+        image_name[0] = '\0';
+
         dc->files[index] = strdup(filename);
         dc->labels[index] = get_label(filename);
+
+        fill_short_pathname_representation(image_name, filename, sizeof(image_name));
+        dc->names[index] = strdup(image_name);
     }
 
     return true;
@@ -455,6 +482,9 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
     // Label for the following file
     char* label = NULL;
 
+    // Disk control interface 'name' for the following file
+    char* image_name = NULL;
+
     while ((dc->count <= DC_MAX_SIZE) && (fgets(buffer, sizeof(buffer), fp) != NULL))
     {
         char* string = trimwhitespace(buffer);
@@ -472,7 +502,17 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
         {
             char* newlabel = trimwhitespace(buffer + strlen(M3U_NONSTD_LABEL));
             free(label);
-            label = newlabel[0] ? strdup(newlabel) : NULL;
+            free(image_name);
+            if (newlabel && newlabel[0])
+            {
+                label = strdup(newlabel);
+                image_name = strdup(newlabel);
+            }
+            else
+            {
+                label = NULL;
+                image_name = NULL;
+            }
         }
         // Disk name / label - EXTM3U standard compiant (#EXTINF)
         else if (!is_vfl && strstartswith(string, M3U_EXTSTD_LABEL))
@@ -482,7 +522,17 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
             if (newlabel)
                 newlabel = trimwhitespace(newlabel);
             free(label);
-            label = (newlabel && newlabel[0]) ? strdup(newlabel) : NULL;
+            free(image_name);
+            if (newlabel && newlabel[0])
+            {
+                label = strdup(newlabel);
+                image_name = strdup(newlabel);
+            }
+            else
+            {
+                label = NULL;
+                image_name = NULL;
+            }
         }
         // VFL UNIT number (UNIT)
         else if (is_vfl && strstartswith(string, VFL_UNIT_ENTRY))
@@ -512,16 +562,30 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
             char* filename;
             if ((filename = m3u_search_file(basedir, string)) != NULL)
             {
+                // If image name is missing, use filename
+                // without extension
+                if (!image_name)
+                {
+                    char tmp[512];
+                    tmp[0] = '\0';
+
+                    fill_short_pathname_representation(tmp, filename, sizeof(tmp));
+                    image_name = strdup(tmp);
+                }
+
                 // Add the file to the struct
-                dc_add_file_int(dc, filename, label ? label : get_label(filename));
+                dc_add_file_int(dc, filename, label ? label : get_label(filename), image_name);
                 label = NULL;
+                image_name = NULL;
             }
             else
             {
                 log_cb(RETRO_LOG_WARN, "File %s from list %s not found\n", list_file);
-                // Throw away the label
+                // Throw away the label and image name
                 free(label);
                 label = NULL;
+                free(image_name);
+                image_name = NULL;
             }
         }
     }
@@ -539,12 +603,16 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
             tmp = dc->labels[idx];
             dc->labels[idx] = dc->labels[ridx];
             dc->labels[ridx] = tmp;
+            tmp = dc->names[idx];
+            dc->names[idx] = dc->names[ridx];
+            dc->names[ridx] = tmp;
             ++idx; --ridx;
         }
     }
 
     free(basedir);
     free(label);
+    free(image_name);
 
     // Close the file 
     fclose(fp);

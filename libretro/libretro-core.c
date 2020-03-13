@@ -1,5 +1,6 @@
 #include "libretro.h"
 #include "libretro-core.h"
+#include "string/stdstring.h"
 #include "file/file_path.h"
 #include "compat/strcasestr.h"
 
@@ -3716,6 +3717,7 @@ static bool retro_replace_image_index(unsigned index,
         {
             dc_remove_file(dc, index);
         }
+        return true;
     }
 
     return false;	
@@ -3733,8 +3735,49 @@ static bool retro_add_image_index(void)
         {
             dc->files[dc->count] = NULL;
             dc->labels[dc->count] = NULL;
+            dc->names[dc->count] = NULL;
             dc->count++;
             return true;
+        }
+    }
+
+    return false;
+}
+
+static bool retro_get_image_path(unsigned index, char *path, size_t len)
+{
+    if (len < 1)
+        return false;
+
+    if (dc)
+    {
+        if (index < dc->count)
+        {
+            if (!string_is_empty(dc->files[index]))
+            {
+                strlcpy(path, dc->files[index], len);
+                return true;
+            }
+        }
+    }
+
+   return false;
+}
+
+static bool retro_get_image_label(unsigned index, char *label, size_t len)
+{
+    if (len < 1)
+        return false;
+
+    if (dc)
+    {
+        if (index < dc->count)
+        {
+            if (!string_is_empty(dc->names[index]))
+            {
+                strlcpy(label, dc->names[index], len);
+                return true;
+            }
         }
     }
 
@@ -3749,6 +3792,19 @@ static struct retro_disk_control_callback diskControl = {
     retro_get_num_images,
     retro_replace_image_index,
     retro_add_image_index,
+};
+
+static struct retro_disk_control_ext_callback diskControlExt = {
+   retro_set_eject_state,
+   retro_get_eject_state,
+   retro_get_image_index,
+   retro_set_image_index,
+   retro_get_num_images,
+   retro_replace_image_index,
+   retro_add_image_index,
+   NULL, // set_initial_image
+   retro_get_image_path,
+   retro_get_image_label,
 };
 
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
@@ -3814,7 +3870,21 @@ void retro_init(void)
 
    /* Use system directory for data files such as C64/.vpl etc. */
    snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%svice", RETRO_DIR, FSDEV_DIR_SEP_STR);
-   archdep_mkdir(retro_system_data_directory, 0);
+   int dir_mode = 0;
+#if defined(IOS)
+   dir_mode = 0755;
+#elif defined(VITA) || defined(PSP)
+   dir_mode = 0777;
+#elif defined(PS2)
+   dir_mode = 0777;
+#elif defined(ORBIS)
+   dir_mode = 0755;
+#elif defined(__QNX__)
+   dir_mode = 0777;
+#else
+   dir_mode = 0750;
+#endif
+   archdep_mkdir(retro_system_data_directory, dir_mode);
 
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
@@ -3860,7 +3930,12 @@ void retro_init(void)
 #undef RETRO_DESCRIPTOR_BLOCK
 
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
-   environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &diskControl);
+   
+   unsigned dci_version = 0;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_DISK_CONTROL_INTERFACE_VERSION, &dci_version) && (dci_version >= 1))
+      environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_EXT_INTERFACE, &diskControlExt);
+   else
+      environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &diskControl);
 
    static uint32_t quirks =  RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE | RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE;
    environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);

@@ -24,9 +24,7 @@ typedef signed int	Sint32;
 typedef signed char     int8;
 typedef signed short    int16;
 typedef signed int   int32;
-typedef unsigned char   uint8;
 typedef unsigned short  uint16;
-typedef unsigned int  uint32;
 
 /* Figure out how to support 64-bit datatypes */
 #if !defined(__STRICT_ANSI__)

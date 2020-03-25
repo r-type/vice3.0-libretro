@@ -53,23 +53,14 @@ static video_canvas_t *retro_canvas_create(video_canvas_t *canvas, unsigned int 
 video_canvas_t *video_canvas_create(video_canvas_t *canvas, 
       unsigned int *width, unsigned int *height, int mapped)
 {
-
    canvas->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
-
-   //printf ("canvas width wants to be : %d\ncanvas height wants to be : %d\ncanvas depth wants to be : %d\n", canvas->width, canvas->height, canvas->depth);
-
    canvas->depth = 8*pix_bytes;
-
-   //printf ("canvas set to %d x %d :%d\n", canvas->width, canvas->height,canvas->depth);
-
    video_canvas_set_palette(canvas, canvas->palette);
-
    return canvas;
 }
 
 void video_canvas_destroy(struct video_canvas_s *canvas)
 {
-
 }
 
 static int video_frame_buffer_alloc(video_canvas_t *canvas, 
@@ -176,7 +167,6 @@ int video_arch_resources_init()
 
 void video_arch_resources_shutdown()
 {
-
 }
 
 void fullscreen_capability(struct cap_fullscreen_s *cap_fullscreen)

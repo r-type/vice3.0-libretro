@@ -1,25 +1,25 @@
 # Vice 3.3 LIBRETRO
 
-Port of VICE 3.3 for libretro with nuklear GUI virtual keyboard
+Port of VICE 3.3 for libretro with virtual keyboard
 
-Supported platforms : Linux Win64 Android emscripten Switch Vita Apple
+Supported platforms: Linux Win64 Android emscripten Switch Vita Apple
 
-Source base: 
-https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
+Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
 
 ## Recent improvements
 
+- Paddles & mouse
 - Zoom mode
 - Savestates
 - Vice 3.3 update
 - x64sc / xpet
 - Virtual keyboard revamped: more responsive, cleaner design, much easier to control
-- Other GUI removed
+- GUI removed
 - Autostart PRG mode to inject
 - System-subdir renamed to vice and created automatically
 - Keyrah joystick maps 
 - C64 joystick disabled while using virtual keyboard
-- Cursor keys disabled while using C64 joystick
+- Cursor keys disabled while using RetroPad
 - New settings:
   - Drive sound emulation
   - Reset type (autostart, soft, hard)

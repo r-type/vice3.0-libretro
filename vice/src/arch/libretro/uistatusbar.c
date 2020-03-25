@@ -40,6 +40,7 @@
 
 #include "libretro.h"
 #include "libretro-core.h"
+#include "graph.h"
 #include "file/file_path.h"
 #include "retro_miscellaneous.h"
 
@@ -505,14 +506,6 @@ void uistatusbar_close(void)
     uistatusbar_state = UISTATUSBAR_REPAINT;
 }
 
-#include "keyboard.h"
-#include "RSDL_wrapper.h"
-#include "libretro-core.h"
-extern void Retro_Draw_string16(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned short fg, unsigned short bg);
-extern void Retro_Draw_string32(RSDL_Surface *surface, signed short int x, signed short int y, const char *string, unsigned short maxstrlen, unsigned short xscale, unsigned short yscale, unsigned fg, unsigned bg);
-extern void DrawFBoxBmp16(RSDL_Surface *surface, int x, int y, int dx, int dy, uint32_t color, unsigned int alpha);
-extern void DrawFBoxBmp32(RSDL_Surface *surface, int x, int y, int dx, int dy, uint32_t color, unsigned int alpha);
-
 void uistatusbar_draw(void)
 {
     int i;
@@ -522,8 +515,8 @@ void uistatusbar_draw(void)
     unsigned short int color_black_16, color_white_16, color_red_16, color_green_16, color_greend_16, color_brown_16;
     color_white_16  = RGB565(255, 255, 255);
     color_black_16  = 0;//RGB565(0, 4, 0);
-    color_red_16    = RGB565(204, 0 , 0);
-    color_green_16  = RGB565(0, 204, 0);
+    color_red_16    = RGB565(187, 0 , 0);
+    color_green_16  = RGB565(0, 187, 0);
     color_greend_16 = RGB565(0, 68 , 0);
     color_brown_16  = RGB565(89, 79, 78);
     color_f_16      = color_white_16;
@@ -533,10 +526,10 @@ void uistatusbar_draw(void)
     unsigned int color_black_32, color_white_32, color_red_32, color_green_32, color_greend_32, color_brown_32;
     color_white_32  = ARGB888(255, 255, 255, 255);
     color_black_32  = 0;//0x00010101;
-    color_red_32    = ARGB888(255, 204, 0, 0) << 0;//0xffcc0000;
-    color_green_32  = ARGB888(255, 0, 204, 0) << 0;//0xff00cc00;
-    color_greend_32 = ARGB888(255, 0, 68, 0) << 0;//0xff004400;
-    color_brown_32  = ARGB888(255, 89, 79, 78) << 0;
+    color_red_32    = ARGB888(255, 187, 0, 0);//0xffbb0000;
+    color_green_32  = ARGB888(255, 0, 187, 0);//0xff00bb00;
+    color_greend_32 = ARGB888(255, 0, 68, 0);//0xff004400;
+    color_brown_32  = ARGB888(255, 89, 79, 78);
     color_f_32      = color_white_32;
     color_b_32      = color_black_32;
 
@@ -544,30 +537,19 @@ void uistatusbar_draw(void)
     unsigned int char_offset = 1;
 
     char tmpstr[512];
+    int x = 0, y = 0;
 
-    RSDL_Surface fake;
-    fake.pixels = &Retro_Screen[0];
-    fake.h = retroh;
-    fake.w = retrow;
-    fake.clip_rect.h = retroh;
-    fake.clip_rect.w = retrow;
-    fake.clip_rect.x = 0;
-    fake.clip_rect.y = 0;
-
-    /* Statusbar location */
-    int x, y;
+    // Statusbar position
     x = 1;
-
-    // Statusbar vertical position
     if (opt_statusbar & STATUSBAR_TOP)
         y = zoomed_YS_offset + 1;
     else
         y = zoomed_height + zoomed_YS_offset - char_width - 1;
 
     // Statusbar background
-    int bkg_x = x - 1;
+    int bkg_x = retroXS_offset + x - 1;
     int bkg_y = y - 1;
-    int max_width = retroW;
+    int max_width = zoomed_width;
     int bkg_width = max_width;
     int bkg_height = char_width + 2;
 
@@ -575,19 +557,19 @@ void uistatusbar_draw(void)
     if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)
     {
         if (drive_enabled)
-            bkg_width = (char_width * 5) - 3;
+            bkg_width = (char_width * 5) - 4;
         else if (tape_enabled)
-            bkg_width = (char_width * 8) - 3;
+            bkg_width = (char_width * 8) - 4;
         else
-            bkg_width = (char_width * 2) + 3;
+            bkg_width = (char_width * 2) + 2;
 
-        bkg_x = x + max_width - bkg_width - 1;
+        bkg_x = retroXS_offset + x + max_width - bkg_width - 1;
     }
 
     if (pix_bytes == 2)
-        DrawFBoxBmp16(&fake, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
+        DrawFBoxBmp(retro_bmp, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
     else
-        DrawFBoxBmp32(&fake, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
+        DrawFBoxBmp32((uint32_t *)retro_bmp, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
 
     if (imagename_timer == 0)
         display_joyport();
@@ -598,11 +580,11 @@ void uistatusbar_draw(void)
         if (c == 0)
             continue;
         
-        /* Default background */
+        // Default background
         color_b_16 = color_black_16;
         color_b_32 = color_black_32;
 
-        /* Drive/tape LED color */
+        // Drive/tape LED color
         if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS)
         {
             if (drive_enabled)
@@ -618,7 +600,8 @@ void uistatusbar_draw(void)
                 color_f_32 = color_black_32;
             }
         }
-        /* Drive loading */
+
+        // Drive loading
         if ((i == STATUSBAR_DRIVE8_TRACK_POS || i == STATUSBAR_DRIVE8_TRACK_POS + 1) && drive_enabled)
         {
             if (drive_pwm > 300)
@@ -641,7 +624,7 @@ void uistatusbar_draw(void)
             if (opt_statusbar & STATUSBAR_MINIMAL)
                 c = ' ';
         }
-        /* Power LED color */
+        // Power LED color
         else if (i == STATUSBAR_SPEED_POS || i == STATUSBAR_SPEED_POS + 1)
         {
             color_f_16 = color_red_16;
@@ -655,10 +638,10 @@ void uistatusbar_draw(void)
             }
         }
 
-        /* Right alignment for tape/drive/power */
-        int x_align = 0;
+        // Right alignment for tape/drive/power
+        int x_align = retroXS_offset;
         if (i >= STATUSBAR_TAPE_POS)
-            x_align = retroW - (MAX_STATUSBAR_LEN * char_width) + 3;
+            x_align = retroXS_offset + zoomed_width - (MAX_STATUSBAR_LEN * char_width) + 4;
 
         if (drive_enabled)
         {
@@ -673,22 +656,11 @@ void uistatusbar_draw(void)
 
         int x_char = x + char_offset + x_align + (i * char_width);
 
-        /* Output */
-        if (c & 0x80)
-        {
-            sprintf(tmpstr, "%c", c & 0x7f);
-            if (pix_bytes == 2)
-                Retro_Draw_string16(&fake, x_char, y, tmpstr,1,1,1, color_b_16, color_f_16);
-            else
-                Retro_Draw_string32(&fake, x_char, y, tmpstr,1,1,1, color_b_32, color_f_32);
-        }
+        // Output
+        sprintf(tmpstr, "%c", c);
+        if (pix_bytes == 2)
+            Draw_text(retro_bmp, x_char, y, color_f_16, color_b_16, 255, 1, 1, 10, tmpstr);
         else
-        {
-            sprintf(tmpstr, "%c", c);
-            if (pix_bytes == 2)
-                Retro_Draw_string16(&fake, x_char, y, tmpstr,1,1,1, color_f_16, color_b_16);
-            else
-                Retro_Draw_string32(&fake, x_char, y, tmpstr,1,1,1, color_f_32, color_b_32);
-        }
+            Draw_text32((uint32_t *)retro_bmp, x_char, y, color_f_32, color_b_32, 255, 1, 1, 10, tmpstr);
     }
 }

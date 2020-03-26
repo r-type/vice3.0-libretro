@@ -130,6 +130,8 @@ static unsigned int opt_aspect_ratio_prev = 0;
 
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
+unsigned int opt_jiffydos = 0;
+static unsigned int opt_jiffydos_prev = 0;
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
@@ -791,6 +793,9 @@ extern int ui_init_finalize(void);
 
 void reload_restart()
 {
+    /* Clear request */
+    request_reload_restart = 0;
+
     /* Stop datasette */
     datasette_control(DATASETTE_CONTROL_STOP);
 
@@ -1017,6 +1022,17 @@ void retro_set_environment(retro_environment_t cb)
          },
          "C64 PAL"
       },
+      {
+         "vice_jiffydos",
+         "Use JiffyDOS",
+         "ROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1581.bin'",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
 #endif
       {
          "vice_read_vicerc",
@@ -1032,7 +1048,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_reset",
          "Reset Type",
-         "'Soft' keeps some code in memory, 'Hard' erases all memory.",
+         "'Autostart' does hard reset and reruns content. 'Soft' keeps some code in memory, 'Hard' erases all memory.",
          {
             { "Autostart", NULL },
             { "Soft", NULL },
@@ -3183,12 +3199,19 @@ static void update_variables(void)
       if (strcmp(var.value, "disabled") == 0) opt_read_vicerc=0;
       else if (strcmp(var.value, "enabled") == 0) opt_read_vicerc=1;
 
-      if (opt_read_vicerc != opt_read_vicerc_prev)
-         request_reload_restart = 1;
-      else
-         request_reload_restart = 0;
-
+      request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? 1 : request_reload_restart;
       opt_read_vicerc_prev = opt_read_vicerc;
+   }
+
+   var.key = "vice_jiffydos";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) opt_jiffydos=0;
+      else if (strcmp(var.value, "enabled") == 0) opt_jiffydos=1;
+
+      request_reload_restart = (opt_jiffydos != opt_jiffydos_prev) ? 1 : request_reload_restart;
+      opt_jiffydos_prev = opt_jiffydos;
    }
 
 
@@ -3594,10 +3617,9 @@ void emu_reset(void)
    switch (RETRORESET)
    {
       case 0:
+         machine_trigger_reset(MACHINE_RESET_MODE_HARD);
          if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
             autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
-         else
-            machine_trigger_reset(MACHINE_RESET_MODE_HARD);
          break;
       case 1:
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
@@ -3618,15 +3640,14 @@ void retro_reset(void)
    // Always disable Warp
    resources_set_int("WarpMode", 0);
 
-   /* Changing opt_read_vicerc requires reloading */
+   // Changing opt_read_vicerc requires reloading
    if (request_reload_restart)
       reload_restart();
 
-   /* Retro reset should always autostart */
+   // Retro reset should always hard reset & autostart
+   machine_trigger_reset(MACHINE_RESET_MODE_HARD);
    if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
       autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
-   else
-      machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 }
 
 struct DiskImage {

@@ -47,7 +47,12 @@
 #include "cbm2model.h"
 #else
 #include "c64model.h"
+#include "c64rom.h"
+#include "c64mem.h"
+#include "c64memrom.h"
+BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 #endif
+#include "archdep.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -90,6 +95,8 @@ int RETROVICIICOLORBRIGHTNESS=1000;
 
 int retro_ui_finalized = 0;
 int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
+extern unsigned int opt_jiffydos;
+extern char retro_system_data_directory[512];
 
 static const cmdline_option_t cmdline_options[] = {
      { NULL }
@@ -269,6 +276,30 @@ int ui_init_finalize(void)
    log_resources_set_int("VICAudioLeak", RETROAUDIOLEAK);
 #endif
 
+#if defined(__X64__) || defined(__X64SC__)
+   // Replace C64 kernal always from backup
+   memcpy(c64memrom_kernal64_rom, c64memrom_kernal64_rom_original, C64_KERNAL_ROM_SIZE);
+   static char tmp_str[512] = {0};
+   if (opt_jiffydos)
+   {
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_C64.bin");
+      log_resources_set_string("KernalName", (const char*)tmp_str);
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1541-II.bin");
+      log_resources_set_string("DosName1541", (const char*)tmp_str);
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1581.bin");
+      log_resources_set_string("DosName1581", (const char*)tmp_str);
+   }
+   else
+   {
+      snprintf(tmp_str, sizeof(tmp_str), "%s", "kernal");//snprintf(tmp_str, sizeof(tmp_str), "%s%c%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "C64", FSDEV_DIR_SEP_CHR, "kernal");
+      log_resources_set_string("KernalName", (const char*)tmp_str);
+      snprintf(tmp_str, sizeof(tmp_str), "%s", "dos1541");
+      log_resources_set_string("DosName1541", (const char*)tmp_str);
+      snprintf(tmp_str, sizeof(tmp_str), "%s", "dos1581");
+      log_resources_set_string("DosName1581", (const char*)tmp_str);
+   }
+#endif
+
 #if defined(__VIC20__) 
    vic20model_set(RETROC64MODL);
 #elif defined(__PLUS4__)
@@ -379,44 +410,46 @@ char* ui_get_file(const char *format,...)
 }
 
 
-#if defined(__X64SC__)
+#if defined(__X64__)
+int c64ui_init_early(void)
+{
+   memcpy(c64memrom_kernal64_rom_original, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
+   return 0;
+}
+#elif defined(__X64SC__)
 int c64scui_init_early(void)
 {
-    return 0;
-}
-#elif defined(__X128__)
-int c128ui_init_early(void)
-{
-    return 0;
+   memcpy(c64memrom_kernal64_rom_original, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
+   return 0;
 }
 #elif defined(__XSCPU64__)
 int scpu64ui_init_early(void)
 {
-    return 0;
+   return 0;
+}
+#elif defined(__X128__)
+int c128ui_init_early(void)
+{
+   return 0;
 }
 #elif defined(__VIC20__) 
 int vic20ui_init_early(void)
 {
-    return 0;
+   return 0;
 }
 #elif defined(__PET__) 
 int petui_init_early(void)
 {
-    return 0;
+   return 0;
 }
 #elif defined(__PLUS4__) 
 int plus4ui_init_early(void)
 {
-    return 0;
+   return 0;
 }
 #elif defined(__CBM2__) 
 int cbm2ui_init_early(void)
 {
-    return 0;
-}
-#else
-int c64ui_init_early(void)
-{
-    return 0;
+   return 0;
 }
 #endif

@@ -1,5 +1,6 @@
 #include "libretro.h"
 #include "libretro-core.h"
+#include "vkbd.h"
 
 #include "joystick.h"
 #include "keyboard.h"
@@ -19,14 +20,28 @@ extern retro_input_state_t input_state_cb;
 extern void emu_reset(void);
 extern unsigned int vice_devices[5];
 
+#ifdef POINTER_DEBUG
+int pointer_x = 0;
+int pointer_y = 0;
+#endif
+int last_pointer_x = 0;
+int last_pointer_y = 0;
+
+// VKBD starting point: 10x3 == f7
+int vkey_pos_x = 10;
+int vkey_pos_y = 3;
+int vkbd_x_min = 0;
+int vkbd_x_max = 0;
+int vkbd_y_min = 0;
+int vkbd_y_max = 0;
+
+int vkflag[8] = {0};
+
 //EMU FLAGS
-int SHOWKEY=-1;
+int NPAGE=-1;
+int SHOWKEY=-1,SHOWKEYTRANS=1;
 int SHIFTON=-1;
 int TABON=-1;
-int vkey_pressed=-1;
-int vkey_sticky=-1;
-int vkey_sticky1=-1;
-int vkey_sticky2=-1;
 char core_key_state[512];
 char core_old_key_state[512];
 bool num_locked = false;
@@ -74,6 +89,23 @@ enum EMU_FUNCTIONS
     EMU_DATASETTE_RESET,
     EMU_FUNCTION_COUNT
 };
+
+/* VKBD_MIN_HOLDING_TIME: Hold a direction longer than this and automatic movement sets in */
+/* VKBD_MOVE_DELAY: Delay between automatic movement from button to button */
+#define VKBD_MIN_HOLDING_TIME 200
+#define VKBD_MOVE_DELAY 50
+bool let_go_of_direction = true;
+long last_move_time = 0;
+long last_press_time = 0;
+
+/* VKBD_STICKY_HOLDING_TIME: Button press longer than this triggers sticky key */
+#define VKBD_STICKY_HOLDING_TIME 1000
+int let_go_of_button = 1;
+long last_press_time_button = 0;
+int vkey_pressed=-1;
+int vkey_sticky=-1;
+int vkey_sticky1=-1;
+int vkey_sticky2=-1;
 
 void emu_function(int function)
 {
@@ -169,108 +201,7 @@ void Keymap_KeyDown(int symkey)
         kbd_handle_keydown(symkey);
 }
 
-void app_vkb_handle(void)
-{
-    static int last_vkey_pressed = -1;
-    static int vkey_sticky1_release = 0;
-    static int vkey_sticky2_release = 0;
-
-    if (vkey_sticky && last_vkey_pressed != -1 && last_vkey_pressed > 0)
-    {
-        if (vkey_sticky1 > -1 && vkey_sticky1 != last_vkey_pressed)
-        {
-            if (vkey_sticky2 > -1 && vkey_sticky2 != last_vkey_pressed)
-                kbd_handle_keyup(vkey_sticky2);
-            vkey_sticky2 = last_vkey_pressed;
-        }
-        else
-            vkey_sticky1 = last_vkey_pressed;
-    }
-
-    /* key up */
-    if (vkey_pressed == -1 && last_vkey_pressed >= 0 && last_vkey_pressed != vkey_sticky1 && last_vkey_pressed != vkey_sticky2)
-        kbd_handle_keyup(last_vkey_pressed);
-
-    if (vkey_sticky1_release)
-    {
-        vkey_sticky1_release=0;
-        vkey_sticky1=-1;
-        kbd_handle_keyup(vkey_sticky1);
-    }
-    if (vkey_sticky2_release)
-    {
-        vkey_sticky2_release=0;
-        vkey_sticky2=-1;
-        kbd_handle_keyup(vkey_sticky2);
-    }
-
-    /* key down */
-    if (vkey_pressed != -1 && last_vkey_pressed == -1)
-    {
-        switch (vkey_pressed)
-        {
-            case -2:
-                emu_function(EMU_RESET);
-                break;
-            case -3:
-                emu_function(EMU_STATUSBAR);
-                break;
-            case -4:
-                emu_function(EMU_JOYPORT);
-                break;
-            case -5: /* sticky shift */
-                Keymap_KeyDown(RETROK_CAPSLOCK);
-                Keymap_KeyUp(RETROK_CAPSLOCK);
-                break;
-            case -20:
-                if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
-                    break;
-                else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
-                    turbo_fire_button_disabled = -1;
-
-                if (turbo_fire_button_disabled != -1)
-                {
-                    turbo_fire_button = turbo_fire_button_disabled;
-                    turbo_fire_button_disabled = -1;
-                }
-                else
-                {
-                    turbo_fire_button_disabled = turbo_fire_button;
-                    turbo_fire_button = -1;
-                }
-                break;
-
-            case -11:
-                emu_function(EMU_DATASETTE_STOP);
-                break;
-            case -12:
-                emu_function(EMU_DATASETTE_START);
-                break;
-            case -13:
-                emu_function(EMU_DATASETTE_FORWARD);
-                break;
-            case -14:
-                emu_function(EMU_DATASETTE_REWIND);
-                break;
-            case -15:
-                emu_function(EMU_DATASETTE_RESET);
-                break;
-
-            default:
-                if (vkey_pressed == vkey_sticky1)
-                    vkey_sticky1_release = 1;
-                if (vkey_pressed == vkey_sticky2)
-                    vkey_sticky2_release = 1;
-                kbd_handle_keydown(vkey_pressed);
-                break;
-        }
-    }
-    last_vkey_pressed = vkey_pressed;
-    //printf("vkey:%d sticky:%d sticky1:%d sticky2:%d\n", vkey_pressed, vkey_sticky, vkey_sticky1, vkey_sticky2);
-}
-
-// Core input Key(not GUI) 
-void Core_Processkey(int disable_physical_cursor_keys)
+void process_key(int disable_physical_cursor_keys)
 {
    int i;
 
@@ -314,20 +245,61 @@ void Core_Processkey(int disable_physical_cursor_keys)
    memcpy(core_old_key_state, core_key_state, sizeof(core_key_state));
 }
 
-// Core input (not GUI) 
-int Core_PollEvent(int disable_physical_cursor_keys)
+void update_input(int disable_physical_cursor_keys)
 {
     //   RETRO        B    Y    SLT  STA  UP   DWN  LEFT RGT  A    X    L    R    L2   R2   L3   R3  LR  LL  LD  LU  RR  RL  RD  RU
     //   INDEX        0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15  16  17  18  19  20  21  22  23
 
-    static int i, j, mk;
-    static int jbt[2][24]={0};
-    static int kbt[EMU_FUNCTION_COUNT]={0};
+    static long now = 0;
+    static long last_vkey_pressed_time = 0;
+    static int last_vkey_pressed = -1;
+    static int vkey_sticky1_release = 0;
+    static int vkey_sticky2_release = 0;
 
-    static int LX, LY, RX, RY;
-    static int threshold=20000;
+    static int i = 0, j = 0, mk = 0;
+    static int LX = 0, LY = 0, RX = 0, RY = 0;
+    static int threshold = 20000;
+    static int jbt[2][24] = {0};
+    static int kbt[EMU_FUNCTION_COUNT] = {0};
     
-    if (!retro_load_ok) return 1;
+    if (!retro_load_ok)
+        return;
+    now = GetTicks() / 1000;
+
+    if (vkey_sticky && last_vkey_pressed != -1 && last_vkey_pressed > 0)
+    {
+        if (vkey_sticky1 > -1 && vkey_sticky1 != last_vkey_pressed)
+        {
+            if (vkey_sticky2 > -1 && vkey_sticky2 != last_vkey_pressed)
+                kbd_handle_keyup(vkey_sticky2);
+            vkey_sticky2 = last_vkey_pressed;
+        }
+        else
+            vkey_sticky1 = last_vkey_pressed;
+    }
+
+    /* Keyup only after button is up */
+    if (last_vkey_pressed != -1 && vkflag[4] != 1)
+    {
+        if (vkey_pressed == -1 && last_vkey_pressed >= 0 && last_vkey_pressed != vkey_sticky1 && last_vkey_pressed != vkey_sticky2)
+            kbd_handle_keyup(last_vkey_pressed);
+
+        last_vkey_pressed = -1;
+    }
+
+    if (vkey_sticky1_release)
+    {
+        vkey_sticky1_release=0;
+        vkey_sticky1=-1;
+        kbd_handle_keyup(vkey_sticky1);
+    }
+    if (vkey_sticky2_release)
+    {
+        vkey_sticky2_release=0;
+        vkey_sticky2=-1;
+        kbd_handle_keyup(vkey_sticky2);
+    }
+
     input_poll_cb();
 
     /* Iterate hotkeys, skip Datasette hotkeys if Datasette hotkeys are disabled or if VKBD is on */
@@ -396,7 +368,7 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     }
 
     /* The check for kbt[i] here prevents the hotkey from generating C64 key events */
-    /* SHOWKEY check is now in Core_Processkey to allow certain keys while SHOWKEY */
+    /* SHOWKEY check is now in process_key() to allow certain keys while SHOWKEY */
     int processkey=1;
     for (i = 0; i < (sizeof(kbt)/sizeof(kbt[0])); i++)
     {
@@ -408,7 +380,7 @@ int Core_PollEvent(int disable_physical_cursor_keys)
     }
 
     if (processkey && disable_physical_cursor_keys != 2)
-        Core_Processkey(disable_physical_cursor_keys);
+        process_key(disable_physical_cursor_keys);
 
     /* RetroPad hotkeys for ports 1 & 2 */
     for (j = 0; j < 2; j++)
@@ -430,8 +402,8 @@ int Core_PollEvent(int disable_physical_cursor_keys)
                 int just_released = 0;
                 if ((i < 4 || i > 7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad */
                 {
-                    /* Skip the press, transparency toggle and start-enter if VKBD is visible */
-                    if (SHOWKEY==1 && (i==RETRO_DEVICE_ID_JOYPAD_B || i==RETRO_DEVICE_ID_JOYPAD_A || i==RETRO_DEVICE_ID_JOYPAD_START))
+                    /* Skip VKBD keys if VKBD is visible */
+                    if (SHOWKEY==1 && (i==RETRO_DEVICE_ID_JOYPAD_B || i==RETRO_DEVICE_ID_JOYPAD_A || i==RETRO_DEVICE_ID_JOYPAD_Y || i==RETRO_DEVICE_ID_JOYPAD_START))
                         continue;
 
                     if (input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) && jbt[j][i]==0 && i!=turbo_fire_button)
@@ -557,7 +529,237 @@ int Core_PollEvent(int disable_physical_cursor_keys)
             } /* for i */
         } /* if vice_devices[0]==joypad */
     } /* for j */
-    return 1;
+
+    /* Virtual keyboard for ports 1 & 2 */
+    if (SHOWKEY==1)
+    {
+        if (vkflag[4]==0) /* Allow directions when key is not pressed */
+        {
+            if (vkflag[0]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)))
+                vkflag[0]=1;
+            else if (vkflag[0]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)))
+                vkflag[0]=0;
+
+            if (vkflag[1]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)))
+                vkflag[1]=1;
+            else if (vkflag[1]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)))
+                vkflag[1]=0;
+
+            if (vkflag[2]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)))
+                vkflag[2]=1;
+            else if (vkflag[2]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT)))
+                vkflag[2]=0;
+
+            if (vkflag[3]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)))
+                vkflag[3]=1;
+            else if (vkflag[3]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)))
+                vkflag[3]=0;
+        }
+        else /* Release all directions when key is pressed */
+        {
+            vkflag[0]=0;
+            vkflag[1]=0;
+            vkflag[2]=0;
+            vkflag[3]=0;
+        }
+
+        if (vkflag[0] || vkflag[1] || vkflag[2] || vkflag[3])
+        {
+            if (let_go_of_direction)
+                /* just pressing down */
+                last_press_time = now;
+
+            if ((now - last_press_time > VKBD_MIN_HOLDING_TIME
+              && now - last_move_time > VKBD_MOVE_DELAY)
+              || let_go_of_direction)
+            {
+                last_move_time = now;
+
+                if (vkflag[0])
+                    vkey_pos_y -= 1;
+                else if (vkflag[1])
+                    vkey_pos_y += 1;
+
+                if (vkflag[2])
+                    vkey_pos_x -= 1;
+                else if (vkflag[3])
+                    vkey_pos_x += 1;
+            }
+            let_go_of_direction = false;
+        }
+        else
+            let_go_of_direction = true;
+
+        if (vkey_pos_x < 0)
+            vkey_pos_x=NPLGN-1;
+        else if (vkey_pos_x > NPLGN-1)
+            vkey_pos_x=0;
+        if (vkey_pos_y < 0)
+            vkey_pos_y=NLIGN-1;
+        else if (vkey_pos_y > NLIGN-1)
+            vkey_pos_y=0;
+
+        /* Absolute pointer */
+        int p_x = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
+        int p_y = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
+
+        if (p_x != 0 && p_y != 0 && (p_x != last_pointer_x || p_y != last_pointer_y))
+        {
+            int px = (int)((p_x + 0x7fff) * retroW / 0xffff);
+            int py = (int)((p_y + 0x7fff) * retroH / 0xffff);
+            last_pointer_x = p_x;
+            last_pointer_y = p_y;
+#ifdef POINTER_DEBUG
+            pointer_x = px;
+            pointer_y = py;
+#endif
+            if (px >= vkbd_x_min && px <= vkbd_x_max && py >= vkbd_y_min && py <= vkbd_y_max)
+            {
+                float vkey_width = (float)(vkbd_x_max - vkbd_x_min) / NPLGN;
+                vkey_pos_x = ((px - vkbd_x_min) / vkey_width);
+
+                float vkey_height = (float)(vkbd_y_max - vkbd_y_min) / NLIGN;
+                vkey_pos_y = ((py - vkbd_y_min) / vkey_height);
+
+                vkey_pos_x = (vkey_pos_x < 0) ? 0 : vkey_pos_x;
+                vkey_pos_x = (vkey_pos_x > NPLGN-1) ? NPLGN-1 : vkey_pos_x;
+                vkey_pos_y = (vkey_pos_y < 0) ? 0 : vkey_pos_y;
+                vkey_pos_y = (vkey_pos_y > NLIGN-1) ? NLIGN-1 : vkey_pos_y;
+
+#ifdef POINTER_DEBUG
+                printf("px:%d py:%d (%d,%d) vkey:%dx%d\n", p_x, p_y, px, py, vkey_pos_x, vkey_pos_y);
+#endif
+            }
+        }
+
+        /* Press Return, RetroPad Start */
+        i=RETRO_DEVICE_ID_JOYPAD_START;
+        if (vkflag[7]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        {
+            vkflag[7]=1;
+            Keymap_KeyDown(RETROK_RETURN);
+        }
+        else if (vkflag[7]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        {
+            vkflag[7]=0;
+            Keymap_KeyUp(RETROK_RETURN);
+        }
+
+        /* ShiftLock, RetroPad Y */
+        i=RETRO_DEVICE_ID_JOYPAD_Y;
+        if (vkflag[6]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        {
+            vkflag[6]=1;
+            Keymap_KeyDown(RETROK_CAPSLOCK);
+            Keymap_KeyUp(RETROK_CAPSLOCK);
+        }
+        else if (vkflag[6]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        {
+            vkflag[6]=0;
+        }
+
+        /* Transparency toggle, RetroPad A */
+        i=RETRO_DEVICE_ID_JOYPAD_A;
+        if (vkflag[5]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        {
+            vkflag[5]=1;
+            SHOWKEYTRANS=-SHOWKEYTRANS;
+        }
+        else if (vkflag[5]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        {
+            vkflag[5]=0;
+        }
+
+        /* Key press, RetroPad B joyports 1+2 / Keyboard Enter / Pointer */
+        i=RETRO_DEVICE_ID_JOYPAD_B;
+        if (vkflag[4]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN) || input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED)))
+        {
+            vkey_pressed = check_vkey(vkey_pos_x, vkey_pos_y);
+            vkflag[4]=1;
+
+            if (vkey_pressed != -1 && last_vkey_pressed == -1)
+            {
+                switch (vkey_pressed)
+                {
+                    case -2:
+                        emu_function(EMU_RESET);
+                        break;
+                    case -3:
+                        emu_function(EMU_STATUSBAR);
+                        break;
+                    case -4:
+                        emu_function(EMU_JOYPORT);
+                        break;
+                    case -5: /* sticky shift */
+                        Keymap_KeyDown(RETROK_CAPSLOCK);
+                        Keymap_KeyUp(RETROK_CAPSLOCK);
+                        break;
+                    case -20:
+                        if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
+                            break;
+                        else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
+                            turbo_fire_button_disabled = -1;
+
+                        if (turbo_fire_button_disabled != -1)
+                        {
+                            turbo_fire_button = turbo_fire_button_disabled;
+                            turbo_fire_button_disabled = -1;
+                        }
+                        else
+                        {
+                            turbo_fire_button_disabled = turbo_fire_button;
+                            turbo_fire_button = -1;
+                        }
+                        break;
+
+                    case -11:
+                        emu_function(EMU_DATASETTE_STOP);
+                        break;
+                    case -12:
+                        emu_function(EMU_DATASETTE_START);
+                        break;
+                    case -13:
+                        emu_function(EMU_DATASETTE_FORWARD);
+                        break;
+                    case -14:
+                        emu_function(EMU_DATASETTE_REWIND);
+                        break;
+                    case -15:
+                        emu_function(EMU_DATASETTE_RESET);
+                        break;
+
+                    default:
+                        if (vkey_pressed == vkey_sticky1)
+                            vkey_sticky1_release = 1;
+                        if (vkey_pressed == vkey_sticky2)
+                            vkey_sticky2_release = 1;
+                        kbd_handle_keydown(vkey_pressed);
+                        break;
+                }
+            }
+            last_vkey_pressed = vkey_pressed;
+        }
+        else if (vkflag[4]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN) && !input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED)))
+        {
+            vkey_pressed = -1;
+            vkflag[4]=0;
+        }
+
+        if (vkflag[4] && vkey_pressed > 0)
+        {
+            if (let_go_of_button)
+                last_press_time_button = now;
+            if (now - last_press_time_button > VKBD_STICKY_HOLDING_TIME)
+                vkey_sticky = 1;
+            let_go_of_button = 0;
+        }
+        else
+        {
+            let_go_of_button = 1;
+            vkey_sticky = 0;
+        }
+    }
+    //printf("vkey:%d sticky:%d sticky1:%d sticky2:%d, now:%d last:%d\n", vkey_pressed, vkey_sticky, vkey_sticky1, vkey_sticky2, now, last_press_time_button);
 }
 
 void retro_poll_event()
@@ -580,7 +782,7 @@ void retro_poll_event()
         ) &&
         !RETROKEYBOARDPASSTHROUGH
     )
-        Core_PollEvent(2); /* Skip all keyboard input when fire is pressed */
+        update_input(2); /* Skip all keyboard input when fire is pressed */
 
     else if ((vice_devices[0] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[0] == RETRO_DEVICE_JOYPAD) && TABON==-1 &&
         (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
@@ -590,7 +792,7 @@ void retro_poll_event()
         ) &&
         !RETROKEYBOARDPASSTHROUGH
     )
-        Core_PollEvent(1); /* Process all inputs but disable cursor keys */
+        update_input(1); /* Process all inputs but disable cursor keys */
 
     else if ((vice_devices[1] == RETRO_DEVICE_VICE_JOYSTICK || vice_devices[1] == RETRO_DEVICE_JOYPAD) && TABON==-1 &&
         (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ||
@@ -612,10 +814,10 @@ void retro_poll_event()
         ) &&
         !RETROKEYBOARDPASSTHROUGH
     )
-        Core_PollEvent(2); /* Skip all keyboard input from RetroPad 2 */
+        update_input(2); /* Skip all keyboard input from RetroPad 2 */
 
     else
-        Core_PollEvent(0); /* Process all inputs */
+        update_input(0); /* Process all inputs */
 
     /* retro joypad take control over keyboard joy */
     /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */

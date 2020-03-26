@@ -29,6 +29,10 @@
 #ifndef _ARCHDEP_H
 #define _ARCHDEP_H
 
+extern  char retro_system_data_directory[512];
+#define LIBDIR retro_system_data_directory
+//#define RETRO_DEBUG 1
+
 #define VICE_ARCHAPI_PRIVATE_API
 #include "archapi.h"
 #undef VICE_ARCHAPI_PRIVATE_API
@@ -174,7 +178,6 @@
 #define ARCHDEP_KEYBOARD_SYM_NONE 0
 /* Keyword to use for a static prototype */
 #define STATIC_PROTOTYPE static
-//extern int sound_init_psp_device();
 extern const char *archdep_home_path(void);
 
 /* set this path to customize the preference storage */ 
@@ -182,19 +185,11 @@ extern const char *archdep_pref_path;
 
 /* Define the default system directory (where the ROMs are).  */
 #ifndef __LIBRETRO__
-
 #ifdef __NetBSD__
 #define LIBDIR          PREFIX "/share/vice"
 #else
 #define LIBDIR          PREFIX "./vice"
 #endif
-
-#else
-
-extern  char retro_system_data_directory[512];
-#define LIBDIR retro_system_data_directory
-//#define RETRO_DEBUG 1
-
 #endif //__LIBRETRO__
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)

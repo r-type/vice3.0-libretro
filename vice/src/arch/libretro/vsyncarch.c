@@ -100,15 +100,12 @@ void vsyncarch_presync(void)
 {
     kbdbuf_flush();
 
-#if defined(__VIC20__)
-    RCANVAS->videoconfig->rendermode = VIDEO_RENDER_RGB_1X1;
-#endif
     video_canvas_render(
-        RCANVAS, (BYTE *)Retro_Screen,
+        RCANVAS, (BYTE *)&retro_bmp,
         retroW, retroH,
         retroXS, retroYS,
         0, 0, //xi, yi,
-        retrow*pix_bytes, 8*pix_bytes
+        retroW*pix_bytes, 8*pix_bytes
     );
                         
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {

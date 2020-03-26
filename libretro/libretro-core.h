@@ -33,16 +33,22 @@
 typedef uint32_t uint32;
 typedef uint8_t uint8;
 
-#if defined(__X128__)
-#define WINDOW_WIDTH 856
-#else
-#define WINDOW_WIDTH 720
-#endif
-#define WINDOW_HEIGHT 576
-#define WINDOW_SIZE (WINDOW_WIDTH*WINDOW_HEIGHT)
-
 //SCREEN
-extern unsigned short int *Retro_Screen;
+#if defined(__X128__)
+#define WINDOW_WIDTH    856
+#define WINDOW_HEIGHT   312
+#elif defined(__PET__) || defined(__CBM2__)
+#define WINDOW_WIDTH    704
+#define WINDOW_HEIGHT   288
+#elif defined(__VIC20__)
+#define WINDOW_WIDTH    448
+#define WINDOW_HEIGHT   288
+#else
+#define WINDOW_WIDTH    384
+#define WINDOW_HEIGHT   288
+#endif
+#define RETRO_BMP_SIZE  (WINDOW_WIDTH * WINDOW_HEIGHT * 2)
+extern unsigned short int retro_bmp[RETRO_BMP_SIZE];
 extern int pix_bytes;
 
 //VKBD
@@ -50,15 +56,23 @@ extern int pix_bytes;
 #define NLIGN 7
 #define NLETT 5
 
-typedef struct {
-	char norml[NLETT];
-	char shift[NLETT];
-	int val;	
-} Mvk;
+//#define POINTER_DEBUG
+#ifdef POINTER_DEBUG
+extern int pointer_x;
+extern int pointer_y;
+#endif
 
-extern Mvk MVk[NPLGN*NLIGN*2];
+extern int vkey_pos_x;
+extern int vkey_pos_y;
 extern int vkey_pressed;
 extern int vkey_sticky;
+extern int vkey_sticky1;
+extern int vkey_sticky2;
+
+extern int vkbd_x_min;
+extern int vkbd_x_max;
+extern int vkbd_y_min;
+extern int vkbd_y_max;
 
 //STATUSBAR
 #define STATUSBAR_BOTTOM    0x01
@@ -67,8 +81,6 @@ extern int vkey_sticky;
 #define STATUSBAR_MINIMAL   0x08
 
 //VARIABLES
-extern int retrow; 
-extern int retroh;
 extern int cpuloop;
 extern int retroXS;
 extern int retroYS;

@@ -2,44 +2,72 @@
 
 Port of VICE 3.3 for libretro with virtual keyboard
 
-Supported platforms: Linux Win64 Android emscripten Switch Vita Apple
+Supported platforms: Linux Windows Apple Android emscripten Switch Vita
 
 Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
 
 ## Recent improvements
 
-- Paddles & mouse
-- Zoom mode
 - Savestates
 - Vice 3.3 update
 - x64sc / xpet
 - Virtual keyboard revamped: more responsive, cleaner design, much easier to control
 - GUI removed
 - Autostart PRG mode to inject
-- System-subdir renamed to vice and created automatically
+- System-subdir renamed to `vice` and created automatically
 - Keyrah joystick maps 
 - C64 joystick disabled while using virtual keyboard
 - Cursor keys disabled while using RetroPad
 - New settings:
   - Drive sound emulation
   - Reset type (autostart, soft, hard)
-  - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset, datasette controls)
-  - Analog sticks mappable
+  - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset, Datasette controls)
   - Virtual keyboard themes
+  - Zoom mode
+  - Paddles & mouse
+  - JiffyDOS support
 
-## Joyport control via Filename
+
+## Default controls
+
+|RetroPad button|Action|
+|---|---|
+|B|Fire button|
+|L2|Run/Stop (Escape)|
+|R2|Return (Enter)|
+|Select|Toggle virtual keyboard|
+
+|Keyboard key|Action|
+|---|---|
+|F11|Toggle virtual keyboard|
+|F12|Toggle statusbar|
+|RControl|Toggle between joyports|
+|End|Reset|
+
+### Virtual keyboard controls
+|Button|Action|
+|---|---|
+|B / Enter|Keypress|
+|A|Toggle transparency|
+|Y|Toggle ShiftLock|
+|Start|Press Return|
+
+Long press for sticky keys. Stickying a third key will replace the second.
+
+
+## Joyport control via filename
 
 C64 games sometimes use joystick port 1 and sometimes joystick port 2 for player 1. There are several ways to switch ports in this core:
-- Use the core option for it: `Quickmenu->Options->Controller 0` 
-- Bring up the virtual keyboard with L shoulder button, and press the key labeled `Joy` there 
-- Re-name your games, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2. Note this only works with extracted files (`.PRG`, `.D64` etc.) not with zip files. 
+- Use the core option for it: `Quickmenu->Options->Controller 0`.
+- Bring up the virtual keyboard with `Select` button, and press the key labeled `JOY` there.
+- Re-name your games, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2. Note this only works with extracted files (`.prg`, `.d64` etc.) not with ZIP files.
 
-## M3U Support and Disk control
-When you have a multi disk game, you can use a m3u file to specify each disk of the game and change them from the RetroArch Disk control interface.
+## M3U support and disk control
+When you have a multi disk game, you can use a M3U file to specify each disk of the game and change them from the RetroArch Disk control interface.
 
 A M3U file is a simple text file with one disk per line (see https://en.wikipedia.org/wiki/M3U).
 
-Example :
+Example:
 
 Ultima VI - The False Prophet (1990)(Origin Systems).m3u
 ```
@@ -52,35 +80,47 @@ Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 3 of 3 Side B)(Populac
 ```
 Path can be absolute or relative to the location of the M3U file.
 
-When a game ask for it, you can change the current disk in the RetroArch 'Disk Control' menu :
+When a game ask for it, you can change the current disk in the RetroArch 'Disk Control' menu:
 - Eject the current disk with 'Disk Cycle Tray Status'.
 - Select the right disk index.
 - Insert the new disk with 'Disk Cycle Tray Status'.
 
-Note : zip support is provided by RetroArch and is done before passing the game to the core. So, when using a m3u file, the specified disk image must be uncompressed (.d64 file formats).
+Note: ZIP support is provided by RetroArch and is done before passing the game to the core. So, when using a M3U file, the specified disk images must be uncompressed.
+
+
+## JiffyDOS support
+
+External ROM files required in `system/vice`:
+
+|Filename|Size|MD5|
+|---|---|---|
+|**JiffyDOS_C64.bin**|8 192|be09394f0576cf81fa8bacf634daf9a2|
+|**JiffyDOS_1541-II.bin**|16 384|1b1e985ea5325a1f46eb7fd9681707bf|
+|**JiffyDOS_1581.bin**|32 768|20b6885c6dc2d42c38754a365b043d71|
+
 
 ## Command file operation
 
-Vice command line options are supported with Retroarch by by placing the desired command line in a text file with a .cmd file extension. The command line format is as documented in the Vice documentation (see http://vice-emu.sourceforge.net/vice_6.html).
+VICE command line options are supported with RetroArch by by placing the desired command line in a text file with a `.cmd` file extension. The command line format is as documented in the Vice documentation (see http://vice-emu.sourceforge.net/vice_6.html).
 
-Using this you can overcome limitations of the gui and set advanced configurations required for running problematic files. Here are a couple of examples for the xvic core  ...
+Using this you can overcome limitations of the GUI and set advanced configurations required for running problematic files. Here are a couple of examples for the xvic core  ...
 
-Vic20 megacart support:
+VIC-20 megacart support:
 ```
 xvic -cartmega /path/to/rom/mega-cart-name.rom
 ```
-Vic20 games which require specific memory configs such as 8k expansion:
+VIC-20 games which require specific memory configs such as 8k expansion:
 ```
 xvic -memory 1 /path/to/rom/some-8k-game.d64
 ```
 
-## Build instructions
+VIC-20 memory expansion will also be set with filename tags or directory matching: `some game (8k).prg` or `/8k/some game.prg`.
 
-LIBDIR set to retro_system_dir
+## Build instructions
 
 ### Linux
 ```
-CC=gcc make -f Makefile.libretro -j10
+CC=gcc make -f Makefile.libretro -j4
 ```
 ### Win64 (crossbuild)
 ```

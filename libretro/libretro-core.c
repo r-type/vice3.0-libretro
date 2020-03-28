@@ -131,6 +131,7 @@ static unsigned int opt_aspect_ratio_prev = 0;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 unsigned int opt_jiffydos = 0;
+unsigned int opt_jiffydos_allow = 0;
 static unsigned int opt_jiffydos_prev = 0;
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
@@ -459,6 +460,15 @@ static int process_cmdline(const char* argv)
             cur_port = joystick_control;
             cur_port_locked = 1;
         }
+
+#if defined(__X64__) || defined(__X64SC__)
+        /* Enable JiffyDOS only with compatible disk drives: 1541 & 1581 */
+        if (strendswith(argv, "64")    /* d64 */
+         || strendswith(argv, "81"))   /* d81 */
+            opt_jiffydos_allow = 1;
+        else
+            opt_jiffydos_allow = 0;
+#endif
 
 #if defined(__VIC20__)
         if (strendswith(argv, ".20"))
@@ -1025,7 +1035,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_jiffydos",
          "Use JiffyDOS",
-         "ROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1581.bin'",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -3203,6 +3213,7 @@ static void update_variables(void)
       opt_read_vicerc_prev = opt_read_vicerc;
    }
 
+#if defined(__X64__) || defined(__X64SC__)
    var.key = "vice_jiffydos";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3210,11 +3221,13 @@ static void update_variables(void)
       if (strcmp(var.value, "disabled") == 0) opt_jiffydos=0;
       else if (strcmp(var.value, "enabled") == 0) opt_jiffydos=1;
 
+      if (!opt_jiffydos_allow)
+         opt_jiffydos = 0;
+
       request_reload_restart = (opt_jiffydos != opt_jiffydos_prev) ? 1 : request_reload_restart;
       opt_jiffydos_prev = opt_jiffydos;
    }
-
-
+#endif
 
    /* Mapper */
    var.key = "vice_mapper_select";

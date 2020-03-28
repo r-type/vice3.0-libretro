@@ -925,17 +925,15 @@ void retro_poll_event()
                     {
                         if (turbo_state[vice_port])
                         {
-                            if (turbo_toggle[vice_port] > turbo_pulse)
-                            {
-                                if ((turbo_toggle[vice_port] / 2) == turbo_pulse)
-                                    turbo_toggle[vice_port] = 0;
-                                j &= ~0x10;
-                            }
+                            if ((turbo_toggle[vice_port]) == (turbo_pulse))
+                                turbo_toggle[vice_port]=1;
                             else
-                            {
+                                turbo_toggle[vice_port]++;
+
+                            if (turbo_toggle[vice_port] > (turbo_pulse / 2))
+                                j &= ~0x10;
+                            else
                                 j |= (SHOWKEY==-1) ? 0x10 : j;
-                            }
-                            turbo_toggle[vice_port]++;
                         }
                         else
                         {

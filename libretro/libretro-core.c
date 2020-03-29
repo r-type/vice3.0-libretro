@@ -130,8 +130,8 @@ static unsigned int opt_aspect_ratio_prev = 0;
 
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
+static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
-unsigned int opt_jiffydos_allow = 0;
 static unsigned int opt_jiffydos_prev = 0;
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
@@ -375,6 +375,9 @@ static int get_image_unit()
         else
            unit = 8;
     }
+    else
+        unit = 8;
+
     return unit;
 }
 
@@ -462,12 +465,12 @@ static int process_cmdline(const char* argv)
         }
 
 #if defined(__X64__) || defined(__X64SC__)
-        /* Enable JiffyDOS only with compatible disk drives: 1541 & 1581 */
-        if (strendswith(argv, "64")    /* d64 */
-         || strendswith(argv, "81"))   /* d81 */
-            opt_jiffydos_allow = 1;
-        else
+        /* Disable JiffyDOS with PRGs & CRTs */
+        if (strendswith(argv, "prg")
+         || strendswith(argv, "crt"))
             opt_jiffydos_allow = 0;
+        else
+            opt_jiffydos_allow = 1;
 #endif
 
 #if defined(__VIC20__)
@@ -659,6 +662,15 @@ void update_from_vice()
 
     if (dc->unit == 1)
     {
+#if defined(__X64__) || defined(__X64SC__)
+        if (opt_jiffydos)
+        {
+            /* Disable JiffyDOS with tapes */
+            opt_jiffydos_allow = 0;
+            opt_jiffydos = 0;
+            runstate = RUNSTATE_LOADED_CONTENT;
+        }
+#endif
         log_cb(RETRO_LOG_INFO, "Image list is active for tape\n");
     }
     else if (dc->unit != 0)
@@ -3673,30 +3685,32 @@ static bool retro_set_eject_state(bool ejected)
     {
         int unit = get_image_unit();
 
-        if (dc->eject_state != ejected)
+        if (dc->eject_state == ejected)
+            return true;
+        else
+            dc->eject_state = ejected;
+
+        if (ejected && dc->index <= dc->count)
         {
-            if (ejected && dc->index <= dc->count)
-            {
-                dc->eject_state = ejected;
-                if (unit == 1)
-                    tape_image_detach(unit);
-                else
-                    file_system_detach_disk(unit);
+            dc->eject_state = ejected;
+            if (unit == 1)
+                tape_image_detach(unit);
+            else
+                file_system_detach_disk(unit);
 
-                display_current_image("", false);
-                return true;
-            }
-            else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
-            {
-                dc->eject_state = ejected;
-                if (unit == 1)
-                    tape_image_attach(unit, dc->files[dc->index]);
-                else
-                    file_system_attach_disk(unit, dc->files[dc->index]);
+            display_current_image("", false);
+            return true;
+        }
+        else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
+        {
+            dc->eject_state = ejected;
+            if (unit == 1)
+                tape_image_attach(unit, dc->files[dc->index]);
+            else
+                file_system_attach_disk(unit, dc->files[dc->index]);
 
-                display_current_image(dc->files[dc->index], true);
-                return true;
-            }
+            display_current_image(dc->files[dc->index], true);
+            return true;
         }
     }
 
@@ -4365,9 +4379,9 @@ void retro_run(void)
       log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
 #endif
       retro_load_ok = true;
+      runstate = RUNSTATE_RUNNING;
       pre_main();
       reload_restart();
-      runstate = RUNSTATE_RUNNING;
       return;
    } 
    else if (runstate == RUNSTATE_LOADED_CONTENT)

@@ -553,15 +553,18 @@ void uistatusbar_draw(void)
     int bkg_width = max_width;
     int bkg_height = char_width + 2;
 
+    // Right alignment offset
+    int x_align_offset = 4 + (retroXS_offset / 2);
+
     // Basic mode statusbar background
     if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)
     {
         if (drive_enabled)
-            bkg_width = (char_width * 5) - 4;
+            bkg_width = (char_width * 5) - x_align_offset;
         else if (tape_enabled)
-            bkg_width = (char_width * 8) - 4;
+            bkg_width = (char_width * 8) - x_align_offset;
         else
-            bkg_width = (char_width * 2) + 2;
+            bkg_width = (char_width * 3) - x_align_offset - 1;
 
         bkg_x = retroXS_offset + x + max_width - bkg_width - 1;
     }
@@ -585,7 +588,7 @@ void uistatusbar_draw(void)
         color_b_32 = color_black_32;
 
         // Drive/tape LED color
-        if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS)
+        if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 1)
         {
             if (drive_enabled)
             {
@@ -641,7 +644,7 @@ void uistatusbar_draw(void)
         // Right alignment for tape/drive/power
         int x_align = retroXS_offset;
         if (i >= STATUSBAR_TAPE_POS)
-            x_align = retroXS_offset + zoomed_width - (MAX_STATUSBAR_LEN * char_width) + 4;
+            x_align = retroXS_offset + x_align_offset + zoomed_width - (MAX_STATUSBAR_LEN * char_width);
 
         if (drive_enabled)
         {

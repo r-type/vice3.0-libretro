@@ -1714,7 +1714,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport_type",
          "RetroPad Port Type",
-         "Non-joysticks will be plugged into current port only and are controlled with the left analog stick or a real mouse.",
+         "Non-joysticks will be plugged into current port only and are controlled with the left analog stick or a real mouse. Paddles will be split to 1st and 2nd RetroPort.",
          {
             { "1", "Joystick" },
             { "2", "Paddles" },

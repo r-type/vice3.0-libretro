@@ -37,6 +37,13 @@ int vkbd_y_max = 0;
 
 int vkflag[8] = {0};
 
+// Mouse speed flags
+#define MOUSE_SPEED_SLOWER 1
+#define MOUSE_SPEED_FASTER 2
+// Mouse speed multipliers
+#define MOUSE_SPEED_SLOW 5
+#define MOUSE_SPEED_FAST 2
+
 //EMU FLAGS
 int NPAGE=-1;
 int SHOWKEY=-1,SHOWKEYTRANS=1;
@@ -60,6 +67,7 @@ extern unsigned int opt_analogmouse;
 extern unsigned int opt_analogmouse_deadzone;
 extern float opt_analogmouse_speed;
 unsigned int mouse_value[2]={0};
+unsigned int mouse_speed[2]={0};
 
 extern unsigned int zoom_mode_id;
 extern unsigned int opt_zoom_mode_id;
@@ -482,6 +490,10 @@ void update_input(int disable_physical_cursor_keys)
                         emu_function(EMU_DATASETTE_REWIND);
                     else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[35]) /* Datasette reset */
                         emu_function(EMU_DATASETTE_RESET);
+                    else if (mapper_keys[i] == -5) /* Mouse speed slower */
+                        mouse_speed[j] |= MOUSE_SPEED_SLOWER;
+                    else if (mapper_keys[i] == -6) /* Mouse speed faster */
+                        mouse_speed[j] |= MOUSE_SPEED_FASTER;
                     else if (mapper_keys[i] == -11) /* Virtual keyboard */
                         emu_function(EMU_VKBD);
                     else if (mapper_keys[i] == -12) /* Statusbar */
@@ -519,6 +531,10 @@ void update_input(int disable_physical_cursor_keys)
                         ; /* nop */
                     else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[35])
                         ; /* nop */
+                    else if (mapper_keys[i] == -5) /* Mouse speed slower */
+                        mouse_speed[j] &= ~MOUSE_SPEED_SLOWER;
+                    else if (mapper_keys[i] == -6) /* Mouse speed faster */
+                        mouse_speed[j] &= ~MOUSE_SPEED_FASTER;
                     else if (mapper_keys[i] == -11) /* Virtual keyboard */
                         ; /* nop */
                     else if (mapper_keys[i] == -12) /* Statusbar */
@@ -841,8 +857,11 @@ void retro_poll_event()
                 else if (retro_port == 4)
                     vice_port = 5;
 
-                // No joystick movements with non-joysticks
+                // No same port joystick movements with non-joysticks
                 if (opt_joyport_type > 1 && vice_port == cur_port)
+                    continue;
+                // No joystick movements with paddles
+                if (opt_joyport_type == 2)
                     continue;
 
                 j = joystick_value[vice_port];
@@ -988,10 +1007,11 @@ void retro_poll_event()
         }
 
         int j = cur_port - 1;
-        static float mouse_multiplier=1;
-        static int dpadmouse_speed[2]={0};
-        static long dpadmouse_press[2]={0};
-        static int dpadmouse_pressed[2]={0};
+        int retro_j = 0;
+        static float mouse_multiplier[2] = {1};
+        static int dpadmouse_speed[2] = {0};
+        static long dpadmouse_press[2] = {0};
+        static int dpadmouse_pressed[2] = {0};
         static long now = 0;
         now = GetTicks();
 
@@ -1006,18 +1026,29 @@ void retro_poll_event()
         int analog_deadzone = 0;
         analog_deadzone = (opt_analogmouse_deadzone * 32768 / 100);
 
+        /* Paddles (opt_joyport_type = 2) share the same joyport, but are meant for 2 players.
+           Therefore treat retroport0 vertical axis as retroport1 horizontal axis, and second fire as retroport1 fire. */
+
         // Joypad buttons
         if (SHOWKEY==-1)
         {
             if (vice_devices[0] == RETRO_DEVICE_JOYPAD && (opt_retropad_options == 1 || opt_retropad_options == 3))
             {
                mouse_l[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
-               mouse_r[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
+               // Paddles-split
+               if (opt_joyport_type == 2)
+                  mouse_r[j] = input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
+               else
+                  mouse_r[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
             }
             else
             {
                mouse_l[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
-               mouse_r[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
+               // Paddles-split
+               if (opt_joyport_type == 2)
+                  mouse_r[j] = input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
+               else
+                  mouse_r[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
             }
         }
 
@@ -1032,52 +1063,75 @@ void retro_poll_event()
         // Joypad movement
         if (SHOWKEY==-1)
         {
-            // Digital mouse speed modifiers
-            if (dpadmouse_pressed[j] == 0)
-               dpadmouse_speed[j] = opt_dpadmouse_speed;
-#if 0
-            if (mouse_speed[j] & MOUSE_SPEED_FASTER)
-               dpadmouse_speed[j] = dpadmouse_speed[j] + 3;
-            if (mouse_speed[j] & MOUSE_SPEED_SLOWER)
-               dpadmouse_speed[j] = dpadmouse_speed[j] - 4;
-#endif
-            // Digital mouse acceleration
-            if (dpadmouse_pressed[j] == 1)
-               if (now - dpadmouse_press[j] > 500 * 50)
-               {
-                  dpadmouse_speed[j]++;
-                  dpadmouse_press[j] = now;
-               }
+            for (retro_j = 0; retro_j < 2; retro_j++)
+            {
+                // Digital mouse speed modifiers
+                if (dpadmouse_pressed[retro_j] == 0)
+                   dpadmouse_speed[retro_j] = opt_dpadmouse_speed;
+                if (mouse_speed[retro_j] & MOUSE_SPEED_FASTER)
+                   dpadmouse_speed[retro_j] = dpadmouse_speed[retro_j] + 4;
+                if (mouse_speed[retro_j] & MOUSE_SPEED_SLOWER)
+                   dpadmouse_speed[retro_j] = dpadmouse_speed[retro_j] - 3;
 
-            // Digital mouse speed limits
-            if (dpadmouse_speed[j] < 3) dpadmouse_speed[j] = 2;
-            if (dpadmouse_speed[j] > 15) dpadmouse_speed[j] = 16;
+                // Digital mouse acceleration
+                if (dpadmouse_pressed[retro_j] == 1)
+                {
+                   if (now - dpadmouse_press[retro_j] > 500 * 200)
+                   {
+                      dpadmouse_speed[retro_j]++;
+                      dpadmouse_press[retro_j] = now;
+                   }
+                }
+
+                // Digital mouse speed limits
+                if (dpadmouse_speed[retro_j] < 4) dpadmouse_speed[retro_j] = 4;
+                if (dpadmouse_speed[retro_j] > 20) dpadmouse_speed[retro_j] = 20;
+            }
 
             if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
-               mouse_x[j] += dpadmouse_speed[j];
+               mouse_x[j] += dpadmouse_speed[0];
             else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
-               mouse_x[j] -= dpadmouse_speed[j];
-            if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))
-               mouse_y[j] += dpadmouse_speed[j];
-            else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))
-               mouse_y[j] -= dpadmouse_speed[j];
+               mouse_x[j] -= dpadmouse_speed[0];
 
-            // Acceleration timestamps
-            if ((mouse_x[j] != 0 || mouse_y[j] != 0) && dpadmouse_pressed[j] == 0)
+            // Paddles-split
+            if (opt_joyport_type == 2)
             {
-               dpadmouse_press[j] = now;
-               dpadmouse_pressed[j] = 1;
+               if (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
+                  mouse_y[j] += dpadmouse_speed[1];
+               else if (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
+                  mouse_y[j] -= dpadmouse_speed[1];
             }
-            else if ((mouse_x[j] == 0 && mouse_y[j] == 0) && dpadmouse_pressed[j] == 1)
+            else
             {
-               dpadmouse_press[j] = 0;
-               dpadmouse_pressed[j] = 0;
+               if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))
+                  mouse_y[j] += dpadmouse_speed[0];
+               else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))
+                  mouse_y[j] -= dpadmouse_speed[0];
+            }
+
+            for (retro_j = 0; retro_j < 2; retro_j++)
+            {
+                // Acceleration timestamps
+                if ((mouse_x[j] != 0 || mouse_y[j] != 0) && dpadmouse_pressed[retro_j] == 0)
+                {
+                   dpadmouse_press[retro_j] = now;
+                   dpadmouse_pressed[retro_j] = 1;
+                }
+                else if ((mouse_x[j] == 0 && mouse_y[j] == 0) && dpadmouse_pressed[retro_j] == 1)
+                {
+                   dpadmouse_press[retro_j] = 0;
+                   dpadmouse_pressed[retro_j] = 0;
+                }
             }
         }
 
         // Left analog movement
-        analog_left[0] = (input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X));
-        analog_left[1] = (input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y));
+        analog_left[0] = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+        // Paddles split
+        if (opt_joyport_type == 2)
+           analog_left[1] = -input_state_cb(1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+        else
+           analog_left[1] = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
         analog_left_magnitude = sqrt((analog_left[0]*analog_left[0]) + (analog_left[1]*analog_left[1]));
         if (analog_left_magnitude <= analog_deadzone)
         {
@@ -1085,24 +1139,26 @@ void retro_poll_event()
             analog_left[1] = 0;
         }
 
-        // Analog stick speed modifiers
-        mouse_multiplier = 1;
-#if 0
-        if (mouse_speed[j] & MOUSE_SPEED_FASTER)
-            mouse_multiplier = mouse_multiplier * MOUSE_SPEED_FAST;
-        if (mouse_speed[j] & MOUSE_SPEED_SLOWER)
-            mouse_multiplier = mouse_multiplier / MOUSE_SPEED_SLOW;
-#endif
+        for (retro_j = 0; retro_j < 2; retro_j++)
+        {
+            // Analog stick speed modifiers
+            mouse_multiplier[retro_j] = 1;
+            if (mouse_speed[retro_j] & MOUSE_SPEED_FASTER)
+                mouse_multiplier[retro_j] = mouse_multiplier[retro_j] * MOUSE_SPEED_FAST;
+            if (mouse_speed[retro_j] & MOUSE_SPEED_SLOWER)
+                mouse_multiplier[retro_j] = mouse_multiplier[retro_j] / MOUSE_SPEED_SLOW;
+        }
+
         if (abs(analog_left[0]) > 0)
         {
-            mouse_x[j] = analog_left[0] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier);
+            mouse_x[j] = analog_left[0] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier[0]);
             if (mouse_x[j] == 0 && abs(analog_left[0]) > analog_deadzone)
                 mouse_x[j] = (analog_left[0] > 0) ? 1 : -1;
         }
 
         if (abs(analog_left[1]) > 0)
         {
-            mouse_y[j] = analog_left[1] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier);
+            mouse_y[j] = analog_left[1] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier[(opt_joyport_type == 2) ? 1 : 0]);
             if (mouse_y[j] == 0 && abs(analog_left[1]) > analog_deadzone)
                 mouse_y[j] = (analog_left[1] > 0) ? 1 : -1;
         }

@@ -46,7 +46,7 @@
 #include <strings.h>
 #endif
 
-#if defined(PSP) || defined(VITA)
+#if defined(PSP) || defined(VITA) || defined(__PSL1GHT__)
 #include <sys/time.h>
 #endif
 
@@ -117,7 +117,7 @@ int archdep_rtc_get_centisecond(void)
 {
     struct timespec dtm;
     int status;
-#if defined(PSP) || defined(VITA) || defined(_3DS)
+#if defined(PSP) || defined(VITA) || defined(_3DS) || defined(__PSL1GHT__)
     struct timeval tm;
     status = gettimeofday(&tm, NULL);
     if(status==0)
@@ -317,7 +317,7 @@ char *archdep_default_save_resource_file_name(void)
       viceuserdir = archdep_pref_path;
     }
 
-    if (access(viceuserdir, F_OK)) {
+    if (ioutil_access(viceuserdir, IOUTIL_ACCESS_F_OK)) {
 #if defined(__WIN32__)
         mkdir(viceuserdir);
 #elif defined(VITA)
@@ -371,40 +371,14 @@ int archdep_path_is_relative(const char *path)
 {
 #ifdef __WIN32__
   return !((isalpha(path[0]) && path[1] == ':') || path[0] == '/' || path[0] == '\\');
-#elif defined(VITA)
+#elif defined(VITA) || defined(__SWITCH__) || defined(WIIU) || defined(_3DS)
     if (path == NULL)
         return 0;
     if (*path == '/')
         return 0;
     // Vita might also use "ux0:" or "uma0:" for absolute paths
-    for (int i = 0; i <= 4; i++)
-    {
-        if (path[i] == '\0')
-          return 1;
-        if (path[i] == ':')
-          return 0;
-    }
-    return 1;
-#elif defined(__SWITCH__)
-    if (path == NULL)
-        return 0;
-    if (*path == '/')
-        return 0;
     // Switch might also use "sdmc:" for absolute paths
-    for (int i = 0; i <= 4; i++)
-    {
-        if (path[i] == '\0')
-          return 1;
-        if (path[i] == ':')
-          return 0;
-    }
-    return 1;
-#elif defined(WIIU)
-    if (path == NULL)
-        return 0;
-    if (*path == '/')
-        return 0;
-    // WIIU might also use "sd:" for absolute paths
+    // WIIU and 3DS might also use "sd:" for absolute paths
     for (int i = 0; i <= 4; i++)
     {
         if (path[i] == '\0')

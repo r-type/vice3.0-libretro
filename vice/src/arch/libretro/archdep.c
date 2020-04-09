@@ -46,7 +46,7 @@
 #include <strings.h>
 #endif
 
-#if defined(PSP) || defined(VITA)
+#if defined(PSP) || defined(VITA) || defined(__PSL1GHT__)
 #include <sys/time.h>
 #endif
 
@@ -117,7 +117,7 @@ int archdep_rtc_get_centisecond(void)
 {
     struct timespec dtm;
     int status;
-#if defined(PSP) || defined(VITA) || defined(_3DS)
+#if defined(PSP) || defined(VITA) || defined(_3DS) || defined(__PSL1GHT__)
     struct timeval tm;
     status = gettimeofday(&tm, NULL);
     if(status==0)
@@ -317,7 +317,7 @@ char *archdep_default_save_resource_file_name(void)
       viceuserdir = archdep_pref_path;
     }
 
-    if (access(viceuserdir, F_OK)) {
+    if (ioutil_access(viceuserdir, IOUTIL_ACCESS_F_OK)) {
 #if defined(__WIN32__)
         mkdir(viceuserdir);
 #elif defined(VITA)

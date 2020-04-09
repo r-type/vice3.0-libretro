@@ -76,6 +76,18 @@
 
 int ioutil_access(const char *pathname, int mode)
 {
+#ifdef __PSL1GHT__
+    struct stat buf;
+    /* This can be improved but since ps3 os doesn't really have ACLs, who
+       cares? */
+    if (stat(pathname, &buf) == 0 &&
+        (buf.st_mode & (S_IRUSR|S_IWUSR)))
+      {
+        /* file points to user readable or writable file */
+        return 0;
+      }
+    return -1;
+#else
     int access_mode = 0;
 
     if ((mode & IOUTIL_ACCESS_R_OK) == IOUTIL_ACCESS_R_OK) {
@@ -92,6 +104,7 @@ int ioutil_access(const char *pathname, int mode)
     }
 
     return access(pathname, access_mode);
+#endif
 }
 
 int ioutil_chdir(const char *path)

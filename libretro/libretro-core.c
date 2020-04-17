@@ -4353,7 +4353,7 @@ void retro_run(void)
       /* Update geometry if model or zoom mode changes */
       if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev)
          update_geometry(1);
-      else if (lastW != retroW || lastH != retroH)
+      else if (lastW != retroW || lastH != retroH || retro_region != retro_get_region())
          update_geometry(0);
    }
 

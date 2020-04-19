@@ -23,7 +23,10 @@ SOURCES_C  := \
 				 $(CORE_DIR)/libretro/retro_files.c \
 				 $(CORE_DIR)/libretro/retro_disk_control.c \
 				 $(CORE_DIR)/libretro/vkbd.c \
-				 $(CORE_DIR)/libretro/graph.c
+				 $(CORE_DIR)/libretro/graph.c \
+				 $(CORE_DIR)/libretro/retroglue.c \
+				 $(DEPS_DIR)/libz/unzip.c \
+				 $(DEPS_DIR)/libz/ioapi.c
 
 ifeq ($(EMUTYPE), x128)
 include $(CORE_DIR)/Makefile.x128

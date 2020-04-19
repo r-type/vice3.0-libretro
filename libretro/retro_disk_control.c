@@ -19,9 +19,16 @@
 #include "retro_disk_control.h"
 #include "retro_strings.h"
 #include "retro_files.h"
-#include "libretro.h"
-
 #include "file/file_path.h"
+#include "libretro.h"
+#include "libretro-core.h"
+#include "retroglue.h"
+
+#include "archdep.h"
+#include "attach.h"
+#include "drive.h"
+#include "tape.h"
+#include "resources.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +53,11 @@
 #undef  DISK_LABEL_FORBID_SHIFTED  // Reject label if has shifted chars
 
 static const char flip_file_header[] = "# Vice fliplist file";
+
+extern char retro_save_directory[RETRO_PATH_MAX];
+extern char retro_temp_directory[RETRO_PATH_MAX];
+extern bool retro_set_image_index(unsigned index);
+extern int runstate;
 
 extern retro_log_printf_t log_cb;
 
@@ -287,6 +299,8 @@ void dc_reset(dc_storage* dc)
         dc->labels[i] = NULL;
         free(dc->names[i]);
         dc->names[i] = NULL;
+
+        dc->types[i] = DC_IMAGE_TYPE_NONE;
     }
 
     dc->unit = 0;
@@ -309,9 +323,10 @@ dc_storage* dc_create(void)
         dc->command = NULL;
         for(int i = 0; i < DC_MAX_SIZE; i++)
         {
-            dc->files[i] = NULL;
+            dc->files[i]  = NULL;
             dc->labels[i] = NULL;
-            dc->names[i] = NULL;
+            dc->names[i]  = NULL;
+            dc->types[i]  = DC_IMAGE_TYPE_NONE;
         }
     }
 
@@ -332,9 +347,10 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* name)
 
     // Add the file
     dc->count++;
-    dc->files[dc->count-1] = filename;
+    dc->files[dc->count-1]  = filename;
     dc->labels[dc->count-1] = label;
-    dc->names[dc->count-1] = name;
+    dc->names[dc->count-1]  = name;
+    dc->types[dc->count-1]  = dc_get_image_type(filename);
     return true;
 }
 
@@ -345,7 +361,7 @@ bool dc_add_file(dc_storage* dc, const char* filename)
         return false;
 
     // Determine if tape or disk fliplist from first entry
-    if (dc->unit == 0)
+    if (dc->unit != -1)
     {
         if (strendswith(filename, "tap") || strendswith(filename, "t64"))
         {
@@ -420,20 +436,115 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
     free(dc->names[index]);
     dc->names[index] = NULL;
 
+    dc->types[index] = DC_IMAGE_TYPE_NONE;
+
     if (filename == NULL)
     {
         dc_remove_file(dc, index);
     }
     else
     {
-        char image_name[512];
-        image_name[0] = '\0';
+        char image_label[RETRO_PATH_MAX];
+        image_label[0] = '\0';
 
-        dc->files[index] = strdup(filename);
-        dc->labels[index] = get_label(filename);
+        static char full_path_replace[RETRO_PATH_MAX] = {0};
+        strcpy(full_path_replace, (char*)filename);
 
-        fill_short_pathname_representation(image_name, filename, sizeof(image_name));
-        dc->names[index] = strdup(image_name);
+        // ZIP
+        if (strendswith(full_path_replace, "zip"))
+        {
+            char zip_basename[RETRO_PATH_MAX] = {0};
+            snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path_replace));
+            snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+            snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "ZIP");
+            char zip_path[RETRO_PATH_MAX] = {0};
+            snprintf(zip_path, sizeof(zip_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+
+            path_mkdir(zip_path);
+            zip_uncompress(full_path_replace, zip_path, NULL);
+
+            // Default to directory mode
+            int zip_mode = 0;
+            snprintf(full_path_replace, sizeof(full_path_replace), "%s", zip_path);
+
+            FILE *zip_m3u;
+            char zip_m3u_buf[2048] = {0};
+            char zip_m3u_path[RETRO_PATH_MAX] = {0};
+            snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
+            int zip_m3u_num = 0;
+
+            DIR *zip_dir;
+            struct dirent *zip_dirp;
+            zip_dir = opendir(zip_path);
+            while ((zip_dirp = readdir(zip_dir)) != NULL)
+            {
+                if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1)
+                    continue;
+
+                // Multi file mode, generate playlist
+                if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
+                 || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
+                )
+                {
+                    zip_mode = 1;
+                    zip_m3u_num++;
+                    snprintf(zip_m3u_buf+strlen(zip_m3u_buf), sizeof(zip_m3u_buf), "%s\n", zip_dirp->d_name);
+                }
+                // Single file mode
+                else if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM)
+                {
+                    zip_mode = 2;
+                    snprintf(full_path_replace, sizeof(full_path_replace), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+                }
+            }
+            closedir(zip_dir);
+
+            switch (zip_mode)
+            {
+                case 0: // Extracted path
+                    dc_reset(dc);
+                    return true;
+                    break;
+                case 2: // Single image
+                    break;
+                case 1: // Generated playlist
+                    if (zip_m3u_num == 1)
+                    {
+                        zip_m3u_buf[strlen(zip_m3u_buf)-1] = '\0';
+                        snprintf(full_path_replace, sizeof(full_path_replace), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_m3u_buf);
+                    }
+                    else
+                    {
+                        zip_m3u = fopen(zip_m3u_path, "w");
+                        fprintf(zip_m3u, "%s", zip_m3u_buf);
+                        fclose(zip_m3u);
+                        snprintf(full_path_replace, sizeof(full_path_replace), "%s", zip_m3u_path);
+                    }
+                    break;
+            }
+        }
+
+        // M3U
+        if (strendswith(full_path_replace, ".m3u"))
+        {
+            // Parse the M3U file
+            dc_parse_m3u(dc, full_path_replace);
+
+            // Some debugging
+            log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
+
+            // Insert first disk
+            retro_set_image_index(0);
+            dc->eject_state = false;
+            return true;
+        }
+
+        dc->files[index] = strdup(full_path_replace);
+        dc->labels[index] = get_label(full_path_replace);
+        dc->types[index] = dc_get_image_type(full_path_replace);
+
+        fill_short_pathname_representation(image_label, full_path_replace, sizeof(image_label));
+        dc->names[index] = strdup(image_label);
     }
 
     return true;
@@ -573,10 +684,34 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
                     image_name = strdup(tmp);
                 }
 
-                // Add the file to the struct
-                dc_add_file_int(dc, filename, label ? label : get_label(filename), image_name);
-                label = NULL;
-                image_name = NULL;
+                // ZIP
+                if (strendswith(filename, "zip"))
+                {
+                    char full_path[RETRO_PATH_MAX] = {0};
+                    snprintf(full_path, sizeof(full_path), "%s", filename);
+
+                    char zip_basename[RETRO_PATH_MAX] = {0};
+                    snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
+                    snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+                    snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "ZIP");
+                    char zip_path[RETRO_PATH_MAX] = {0};
+                    snprintf(zip_path, sizeof(zip_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+                    char lastfile[RETRO_PATH_MAX] = {0};
+
+                    path_mkdir(zip_path);
+                    zip_uncompress(full_path, zip_path, lastfile);
+                    snprintf(full_path, RETRO_PATH_MAX, "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, lastfile);
+
+                    // Add the file to the struct
+                    dc_add_file(dc, full_path);
+                }
+                else
+                {
+                    // Add the file to the struct
+                    dc_add_file_int(dc, filename, label ? label : get_label(filename), image_name);
+                    label = NULL;
+                    image_name = NULL;
+                }
             }
             else
             {
@@ -618,7 +753,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
     fclose(fp);
 
     // M3U - Determine if tape or disk fliplist from first entry
-    if (dc->unit == 0 && dc->count !=0)
+    if (dc->count != 0)
     {
         if (strendswith(dc->files[0], "tap") || strendswith(dc->files[0], "t64"))
         {
@@ -628,8 +763,23 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
         {
             dc->unit = 8;
         }
-    }
 
+        if (runstate == RUNSTATE_RUNNING)
+        {
+            if (dc->unit == 1)
+            {
+                // Detach & disable drive 8
+                file_system_detach_disk(8);
+                log_resources_set_int("Drive8Type", DRIVE_TYPE_NONE);
+            }
+            else
+            {
+                // Detach & disable tape, enable drive 8
+                tape_deinstall();
+                log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
+            }
+        }
+    }
 }
 
 void dc_parse_m3u(dc_storage* dc, const char* m3u_file)
@@ -649,4 +799,42 @@ void dc_free(dc_storage* dc)
     free(dc);
     dc = NULL;
     return;
+}
+
+enum dc_image_type dc_get_image_type(const char* filename)
+{
+	// Missing file
+	if (!filename || (*filename == '\0'))
+		return DC_IMAGE_TYPE_NONE;
+
+	// Floppy image
+	if (strendswith(filename, ".d64") ||
+	    strendswith(filename, ".d71") ||
+	    strendswith(filename, ".d80") ||
+	    strendswith(filename, ".d81") ||
+	    strendswith(filename, ".d82") ||
+	    strendswith(filename, ".g64") ||
+	    strendswith(filename, ".x64") ||
+	    strendswith(filename, ".d6z") ||
+	    strendswith(filename, ".d7z") ||
+	    strendswith(filename, ".d8z") ||
+	    strendswith(filename, ".g6z") ||
+	    strendswith(filename, ".g4z") ||
+	    strendswith(filename, ".x6z"))
+	   return DC_IMAGE_TYPE_FLOPPY;
+
+	// Tape image
+	if (strendswith(filename, ".tap") ||
+	    strendswith(filename, ".t64"))
+	   return DC_IMAGE_TYPE_TAPE;
+
+	// Memory image
+	if (strendswith(filename, ".prg") ||
+	    strendswith(filename, ".p00") ||
+	    strendswith(filename, ".crt") ||
+	    strendswith(filename, ".bin"))
+	   return DC_IMAGE_TYPE_MEM;
+
+	// Fallback
+	return DC_IMAGE_TYPE_UNKNOWN;
 }

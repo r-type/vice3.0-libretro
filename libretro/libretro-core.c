@@ -1,9 +1,5 @@
 #include "libretro.h"
 #include "libretro-core.h"
-#include "vkbd.h"
-#include "string/stdstring.h"
-#include "file/file_path.h"
-#include "compat/strcasestr.h"
 
 #include "archdep.h"
 #include "c64.h"
@@ -12,11 +8,16 @@
 #include "machine.h"
 #include "snapshot.h"
 #include "autostart.h"
+#include "drive.h"
 #include "tape.h"
+#include "vdrive.h"
+#include "diskimage.h"
 #include "attach.h"
 #include "interrupt.h"
 #include "datasette.h"
-#ifndef __PET__
+#ifdef __PET__
+#include "keyboard.h"
+#else
 #include "cartridge.h"
 #endif
 #include "initcmdline.h"
@@ -44,7 +45,7 @@ char slash = FSDEV_DIR_SEP_CHR;
 bool retro_load_ok = false;
 static bool noautostart = false;
 static char* autostartString = NULL;
-char RETRO_DIR[512];
+char RETRO_DIR[RETRO_PATH_MAX];
 static char* core_options_legacy_strings = NULL;
 
 static snapshot_stream_t* snapshot_stream = NULL;
@@ -182,10 +183,11 @@ char resources_var_border[20] = "VICIIBorderMode";
 #endif
 //VICE DEF END
 
-const char *retro_save_directory;
-const char *retro_system_directory;
-const char *retro_content_directory;
-char retro_system_data_directory[512];
+char retro_save_directory[RETRO_PATH_MAX] = {0};
+char retro_temp_directory[RETRO_PATH_MAX] = {0};
+char retro_system_directory[RETRO_PATH_MAX] = {0};
+char retro_content_directory[RETRO_PATH_MAX] = {0};
+char retro_system_data_directory[RETRO_PATH_MAX] = {0};
 
 retro_input_state_t input_state_cb;
 retro_input_poll_t input_poll_cb;
@@ -195,16 +197,9 @@ static retro_audio_sample_t audio_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
 
-#include "retro_strings.h"
-#include "retro_files.h"
-#include "retro_disk_control.h"
 static dc_storage* dc;
-enum {
-	RUNSTATE_FIRST_START = 0,
-	RUNSTATE_LOADED_CONTENT,
-	RUNSTATE_RUNNING,
-};
-static int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are just starting the core from scratch */
+
+int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are just starting the core from scratch */
 /* runstate = RUNSTATE_FIRST_START: first time retro_run() is called after loading and starting core */
 /* runstate = RUNSTATE_LOADED_CONTENT: load content was selected while core is running, so do an autostart_reset() */
 /* runstate = RUNSTATE_RUNNING: core is running normally */
@@ -222,12 +217,6 @@ static char* x_strdup(const char* str)
 unsigned int retro_get_borders(void)
 {
    return RETROBORDERS;
-}
-
-unsigned int retro_toggle_vkbd_alpha(void)
-{
-   vkbd_alpha = (vkbd_alpha == 255) ? opt_vkbd_alpha : 255;
-   return vkbd_alpha;
 }
 
 void retro_set_input_state(retro_input_state_t cb)
@@ -368,7 +357,7 @@ static int check_joystick_control(const char* filename)
 static int get_image_unit()
 {
     int unit = dc->unit;
-    if (unit == 0 && dc->index < dc->count)
+    if (dc->index < dc->count)
     {
         if (strendswith(dc->files[dc->index], "tap") || strendswith(dc->files[dc->index], "t64"))
            unit = 1;
@@ -413,7 +402,7 @@ static void log_disk_in_tray(bool display)
 
 static int process_cmdline(const char* argv)
 {
-    int i=0;
+    int i = 0;
     bool is_fliplist = false;
     int joystick_control = 0;
 
@@ -464,10 +453,76 @@ static int process_cmdline(const char* argv)
             cur_port_locked = 1;
         }
 
+        // ZIP
+        if (strendswith(argv, ".zip"))
+        {
+            char full_path[RETRO_PATH_MAX] = {0};
+            snprintf(full_path, sizeof(full_path), "%s", argv);
+
+            char zip_basename[RETRO_PATH_MAX] = {0};
+            snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
+            snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+            snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "ZIP");
+            char zip_path[RETRO_PATH_MAX] = {0};
+            snprintf(zip_path, sizeof(zip_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+
+            path_mkdir(zip_path);
+            zip_uncompress(full_path, zip_path, NULL);
+
+            // Default to directory mode
+            int zip_mode = 0;
+            snprintf(full_path, sizeof(full_path), "%s", zip_path);
+
+            FILE *zip_m3u;
+            char zip_m3u_buf[2048] = {0};
+            char zip_m3u_path[RETRO_PATH_MAX] = {0};
+            snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
+
+            DIR *zip_dir;
+            struct dirent *zip_dirp;
+            zip_dir = opendir(zip_path);
+            while ((zip_dirp = readdir(zip_dir)) != NULL)
+            {
+               if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1)
+                  continue;
+
+               // Multi file mode, generate playlist
+               if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
+                || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
+               )
+               {
+                  zip_mode = 1;
+                  snprintf(zip_m3u_buf+strlen(zip_m3u_buf), sizeof(zip_m3u_buf), "%s\n", zip_dirp->d_name);
+               }
+               // Single file mode
+               else if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM)
+               {
+                  zip_mode = 2;
+                  snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+               }
+            }
+            closedir(zip_dir);
+
+            switch (zip_mode)
+            {
+               case 0: // Extracted path
+               case 2: // Single image
+                  break;
+               case 1: // Generated playlist
+                  zip_m3u = fopen(zip_m3u_path, "w");
+                  fprintf(zip_m3u, "%s", zip_m3u_buf);
+                  fclose(zip_m3u);
+                  snprintf(full_path, sizeof(full_path), "%s", zip_m3u_path);
+                  break;
+            }
+
+            argv = full_path;
+        }
+
 #if defined(__X64__) || defined(__X64SC__)
-        /* Disable JiffyDOS with PRGs & CRTs */
-        if (strendswith(argv, "prg")
-         || strendswith(argv, "crt"))
+        // Disable JiffyDOS with PRGs & CRTs
+        if (strendswith(argv, ".prg")
+         || strendswith(argv, ".crt"))
             opt_jiffydos_allow = 0;
         else
             opt_jiffydos_allow = 1;
@@ -531,7 +586,7 @@ static int process_cmdline(const char* argv)
         else
         {
             // Some debugging
-            log_cb(RETRO_LOG_INFO, "m3u/vfl file parsed, %d file(s) found\n", dc->count);
+            log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
 
             if (!dc->command)
             {
@@ -613,7 +668,7 @@ static int process_cmdline(const char* argv)
         if (is_fliplist)
         {
             // Some debugging
-            log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
+            log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
         }
     }
 
@@ -992,12 +1047,11 @@ void retro_set_environment(retro_environment_t cb)
             { "4032B", NULL },
             { "8032", NULL },
             { "8096", NULL },
-            { "8096", NULL },
             { "8296", NULL },
-            { "SUPERPET", NULL },
+            { "SUPERPET", "SuperPET" },
             { NULL, NULL },
          },
-         "2001"
+         "8032"
       },
 #elif defined(__CBM2__)
       {
@@ -2569,7 +2623,11 @@ static void update_variables(void)
       else if (strcmp(var.value, "SUPERPET") == 0) modl=PETMODEL_SUPERPET;
       
       if (retro_ui_finalized && RETROC64MODL != modl)
+      {
          petmodel_set(modl);
+         // Keyboard layout refresh required. All models below 8032 except B models use graphics layout, others use business.
+         keyboard_init();
+      }
       RETROC64MODL=modl;
    }
 #elif defined(__CBM2__)
@@ -3707,7 +3765,36 @@ static bool retro_set_eject_state(bool ejected)
             if (unit == 1)
                 tape_image_attach(unit, dc->files[dc->index]);
             else
+            {
                 file_system_attach_disk(unit, dc->files[dc->index]);
+
+                int drive_type;
+                resources_get_int("Drive8Type", &drive_type);
+
+                // Autodetect drive type
+                vdrive_t *vdrive;
+                struct disk_image_s *diskimg;
+
+                vdrive = file_system_get_vdrive(8);
+                if (vdrive == NULL)
+                    log_cb(RETRO_LOG_ERROR, "Failed to get vdrive reference for unit 8.\n");
+                else
+                {
+                    diskimg = vdrive->image;
+                    if (diskimg == NULL)
+                        log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit 8.\n");
+                    else
+                    {
+                        log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
+                        if (log_resources_set_int("Drive8Type", diskimg->type) < 0)
+                            log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
+
+                        // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
+                        if (diskimg->type != drive_type)
+                            file_system_attach_disk(unit, dc->files[dc->index]);
+                    }
+                }
+            }
 
             display_current_image(dc->files[dc->index], true);
             return true;
@@ -3741,7 +3828,7 @@ static unsigned retro_get_image_index(void)
  * The implementation supports setting "no disk" by using an
  * index >= get_num_images().
  */
-static bool retro_set_image_index(unsigned index)
+bool retro_set_image_index(unsigned index)
 {
     // Switch disk in drive
     if (dc)
@@ -3784,8 +3871,7 @@ static unsigned retro_get_num_images(void)
  * returned 4 before.
  * Index 1 will be removed, and the new index is 3.
  */
-static bool retro_replace_image_index(unsigned index,
-      const struct retro_game_info *info)
+static bool retro_replace_image_index(unsigned index, const struct retro_game_info *info)
 {
     if (dc)
     {
@@ -3896,8 +3982,8 @@ void retro_init(void)
 {
    struct retro_log_callback log;
 
-	// Init disk control context
-   	dc = dc_create();
+   // Init disk control context
+   dc = dc_create();
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
       log_cb = log.log;
@@ -3905,32 +3991,41 @@ void retro_init(void)
       log_cb = fallback_log;
 
    const char *system_dir = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir) && system_dir)
    {
       // if defined, use the system directory
-      retro_system_directory=system_dir;
+      strlcpy(
+            retro_system_directory,
+            system_dir,
+            sizeof(retro_system_directory));
    }
 
    const char *content_dir = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY, &content_dir) && content_dir)
    {
       // if defined, use the system directory
-      retro_content_directory=content_dir;
+      strlcpy(
+            retro_content_directory,
+            content_dir,
+            sizeof(retro_content_directory));
    }
 
    const char *save_dir = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) && save_dir)
    {
       // If save directory is defined use it, otherwise use system directory
-      retro_save_directory = *save_dir ? save_dir : retro_system_directory;
+      strlcpy(
+            retro_save_directory,
+            string_is_empty(save_dir) ? retro_system_directory : save_dir,
+            sizeof(retro_save_directory));
    }
    else
    {
       // make retro_save_directory the same in case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY is not implemented by the frontend
-      retro_save_directory=retro_system_directory;
+      strlcpy(
+            retro_save_directory,
+            retro_system_directory,
+            sizeof(retro_save_directory));
    }
 
    if (retro_system_directory==NULL)
@@ -4029,13 +4124,17 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-   /* Clean the disk control context */
+   // Clean the disk control context
    if (dc)
       dc_free(dc);
+
+   // Clean legacy strings
    if (core_options_legacy_strings)
-   {
-	   free(core_options_legacy_strings);
-   }
+      free(core_options_legacy_strings);
+
+   // Clean ZIP temp
+   if (retro_temp_directory && path_is_directory(retro_temp_directory))
+      remove_recurse(retro_temp_directory);
 }
 
 unsigned retro_api_version(void)
@@ -4063,7 +4162,7 @@ void retro_get_system_info(struct retro_system_info *info)
    info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf";
 #endif
    info->need_fullpath    = true;
-   info->block_extract    = false;
+   info->block_extract    = true;
 }
 
 double retro_get_aspect_ratio(unsigned int width, unsigned int height)
@@ -4353,7 +4452,7 @@ void retro_run(void)
       /* Update geometry if model or zoom mode changes */
       if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev)
          update_geometry(1);
-      else if (lastW != retroW || lastH != retroH)
+      else if (lastW != retroW || lastH != retroH || retro_region != retro_get_region())
          update_geometry(0);
    }
 

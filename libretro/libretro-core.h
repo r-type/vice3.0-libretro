@@ -6,8 +6,17 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
-
 #include <stdbool.h>
+#include <dirent.h>
+
+#include "vkbd.h"
+#include "retroglue.h"
+#include "retro_files.h"
+#include "retro_strings.h"
+#include "retro_disk_control.h"
+#include "string/stdstring.h"
+#include "file/file_path.h"
+#include "compat/strcasestr.h"
 
 #define MATRIX(a,b) (((a) << 3) | (b))
 #define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
@@ -101,5 +110,10 @@ extern int RETROUSERPORTJOY;
 extern void maincpu_mainloop_retro(void);
 extern long GetTicks(void);
 extern unsigned int retro_get_borders(void);
-extern unsigned int retro_toggle_vkbd_alpha(void);
+
+enum {
+	RUNSTATE_FIRST_START = 0,
+	RUNSTATE_LOADED_CONTENT,
+	RUNSTATE_RUNNING,
+};
 #endif

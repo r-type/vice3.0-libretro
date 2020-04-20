@@ -91,8 +91,4 @@ void joystick_close(void)
     return;
 }
 
-void kbd_initialize_numpad_joykeys(int* joykeys)
-{
-}
-
 /* ------------------------------------------------------------------------- */

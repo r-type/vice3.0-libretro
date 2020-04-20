@@ -159,5 +159,9 @@ void remove_recurse(const char *path)
    }
 
    closedir(dir);
+#ifdef VITA
+   sceIoRmdir(path);
+#else
    rmdir(path);
+#endif
 }

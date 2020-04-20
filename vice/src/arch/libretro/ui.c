@@ -43,6 +43,7 @@
 #include "c128model.h"
 #elif defined(__PET__)
 #include "petmodel.h"
+#include "keyboard.h"
 #elif defined(__CBM2__)
 #include "cbm2model.h"
 #else
@@ -308,6 +309,7 @@ int ui_init_finalize(void)
    c128model_set(RETROC64MODL);
 #elif defined(__PET__)
    petmodel_set(RETROC64MODL);
+   keyboard_init();
 #elif defined(__CBM2__)
    cbm2model_set(RETROC64MODL);
 #elif defined(__XSCPU64__)

@@ -164,7 +164,7 @@ const char *archdep_program_name(void)
     if (program_name == NULL) {
         char *p;
 #if defined(__WIN32__) 
-  p = strrchr(argv0, '\\');
+        p = strrchr(argv0, '\\');
 #else
         p = strrchr(argv0, '/');
 #endif
@@ -241,7 +241,6 @@ char *archdep_default_sysfile_pathlist(const char *emu_id)
                                    NULL);
         lib_free(default_path_temp);
 #elif defined(__WIN32__) 
-  
        default_path = util_concat( home_path, "\\", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                    home_path, "\\DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                    home_path, "\\PRINTER", NULL);
@@ -280,10 +279,9 @@ char *archdep_make_backup_filename(const char *fname)
 char *archdep_default_resource_file_name(void)
 {
     if(archdep_pref_path==NULL) {
-      const char *home;
-      
-      home = archdep_home_path();
-      return util_concat(home, "/.vice/vicerc", NULL);
+        const char *home;
+        home = archdep_home_path();
+        return util_concat(home, "/.vice/vicerc", NULL);
     } else {
         if (opt_read_vicerc)
             return util_concat(archdep_pref_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
@@ -321,7 +319,7 @@ char *archdep_default_save_resource_file_name(void)
 #if defined(__WIN32__)
         mkdir(viceuserdir);
 #elif defined(VITA)
-        sceIoMkdir(viceuserdir,0777);
+        sceIoMkdir(viceuserdir, 0777);
 #else
         mkdir(viceuserdir, 0700);
 #endif
@@ -370,7 +368,7 @@ int archdep_default_logger(const char *level_string, const char *txt) {
 int archdep_path_is_relative(const char *path)
 {
 #ifdef __WIN32__
-  return !((isalpha(path[0]) && path[1] == ':') || path[0] == '/' || path[0] == '\\');
+    return !((isalpha(path[0]) && path[1] == ':') || path[0] == '/' || path[0] == '\\');
 #elif defined(VITA) || defined(__SWITCH__) || defined(WIIU) || defined(_3DS)
     if (path == NULL)
         return 0;
@@ -589,12 +587,16 @@ int archdep_file_set_gzip(const char *name)
 int archdep_mkdir(const char *pathname, int mode)
 {
 #if defined(__WIN32__)
-       return mkdir(pathname);
+    return mkdir(pathname);
 #elif defined(VITA)
-       return sceIoMkdir(pathname,0777);
+    return sceIoMkdir(pathname, 0777);
 #else
-     return mkdir(pathname, (mode_t)mode);
+    return mkdir(pathname, (mode_t)mode);
 #endif
+}
+
+int archdep_rmdir(const char *pathname)
+{
 }
 
 int archdep_stat(const char *file_name, unsigned int *len, unsigned int *isdir)
@@ -642,24 +644,6 @@ void archdep_shutdown(void)
 
     lib_free(argv0);
     lib_free(boot_path);
-
-}
-
-signed long kbd_arch_keyname_to_keynum(char *keyname) {
-	return (signed long)atoi(keyname);
-}
-
-const char *kbd_arch_keynum_to_keyname(signed long keynum) {
-	static char keyname[20];
-
-	memset(keyname, 0, 20);
-	sprintf(keyname, "%li", keynum);
-	return keyname;
-}
-
-void kbd_arch_init()
-{
-  keyboard_clear_keymatrix();
 }
 
 /*
@@ -671,12 +655,17 @@ int archdep_network_init(void)
 void archdep_network_shutdown(void)
 {
 }
+
+void archdep_vice_exit(int excode)
+{
+    exit(excode);
+}
 */
 
 char *archdep_get_runtime_os(void)
 {
 #ifndef __WIN32__
-     return "*nix";
+    return "*nix";
 #else
     return "win*";
 #endif
@@ -686,18 +675,3 @@ char *archdep_get_runtime_cpu(void)
 {
     return "Unknown CPU";
 }
-
-
-int archdep_rmdir(const char *pathname)
-{
-}
-
-
-
-
-/*
-void archdep_vice_exit(int excode)
-{
-    exit(excode);
-}
-*/

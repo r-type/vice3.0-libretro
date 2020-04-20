@@ -1389,7 +1389,9 @@ static int keyboard_set_keyboard_type(int val, void *param)
 
     mapping = machine_keyboard_mapping;
     idx = machine_keymap_index;
-
+#ifdef __LIBRETRO__
+    machine_keyboard_type = val;
+#endif
     DBG((">keyboard_set_keyboard_type(idx:%d mapping:%d type:%d)\n", idx, mapping, val));
     if (idx < 2) {
         if (switch_keymap_file(&idx, &mapping, &val) < 0) {
@@ -1411,10 +1413,6 @@ static int keyboard_set_keyboard_type(int val, void *param)
     return 0;
 }
 
-#ifdef __LIBRETRO__
-#include "defaultkey.inc"
-#endif
-
 /* handle change if "KeyboardMapping" */
 static int keyboard_set_keyboard_mapping(int val, void *param)
 {
@@ -1430,10 +1428,6 @@ static int keyboard_set_keyboard_mapping(int val, void *param)
         if (switch_keymap_file(&idx, &val, &type) < 0) {
             /*log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");*/
             /* return -1; */
-#ifdef __LIBRETRO__
-            log_message(keyboard_log, "Default keymap embedded libretro...");
-            retro_defaultkeyboard();
-#endif
             return 0; /* HACK: allow to start up when default keymap is missing */
         }
         machine_keymap_index = idx;
@@ -1748,6 +1742,9 @@ int keyboard_cmdline_options_init(void)
 }
 
 /*--------------------------------------------------------------------------*/
+#ifdef __LIBRETRO__
+#include "defaultkey.inc"
+#endif
 
 void keyboard_init(void)
 {
@@ -1759,6 +1756,9 @@ void keyboard_init(void)
                             restore_alarm_triggered, NULL);
 
     kbd_arch_init();
+#ifdef __LIBRETRO__
+    libretro_keyboard();
+#endif
 
     if (machine_class != VICE_MACHINE_VSID) {
         load_keymap_ok = 1;

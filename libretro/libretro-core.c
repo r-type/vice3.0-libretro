@@ -15,7 +15,9 @@
 #include "attach.h"
 #include "interrupt.h"
 #include "datasette.h"
-#ifndef __PET__
+#ifdef __PET__
+#include "keyboard.h"
+#else
 #include "cartridge.h"
 #endif
 #include "initcmdline.h"
@@ -1045,12 +1047,11 @@ void retro_set_environment(retro_environment_t cb)
             { "4032B", NULL },
             { "8032", NULL },
             { "8096", NULL },
-            { "8096", NULL },
             { "8296", NULL },
-            { "SUPERPET", NULL },
+            { "SUPERPET", "SuperPET" },
             { NULL, NULL },
          },
-         "2001"
+         "8032"
       },
 #elif defined(__CBM2__)
       {
@@ -2622,7 +2623,11 @@ static void update_variables(void)
       else if (strcmp(var.value, "SUPERPET") == 0) modl=PETMODEL_SUPERPET;
       
       if (retro_ui_finalized && RETROC64MODL != modl)
+      {
          petmodel_set(modl);
+         // Keyboard layout refresh required. All models below 8032 except B models use graphics layout, others use business.
+         keyboard_init();
+      }
       RETROC64MODL=modl;
    }
 #elif defined(__CBM2__)

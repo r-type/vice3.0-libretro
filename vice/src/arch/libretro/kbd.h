@@ -27,7 +27,6 @@
 #ifndef _KBD_H
 #define _KBD_H
 
-//#define KBD_PORT_PREFIX "retro"
 #define KBD_PORT_PREFIX "sdl"
 
 extern void kbd_arch_init(void);
@@ -41,6 +40,4 @@ extern int kbd_arch_get_host_mapping(void);
 extern void kbd_handle_keydown(int kcode);
 extern void kbd_handle_keyup(int kcode);
 
-
 #endif
-

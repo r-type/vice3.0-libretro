@@ -715,7 +715,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
             }
             else
             {
-                log_cb(RETRO_LOG_WARN, "File %s from list %s not found\n", list_file);
+                log_cb(RETRO_LOG_WARN, "File %s from list %s not found in dir %s\n", string, list_file, basedir);
                 // Throw away the label and image name
                 free(label);
                 label = NULL;

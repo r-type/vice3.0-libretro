@@ -26,11 +26,10 @@
 // Verify if file exists
 bool file_exists(const char *filename)
 {
-	struct stat buf;
-	if (stat(filename, &buf) == 0 &&
-	    (buf.st_mode & (S_IRUSR|S_IWUSR)) && !(buf.st_mode & S_IFDIR))
+	FILE *file;
+	if (file = fopen(filename, "r"))
 	{
-		/* file points to user readable regular file */
+		fclose(file);
 		return true;
 	}
 	return false;

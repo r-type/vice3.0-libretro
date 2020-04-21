@@ -1015,8 +1015,8 @@ void retro_poll_event()
         static long now = 0;
         now = GetTicks();
 
-        int mouse_x[2] = {0}, mouse_y[2] = {0};
-        unsigned int mouse_l[2] = {0}, mouse_r[2] = {0}, mouse_m[2] = {0};
+        int retro_mouse_x[2] = {0}, retro_mouse_y[2] = {0};
+        unsigned int retro_mouse_l[2] = {0}, retro_mouse_r[2] = {0}, retro_mouse_m[2] = {0};
         static unsigned int vice_mouse_l[2] = {0}, vice_mouse_r[2] = {0}, vice_mouse_m[2] = {0};
 
         int analog_left[2] = {0};
@@ -1034,30 +1034,30 @@ void retro_poll_event()
         {
             if (vice_devices[0] == RETRO_DEVICE_JOYPAD && (opt_retropad_options == 1 || opt_retropad_options == 3))
             {
-               mouse_l[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
+               retro_mouse_l[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
                // Paddles-split
                if (opt_joyport_type == 2)
-                  mouse_r[j] = input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
+                  retro_mouse_r[j] = input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
                else
-                  mouse_r[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
+                  retro_mouse_r[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
             }
             else
             {
-               mouse_l[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
+               retro_mouse_l[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
                // Paddles-split
                if (opt_joyport_type == 2)
-                  mouse_r[j] = input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
+                  retro_mouse_r[j] = input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B);
                else
-                  mouse_r[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
+                  retro_mouse_r[j] = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A);
             }
         }
 
         // Real mouse buttons
-        if (!mouse_l[j] && !mouse_r[j] && !mouse_m[j])
+        if (!retro_mouse_l[j] && !retro_mouse_r[j] && !retro_mouse_m[j])
         {
-            mouse_l[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
-            mouse_r[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
-            mouse_m[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE);
+            retro_mouse_l[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+            retro_mouse_r[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
+            retro_mouse_m[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE);
         }
 
         // Joypad movement
@@ -1089,35 +1089,35 @@ void retro_poll_event()
             }
 
             if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
-               mouse_x[j] += dpadmouse_speed[0];
+               retro_mouse_x[j] += dpadmouse_speed[0];
             else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
-               mouse_x[j] -= dpadmouse_speed[0];
+               retro_mouse_x[j] -= dpadmouse_speed[0];
 
             // Paddles-split
             if (opt_joyport_type == 2)
             {
                if (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
-                  mouse_y[j] += dpadmouse_speed[1];
+                  retro_mouse_y[j] += dpadmouse_speed[1];
                else if (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
-                  mouse_y[j] -= dpadmouse_speed[1];
+                  retro_mouse_y[j] -= dpadmouse_speed[1];
             }
             else
             {
                if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))
-                  mouse_y[j] += dpadmouse_speed[0];
+                  retro_mouse_y[j] += dpadmouse_speed[0];
                else if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))
-                  mouse_y[j] -= dpadmouse_speed[0];
+                  retro_mouse_y[j] -= dpadmouse_speed[0];
             }
 
             for (retro_j = 0; retro_j < 2; retro_j++)
             {
                 // Acceleration timestamps
-                if ((mouse_x[j] != 0 || mouse_y[j] != 0) && dpadmouse_pressed[retro_j] == 0)
+                if ((retro_mouse_x[j] != 0 || retro_mouse_y[j] != 0) && dpadmouse_pressed[retro_j] == 0)
                 {
                    dpadmouse_press[retro_j] = now;
                    dpadmouse_pressed[retro_j] = 1;
                 }
-                else if ((mouse_x[j] == 0 && mouse_y[j] == 0) && dpadmouse_pressed[retro_j] == 1)
+                else if ((retro_mouse_x[j] == 0 && retro_mouse_y[j] == 0) && dpadmouse_pressed[retro_j] == 1)
                 {
                    dpadmouse_press[retro_j] = 0;
                    dpadmouse_pressed[retro_j] = 0;
@@ -1151,65 +1151,65 @@ void retro_poll_event()
 
         if (abs(analog_left[0]) > 0)
         {
-            mouse_x[j] = analog_left[0] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier[0]);
-            if (mouse_x[j] == 0 && abs(analog_left[0]) > analog_deadzone)
-                mouse_x[j] = (analog_left[0] > 0) ? 1 : -1;
+            retro_mouse_x[j] = analog_left[0] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier[0]);
+            if (retro_mouse_x[j] == 0 && abs(analog_left[0]) > analog_deadzone)
+                retro_mouse_x[j] = (analog_left[0] > 0) ? 1 : -1;
         }
 
         if (abs(analog_left[1]) > 0)
         {
-            mouse_y[j] = analog_left[1] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier[(opt_joyport_type == 2) ? 1 : 0]);
-            if (mouse_y[j] == 0 && abs(analog_left[1]) > analog_deadzone)
-                mouse_y[j] = (analog_left[1] > 0) ? 1 : -1;
+            retro_mouse_y[j] = analog_left[1] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier[(opt_joyport_type == 2) ? 1 : 0]);
+            if (retro_mouse_y[j] == 0 && abs(analog_left[1]) > analog_deadzone)
+                retro_mouse_y[j] = (analog_left[1] > 0) ? 1 : -1;
         }
 
         // Real mouse movement
-        if (!mouse_x[j] && !mouse_y[j])
+        if (!retro_mouse_x[j] && !retro_mouse_y[j])
         {
-            mouse_x[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-            mouse_y[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+            retro_mouse_x[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+            retro_mouse_y[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
         }
 
         // Ports 1 & 2 to VICE
         for (j = 0; j < 2; j++)
         {
-            if (!mouse_l[j] && !mouse_r[j] && !mouse_m[j])
+            if (!retro_mouse_l[j] && !retro_mouse_r[j] && !retro_mouse_m[j])
                 mouse_value[j+1] = 0;
 
             // Buttons
-            if (mouse_l[j] && !vice_mouse_l[j])
+            if (retro_mouse_l[j] && !vice_mouse_l[j])
             {
                 mouse_button(0, 1);
                 vice_mouse_l[j] = 1;
                 mouse_value[j+1] |= 0x10;
             }
-            else if (!mouse_l[j] && vice_mouse_l[j])
+            else if (!retro_mouse_l[j] && vice_mouse_l[j])
             {
                 mouse_button(0, 0);
                 vice_mouse_l[j] = 0;
                 mouse_value[j+1] &= ~0x10;
             }
 
-            if (mouse_r[j] && !vice_mouse_r[j])
+            if (retro_mouse_r[j] && !vice_mouse_r[j])
             {
                 mouse_button(1, 1);
                 vice_mouse_r[j] = 1;
                 mouse_value[j+1] |= 0x20;
             }
-            else if (!mouse_r[j] && vice_mouse_r[j])
+            else if (!retro_mouse_r[j] && vice_mouse_r[j])
             {
                 mouse_button(1, 0);
                 vice_mouse_r[j] = 0;
                 mouse_value[j+1] &= ~0x20;
             }
 
-            if (mouse_m[j] && !vice_mouse_m[j])
+            if (retro_mouse_m[j] && !vice_mouse_m[j])
             {
                 mouse_button(2, 1);
                 vice_mouse_m[j] = 1;
                 mouse_value[j+1] |= 0x40;
             }
-            else if (!mouse_m[j] && vice_mouse_m[j])
+            else if (!retro_mouse_m[j] && vice_mouse_m[j])
             {
                 mouse_button(2, 0);
                 vice_mouse_m[j] = 0;
@@ -1217,29 +1217,29 @@ void retro_poll_event()
             }
 
             // Movement
-            if (mouse_x[j] || mouse_y[j])
+            if (retro_mouse_x[j] || retro_mouse_y[j])
             {
-                if (mouse_y[j] < 0 && !(mouse_value[j+1] & 0x01))
+                if (retro_mouse_y[j] < 0 && !(mouse_value[j+1] & 0x01))
                     mouse_value[j+1] |= 0x01;
-                if (mouse_y[j] > -1 && mouse_value[j+1] & 0x01)
+                if (retro_mouse_y[j] > -1 && mouse_value[j+1] & 0x01)
                     mouse_value[j+1] &= ~0x01;
 
-                if (mouse_y[j] > 0 && !(mouse_value[j+1] & 0x02))
+                if (retro_mouse_y[j] > 0 && !(mouse_value[j+1] & 0x02))
                     mouse_value[j+1] |= 0x02;
-                if (mouse_y[j] < -1 && mouse_value[j+1] & 0x02)
+                if (retro_mouse_y[j] < -1 && mouse_value[j+1] & 0x02)
                     mouse_value[j+1] &= ~0x02;
 
-                if (mouse_x[j] < 0 && !(mouse_value[j+1] & 0x04))
+                if (retro_mouse_x[j] < 0 && !(mouse_value[j+1] & 0x04))
                     mouse_value[j+1] |= 0x04;
-                if (mouse_x[j] > -1 && mouse_value[j+1] & 0x04)
+                if (retro_mouse_x[j] > -1 && mouse_value[j+1] & 0x04)
                     mouse_value[j+1] &= ~0x04;
 
-                if (mouse_x[j] > 0 && !(mouse_value[j+1] & 0x08))
+                if (retro_mouse_x[j] > 0 && !(mouse_value[j+1] & 0x08))
                     mouse_value[j+1] |= 0x08;
-                if (mouse_x[j] < -1 && mouse_value[j+1] & 0x08)
+                if (retro_mouse_x[j] < -1 && mouse_value[j+1] & 0x08)
                     mouse_value[j+1] &= ~0x08;
 
-                mouse_move(mouse_x[j], mouse_y[j]);
+                mouse_move(retro_mouse_x[j], retro_mouse_y[j]);
             }
         }
     }

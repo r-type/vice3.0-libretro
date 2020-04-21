@@ -26,10 +26,15 @@
 // Verify if file exists
 bool file_exists(const char *filename)
 {
-	FILE *file;
-	if (file = fopen(filename, "r"))
+	struct stat buf;
+#ifdef VITA
+	if (path_is_valid(filename) && !path_is_directory(filename))
+#else
+	if (stat(filename, &buf) == 0 &&
+	    (buf.st_mode & (S_IRUSR|S_IWUSR)) && !(buf.st_mode & S_IFDIR))
+#endif
 	{
-		fclose(file);
+		/* file points to user readable regular file */
 		return true;
 	}
 	return false;

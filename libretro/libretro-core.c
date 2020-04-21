@@ -453,6 +453,18 @@ static int process_cmdline(const char* argv)
             cur_port_locked = 1;
         }
 
+        // "Browsed" file in ZIP
+        char browsed_file[RETRO_PATH_MAX] = {0};
+        if (strstr(argv, ".zip#"))
+        {
+            char *token = strtok((char*)argv, "#");
+            while (token != NULL)
+            {
+                snprintf(browsed_file, sizeof(browsed_file), "%s", token);
+                token = strtok(NULL, "#");
+            }
+        }
+
         // ZIP
         if (strendswith(argv, ".zip"))
         {
@@ -483,7 +495,7 @@ static int process_cmdline(const char* argv)
             zip_dir = opendir(zip_path);
             while ((zip_dirp = readdir(zip_dir)) != NULL)
             {
-               if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1)
+               if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1 || browsed_file[0] != '\0')
                   continue;
 
                // Multi file mode, generate playlist
@@ -507,6 +519,8 @@ static int process_cmdline(const char* argv)
             {
                case 0: // Extracted path
                case 2: // Single image
+                  if (browsed_file[0] != '\0')
+                      snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, browsed_file);
                   break;
                case 1: // Generated playlist
                   zip_m3u = fopen(zip_m3u_path, "w");
@@ -2381,23 +2395,17 @@ static void update_variables(void)
    {
       if (retro_ui_finalized)
       {
-         if (strcmp(var.value, "enabled") == 0)
+         if (strcmp(var.value, "enabled") == 0 && RETROTDE == 0)
          {
-            if (RETROTDE==0)
-            {
-               RETROTDE=1;
-               log_resources_set_int("DriveTrueEmulation", 1);
-               log_resources_set_int("VirtualDevices", 0);
-            }
+            RETROTDE=1;
+            log_resources_set_int("DriveTrueEmulation", 1);
+            log_resources_set_int("VirtualDevices", 0);
          }
-         else if (strcmp(var.value, "disabled") == 0)
+         else if (strcmp(var.value, "disabled") == 0 && RETROTDE == 1)
          {
-            if (RETROTDE==1)
-            {
-               RETROTDE=0;
-               log_resources_set_int("DriveTrueEmulation", 0);
-               log_resources_set_int("VirtualDevices", 1);
-            }
+            RETROTDE=0;
+            log_resources_set_int("DriveTrueEmulation", 0);
+            log_resources_set_int("VirtualDevices", 1);
          }
       }
       else
@@ -2419,12 +2427,17 @@ static void update_variables(void)
          if (strcmp(var.value, "disabled") == 0)
          {
             log_resources_set_int("DriveSoundEmulation", 0);
+            log_resources_set_int("DriveSoundEmulationVolume", 0);
          }
          else
          {
             log_resources_set_int("DriveSoundEmulation", 1);
             log_resources_set_int("DriveSoundEmulationVolume", val);
          }
+
+         // Forcefully and silently mute sounds without TDE, because motor sound keeps playing if TDE is changed during
+         if (RETROTDE == 0)
+            resources_set_int("DriveSoundEmulationVolume", 0);
       }
       else
       {
@@ -3693,7 +3706,7 @@ void emu_reset(void)
    // Always disable Warp
    resources_set_int("WarpMode", 0);
 
-   /* Changing opt_read_vicerc requires reloading */
+   // Changing opt_read_vicerc requires reloading
    if (request_reload_restart)
       reload_restart();
 
@@ -3701,6 +3714,9 @@ void emu_reset(void)
    {
       case 0:
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+         // Allow autostarting with a different disk
+         if (dc->count > 1)
+            autostartString = x_strdup(dc->files[dc->index]);
          if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
             autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
          break;
@@ -3729,6 +3745,9 @@ void retro_reset(void)
 
    // Retro reset should always hard reset & autostart
    machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+   // Allow autostarting with a different disk
+   if (dc->count > 1)
+      autostartString = x_strdup(dc->files[dc->index]);
    if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
       autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
 }
@@ -3783,15 +3802,26 @@ static bool retro_set_eject_state(bool ejected)
                     diskimg = vdrive->image;
                     if (diskimg == NULL)
                         log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit 8.\n");
-                    else
+                    else if (diskimg->type != drive_type)
                     {
                         log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
                         if (log_resources_set_int("Drive8Type", diskimg->type) < 0)
                             log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
 
                         // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
-                        if (diskimg->type != drive_type)
-                            file_system_attach_disk(unit, dc->files[dc->index]);
+                        file_system_attach_disk(unit, dc->files[dc->index]);
+
+                        // Drive motor sound keeps on playing if the drive type is changed while the motor is running
+                        // Also happens when toggling TDE
+                        switch (diskimg->type)
+                        {
+                            case 1581:
+                                resources_set_int("DriveSoundEmulationVolume", 0);
+                                break;
+                            default:
+                                resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+                                break;
+                        }
                     }
                 }
             }
@@ -3975,7 +4005,11 @@ static struct retro_disk_control_ext_callback diskControlExt = {
 
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 {
-   /* stub */
+   (void)level;
+   va_list va;
+   va_start(va, fmt);
+   vfprintf(stderr, fmt, va);
+   va_end(va);
 }
 
 void retro_init(void)

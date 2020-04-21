@@ -15,14 +15,12 @@ Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.t
 - GUI removed
 - Autostart PRG mode to inject
 - System-subdir renamed to `vice` and created automatically
-- Keyrah joystick maps 
-- C64 joystick disabled while using virtual keyboard
 - Cursor keys disabled while using RetroPad
 - New settings:
-  - Drive sound emulation
-  - Reset type (autostart, soft, hard)
-  - Customizable keymaps for essential functions (virtual keyboard, statusbar, joyport switch, reset, Datasette controls)
-  - Virtual keyboard themes
+  - Drive Sound Emulation (D64 only)
+  - Reset Type (Autostart, Soft, Hard)
+  - Customizable hotkeys for essential functions (virtual keyboard, statusbar, joyport switch, reset, Datasette controls)
+  - Keyrah joystick maps
   - Zoom mode
   - Paddles & mouse
   - JiffyDOS support
@@ -58,12 +56,12 @@ Long press for sticky keys. Stickying a third key will replace the second.
 ## Joyport control via filename
 
 C64 games sometimes use joystick port 1 and sometimes joystick port 2 for player 1. There are several ways to switch ports in this core:
-- Use the core option for it: `Quickmenu->Options->Controller 0`.
+- Use the core option for it: `Quick Menu -> Options -> RetroPad Port`.
 - Bring up the virtual keyboard with `Select` button, and press the key labeled `JOY` there.
-- Re-name your games, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2. Note this only works with extracted files (`.prg`, `.d64` etc.) not with ZIP files.
+- Rename your games, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2.
 
 ## M3U support and disk control
-When you have a multi disk game, you can use a M3U file to specify each disk of the game and change them from the RetroArch Disk control interface.
+When you have a multi disk game, you can use a M3U file to specify each disk of the game and change them from the RetroArch Disk Control interface.
 
 A M3U file is a simple text file with one disk per line (see https://en.wikipedia.org/wiki/M3U).
 
@@ -85,7 +83,7 @@ When a game ask for it, you can change the current disk in the RetroArch 'Disk C
 - Select the right disk index.
 - Insert the new disk with 'Disk Cycle Tray Status'.
 
-Note: ZIP support is provided by RetroArch and is done before passing the game to the core. So, when using a M3U file, the specified disk images must be uncompressed.
+Note: ZIP support is provided by the core, which allows the use of zipped images in M3Us.
 
 
 ## JiffyDOS support

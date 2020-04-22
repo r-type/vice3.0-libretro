@@ -536,7 +536,9 @@ static int process_cmdline(const char* argv)
 #if defined(__X64__) || defined(__X64SC__)
         // Disable JiffyDOS with PRGs & CRTs
         if (strendswith(argv, ".prg")
-         || strendswith(argv, ".crt"))
+         || strendswith(argv, ".crt")
+         || strendswith(argv, ".t64")
+         || strendswith(argv, ".tap"))
             opt_jiffydos_allow = 0;
         else
             opt_jiffydos_allow = 1;

@@ -203,7 +203,7 @@ void Keymap_KeyDown(int symkey)
         /* Cursors will not move if CTRL (Tab) actually is pressed, so we need to fake keyup */
         if (TABON == 1)
             kbd_handle_keyup(RETROK_TAB);
-            kbd_handle_keydown(symkey);
+        kbd_handle_keydown(symkey);
     }
     else
         kbd_handle_keydown(symkey);
@@ -927,7 +927,7 @@ void retro_poll_event()
                         break;
                 }
 
-                if (mapper_keys[jump_button] != 0)
+                if (jump_button > -1 && mapper_keys[jump_button] != 0)
                     jump_button = -1;
 
                 if (jump_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, jump_button))

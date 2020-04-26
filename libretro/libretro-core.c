@@ -123,18 +123,20 @@ extern int RETROVICIICOLORBRIGHTNESS;
 unsigned int zoom_mode_id = 0;
 int zoom_mode_id_prev = -1;
 unsigned int opt_zoom_mode_id = 0;
+unsigned int zoom_mode_crop_id = 0;
 unsigned int zoomed_width;
 unsigned int zoomed_height;
 unsigned int zoomed_XS_offset;
 unsigned int zoomed_YS_offset;
 static unsigned int opt_aspect_ratio = 0;
-static unsigned int opt_aspect_ratio_prev = 0;
 
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
 static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
 static unsigned int opt_jiffydos_prev = 0;
+#endif
 static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
@@ -810,7 +812,7 @@ void update_from_vice()
         dc->eject_state = true;
 }
 
-int build_params()
+void build_params()
 {
     int i;
 
@@ -1191,229 +1193,6 @@ void retro_set_environment(retro_environment_t cb)
          "enabled"
       },
       {
-         "vice_audio_options_display",
-         "Show Audio Options",
-         "Core options page refresh required.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_drive_sound_emulation",
-         "Drive Sound Emulation",
-         "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 or D71 disk image required.",
-         {
-            { "disabled", NULL },
-            { "10\%", "10\% volume" },
-            { "15\%", "15\% volume" },
-            { "20\%", "20\% volume" },
-            { "25\%", "25\% volume" },
-            { "30\%", "30\% volume" },
-            { "35\%", "35\% volume" },
-            { "40\%", "40\% volume" },
-            { "45\%", "45\% volume" },
-            { "50\%", "50\% volume" },
-            { "55\%", "55\% volume" },
-            { "60\%", "60\% volume" },
-            { "65\%", "65\% volume" },
-            { "70\%", "70\% volume" },
-            { "75\%", "75\% volume" },
-            { "80\%", "80\% volume" },
-            { "85\%", "85\% volume" },
-            { "90\%", "90\% volume" },
-            { "95\%", "95\% volume" },
-            { "100\%", "100\% volume" },
-            { NULL, NULL },
-         },
-         "20\%"
-      },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
-      {
-         "vice_audio_leak_emulation",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-         "VIC-II Audio Leak Emulation",
-#elif defined(__VIC20__)
-         "VIC Audio Leak Emulation",
-#endif
-         "",
-         {
-            { "disabled", NULL },
-            { "1", "100\% volume" },
-            { "2", "200\% volume" },
-            { "3", "300\% volume" },
-            { "4", "400\% volume" },
-            { "5", "500\% volume" },
-            { "6", "600\% volume" },
-            { "7", "700\% volume" },
-            { "8", "800\% volume" },
-            { "9", "900\% volume" },
-            { "10", "1000\% volume" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-      {
-         "vice_sound_sample_rate",
-         "Sound Output Sample Rate",
-         "Slightly higher quality or higher performance.",
-         {
-            { "22050", NULL },
-            { "44100", NULL },
-            { "48000", NULL },
-            { "96000", NULL },
-            { NULL, NULL },
-         },
-         "48000"
-      },
-#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
-      {
-         "vice_sid_engine",
-         "SID Engine",
-         "ReSID is accurate but slower.",
-         {
-            { "FastSID", NULL },
-            { "ReSID", NULL },
-            { "ReSID-3.3", NULL },
-            { "ReSID-FP", NULL },
-            { NULL, NULL },
-         },
-         "ReSID"
-      },
-      {
-         "vice_sid_model",
-         "SID Model",
-         "The original C64 uses 6581, C64C uses 8580.",
-         {
-            { "Default", NULL },
-            { "6581", NULL },
-            { "8580", NULL },
-            { "8580RD", "8580 ReSID + Digi Boost" },
-            { NULL, NULL },
-         },
-         "Default"
-      },
-      {
-         "vice_resid_sampling",
-         "ReSID Sampling",
-         "Resampling for best quality. 'Fast' improves performance dramatically on PS Vita.",
-         {
-            { "Fast", NULL },
-            { "Interpolation", NULL },
-            { "Resampling", NULL },
-            { "Fast resampling", NULL },
-            { NULL, NULL },
-         },
-#if defined(PSP) || defined(VITA) || defined(__SWITCH__)
-         "Fast"
-#else
-         "Resampling"
-#endif
-      },
-      {
-         "vice_resid_passband",
-         "ReSID Filter Passband",
-         "Parameters for SID Filter.",
-         {
-            { "0", NULL },
-            { "10", NULL },
-            { "20", NULL },
-            { "30", NULL },
-            { "40", NULL },
-            { "50", NULL },
-            { "60", NULL },
-            { "70", NULL },
-            { "80", NULL },
-            { "90", NULL },
-            { NULL, NULL },
-         },
-         "90"
-      },
-      {
-         "vice_resid_gain",
-         "ReSID Filter Gain",
-         "Parameters for SID Filter.",
-         {
-            { "90", NULL },
-            { "91", NULL },
-            { "92", NULL },
-            { "93", NULL },
-            { "94", NULL },
-            { "95", NULL },
-            { "96", NULL },
-            { "97", NULL },
-            { "98", NULL },
-            { "99", NULL },
-            { "100", NULL },
-            { NULL, NULL },
-         },
-         "97"
-      },
-      {
-         "vice_resid_filterbias",
-         "ReSID Filter Bias",
-         "Parameters for SID Filter.",
-         {
-            { "-5000", NULL },
-            { "-4500", NULL },
-            { "-4000", NULL },
-            { "-3500", NULL },
-            { "-3000", NULL },
-            { "-2500", NULL },
-            { "-2000", NULL },
-            { "-1500", NULL },
-            { "-1000", NULL },
-            { "-500", NULL },
-            { "0", NULL },
-            { "500", NULL },
-            { "1000", NULL },
-            { "1500", NULL },
-            { "2000", NULL },
-            { "2500", NULL },
-            { "3000", NULL },
-            { "3500", NULL },
-            { "4000", NULL },
-            { "4500", NULL },
-            { "5000", NULL },
-            { NULL, NULL },
-         },
-         "500"
-      },
-      {
-         "vice_resid_8580filterbias",
-         "ReSID Filter 8580 Bias",
-         "Parameters for SID Filter.",
-         {
-            { "-5000", NULL },
-            { "-4500", NULL },
-            { "-4000", NULL },
-            { "-3500", NULL },
-            { "-3000", NULL },
-            { "-2500", NULL },
-            { "-2000", NULL },
-            { "-1500", NULL },
-            { "-1000", NULL },
-            { "-500", NULL },
-            { "0", NULL },
-            { "500", NULL },
-            { "1000", NULL },
-            { "1500", NULL },
-            { "2000", NULL },
-            { "2500", NULL },
-            { "3000", NULL },
-            { "3500", NULL },
-            { "4000", NULL },
-            { "4500", NULL },
-            { "5000", NULL },
-            { NULL, NULL },
-         },
-         "1500"
-      },
-#endif
-      {
          "vice_video_options_display",
          "Show Video Options",
          "Core options page refresh required.",
@@ -1424,7 +1203,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#if !defined(__PET__) && !defined(__CBM2__)
+#if !defined(__PET__) && !defined(__CBM2__) && 0
       {
          "vice_border",
          "Display Borders",
@@ -1454,7 +1233,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode",
          "Zoom Mode",
-         "Zoom will be ignored without borders.\nRequirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
+         "Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
          {
             { "none", "disabled" },
             { "small", "Small" },
@@ -1463,6 +1242,18 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "none"
+      },
+      {
+         "vice_zoom_mode_crop",
+         "Zoom Mode Crop",
+         "'Vertical' is suited for widescreen displays. Use 'Both' & 'Maximum' to remove borders completely.",
+         {
+            { "vertical", "Vertical" },
+            { "horizontal", "Horizontal" },
+            { "both", "Both" },
+            { NULL, NULL },
+         },
+         "vertical"
       },
 #endif
       {
@@ -1785,6 +1576,229 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "1000"
+      },
+#endif
+      {
+         "vice_audio_options_display",
+         "Show Audio Options",
+         "Core options page refresh required.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_drive_sound_emulation",
+         "Drive Sound Emulation",
+         "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 or D71 disk image required.",
+         {
+            { "disabled", NULL },
+            { "10\%", "10\% volume" },
+            { "15\%", "15\% volume" },
+            { "20\%", "20\% volume" },
+            { "25\%", "25\% volume" },
+            { "30\%", "30\% volume" },
+            { "35\%", "35\% volume" },
+            { "40\%", "40\% volume" },
+            { "45\%", "45\% volume" },
+            { "50\%", "50\% volume" },
+            { "55\%", "55\% volume" },
+            { "60\%", "60\% volume" },
+            { "65\%", "65\% volume" },
+            { "70\%", "70\% volume" },
+            { "75\%", "75\% volume" },
+            { "80\%", "80\% volume" },
+            { "85\%", "85\% volume" },
+            { "90\%", "90\% volume" },
+            { "95\%", "95\% volume" },
+            { "100\%", "100\% volume" },
+            { NULL, NULL },
+         },
+         "20\%"
+      },
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
+      {
+         "vice_audio_leak_emulation",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+         "VIC-II Audio Leak Emulation",
+#elif defined(__VIC20__)
+         "VIC Audio Leak Emulation",
+#endif
+         "",
+         {
+            { "disabled", NULL },
+            { "1", "100\% volume" },
+            { "2", "200\% volume" },
+            { "3", "300\% volume" },
+            { "4", "400\% volume" },
+            { "5", "500\% volume" },
+            { "6", "600\% volume" },
+            { "7", "700\% volume" },
+            { "8", "800\% volume" },
+            { "9", "900\% volume" },
+            { "10", "1000\% volume" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+      {
+         "vice_sound_sample_rate",
+         "Sound Output Sample Rate",
+         "Slightly higher quality or higher performance.",
+         {
+            { "22050", NULL },
+            { "44100", NULL },
+            { "48000", NULL },
+            { "96000", NULL },
+            { NULL, NULL },
+         },
+         "48000"
+      },
+#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+      {
+         "vice_sid_engine",
+         "SID Engine",
+         "ReSID is accurate but slower.",
+         {
+            { "FastSID", NULL },
+            { "ReSID", NULL },
+            { "ReSID-3.3", NULL },
+            { "ReSID-FP", NULL },
+            { NULL, NULL },
+         },
+         "ReSID"
+      },
+      {
+         "vice_sid_model",
+         "SID Model",
+         "The original C64 uses 6581, C64C uses 8580.",
+         {
+            { "Default", NULL },
+            { "6581", NULL },
+            { "8580", NULL },
+            { "8580RD", "8580 ReSID + Digi Boost" },
+            { NULL, NULL },
+         },
+         "Default"
+      },
+      {
+         "vice_resid_sampling",
+         "ReSID Sampling",
+         "Resampling for best quality. 'Fast' improves performance dramatically on PS Vita.",
+         {
+            { "Fast", NULL },
+            { "Interpolation", NULL },
+            { "Resampling", NULL },
+            { "Fast resampling", NULL },
+            { NULL, NULL },
+         },
+#if defined(PSP) || defined(VITA) || defined(__SWITCH__)
+         "Fast"
+#else
+         "Resampling"
+#endif
+      },
+      {
+         "vice_resid_passband",
+         "ReSID Filter Passband",
+         "Parameters for SID Filter.",
+         {
+            { "0", NULL },
+            { "10", NULL },
+            { "20", NULL },
+            { "30", NULL },
+            { "40", NULL },
+            { "50", NULL },
+            { "60", NULL },
+            { "70", NULL },
+            { "80", NULL },
+            { "90", NULL },
+            { NULL, NULL },
+         },
+         "90"
+      },
+      {
+         "vice_resid_gain",
+         "ReSID Filter Gain",
+         "Parameters for SID Filter.",
+         {
+            { "90", NULL },
+            { "91", NULL },
+            { "92", NULL },
+            { "93", NULL },
+            { "94", NULL },
+            { "95", NULL },
+            { "96", NULL },
+            { "97", NULL },
+            { "98", NULL },
+            { "99", NULL },
+            { "100", NULL },
+            { NULL, NULL },
+         },
+         "97"
+      },
+      {
+         "vice_resid_filterbias",
+         "ReSID Filter Bias",
+         "Parameters for SID Filter.",
+         {
+            { "-5000", NULL },
+            { "-4500", NULL },
+            { "-4000", NULL },
+            { "-3500", NULL },
+            { "-3000", NULL },
+            { "-2500", NULL },
+            { "-2000", NULL },
+            { "-1500", NULL },
+            { "-1000", NULL },
+            { "-500", NULL },
+            { "0", NULL },
+            { "500", NULL },
+            { "1000", NULL },
+            { "1500", NULL },
+            { "2000", NULL },
+            { "2500", NULL },
+            { "3000", NULL },
+            { "3500", NULL },
+            { "4000", NULL },
+            { "4500", NULL },
+            { "5000", NULL },
+            { NULL, NULL },
+         },
+         "500"
+      },
+      {
+         "vice_resid_8580filterbias",
+         "ReSID Filter 8580 Bias",
+         "Parameters for SID Filter.",
+         {
+            { "-5000", NULL },
+            { "-4500", NULL },
+            { "-4000", NULL },
+            { "-3500", NULL },
+            { "-3000", NULL },
+            { "-2500", NULL },
+            { "-2000", NULL },
+            { "-1500", NULL },
+            { "-1000", NULL },
+            { "-500", NULL },
+            { "0", NULL },
+            { "500", NULL },
+            { "1000", NULL },
+            { "1500", NULL },
+            { "2000", NULL },
+            { "2500", NULL },
+            { "3000", NULL },
+            { "3500", NULL },
+            { "4000", NULL },
+            { "4500", NULL },
+            { "5000", NULL },
+            { NULL, NULL },
+         },
+         "1500"
       },
 #endif
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
@@ -2370,13 +2384,13 @@ void retro_set_environment(retro_environment_t cb)
 int log_resources_set_int(const char *name, int value)
 {
     log_cb(RETRO_LOG_INFO, "Resource %s = %d\n", name, value);
-    resources_set_int(name, value);
+    return resources_set_int(name, value);
 }
 
 int log_resources_set_string(const char *name, const char* value)
 {
     log_cb(RETRO_LOG_INFO, "Resource %s = \"%s\"\n", name, value);
-    resources_set_string(name, value);
+    return resources_set_string(name, value);
 }
 
 static void update_variables(void)
@@ -2506,10 +2520,11 @@ static void update_variables(void)
 
       if (strcmp(var.value, "VIC20 PAL") == 0) modl=VIC20MODEL_VIC20_PAL;
       else if (strcmp(var.value, "VIC20 NTSC") == 0) modl=VIC20MODEL_VIC20_NTSC;
-      else if (strcmp(var.value, "SuperVIC (+16K)") == 0) modl=VIC20MODEL_VIC21;
+      else if (strcmp(var.value, "SuperVIC NTSC (+16K)") == 0) modl=VIC20MODEL_VIC21;
 
       if (retro_ui_finalized && RETROC64MODL != modl)
          vic20model_set(modl);
+
       RETROC64MODL=modl;
    }
 
@@ -2582,6 +2597,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && RETROVIC20MEM != vic20mem)
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+
       RETROVIC20MEM=vic20mem;
    }
 #elif defined(__PLUS4__)
@@ -2600,6 +2616,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && RETROC64MODL != modl)
          plus4model_set(modl);
+
       RETROC64MODL=modl;
    }
 #elif defined(__X128__)
@@ -2616,6 +2633,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && RETROC64MODL != modl)
          c128model_set(modl);
+
       RETROC64MODL=modl;
    }
 
@@ -2633,6 +2651,7 @@ static void update_variables(void)
          log_resources_set_int("C128ColumnKey", c128columnkey);
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
       }
+
       RETROC128COLUMNKEY=c128columnkey;
    }
 
@@ -2710,6 +2729,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && RETROC64MODL != modl)
          cbm2model_set(modl);
+
       RETROC64MODL=modl;
    }
 #else
@@ -2735,6 +2755,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && RETROC64MODL != modl)
          c64model_set(modl);
+
       RETROC64MODL=modl;
    }
 #endif
@@ -2746,16 +2767,17 @@ static void update_variables(void)
    {
       int eng=0;
 
-      if (strcmp(var.value, "ReSID") == 0) { eng=1; }
-      else if (strcmp(var.value, "ReSID-3.3") == 0) { eng=6; }
-      else if (strcmp(var.value, "ReSID-FP") == 0) { eng=7; }
+      if (strcmp(var.value, "ReSID") == 0) eng=1;
+      else if (strcmp(var.value, "ReSID-3.3") == 0) eng=6;
+      else if (strcmp(var.value, "ReSID-FP") == 0) eng=7;
 
-      if (retro_ui_finalized)
-         if (RETROSIDENGINE != eng)
-            if (RETROSIDMODL == 0xff)
-               resources_set_int("SidEngine", eng);
-            else
-               sid_set_engine_model(eng, RETROSIDMODL);
+      if (retro_ui_finalized && RETROSIDENGINE != eng)
+      {
+         if (RETROSIDMODL == 0xff)
+            resources_set_int("SidEngine", eng);
+         else
+            sid_set_engine_model(eng, RETROSIDMODL);
+      }
 
       RETROSIDENGINE=eng;
    }
@@ -2766,14 +2788,13 @@ static void update_variables(void)
    {
       int modl=0xff;
 
-      if (strcmp(var.value, "6581") == 0) { modl=0; }
-      else if (strcmp(var.value, "8580") == 0) { modl=1; }
+      if (strcmp(var.value, "6581") == 0) modl=0;
+      else if (strcmp(var.value, "8580") == 0) modl=1;
       /* There is no digiboost for FastSID (and it's not needed either) */
-      else if (strcmp(var.value, "8580RD") == 0) { modl=(!RETROSIDENGINE ? 1 : 2); }
+      else if (strcmp(var.value, "8580RD") == 0) modl=(!RETROSIDENGINE ? 1 : 2);
 
-      if (retro_ui_finalized)
-         if (modl != 0xff)
-            sid_set_engine_model(RETROSIDENGINE, modl);
+      if (retro_ui_finalized && modl != 0xff)
+         sid_set_engine_model(RETROSIDENGINE, modl);
 
       RETROSIDMODL=modl;
    }
@@ -2784,14 +2805,13 @@ static void update_variables(void)
    {
       int resid=0;
 
-      if (strcmp(var.value, "Fast") == 0) { resid=0; }
-      else if (strcmp(var.value, "Interpolation") == 0) { resid=1; }
-      else if (strcmp(var.value, "Resampling") == 0) { resid=2; }
-      else if (strcmp(var.value, "Fast resampling") == 0) { resid=3; }
+      if (strcmp(var.value, "Fast") == 0) resid=0;
+      else if (strcmp(var.value, "Interpolation") == 0) resid=1;
+      else if (strcmp(var.value, "Resampling") == 0) resid=2;
+      else if (strcmp(var.value, "Fast resampling") == 0) resid=3;
 
-      if (retro_ui_finalized)
-         if (RETRORESIDSAMPLING != resid)
-            log_resources_set_int("SidResidSampling", resid);
+      if (retro_ui_finalized && RETRORESIDSAMPLING != resid)
+         log_resources_set_int("SidResidSampling", resid);
 
       RETRORESIDSAMPLING=resid;
    }
@@ -2803,13 +2823,13 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized)
-         if (RETRORESIDPASSBAND != val)
-         {
-            log_resources_set_int("SidResidPassband", val);
-            log_resources_set_int("SidResid8580Passband", val);
-         }
-         RETRORESIDPASSBAND=val;
+      if (retro_ui_finalized && RETRORESIDPASSBAND != val)
+      {
+         log_resources_set_int("SidResidPassband", val);
+         log_resources_set_int("SidResid8580Passband", val);
+      }
+
+      RETRORESIDPASSBAND=val;
    }
 
    var.key = "vice_resid_gain";
@@ -2819,13 +2839,13 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized)
-         if (RETRORESIDGAIN != val)
-         {
-            log_resources_set_int("SidResidGain", val);
-            log_resources_set_int("SidResid8580Gain", val);
-         }
-         RETRORESIDGAIN=val;
+      if (retro_ui_finalized && RETRORESIDGAIN != val)
+      {
+         log_resources_set_int("SidResidGain", val);
+         log_resources_set_int("SidResid8580Gain", val);
+      }
+
+      RETRORESIDGAIN=val;
    }
 
    var.key = "vice_resid_filterbias";
@@ -2835,10 +2855,10 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized)
-         if (RETRORESIDFILTERBIAS != val)
-            log_resources_set_int("SidResidFilterBias", val);
-         RETRORESIDFILTERBIAS=val;
+      if (retro_ui_finalized && RETRORESIDFILTERBIAS != val)
+         log_resources_set_int("SidResidFilterBias", val);
+
+      RETRORESIDFILTERBIAS=val;
    }
 
    var.key = "vice_resid_8580filterbias";
@@ -2848,14 +2868,14 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized)
-         if (RETRORESID8580FILTERBIAS != val)
-            log_resources_set_int("SidResid8580FilterBias", val);
-         RETRORESID8580FILTERBIAS=val;
+      if (retro_ui_finalized && RETRORESID8580FILTERBIAS != val)
+         log_resources_set_int("SidResid8580FilterBias", val);
+
+      RETRORESID8580FILTERBIAS=val;
    }
 #endif
 
-#if !defined(__PET__) && !defined(__CBM2__)
+#if !defined(__PET__) && !defined(__CBM2__) && 0
    var.key = "vice_border";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2880,8 +2900,10 @@ static void update_variables(void)
       else if (strcmp(var.value, "medium") == 0) zoom_mode_id=2;
       else if (strcmp(var.value, "maximum") == 0) zoom_mode_id=3;
 
+#if 0
       if (RETROBORDERS)
          zoom_mode_id = 0;
+#endif
 #if defined(__X128__)
       if (RETROC128COLUMNKEY==0)
          zoom_mode_id = 0;
@@ -2890,10 +2912,27 @@ static void update_variables(void)
       opt_zoom_mode_id = zoom_mode_id;
    }
 
+   var.key = "vice_zoom_mode_crop";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int zoom_mode_crop_id_prev = zoom_mode_crop_id;
+
+      if (strcmp(var.value, "vertical") == 0) zoom_mode_crop_id=0;
+      else if (strcmp(var.value, "horizontal") == 0) zoom_mode_crop_id=1;
+      else if (strcmp(var.value, "both") == 0) zoom_mode_crop_id=2;
+
+      // Zoom reset
+      if (zoom_mode_crop_id != zoom_mode_crop_id_prev)
+         zoom_mode_id_prev = -1;
+   }
+
    var.key = "vice_aspect_ratio";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
+      int opt_aspect_ratio_prev = opt_aspect_ratio;
+
       if (strcmp(var.value, "auto") == 0) opt_aspect_ratio=0;
       else if (strcmp(var.value, "pal") == 0) opt_aspect_ratio=1;
       else if (strcmp(var.value, "ntsc") == 0) opt_aspect_ratio=2;
@@ -2901,10 +2940,7 @@ static void update_variables(void)
 
       // Zoom reset
       if (opt_aspect_ratio != opt_aspect_ratio_prev)
-      {
-         opt_aspect_ratio_prev = opt_aspect_ratio;
          zoom_mode_id_prev = -1;
-      }
    }
 #endif
 
@@ -3700,7 +3736,7 @@ static void update_variables(void)
    /* Video options */
    option_display.visible = opt_video_options_display;
 
-#if !defined(__PET__) && !defined(__CBM2__)
+#if !defined(__PET__) && !defined(__CBM2__) && 0
    option_display.key = "vice_border";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -4213,7 +4249,7 @@ void retro_deinit(void)
       free(core_options_legacy_strings);
 
    // Clean ZIP temp
-   if (retro_temp_directory && path_is_directory(retro_temp_directory))
+   if (retro_temp_directory != NULL && path_is_directory(retro_temp_directory))
       remove_recurse(retro_temp_directory);
 }
 
@@ -4343,69 +4379,113 @@ void update_geometry(int mode)
          if (zoom_mode_id != zoom_mode_id_prev)
          {
             zoom_mode_id_prev = zoom_mode_id;
+            int zoom_crop_height = 0;
+            int zoom_crop_width = 0;
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+            // PAL: 384x272, NTSC: 384x247, VIC-II: 320x200
+            int zoom_width_max = 320;
+            int zoom_height_max = 200;
             switch (zoom_mode_id)
             {
-            #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-               // PAL: 384x272, NTSC: 384x247
+               case 1: // Small
+                  zoom_crop_width = retroW - zoom_width_max - 32;
+                  zoom_crop_height = retroH - zoom_height_max - 30;
+                  break;
+               case 2: // Medium
+                  zoom_crop_width = retroW - zoom_width_max - 20;
+                  zoom_crop_height = retroH - zoom_height_max - 18;
+                  break;
+               case 3: // Maximum
+                  zoom_crop_width = retroW - zoom_width_max;
+                  zoom_crop_height = retroH - zoom_height_max;
+                  break;
+            }
+#elif defined(__VIC20__)
+            // PAL: 448x284, NTSC: 400x234, VIC: 352x184
+            int zoom_width_max = 352;
+            int zoom_height_max = 184;
+            switch (zoom_mode_id)
+            {
+               case 1: // Small
+                  zoom_crop_width = retroW - zoom_width_max - 46;
+                  zoom_crop_height = retroH - zoom_height_max - 38;
+                  break;
+               case 2: // Medium
+                  zoom_crop_width = retroW - zoom_width_max - 22;
+                  zoom_crop_height = retroH - zoom_height_max - 18;
+                  break;
+               case 3: // Maximum
+                  zoom_crop_width = retroW - zoom_width_max;
+                  zoom_crop_height = retroH - zoom_height_max;
+                  break;
+            }
+#elif defined(__PLUS4__)
+            // PAL: 384x288, NTSC: 384x242, TED: 320x200
+            int zoom_width_max = 320;
+            int zoom_height_max = 200;
+            switch (zoom_mode_id)
+            {
+               case 1: // Small
+                  zoom_crop_width = retroW - zoom_width_max - 40;
+                  zoom_crop_height = retroH - zoom_height_max - 36;
+                  break;
+               case 2: // Medium
+                  zoom_crop_width = retroW - zoom_width_max - 20;
+                  zoom_crop_height = retroH - zoom_height_max - 18;
+                  break;
+               case 3: // Maximum
+                  zoom_crop_width = retroW - zoom_width_max;
+                  zoom_crop_height = retroH - zoom_height_max;
+                  break;
+            }
+#endif
+            switch (zoom_mode_crop_id)
+            {
+               case 0: // Vertical disables horizontal crop
+                  zoom_crop_width = 0;
+                  // Minor adjustment for 16:9 fit
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+                  if (zoom_mode_id == 3 && retro_region == RETRO_REGION_PAL)
+                     zoom_crop_width = 4;
+#elif defined(__VIC20__)
+                  if (zoom_mode_id == 2 && retro_region == RETRO_REGION_PAL)
+                     zoom_crop_width = 18;
+                  if (zoom_mode_id == 3 && retro_region == RETRO_REGION_PAL)
+                     zoom_crop_width = 56;
+#elif defined(__PLUS4__)
+                  if (zoom_mode_id == 2 && retro_region == RETRO_REGION_PAL)
+                     zoom_crop_width = 10;
+                  if (zoom_mode_id == 3 && retro_region == RETRO_REGION_PAL)
+                     zoom_crop_width = 40;
+#endif
+                  break;
+               case 1: // Horizontal disables vertical crop
+                  zoom_crop_height = 0;
+                  break;
+               case 2: // Both
+                  break;
+            }
+
+            switch (zoom_mode_id)
+            {
                case 1:
-                  zoomed_width        = retroW;
-                  zoomed_XS_offset    = 0;
-                  zoomed_height       = (retro_region == RETRO_REGION_NTSC) ? 230 : 240;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 8 : 16;
-                  break;
                case 2:
-                  zoomed_width        = retroW;
-                  zoomed_XS_offset    = 0;
-                  zoomed_height       = (retro_region == RETRO_REGION_NTSC) ? 218 : 216;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 14 : 27;
-                  break;
                case 3:
-                  zoomed_width        = 380;
-                  zoomed_XS_offset    = 2;
-                  zoomed_height       = 200;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 23 : 35;
+                  zoomed_width        = retroW - zoom_crop_width;
+                  zoomed_height       = retroH - zoom_crop_height;
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+                  zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
+                  zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 1 : 0) : 0;
+#elif defined(__VIC20__)
+                  zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) - ((retro_region == RETRO_REGION_PAL) ? 0 : -8) : 0;
+                  zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 2 : 3) : 0;
+#elif defined(__PLUS4__)
+                  zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
+                  zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 4 : 3) : 0;
+#endif
                   break;
-            #elif defined(__VIC20__)
-               // PAL: 448x284, NTSC: 400x234
-               case 1:
-                  zoomed_width        = retroW;
-                  zoomed_XS_offset    = (retro_region == RETRO_REGION_NTSC) ? 8 : 0;
-                  zoomed_height       = (retro_region == RETRO_REGION_NTSC) ? 218 : 236;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 6 : 20;
-                  break;
-               case 2:
-                  zoomed_width        = retroW;
-                  zoomed_XS_offset    = (retro_region == RETRO_REGION_NTSC) ? 8 : 0;
-                  zoomed_height       = (retro_region == RETRO_REGION_NTSC) ? 202 : 216;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 13 : 32;
-                  break;
-               case 3:
-                  zoomed_width        = (retro_region == RETRO_REGION_NTSC) ? retroW : 392;
-                  zoomed_XS_offset    = (retro_region == RETRO_REGION_NTSC) ? 8 : 28;
-                  zoomed_height       = 184;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 22 : 48;
-                  break;
-            #elif defined(__PLUS4__)
-               // PAL: 384x288, NTSC: 384x242
-               case 1:
-                  zoomed_width        = retroW;
-                  zoomed_XS_offset    = 0;
-                  zoomed_height       = (retro_region == RETRO_REGION_NTSC) ? 228 : 246;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 4 : 18;
-                  break;
-               case 2:
-                  zoomed_width        = (retro_region == RETRO_REGION_NTSC) ? retroW : 377;
-                  zoomed_XS_offset    = (retro_region == RETRO_REGION_NTSC) ? 0 : 4;
-                  zoomed_height       = (retro_region == RETRO_REGION_NTSC) ? 212 : 220;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 12 : 30;
-                  break;
-               case 3:
-                  zoomed_width        = (retro_region == RETRO_REGION_NTSC) ? retroW : 343;
-                  zoomed_XS_offset    = (retro_region == RETRO_REGION_NTSC) ? 0 : 21;
-                  zoomed_height       = 200;
-                  zoomed_YS_offset    = (retro_region == RETRO_REGION_NTSC) ? 18 : 40;
-                  break;
-            #endif
+
                default:
                   zoomed_width        = retroW;
                   zoomed_height       = retroH;
@@ -4729,8 +4809,8 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 static void save_trap(uint16_t addr, void *success)
 {
-   static unsigned int save_disks;
-   static unsigned int drive_type;
+   int save_disks;
+   int drive_type;
    resources_get_int("Drive8Type", &drive_type);
    save_disks = (drive_type < 1550) ? 1 : 0;
 

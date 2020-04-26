@@ -30,6 +30,7 @@ int BKG_PADDING(int len)
          return -((font_width / 2) * 3);
          break;
    }
+   return 0;
 }
 
 void print_virtual_kbd(unsigned short int *pixels)

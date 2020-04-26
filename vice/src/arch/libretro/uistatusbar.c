@@ -48,7 +48,7 @@
 #include "archdep.h"
 
 extern unsigned int opt_joyport_type;
-extern unsigned int mouse_value[2];
+extern unsigned int mouse_value[2 + 1];
 
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
@@ -554,7 +554,11 @@ void uistatusbar_draw(void)
     int bkg_height = char_width + 2;
 
     // Right alignment offset
-    int x_align_offset = 4 + (retroXS_offset / 2);
+    int x_align_offset = (retroW - zoomed_width) + 4 - ((retroXS_offset > 0) ? (retroXS_offset * 2) : 0);
+    if (retroW != zoomed_width)
+        x_align_offset += 1;
+    if (x_align_offset < 0)
+        x_align_offset = 0;
 
     // Basic mode statusbar background
     if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)

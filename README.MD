@@ -116,13 +116,28 @@ VIC-20 memory expansion will also be set with filename tags or directory matchin
 
 ## Build instructions
 
+Remember to run `make clean EMUTYPE=x` when building different EMUTYPEs.
+
+Currently working EMUTYPEs are:
+- `x64`
+- `x64sc`
+- `x128`
+- `xplus4`
+- `xvic`
+- `xpet`
+- `xcbm2`
+
 ### Linux
 ```
-CC=gcc make -f Makefile.libretro -j4
+CC=gcc make -j4
+```
+### Windows
+```
+make -j4
 ```
 ### Win64 (crossbuild)
 ```
-make -f Makefile.libretro platform=wincross64 -j4
+make platform=wincross64 -j4
 ```
 ### Android standalone toolchain Build
 ```
@@ -130,7 +145,7 @@ export path to your standalone toolchain like
 
 export PATH=$PATH:/opt/standtc/bin
 
-make -f Makefile.libretro platform=androidstc -j4
+make platform=androidstc -j4
 ```
 ### Android ndk Build
 ```

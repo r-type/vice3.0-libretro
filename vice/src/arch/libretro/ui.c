@@ -41,6 +41,12 @@
 #elif defined(__X128__)
 #include "c64model.h"
 #include "c128model.h"
+#include "c128rom.h"
+#include "c128mem.h"
+#include "c128kernal.h"
+#include "c128kernal64.h"
+BYTE c128memrom_kernal128_rom_original[C128_KERNAL_ROM_IMAGE_SIZE] = {0};
+BYTE c128memrom_kernal64_rom_original[C128_KERNAL64_ROM_SIZE] = {0};
 #elif defined(__PET__)
 #include "petmodel.h"
 #include "keyboard.h"
@@ -74,6 +80,7 @@ int RETROAUDIOLEAK=0;
 int RETROC64MODL=0;
 #if defined(__X128__)
 int RETROC128COLUMNKEY=1;
+int RETROC128GO64=0;
 #endif
 #if defined(__VIC20__)
 int RETROVIC20MEM=0;
@@ -277,27 +284,44 @@ int ui_init_finalize(void)
    log_resources_set_int("VICAudioLeak", RETROAUDIOLEAK);
 #endif
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   // Replace kernal always from backup, because kernal loading replaces the embedded variable
 #if defined(__X64__) || defined(__X64SC__)
-   // Replace C64 kernal always from backup
    memcpy(c64memrom_kernal64_rom, c64memrom_kernal64_rom_original, C64_KERNAL_ROM_SIZE);
+#elif defined(__X128__)
+   memcpy(c128kernal64_embedded, c128memrom_kernal64_rom_original, C128_KERNAL64_ROM_SIZE);
+   memcpy(kernal_int, c128memrom_kernal128_rom_original, C128_KERNAL_ROM_IMAGE_SIZE);
+#endif
    static char tmp_str[512] = {0};
    if (opt_jiffydos)
    {
+#if defined(__X64__) || defined(__X64SC__)
       snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_C64.bin");
       log_resources_set_string("KernalName", (const char*)tmp_str);
+#elif defined(__X128__)
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_C64.bin");
+      log_resources_set_string("Kernal64Name", (const char*)tmp_str);
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_C128.bin");
+      log_resources_set_string("KernalIntName", (const char*)tmp_str);
+#endif
       snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1541-II.bin");
       log_resources_set_string("DosName1541", (const char*)tmp_str);
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1571_repl310654.bin");
+      log_resources_set_string("DosName1571", (const char*)tmp_str);
       snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1581.bin");
       log_resources_set_string("DosName1581", (const char*)tmp_str);
    }
    else
    {
-      snprintf(tmp_str, sizeof(tmp_str), "%s", "kernal");//snprintf(tmp_str, sizeof(tmp_str), "%s%c%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "C64", FSDEV_DIR_SEP_CHR, "kernal");
-      log_resources_set_string("KernalName", (const char*)tmp_str);
-      snprintf(tmp_str, sizeof(tmp_str), "%s", "dos1541");
-      log_resources_set_string("DosName1541", (const char*)tmp_str);
-      snprintf(tmp_str, sizeof(tmp_str), "%s", "dos1581");
-      log_resources_set_string("DosName1581", (const char*)tmp_str);
+#if defined(__X64__) || defined(__X64SC__)
+      log_resources_set_string("KernalName", "kernal");
+#elif defined(__X128__)
+      log_resources_set_string("Kernal64Name", "kernal64");
+      log_resources_set_string("KernalIntName", "kernal");
+#endif
+      log_resources_set_string("DosName1541", "dos1541");
+      log_resources_set_string("DosName1571", "dos1571");
+      log_resources_set_string("DosName1581", "dos1581");
    }
 #endif
 
@@ -343,6 +367,7 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__X128__)
+   log_resources_set_int("Go64Mode", RETROC128GO64);
    log_resources_set_int("C128ColumnKey", RETROC128COLUMNKEY);
 #endif
 
@@ -432,6 +457,8 @@ int scpu64ui_init_early(void)
 #elif defined(__X128__)
 int c128ui_init_early(void)
 {
+   memcpy(c128memrom_kernal128_rom_original, kernal_int, C128_KERNAL_ROM_IMAGE_SIZE);
+   memcpy(c128memrom_kernal64_rom_original, c128kernal64_embedded, C128_KERNAL64_ROM_SIZE);
    return 0;
 }
 #elif defined(__VIC20__) 

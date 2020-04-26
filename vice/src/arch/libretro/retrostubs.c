@@ -203,7 +203,7 @@ void Keymap_KeyDown(int symkey)
         /* Cursors will not move if CTRL (Tab) actually is pressed, so we need to fake keyup */
         if (TABON == 1)
             kbd_handle_keyup(RETROK_TAB);
-            kbd_handle_keydown(symkey);
+        kbd_handle_keydown(symkey);
     }
     else
         kbd_handle_keydown(symkey);
@@ -498,6 +498,8 @@ void update_input(int disable_physical_cursor_keys)
                         emu_function(EMU_VKBD);
                     else if (mapper_keys[i] == -12) /* Statusbar */
                         emu_function(EMU_STATUSBAR);
+                    else if (mapper_keys[i] == -13) /* Switch joyport */
+                        emu_function(EMU_JOYPORT);
                     else
                         Keymap_KeyDown(mapper_keys[i]);
                 }
@@ -538,6 +540,8 @@ void update_input(int disable_physical_cursor_keys)
                     else if (mapper_keys[i] == -11) /* Virtual keyboard */
                         ; /* nop */
                     else if (mapper_keys[i] == -12) /* Statusbar */
+                        ; /* nop */
+                    else if (mapper_keys[i] == -13) /* Switch joyport */
                         ; /* nop */
                     else
                         Keymap_KeyUp(mapper_keys[i]);
@@ -923,7 +927,7 @@ void retro_poll_event()
                         break;
                 }
 
-                if (mapper_keys[jump_button] != 0)
+                if (jump_button > -1 && mapper_keys[jump_button] != 0)
                     jump_button = -1;
 
                 if (jump_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, jump_button))

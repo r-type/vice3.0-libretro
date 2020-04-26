@@ -498,6 +498,8 @@ void update_input(int disable_physical_cursor_keys)
                         emu_function(EMU_VKBD);
                     else if (mapper_keys[i] == -12) /* Statusbar */
                         emu_function(EMU_STATUSBAR);
+                    else if (mapper_keys[i] == -13) /* Switch joyport */
+                        emu_function(EMU_JOYPORT);
                     else
                         Keymap_KeyDown(mapper_keys[i]);
                 }
@@ -538,6 +540,8 @@ void update_input(int disable_physical_cursor_keys)
                     else if (mapper_keys[i] == -11) /* Virtual keyboard */
                         ; /* nop */
                     else if (mapper_keys[i] == -12) /* Statusbar */
+                        ; /* nop */
+                    else if (mapper_keys[i] == -13) /* Switch joyport */
                         ; /* nop */
                     else
                         Keymap_KeyUp(mapper_keys[i]);

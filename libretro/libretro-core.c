@@ -1170,7 +1170,7 @@ void retro_set_environment(retro_environment_t cb)
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled"
+         "enabled"
       },
       {
          "vice_audio_options_display",
@@ -1210,7 +1210,7 @@ void retro_set_environment(retro_environment_t cb)
             { "100\%", "100\% volume" },
             { NULL, NULL },
          },
-         "disabled"
+         "20\%"
       },
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
       {

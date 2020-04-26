@@ -99,6 +99,7 @@ extern int RETROAUDIOLEAK;
 extern int RETROC64MODL;
 #if defined(__X128__)
 extern int RETROC128COLUMNKEY;
+extern int RETROC128GO64;
 #endif
 #if defined(__VIC20__)
 extern int RETROVIC20MEM;
@@ -533,7 +534,7 @@ static int process_cmdline(const char* argv)
             argv = full_path;
         }
 
-#if defined(__X64__) || defined(__X64SC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
         // Disable JiffyDOS with PRGs & CRTs
         if (strendswith(argv, ".prg")
          || strendswith(argv, ".crt")
@@ -733,7 +734,7 @@ void update_from_vice()
 
     if (dc->unit == 1)
     {
-#if defined(__X64__) || defined(__X64SC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
         if (opt_jiffydos)
         {
             /* Disable JiffyDOS with tapes */
@@ -1047,6 +1048,17 @@ void retro_set_environment(retro_environment_t cb)
          },
          "VICII"
       },
+      {
+         "vice_c128_go64",
+         "GO64",
+         "Start in C64 compatibility mode.\nFull restart required.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
 #elif defined(__PET__)
       {
          "vice_pet_model",
@@ -1114,10 +1126,16 @@ void retro_set_environment(retro_environment_t cb)
          },
          "C64 PAL"
       },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
       {
          "vice_jiffydos",
          "Use JiffyDOS",
-         "For D64 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1581.bin'",
+#if defined(__X64__) || defined(__X64SC__)
+         "For D64, D71 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+#elif defined(__X128__)
+         "For D64, D71 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+#endif
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1186,7 +1204,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_emulation",
          "Drive Sound Emulation",
-         "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 disk image required.",
+         "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 or D71 disk image required.",
          {
             { "disabled", NULL },
             { "10\%", "10\% volume" },
@@ -2617,6 +2635,32 @@ static void update_variables(void)
       }
       RETROC128COLUMNKEY=c128columnkey;
    }
+
+   var.key = "vice_c128_go64";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int c128go64=0;
+
+      if (strcmp(var.value, "disabled") == 0) c128go64=0;
+      else if (strcmp(var.value, "enabled") == 0) c128go64=1;
+
+      // Force VIC-II with GO64
+      if (c128go64)
+      {
+         RETROC128COLUMNKEY=1;
+         if (retro_ui_finalized)
+            log_resources_set_int("C128ColumnKey", 1);
+      }
+
+      if (retro_ui_finalized && RETROC128GO64 != c128go64)
+      {
+         log_resources_set_int("Go64Mode", c128go64);
+         // Skip reset for now, because going into 64 mode while running produces VDC related endless garbage?!
+         //machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+      }
+      RETROC128GO64=c128go64;
+   }
 #elif defined(__PET__)
    var.key = "vice_pet_model";
    var.value = NULL;
@@ -3298,7 +3342,7 @@ static void update_variables(void)
       opt_read_vicerc_prev = opt_read_vicerc;
    }
 
-#if defined(__X64__) || defined(__X64SC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
    var.key = "vice_jiffydos";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)

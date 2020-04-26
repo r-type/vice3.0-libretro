@@ -1,4 +1,4 @@
-COMMONFLAGS += -D__X64SC__ 
+COMMONFLAGS += -D__X64SC__
 
 INCFLAGS += \
         -I$(EMU)/sid \

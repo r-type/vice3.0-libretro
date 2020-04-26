@@ -2,78 +2,78 @@ EMU        := $(CORE_DIR)/vice/src
 DEPS_DIR   := $(CORE_DIR)/deps
 LIBRETRO_COMM_DIR := $(CORE_DIR)/libretro-common
 
-INCFLAGS += \
-				-I$(CORE_DIR)/include \
-				-I$(CORE_DIR)/libretro/include \
-				-I$(LIBRETRO_COMM_DIR)/include \
-				-I$(CORE_DIR)/libretro \
-				-I$(CORE_DIR)/include/embedded \
-				-I$(CORE_DIR)/include/compat \
-				-I$(CORE_DIR) -DHAVE_CONFIG_H
+GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
+ifneq ($(GIT_VERSION)," unknown")
+   COMMONFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
 
-VERSION   = 3
-REVISION  = 0
+INCFLAGS += \
+	-I$(CORE_DIR) \
+	-I$(CORE_DIR)/libretro \
+	-I$(CORE_DIR)/libretro/include \
+	-I$(LIBRETRO_COMM_DIR)/include \
+	-I$(CORE_DIR)/include \
+	-I$(CORE_DIR)/include/embedded \
+	-I$(CORE_DIR)/include/compat \
 
 CXXFLAGS += $(CPPFLAGS)
 
 SOURCES_CXX :=
 SOURCES_C  := \
-				 $(CORE_DIR)/libretro/libretro-core.c \
-				 $(CORE_DIR)/libretro/retro_strings.c \
-				 $(CORE_DIR)/libretro/retro_files.c \
-				 $(CORE_DIR)/libretro/retro_disk_control.c \
-				 $(CORE_DIR)/libretro/vkbd.c \
-				 $(CORE_DIR)/libretro/graph.c \
-				 $(CORE_DIR)/libretro/retroglue.c \
-				 $(DEPS_DIR)/libz/unzip.c \
-				 $(DEPS_DIR)/libz/ioapi.c
+	$(CORE_DIR)/libretro/libretro-core.c \
+	$(CORE_DIR)/libretro/retro_strings.c \
+	$(CORE_DIR)/libretro/retro_files.c \
+	$(CORE_DIR)/libretro/retro_disk_control.c \
+	$(CORE_DIR)/libretro/vkbd.c \
+	$(CORE_DIR)/libretro/graph.c \
+	$(CORE_DIR)/libretro/retroglue.c \
+	$(DEPS_DIR)/libz/unzip.c \
+	$(DEPS_DIR)/libz/ioapi.c
 
 ifeq ($(EMUTYPE), x128)
-include $(CORE_DIR)/Makefile.x128
+	include $(CORE_DIR)/Makefile.x128
 else ifeq ($(EMUTYPE), x64sc)
-include $(CORE_DIR)/Makefile.x64sc
+	include $(CORE_DIR)/Makefile.x64sc
 else ifeq ($(EMUTYPE), x64dtv)
-include $(CORE_DIR)/Makefile.x64dtv
+	include $(CORE_DIR)/Makefile.x64dtv
 else ifeq ($(EMUTYPE), x64scpu)
-include $(CORE_DIR)/Makefile.x64scpu
+	include $(CORE_DIR)/Makefile.x64scpu
 else ifeq ($(EMUTYPE), xplus4)
-include $(CORE_DIR)/Makefile.xplus4
+	include $(CORE_DIR)/Makefile.xplus4
 else ifeq ($(EMUTYPE), xvic)
-include $(CORE_DIR)/Makefile.xvic
+	include $(CORE_DIR)/Makefile.xvic
 else ifeq ($(EMUTYPE), xcbm5x0)
-include $(CORE_DIR)/Makefile.xcbm5x0
+	include $(CORE_DIR)/Makefile.xcbm5x0
 else ifeq ($(EMUTYPE), xcbm2)
-include $(CORE_DIR)/Makefile.xcbm2
+	include $(CORE_DIR)/Makefile.xcbm2
 else ifeq ($(EMUTYPE), xpet)
-include $(CORE_DIR)/Makefile.xpet
+	include $(CORE_DIR)/Makefile.xpet
 else
-include $(CORE_DIR)/Makefile.x64
+	include $(CORE_DIR)/Makefile.x64
 endif
 
 SOURCES_CXX += $(LOCAL_SRC_CC_FILES)
-
 SOURCES_C += \
-				 $(LOCAL_SRC_FILES) \
-				 $(EMU)/arch/libretro/joy.c \
-				 $(EMU)/arch/libretro/video.c \
-				 $(EMU)/arch/libretro/ui.c \
-				 $(EMU)/arch/libretro/kbd.c \
-				 $(EMU)/arch/libretro/main.c \
-				 $(EMU)/arch/libretro/archdep.c \
-				 $(EMU)/arch/libretro/vsidui.c \
-				 $(EMU)/arch/libretro/blockdev.c \
-				 $(EMU)/arch/libretro/c64ui.c \
-				 $(EMU)/arch/libretro/console.c \
-				 $(EMU)/arch/libretro/uicmdline.c \
-				 $(EMU)/arch/libretro/uimon.c \
-				 $(EMU)/arch/libretro/vsyncarch.c \
-				 $(EMU)/arch/libretro/mousedrv.c \
-				 $(EMU)/arch/libretro/signals.c \
-				 $(EMU)/arch/libretro/retrostubs.c \
-				 $(EMU)/arch/libretro/uistatusbar.c
+	$(LOCAL_SRC_FILES) \
+	$(EMU)/arch/libretro/joy.c \
+	$(EMU)/arch/libretro/video.c \
+	$(EMU)/arch/libretro/ui.c \
+	$(EMU)/arch/libretro/kbd.c \
+	$(EMU)/arch/libretro/main.c \
+	$(EMU)/arch/libretro/archdep.c \
+	$(EMU)/arch/libretro/vsidui.c \
+	$(EMU)/arch/libretro/blockdev.c \
+	$(EMU)/arch/libretro/c64ui.c \
+	$(EMU)/arch/libretro/console.c \
+	$(EMU)/arch/libretro/uicmdline.c \
+	$(EMU)/arch/libretro/uimon.c \
+	$(EMU)/arch/libretro/vsyncarch.c \
+	$(EMU)/arch/libretro/mousedrv.c \
+	$(EMU)/arch/libretro/signals.c \
+	$(EMU)/arch/libretro/retrostubs.c \
+	$(EMU)/arch/libretro/uistatusbar.c
 
-ifeq ($(STATIC_LINKING),1)
-else
+ifneq ($(STATIC_LINKING),1)
 SOURCES_C += \
 	$(DEPS_DIR)/libz/adler32.c \
 	$(DEPS_DIR)/libz/crc32.c \

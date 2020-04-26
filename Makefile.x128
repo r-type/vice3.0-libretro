@@ -1,4 +1,4 @@
-COMMONFLAGS += -D__X128__ 
+COMMONFLAGS += -D__X128__
 
 INCFLAGS += \
 		-I$(EMU)/sid \

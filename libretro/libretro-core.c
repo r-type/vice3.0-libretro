@@ -108,7 +108,6 @@ extern int vic20mem_forced;
 extern int RETROUSERPORTJOY;
 extern int RETROEXTPAL;
 extern int RETROAUTOSTARTWARP;
-extern int RETROBORDERS;
 extern int RETROTHEME;
 extern int RETROKEYRAHKEYPAD;
 extern int RETROKEYBOARDPASSTHROUGH;
@@ -155,14 +154,6 @@ extern int cur_port_locked;
 
 extern int turbo_fire_button;
 extern unsigned int turbo_pulse;
-
-#if defined(__VIC20__)
-char resources_var_border[20] = "VICBorderMode";
-#elif defined(__PLUS4__)
-char resources_var_border[20] = "TEDBorderMode";
-#else
-char resources_var_border[20] = "VICIIBorderMode";
-#endif
 
 //VICE DEF BEGIN
 #include "resources.h"
@@ -215,11 +206,6 @@ int disk_label_mode = DISK_LABEL_MODE_ASCII_OR_CAMELCASE;
 static char* x_strdup(const char* str)
 {
     return str ? strdup(str) : NULL;
-}
-
-unsigned int retro_get_borders(void)
-{
-   return RETROBORDERS;
 }
 
 void retro_set_input_state(retro_input_state_t cb)
@@ -1203,19 +1189,6 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#if !defined(__PET__) && !defined(__CBM2__) && 0
-      {
-         "vice_border",
-         "Display Borders",
-         "All cores except 'x64sc' will reset when this option is changed.",
-         {
-            { "enabled", NULL },
-            { "disabled", NULL },
-            { NULL, NULL },
-         },
-         "enabled"
-      },
-#endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
       {
          "vice_aspect_ratio",
@@ -2875,21 +2848,6 @@ static void update_variables(void)
    }
 #endif
 
-#if !defined(__PET__) && !defined(__CBM2__) && 0
-   var.key = "vice_border";
-   var.value = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      int border=0; /* 0 : normal, 1: full, 2: debug, 3: none */
-      if (strcmp(var.value, "enabled") == 0) border=0;
-      else if (strcmp(var.value, "disabled") == 0) border=3;
-
-      RETROBORDERS=border;
-      if (retro_ui_finalized)
-         log_resources_set_int(resources_var_border, border);
-   }
-#endif
-
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
    var.key = "vice_zoom_mode";
    var.value = NULL;
@@ -2900,10 +2858,6 @@ static void update_variables(void)
       else if (strcmp(var.value, "medium") == 0) zoom_mode_id=2;
       else if (strcmp(var.value, "maximum") == 0) zoom_mode_id=3;
 
-#if 0
-      if (RETROBORDERS)
-         zoom_mode_id = 0;
-#endif
 #if defined(__X128__)
       if (RETROC128COLUMNKEY==0)
          zoom_mode_id = 0;
@@ -3736,12 +3690,10 @@ static void update_variables(void)
    /* Video options */
    option_display.visible = opt_video_options_display;
 
-#if !defined(__PET__) && !defined(__CBM2__) && 0
-   option_display.key = "vice_border";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
    option_display.key = "vice_zoom_mode";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_zoom_mode_crop";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_aspect_ratio";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -4355,23 +4307,6 @@ void update_geometry(int mode)
             environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
             return;
          }
-#if 0
-         if (retro_get_borders())
-            // When borders are disabled, each system has a different aspect ratio.
-            // For example, C64 & C128 have 320 / 200 pixel resolution with a 15 / 16
-            // pixel aspect ratio leading to a total aspect of 320 / 200 * 15 / 16 = 1.5
-         #if defined(__VIC20__)
-            system_av_info.geometry.aspect_ratio = (float)1.6;
-         #elif defined(__PLUS4__)
-            system_av_info.geometry.aspect_ratio = (float)1.65;
-         #elif defined(__PET__)
-            system_av_info.geometry.aspect_ratio = (float)4.0/3.0;
-         #else
-            system_av_info.geometry.aspect_ratio = (float)1.5;
-         #endif
-         else
-            system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retroW, retroH);
-#endif
          break;
 
       case 1:

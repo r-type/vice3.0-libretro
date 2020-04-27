@@ -120,120 +120,81 @@ void print_virtual_kbd(unsigned short int *pixels)
    int BKG_PADDING_Y_DEFAULT = -3;
 
 #if defined(__VIC20__)
-   if (retro_get_borders())
+   if (retro_get_region() == RETRO_REGION_NTSC)
    {
-      XOFFSET           = 4;
-      YOFFSET           = -4;
-      XPADDING          = 4;
-      YPADDING          = 8;
-      
-      if (opt_statusbar & STATUSBAR_TOP)
-         YOFFSET        = 4;
+      XOFFSET           = 9;
+      YOFFSET           = -3;
+      XPADDING          = 44;
+      YPADDING          = 58;
+
+      if (zoom_mode_id == 3)
+      {
+         if (opt_statusbar & STATUSBAR_TOP)
+            YOFFSET = -2;
+         else
+            YOFFSET = -7;
+      }
    }
    else
-   {
-      if (retro_get_region() == RETRO_REGION_NTSC)
-      {
-         XOFFSET           = 9;
-         YOFFSET           = -3;
-         XPADDING          = 44;
-         YPADDING          = 58;
-
-         if (zoom_mode_id == 3)
-         {
-            if (opt_statusbar & STATUSBAR_TOP)
-               YOFFSET = -2;
-            else
-               YOFFSET = -7;
-         }
-      }
-      else
-      {
-         XOFFSET           = 4;
-         YOFFSET           = -3;
-         XPADDING          = 98;
-         YPADDING          = 108;
-
-         if (zoom_mode_id == 3)
-         {
-            if (opt_statusbar & STATUSBAR_TOP)
-               YOFFSET = 2;
-            else
-               YOFFSET = -6;
-         }
-      }
-   }
-#elif defined(__PLUS4__)
-   if (retro_get_borders())
    {
       XOFFSET           = 4;
       YOFFSET           = -3;
-      XPADDING          = 4;
-      YPADDING          = 8;
-      
-      if (opt_statusbar & STATUSBAR_TOP)
-         YOFFSET        = 5;
+      XPADDING          = 98;
+      YPADDING          = 108;
+
+      if (zoom_mode_id == 3)
+      {
+         if (opt_statusbar & STATUSBAR_TOP)
+            YOFFSET = 2;
+         else
+            YOFFSET = -6;
+      }
+   }
+#elif defined(__PLUS4__)
+   if (retro_get_region() == RETRO_REGION_NTSC)
+   {
+      XOFFSET           = 0;
+      YOFFSET           = -3;
+      XPADDING          = 64;
+      YPADDING          = 52;
+
+      if (zoom_mode_id == 3)
+      {
+         if (opt_statusbar & STATUSBAR_TOP)
+            YOFFSET = 1;
+         else
+            YOFFSET = -7;
+      }
    }
    else
    {
-      if (retro_get_region() == RETRO_REGION_NTSC)
-      {
-         XOFFSET           = 0;
-         YOFFSET           = -3;
-         XPADDING          = 64;
-         YPADDING          = 52;
+      XOFFSET           = 4;
+      YOFFSET           = -3;
+      XPADDING          = 66;
+      YPADDING          = 96;
 
-         if (zoom_mode_id == 3)
-         {
-            if (opt_statusbar & STATUSBAR_TOP)
-               YOFFSET = 1;
-            else
-               YOFFSET = -7;
-         }
-      }
-      else
+      if (zoom_mode_id == 3)
       {
-         XOFFSET           = 4;
-         YOFFSET           = -3;
-         XPADDING          = 66;
-         YPADDING          = 96;
-
-         if (zoom_mode_id == 3)
-         {
-            if (opt_statusbar & STATUSBAR_TOP)
-               YOFFSET = 1;
-            else
-               YOFFSET = -7;
-         }      
+         if (opt_statusbar & STATUSBAR_TOP)
+            YOFFSET = 1;
+         else
+            YOFFSET = -7;
       }
    }
 #else
-   if (retro_get_borders())
-   {
-      XOFFSET           = 1;
-      YOFFSET           = -4;
-      XPADDING          = 8;
-      YPADDING          = 10;
-      
-      if (opt_statusbar & STATUSBAR_TOP)
-         YOFFSET        = 4;
-   }
-   else
-   {
-      XOFFSET           = 0;
-      YOFFSET           = 1;
-      XPADDING          = 74;
-      YPADDING          = 78;
+   XOFFSET           = 0;
+   YOFFSET           = 1;
+   XPADDING          = 74;
+   YPADDING          = 78;
 
-      if (retro_get_region() != RETRO_REGION_NTSC)
-      {
-         if (zoom_mode_id == 3)
-            YOFFSET = -3;
-      }
-
-      if (opt_statusbar & STATUSBAR_TOP)
-         YOFFSET = 5;
+   if (retro_get_region() != RETRO_REGION_NTSC)
+   {
+      if (zoom_mode_id == 3)
+         YOFFSET = -3;
    }
+
+   if (opt_statusbar & STATUSBAR_TOP)
+      YOFFSET = 5;
 #endif
 
    int XSIDE = (retroW - XPADDING) / NPLGN;

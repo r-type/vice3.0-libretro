@@ -109,7 +109,6 @@ extern int RETROUSERPORTJOY;
 //FUNCS
 extern void maincpu_mainloop_retro(void);
 extern long GetTicks(void);
-extern unsigned int retro_get_borders(void);
 
 enum {
 	RUNSTATE_FIRST_START = 0,

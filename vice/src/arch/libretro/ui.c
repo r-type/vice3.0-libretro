@@ -89,7 +89,6 @@ int vic20mem_forced=-1;
 int RETROUSERPORTJOY=-1;
 int RETROEXTPAL=-1;
 int RETROAUTOSTARTWARP=0;
-int RETROBORDERS=0;
 int RETROTHEME=0;
 int RETROKEYRAHKEYPAD=0;
 int RETROKEYBOARDPASSTHROUGH=0;
@@ -354,16 +353,6 @@ int ui_init_finalize(void)
    log_resources_set_int("SidResid8580Passband", RETRORESIDPASSBAND);
    log_resources_set_int("SidResid8580Gain", RETRORESIDGAIN);
    log_resources_set_int("SidResid8580FilterBias", RETRORESID8580FILTERBIAS);
-#endif
-
-#if !defined(__PET__) && !defined(__CBM2__)
-#if defined(__VIC20__)
-   log_resources_set_int("VICBorderMode", RETROBORDERS);
-#elif defined(__PLUS4__)
-   log_resources_set_int("TEDBorderMode", RETROBORDERS);
-#else
-   log_resources_set_int("VICIIBorderMode", RETROBORDERS);
-#endif
 #endif
 
 #if defined(__X128__)

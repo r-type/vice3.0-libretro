@@ -129,6 +129,12 @@ unsigned int zoomed_XS_offset;
 unsigned int zoomed_YS_offset;
 static unsigned int opt_aspect_ratio = 0;
 
+static bool manual_crop_update = false;
+static unsigned int manual_crop_top = 0;
+static unsigned int manual_crop_bottom = 0;
+static unsigned int manual_crop_left = 0;
+static unsigned int manual_crop_right = 0;
+
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
@@ -1227,6 +1233,34 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "vertical"
+      },
+      {
+         "vice_manual_crop_top",
+         "Manual Crop Top",
+         "",
+         MANUAL_CROP_OPTIONS,
+         "0",
+      },
+      {
+         "vice_manual_crop_bottom",
+         "Manual Crop Bottom",
+         "",
+         MANUAL_CROP_OPTIONS,
+         "0",
+      },
+      {
+         "vice_manual_crop_left",
+         "Manual Crop Left",
+         "",
+         MANUAL_CROP_OPTIONS,
+         "0",
+      },
+      {
+         "vice_manual_crop_right",
+         "Manual Crop Right",
+         "",
+         MANUAL_CROP_OPTIONS,
+         "0",
       },
 #endif
       {
@@ -2896,6 +2930,51 @@ static void update_variables(void)
       if (opt_aspect_ratio != opt_aspect_ratio_prev)
          zoom_mode_id_prev = -1;
    }
+
+   var.key = "vice_manual_crop_top";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int manual_crop_top_prev = manual_crop_top;
+      manual_crop_top = atoi(var.value);
+      if (manual_crop_top != manual_crop_top_prev)
+         manual_crop_update = true;
+   }
+   var.key = "vice_manual_crop_bottom";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int manual_crop_bottom_prev = manual_crop_bottom;
+      manual_crop_bottom = atoi(var.value);
+      if (manual_crop_bottom != manual_crop_bottom_prev)
+         manual_crop_update = true;
+   }
+   var.key = "vice_manual_crop_left";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int manual_crop_left_prev = manual_crop_left;
+      manual_crop_left = atoi(var.value);
+      if (manual_crop_left != manual_crop_left_prev)
+         manual_crop_update = true;
+   }
+   var.key = "vice_manual_crop_right";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int manual_crop_right_prev = manual_crop_right;
+      manual_crop_right = atoi(var.value);
+      if (manual_crop_right != manual_crop_right_prev)
+         manual_crop_update = true;
+   }
+
+   // Reset zoom when crops are disabled
+   if (manual_crop_update && manual_crop_top == 0 && manual_crop_bottom == 0 && manual_crop_left == 0 && manual_crop_right == 0)
+   {
+      zoom_mode_id_prev = -1;
+      manual_crop_update = false;
+   }
+
 #endif
 
    var.key = "vice_gfx_colors";
@@ -3697,6 +3776,14 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_aspect_ratio";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_manual_crop_top";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_manual_crop_bottom";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_manual_crop_left";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_manual_crop_right";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
    option_display.key = "vice_gfx_colors";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -4287,13 +4374,13 @@ void update_geometry(int mode)
    {
       case 0:
          /* Zoom mode init */
-         zoom_mode_id_prev = 0;
-         zoomed_width = retroW;
-         zoomed_height = retroH;
-         zoomed_XS_offset = 0;
-         zoomed_YS_offset = 0;
-         retroXS_offset = 0;
-         retroYS_offset = 0;
+         zoom_mode_id_prev  = 0;
+         zoomed_width       = retroW;
+         zoomed_height      = retroH;
+         zoomed_XS_offset   = 0;
+         zoomed_YS_offset   = 0;
+         retroXS_offset     = 0;
+         retroYS_offset     = 0;
 
          system_av_info.geometry.base_width = retroW;
          system_av_info.geometry.base_height = retroH;
@@ -4314,6 +4401,9 @@ void update_geometry(int mode)
          if (zoom_mode_id != zoom_mode_id_prev)
          {
             zoom_mode_id_prev = zoom_mode_id;
+            if (manual_crop_top > 0 || manual_crop_bottom > 0 || manual_crop_left > 0 || manual_crop_right > 0)
+               manual_crop_update = true;
+
             int zoom_crop_height = 0;
             int zoom_crop_width = 0;
 
@@ -4437,6 +4527,26 @@ void update_geometry(int mode)
          }
 #endif
          break;
+
+      case 2:
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
+         manual_crop_update = false;
+
+         int zoom_crop_width = 0;
+         int zoom_crop_height = 0;
+         zoom_crop_width    = manual_crop_left + manual_crop_right;
+         zoom_crop_height   = manual_crop_top + manual_crop_bottom;
+
+         zoomed_width       = retroW - zoom_crop_width;
+         zoomed_height      = retroH - zoom_crop_height;
+         zoomed_XS_offset   = manual_crop_left;
+         zoomed_YS_offset   = manual_crop_top;
+
+         system_av_info.geometry.base_width = zoomed_width;
+         system_av_info.geometry.base_height = zoomed_height;
+         system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(zoomed_width, zoomed_height);
+#endif
+         break;
    }
    environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
 }
@@ -4545,10 +4655,14 @@ void retro_run(void)
       }
 
       /* Update geometry if model or zoom mode changes */
-      if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev)
+      if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev && !manual_crop_update)
          update_geometry(1);
       else if (lastW != retroW || lastH != retroH || retro_region != retro_get_region())
          update_geometry(0);
+
+      /* Manual cropping */
+      if (manual_crop_update)
+         update_geometry(2);
    }
 
    if (retro_ui_finalized && !prev_ui_finalized)

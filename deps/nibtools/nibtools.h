@@ -138,7 +138,11 @@ int write_d64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE track_density, size_t track_length);
 int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, BYTE *track_alignment);
 int sync_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, BYTE *track_alignment);
+#ifdef __LIBRETRO__
+int write_dword(FILE * fd, unsigned int * buf, int num);
+#else
 int write_dword(FILE * fd, DWORD * buf, int num);
+#endif
 unsigned int crc_dir_track(BYTE *track_buffer, size_t *track_length);
 unsigned int crc_all_tracks(BYTE *track_buffer, size_t *track_length);
 unsigned int md5_dir_track(BYTE *track_buffer, size_t *track_length, unsigned char *result);

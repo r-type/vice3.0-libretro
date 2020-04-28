@@ -439,13 +439,13 @@ ShiftCopyXBitsFromPBtoQC(BYTE **p, BYTE *b, BYTE **q, BYTE *c, int NumDataBits, 
 		// > 0 <= C <= 7 (see above)
 		// > *b = Next bit position to be copied from 'db' (1 <= B <= 8)
 		// > [ ((Q << C) & 0xff00) + new bits from db ] >> C
-		**q = ( ( (__int32)((**q) >> (8-*c)) << 8) | (((__int32)db << (*b-1)) & 0xff) ) >> *c;
+		**q = ( ( (uint32)((**q) >> (8-*c)) << 8) | (((uint32)db << (*b-1)) & 0xff) ) >> *c;
 
 		// Determine number 'd' of copied bits (lowest value of following):
 		// - At most (8-*c) free bits in Q were filled
 		// - At most (9-*b) bits could be copied from db
 		// - At most NumDataBits were left to be copied
-		d = min(min(8-*c, 9-*b), NumDataBits);
+		d = fmin(fmin(8-*c, 9-*b), NumDataBits);
 		// Now: 1 <= d <= 8
 
 		// Update source position P.B

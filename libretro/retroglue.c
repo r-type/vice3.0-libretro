@@ -158,26 +158,21 @@ void remove_recurse(const char *path)
    }
 
    closedir(dir);
-#ifdef VITA
-   sceIoRmdir(path);
-#else
-   rmdir(path);
-#endif
+   archdep_rmdir(path);
 }
 
 
 /* NIBTOOLS */
-
+typedef unsigned char BYTE;
+typedef unsigned char __u_char;
 #include "deps/nibtools/nibtools.h"
-#include "deps/nibtools/gcr.h"
-#include "deps/nibtools/prot.h"
 
 #include "deps/nibtools/gcr.c"
 #include "deps/nibtools/prot.c"
 #include "deps/nibtools/crc.c"
 #include "deps/nibtools/bitshifter.c"
 
-int write_dword(FILE * fd, DWORD * buf, int num)
+int write_dword(FILE * fd, unsigned int * buf, int num)
 {
 	int i;
 	BYTE *tmpbuf;

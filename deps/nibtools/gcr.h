@@ -14,8 +14,10 @@
 
 */
 
-#ifndef __LIBRETRO__
+#if !defined(BYTE)
 #define BYTE unsigned char
+#endif
+#if !defined(DWORD)
 #define DWORD unsigned int
 #endif
 #define TRUE 1

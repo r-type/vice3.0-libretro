@@ -597,6 +597,11 @@ int archdep_mkdir(const char *pathname, int mode)
 
 int archdep_rmdir(const char *pathname)
 {
+#ifdef VITA
+    sceIoRmdir(pathname);
+#else
+    rmdir(pathname);
+#endif
     return 0;
 }
 

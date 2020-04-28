@@ -450,16 +450,30 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
         static char full_path_replace[RETRO_PATH_MAX] = {0};
         strcpy(full_path_replace, (char*)filename);
 
+        // ZIP + NIB vars, use the same temp directory for single NIBs
+        char zip_basename[RETRO_PATH_MAX] = {0};
+        snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path_replace));
+        snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+        snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "ZIP");
+        char zip_path[RETRO_PATH_MAX] = {0};
+        snprintf(zip_path, sizeof(zip_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+
+        char nib_input[RETRO_PATH_MAX] = {0};
+        char nib_output[RETRO_PATH_MAX] = {0};
+
+        // NIB convert to G64
+        if (strendswith(full_path_replace, ".nib"))
+        {
+            snprintf(nib_input, sizeof(nib_input), "%s", full_path_replace);
+            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
+            path_mkdir(zip_path);
+            nib_convert(nib_input, nib_output);
+            snprintf(full_path_replace, sizeof(full_path_replace), "%s", nib_output);
+        }
+
         // ZIP
         if (strendswith(full_path_replace, "zip"))
         {
-            char zip_basename[RETRO_PATH_MAX] = {0};
-            snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path_replace));
-            snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-            snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "ZIP");
-            char zip_path[RETRO_PATH_MAX] = {0};
-            snprintf(zip_path, sizeof(zip_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
-
             path_mkdir(zip_path);
             zip_uncompress(full_path_replace, zip_path, NULL);
 
@@ -475,6 +489,20 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
 
             DIR *zip_dir;
             struct dirent *zip_dirp;
+
+            // Convert all NIBs to G64
+            zip_dir = opendir(zip_path);
+            while ((zip_dirp = readdir(zip_dir)) != NULL)
+            {
+                if (strendswith(zip_dirp->d_name, ".nib"))
+                {
+                    snprintf(nib_input, sizeof(nib_input), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+                    snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
+                    nib_convert(nib_input, nib_output);
+                }
+            }
+            closedir(zip_dir);
+
             zip_dir = opendir(zip_path);
             while ((zip_dirp = readdir(zip_dir)) != NULL)
             {

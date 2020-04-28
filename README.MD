@@ -8,8 +8,8 @@ Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.t
 
 ## Recent improvements
 
+- Automatic NIB->G64 conversion
 - Savestates
-- Vice 3.3 update
 - x64sc / xpet
 - Virtual keyboard revamped: more responsive, cleaner design, much easier to control
 - GUI removed
@@ -93,7 +93,9 @@ External ROM files required in `system/vice`:
 |Filename|Size|MD5|
 |---|---|---|
 |**JiffyDOS_C64.bin**|8 192|be09394f0576cf81fa8bacf634daf9a2|
+|**JiffyDOS_C128.bin**|16 384|cbbd1bbcb5e4fd8046b6030ab71fc021|
 |**JiffyDOS_1541-II.bin**|16 384|1b1e985ea5325a1f46eb7fd9681707bf|
+|**JiffyDOS_1571_repl310654.bin**|32 768|41c6cc528e9515ffd0ed9b180f8467c0|
 |**JiffyDOS_1581.bin**|32 768|20b6885c6dc2d42c38754a365b043d71|
 
 
@@ -118,7 +120,7 @@ VIC-20 memory expansion will also be set with filename tags or directory matchin
 
 Remember to run `make clean EMUTYPE=x` when building different EMUTYPEs.
 
-Currently working EMUTYPEs are:
+Currently working EMUTYPEs:
 - `x64`
 - `x64sc`
 - `x128`
@@ -376,4 +378,12 @@ ndk-build
  Business Machines, as well as Mammoth Toys, a division of nsi ltd.,
  Digital Concepts DC studios inc., Ironstone Partners ltd., and
  Toy:Lobster company ltd.
+
+
+### NIBTOOLS
+
+(C) 2005 Pete Rittwage and the C64 Preservation Project team
+
+It is based on MNIB which is copyrighted
+(C) 2000 Markus Brenner
 

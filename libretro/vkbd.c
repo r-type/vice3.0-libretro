@@ -120,7 +120,7 @@ void print_virtual_kbd(unsigned short int *pixels)
    int BKG_PADDING_Y_DEFAULT = -3;
 
 #if defined(__VIC20__)
-   if (retro_get_region() == RETRO_REGION_NTSC)
+   if (retro_region == RETRO_REGION_NTSC)
    {
       XOFFSET           = 9;
       YOFFSET           = -3;
@@ -151,7 +151,7 @@ void print_virtual_kbd(unsigned short int *pixels)
       }
    }
 #elif defined(__PLUS4__)
-   if (retro_get_region() == RETRO_REGION_NTSC)
+   if (retro_region == RETRO_REGION_NTSC)
    {
       XOFFSET           = 0;
       YOFFSET           = -3;
@@ -187,7 +187,7 @@ void print_virtual_kbd(unsigned short int *pixels)
    XPADDING          = 74;
    YPADDING          = 78;
 
-   if (retro_get_region() != RETRO_REGION_NTSC)
+   if (retro_region != RETRO_REGION_NTSC)
    {
       if (zoom_mode_id == 3)
          YOFFSET = -3;

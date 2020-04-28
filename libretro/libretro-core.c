@@ -1143,10 +1143,10 @@ void retro_set_environment(retro_environment_t cb)
             { "C64C NTSC", NULL },
             //{ "C64 OLD NTSC", NULL },
             //{ "C64 PAL N", NULL },
+            { "C64 GS PAL", NULL },
+            { "C64 JAP NTSC", NULL },
             { "C64SX PAL", NULL },
             { "C64SX NTSC", NULL },
-            { "C64 JAP", NULL },
-            { "C64 GS", NULL },
             { "PET64 PAL", NULL },
             { "PET64 NTSC", NULL },
             { NULL, NULL },
@@ -2788,8 +2788,8 @@ static void update_variables(void)
       //else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
       else if (strcmp(var.value, "C64SX PAL") == 0) modl=C64MODEL_C64SX_PAL;
       else if (strcmp(var.value, "C64SX NTSC") == 0) modl=C64MODEL_C64SX_NTSC;
-      else if (strcmp(var.value, "C64 JAP") == 0) modl=C64MODEL_C64_JAP;
-      else if (strcmp(var.value, "C64 GS") == 0) modl=C64MODEL_C64_GS;
+      else if (strcmp(var.value, "C64 JAP NTSC") == 0) modl=C64MODEL_C64_JAP;
+      else if (strcmp(var.value, "C64 GS PAL") == 0) modl=C64MODEL_C64_GS;
       else if (strcmp(var.value, "PET64 PAL") == 0) modl=C64MODEL_PET64_PAL;
       else if (strcmp(var.value, "PET64 NTSC") == 0) modl=C64MODEL_PET64_NTSC;
 
@@ -4695,7 +4695,7 @@ void retro_run(void)
       /* Update geometry if model or zoom mode changes */
       if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev && !manual_crop_update)
          update_geometry(1);
-      else if (lastW != retroW || lastH != retroH || retro_region != retro_get_region())
+      else if (lastW != retroW || lastH != retroH)
          update_geometry(0);
 
       /* Manual cropping */
@@ -4799,7 +4799,7 @@ void retro_run(void)
       imagename_timer--;
 
    video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retroW<<(pix_bytes/4))), zoomed_width, zoomed_height, retroW<<(pix_bytes/2));
-   microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
+   microSecCounter += (1000000/(retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
 bool retro_load_game(const struct retro_game_info *info)
@@ -4842,44 +4842,21 @@ void retro_unload_game(void)
 
 unsigned retro_get_region(void)
 {
-#if defined(__PET__) || defined(__XSCPU64__)
-   return RETRO_REGION_PAL;
-#else
-   switch (RETROC64MODL)
-   {
-#if defined(__VIC20__)
-      case VIC20MODEL_VIC20_NTSC:
-      case VIC20MODEL_VIC21:
-#elif defined(__CBM2__)
-      case CBM2MODEL_510_NTSC:
-      case CBM2MODEL_610_NTSC:
-      case CBM2MODEL_620_NTSC:
-      case CBM2MODEL_620PLUS_NTSC:
-      case CBM2MODEL_710_NTSC:
-      case CBM2MODEL_720_NTSC:
-      case CBM2MODEL_720PLUS_NTSC:
-#elif defined(__PLUS4__)
-      case PLUS4MODEL_C16_NTSC:
-      case PLUS4MODEL_PLUS4_NTSC:
-      case PLUS4MODEL_V364_NTSC:
-      case PLUS4MODEL_232_NTSC:
-#elif defined(__X128__)
-      case C128MODEL_C128_NTSC:
-      case C128MODEL_C128DCR_NTSC:
-#else
-      case C64MODEL_C64_NTSC:
-      case C64MODEL_C64C_NTSC:
-      case C64MODEL_C64_OLD_NTSC:
-      case C64MODEL_C64SX_NTSC:
-      case C64MODEL_PET64_NTSC:
-#endif
-         return RETRO_REGION_NTSC;
-         break;
-      default:
-         return RETRO_REGION_PAL;
-         break;
-   }
-#endif /* __PET__ */
+    unsigned machine_sync = 0;
+    if (retro_ui_finalized)
+        resources_get_int("MachineVideoStandard", &machine_sync);
+    switch (machine_sync)
+    {
+        default:
+        case MACHINE_SYNC_PAL:
+        case MACHINE_SYNC_PALN:
+            return RETRO_REGION_PAL;
+            break;
+        case MACHINE_SYNC_NTSC:
+        case MACHINE_SYNC_NTSCOLD:
+            return RETRO_REGION_NTSC;
+            break;
+    }
 }
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)

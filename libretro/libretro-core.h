@@ -115,6 +115,7 @@ extern unsigned int zoomed_YS_offset;
 extern int imagename_timer;
 extern unsigned int opt_statusbar;
 extern unsigned int cur_port;
+extern unsigned int retro_region;
 extern int RETROUSERPORTJOY;
 
 //FUNCS

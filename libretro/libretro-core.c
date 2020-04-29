@@ -460,19 +460,33 @@ static int process_cmdline(const char* argv)
             }
         }
 
+        char full_path[RETRO_PATH_MAX] = {0};
+        snprintf(full_path, sizeof(full_path), "%s", argv);
+
+        // ZIP + NIB vars, use the same temp directory for single NIBs
+        char zip_basename[RETRO_PATH_MAX] = {0};
+        snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
+        snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+        snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "ZIP");
+        char zip_path[RETRO_PATH_MAX] = {0};
+        snprintf(zip_path, sizeof(zip_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+
+        char nib_input[RETRO_PATH_MAX] = {0};
+        char nib_output[RETRO_PATH_MAX] = {0};
+
+        // NIB convert to G64
+        if (strendswith(argv, ".nib"))
+        {
+            snprintf(nib_input, sizeof(nib_input), "%s", argv);
+            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
+            path_mkdir(zip_path);
+            nib_convert(nib_input, nib_output);
+            argv = nib_output;
+        }
+
         // ZIP
         if (strendswith(argv, ".zip"))
         {
-            char full_path[RETRO_PATH_MAX] = {0};
-            snprintf(full_path, sizeof(full_path), "%s", argv);
-
-            char zip_basename[RETRO_PATH_MAX] = {0};
-            snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
-            snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-            snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "ZIP");
-            char zip_path[RETRO_PATH_MAX] = {0};
-            snprintf(zip_path, sizeof(zip_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
-
             path_mkdir(zip_path);
             zip_uncompress(full_path, zip_path, NULL);
 
@@ -481,48 +495,71 @@ static int process_cmdline(const char* argv)
             snprintf(full_path, sizeof(full_path), "%s", zip_path);
 
             FILE *zip_m3u;
-            char zip_m3u_buf[2048] = {0};
+            char zip_m3u_list[20][RETRO_PATH_MAX] = {0};
             char zip_m3u_path[RETRO_PATH_MAX] = {0};
             snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
+            int zip_m3u_num = 0;
 
             DIR *zip_dir;
             struct dirent *zip_dirp;
+
+            // Convert all NIBs to G64
             zip_dir = opendir(zip_path);
             while ((zip_dirp = readdir(zip_dir)) != NULL)
             {
-               if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1 || browsed_file[0] != '\0')
-                  continue;
+                if (strendswith(zip_dirp->d_name, ".nib"))
+                {
+                    snprintf(nib_input, sizeof(nib_input), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+                    snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
+                    nib_convert(nib_input, nib_output);
+                }
+            }
+            closedir(zip_dir);
 
-               // Multi file mode, generate playlist
-               if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
-                || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
-               )
-               {
-                  zip_mode = 1;
-                  snprintf(zip_m3u_buf+strlen(zip_m3u_buf), sizeof(zip_m3u_buf), "%s\n", zip_dirp->d_name);
-               }
-               // Single file mode
-               else if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM)
-               {
-                  zip_mode = 2;
-                  snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
-               }
+            zip_dir = opendir(zip_path);
+            while ((zip_dirp = readdir(zip_dir)) != NULL)
+            {
+                if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1 || browsed_file[0] != '\0')
+                    continue;
+
+                // Multi file mode, generate playlist
+                if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
+                 || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
+                )
+                {
+                    zip_mode = 1;
+                    zip_m3u_num++;
+                    snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_dirp->d_name);
+                }
+                // Single file mode
+                else if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM)
+                {
+                    zip_mode = 2;
+                    snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+                }
             }
             closedir(zip_dir);
 
             switch (zip_mode)
             {
-               case 0: // Extracted path
-               case 2: // Single image
-                  if (browsed_file[0] != '\0')
-                      snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, browsed_file);
-                  break;
-               case 1: // Generated playlist
-                  zip_m3u = fopen(zip_m3u_path, "w");
-                  fprintf(zip_m3u, "%s", zip_m3u_buf);
-                  fclose(zip_m3u);
-                  snprintf(full_path, sizeof(full_path), "%s", zip_m3u_path);
-                  break;
+                case 0: // Extracted path
+                case 2: // Single image
+                    if (browsed_file[0] != '\0')
+                    {
+                        if (strendswith(browsed_file, ".nib"))
+                            snprintf(full_path, sizeof(full_path), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, path_remove_extension(browsed_file));
+                        else
+                            snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, browsed_file);
+                    }
+                    break;
+                case 1: // Generated playlist
+                    zip_m3u = fopen(zip_m3u_path, "w");
+                    qsort(zip_m3u_list, zip_m3u_num, RETRO_PATH_MAX, qstrcmp);
+                    for (int l = 0; l < zip_m3u_num; l++)
+                        fprintf(zip_m3u, "%s\n", zip_m3u_list[l]);
+                    fclose(zip_m3u);
+                    snprintf(full_path, sizeof(full_path), "%s", zip_m3u_path);
+                    break;
             }
 
             argv = full_path;
@@ -1110,10 +1147,10 @@ void retro_set_environment(retro_environment_t cb)
             { "C64C NTSC", NULL },
             //{ "C64 OLD NTSC", NULL },
             //{ "C64 PAL N", NULL },
+            { "C64 GS PAL", NULL },
+            { "C64 JAP NTSC", NULL },
             { "C64SX PAL", NULL },
             { "C64SX NTSC", NULL },
-            { "C64 JAP", NULL },
-            { "C64 GS", NULL },
             { "PET64 PAL", NULL },
             { "PET64 NTSC", NULL },
             { NULL, NULL },
@@ -2755,8 +2792,8 @@ static void update_variables(void)
       //else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
       else if (strcmp(var.value, "C64SX PAL") == 0) modl=C64MODEL_C64SX_PAL;
       else if (strcmp(var.value, "C64SX NTSC") == 0) modl=C64MODEL_C64SX_NTSC;
-      else if (strcmp(var.value, "C64 JAP") == 0) modl=C64MODEL_C64_JAP;
-      else if (strcmp(var.value, "C64 GS") == 0) modl=C64MODEL_C64_GS;
+      else if (strcmp(var.value, "C64 JAP NTSC") == 0) modl=C64MODEL_C64_JAP;
+      else if (strcmp(var.value, "C64 GS PAL") == 0) modl=C64MODEL_C64_GS;
       else if (strcmp(var.value, "PET64 PAL") == 0) modl=C64MODEL_PET64_PAL;
       else if (strcmp(var.value, "PET64 NTSC") == 0) modl=C64MODEL_PET64_NTSC;
 
@@ -3921,6 +3958,11 @@ static bool retro_set_eject_state(bool ejected)
                 else
                 {
                     diskimg = vdrive->image;
+
+                    /* G64 will set a nonexistent drivetype, therefore force 1541 */
+                    if (diskimg != NULL && diskimg->type == 100)
+                        diskimg->type = 1541;
+
                     if (diskimg == NULL)
                         log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit 8.\n");
                     else if (diskimg->type != drive_type)
@@ -4312,9 +4354,9 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.3" GIT_VERSION;
 #if defined(__VIC20__)
-   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf";
+   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|nib|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf";
 #else
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf";
+   info->valid_extensions = "d64|d71|d80|d81|d82|nib|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf";
 #endif
    info->need_fullpath    = true;
    info->block_extract    = true;
@@ -4657,7 +4699,7 @@ void retro_run(void)
       /* Update geometry if model or zoom mode changes */
       if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev && !manual_crop_update)
          update_geometry(1);
-      else if (lastW != retroW || lastH != retroH || retro_region != retro_get_region())
+      else if (lastW != retroW || lastH != retroH)
          update_geometry(0);
 
       /* Manual cropping */
@@ -4761,7 +4803,7 @@ void retro_run(void)
       imagename_timer--;
 
    video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retroW<<(pix_bytes/4))), zoomed_width, zoomed_height, retroW<<(pix_bytes/2));
-   microSecCounter += (1000000/(retro_get_region() == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
+   microSecCounter += (1000000/(retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
 bool retro_load_game(const struct retro_game_info *info)
@@ -4804,44 +4846,21 @@ void retro_unload_game(void)
 
 unsigned retro_get_region(void)
 {
-#if defined(__PET__) || defined(__XSCPU64__)
-   return RETRO_REGION_PAL;
-#else
-   switch (RETROC64MODL)
-   {
-#if defined(__VIC20__)
-      case VIC20MODEL_VIC20_NTSC:
-      case VIC20MODEL_VIC21:
-#elif defined(__CBM2__)
-      case CBM2MODEL_510_NTSC:
-      case CBM2MODEL_610_NTSC:
-      case CBM2MODEL_620_NTSC:
-      case CBM2MODEL_620PLUS_NTSC:
-      case CBM2MODEL_710_NTSC:
-      case CBM2MODEL_720_NTSC:
-      case CBM2MODEL_720PLUS_NTSC:
-#elif defined(__PLUS4__)
-      case PLUS4MODEL_C16_NTSC:
-      case PLUS4MODEL_PLUS4_NTSC:
-      case PLUS4MODEL_V364_NTSC:
-      case PLUS4MODEL_232_NTSC:
-#elif defined(__X128__)
-      case C128MODEL_C128_NTSC:
-      case C128MODEL_C128DCR_NTSC:
-#else
-      case C64MODEL_C64_NTSC:
-      case C64MODEL_C64C_NTSC:
-      case C64MODEL_C64_OLD_NTSC:
-      case C64MODEL_C64SX_NTSC:
-      case C64MODEL_PET64_NTSC:
-#endif
-         return RETRO_REGION_NTSC;
-         break;
-      default:
-         return RETRO_REGION_PAL;
-         break;
-   }
-#endif /* __PET__ */
+    unsigned machine_sync = 0;
+    if (retro_ui_finalized)
+        resources_get_int("MachineVideoStandard", &machine_sync);
+    switch (machine_sync)
+    {
+        default:
+        case MACHINE_SYNC_PAL:
+        case MACHINE_SYNC_PALN:
+            return RETRO_REGION_PAL;
+            break;
+        case MACHINE_SYNC_NTSC:
+        case MACHINE_SYNC_NTSCOLD:
+            return RETRO_REGION_NTSC;
+            break;
+    }
 }
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)

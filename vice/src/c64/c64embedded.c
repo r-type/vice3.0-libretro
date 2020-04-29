@@ -57,10 +57,25 @@
 #include "vicii_rgb_vpl.h"
 #include "vicii_vice_vpl.h"
 
+#ifdef __LIBRETRO__
+#include "c64gskernal.h"
+#include "c64edkernal.h"
+#include "c64sxkernal.h"
+#include "c64jpkernal.h"
+#include "c64jpchrgen.h"
+#endif
+
 static embedded_t c64files[] = {
     { "basic", C64_BASIC_ROM_SIZE, C64_BASIC_ROM_SIZE, C64_BASIC_ROM_SIZE, NULL },
     { "kernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, NULL },
     { "chargen", C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, NULL },
+#ifdef __LIBRETRO__
+    { "gskernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_gskernal64_rom },
+    { "edkernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_edkernal64_rom },
+    { "sxkernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_sxkernal64_rom },
+    { "jpkernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_jpkernal64_rom },
+    { "jpchrgen", C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, mem_jpchrgen_rom },
+#endif
     EMBEDDED_LIST_END
 };
 

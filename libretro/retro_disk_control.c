@@ -482,7 +482,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             snprintf(full_path_replace, sizeof(full_path_replace), "%s", zip_path);
 
             FILE *zip_m3u;
-            char zip_m3u_buf[2048] = {0};
+            char zip_m3u_list[20][RETRO_PATH_MAX] = {0};
             char zip_m3u_path[RETRO_PATH_MAX] = {0};
             snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
             int zip_m3u_num = 0;
@@ -516,7 +516,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
                 {
                     zip_mode = 1;
                     zip_m3u_num++;
-                    snprintf(zip_m3u_buf+strlen(zip_m3u_buf), sizeof(zip_m3u_buf), "%s\n", zip_dirp->d_name);
+                    snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_dirp->d_name);
                 }
                 // Single file mode
                 else if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM)
@@ -538,13 +538,14 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
                 case 1: // Generated playlist
                     if (zip_m3u_num == 1)
                     {
-                        zip_m3u_buf[strlen(zip_m3u_buf)-1] = '\0';
-                        snprintf(full_path_replace, sizeof(full_path_replace), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_m3u_buf);
+                        snprintf(full_path_replace, sizeof(full_path_replace), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_m3u_list[0]);
                     }
                     else
                     {
                         zip_m3u = fopen(zip_m3u_path, "w");
-                        fprintf(zip_m3u, "%s", zip_m3u_buf);
+                        qsort(zip_m3u_list, zip_m3u_num, RETRO_PATH_MAX, qstrcmp);
+                        for (int l = 0; l < zip_m3u_num; l++)
+                            fprintf(zip_m3u, "%s\n", zip_m3u_list[l]);
                         fclose(zip_m3u);
                         snprintf(full_path_replace, sizeof(full_path_replace), "%s", zip_m3u_path);
                     }

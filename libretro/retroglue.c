@@ -1,6 +1,40 @@
 #include "libretro-core.h"
 #include "archdep.h"
 
+int qstrcmp(const void *a, const void *b)
+{
+    const char *pa = (const char *)a;
+    const char *pb = (const char *)b;
+    return strcmp(pa, pb);
+}
+
+void remove_recurse(const char *path)
+{
+   struct dirent *dirp;
+   char filename[RETRO_PATH_MAX];
+   DIR *dir = opendir(path);
+   if (dir == NULL)
+      return;
+
+   while ((dirp = readdir(dir)) != NULL)
+   {
+      if (dirp->d_name[0] == '.')
+         continue;
+
+      sprintf(filename, "%s%s%s", path, FSDEV_DIR_SEP_STR, dirp->d_name);
+      fprintf(stdout, "Temp clean: %s\n", filename);
+
+      if (path_is_directory(filename))
+         remove_recurse(filename);
+      else
+         remove(filename);
+   }
+
+   closedir(dir);
+   archdep_rmdir(path);
+}
+
+/* zlib */
 #include "deps/libz/zlib.h"
 #include "deps/libz/unzip.h"
 #include "file/file_path.h"
@@ -134,33 +168,6 @@ void zip_uncompress(char *in, char *out, char *lastfile)
         uf = NULL;
     }
 }
-
-void remove_recurse(const char *path)
-{
-   struct dirent *dirp;
-   char filename[RETRO_PATH_MAX];
-   DIR *dir = opendir(path);
-   if (dir == NULL)
-      return;
-
-   while ((dirp = readdir(dir)) != NULL)
-   {
-      if (dirp->d_name[0] == '.')
-         continue;
-
-      sprintf(filename, "%s%s%s", path, FSDEV_DIR_SEP_STR, dirp->d_name);
-      fprintf(stdout, "Unzip clean: %s\n", filename);
-
-      if (path_is_directory(filename))
-         remove_recurse(filename);
-      else
-         remove(filename);
-   }
-
-   closedir(dir);
-   archdep_rmdir(path);
-}
-
 
 /* NIBTOOLS */
 typedef unsigned char BYTE;

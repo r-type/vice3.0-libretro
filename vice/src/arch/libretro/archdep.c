@@ -599,6 +599,8 @@ int archdep_rmdir(const char *pathname)
 {
 #ifdef VITA
     sceIoRmdir(pathname);
+#elif defined(EMSCRIPTEN)
+    FS.rmdir(pathname);
 #else
     rmdir(pathname);
 #endif

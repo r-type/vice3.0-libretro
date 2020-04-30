@@ -1,4 +1,5 @@
 
+#include <retro_endianness.h>
 
 #ifdef __WIN32__
 #define HAVE_HTONS 1
@@ -39,14 +40,6 @@
 #endif
 
 #define USE_EMBEDDED 1
-
-/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
- significant byte first (like Motorola and SPARC, unlike Intel). */
-#if defined AC_APPLE_UNIVERSAL_BUILD
-   #if defined __BIG_ENDIAN__
-      #define WORDS_BIGENDIAN 1
-   #endif
-#endif
 
 #define HAVE_U_SHORT 1
 

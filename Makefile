@@ -284,7 +284,7 @@ else ifeq ($(platform), wii)
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-   COMMONFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float -D__POWERPC__ -D__ppc__ -DWORDS_BIGENDIAN=1
+   COMMONFLAGS += -DGEKKO -mrvl -mcpu=750 -meabi -mhard-float
    STATIC_LINKING = 1
 
 # WiiU
@@ -293,7 +293,7 @@ else ifeq ($(platform), wiiu)
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-   COMMONFLAGS += -DGEKKO -mwup -mcpu=750 -meabi -mhard-float -D__POWERPC__ -D__ppc__ -DWORDS_BIGENDIAN=1
+   COMMONFLAGS += -DGEKKO -mwup -mcpu=750 -meabi -mhard-float
    COMMONFLAGS += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int
    COMMONFLAGS += -DHAVE_STRTOUL -DWIIU
    STATIC_LINKING = 1
@@ -304,9 +304,8 @@ else ifeq ($(platform), ps3)
    CC      = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
    CXX     = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
    AR      = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
-   ENDIANNESS_DEFINES := -DMSB_FIRST -DWORDS_BIGENDIAN=1
    OLD_GCC := 1
-   COMMONFLAGS += -DHAVE_STRTOUL $(ENDIANNESS_DEFINES)
+   COMMONFLAGS += -DHAVE_STRTOUL
    STATIC_LINKING = 1
 
 # Lightweight PS3 Homebrew SDK
@@ -316,9 +315,8 @@ else ifeq ($(platform), psl1ght)
    CXX = $(PS3DEV)/ppu/bin/ppu-g++$(EXE_EXT)
    CC_AS = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
    AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
-   ENDIANNESS_DEFINES := -DMSB_FIRST -DWORDS_BIGENDIAN=1 -D__PSL1GHT__
    OLD_GCC := 1
-   COMMONFLAGS += -DHAVE_STRTOUL $(ENDIANNESS_DEFINES)
+   COMMONFLAGS += -DHAVE_STRTOUL -D__PSL1GHT__
    STATIC_LINKING = 1
 
 # ARM

@@ -28,7 +28,9 @@
 // Compiler specifics.
 #define HAVE_BOOL 1
 #define HAVE_BUILTIN_EXPECT 1
+#ifndef __QNX__
 #define HAVE_LOG1P 1
+#endif
 
 // Define bool, true, and false for C++ compilers that lack these keywords.
 #if !HAVE_BOOL

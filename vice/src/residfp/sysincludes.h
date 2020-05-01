@@ -16,6 +16,10 @@
 #ifdef HAVE_MMINTRIN_H
 #  include <mmintrin.h>
 #endif
+#ifdef __QNX__
+#include <math.h>
+#include <string.h>
+#endif
 #include <stdint.h>
 #include <sstream>
 #include <string>

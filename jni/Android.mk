@@ -13,7 +13,8 @@ COREFLAGS := -DCORE_NAME=\"$(EMUTYPE)\" \
   -D__LIBRETRO__ \
   $(INCFLAGS) $(COMMONFLAGS) \
   -DHAVE_INET_ATON \
-  -DWANT_ZLIB
+  -DWANT_ZLIB \
+  -D_INTTYPES_H
 
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
 ifneq ($(GIT_VERSION)," unknown")

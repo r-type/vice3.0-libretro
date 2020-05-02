@@ -208,6 +208,7 @@ else ifeq ($(platform), qnx)
    CXX = QCC -Vgcc_ntoarmv7le_cpp
    AR = QCC -Vgcc_ntoarmv7le
    PLATFORM_DEFINES := -D__BLACKBERRY_QNX__ -fexceptions -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
+   CFLAGS += -std=gnu99
 
 # ANDROID STANDALONE TOOLCHAIN
 else ifeq ($(platform), androidstc)

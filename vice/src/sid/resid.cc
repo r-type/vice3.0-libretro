@@ -26,6 +26,7 @@
  *
  */
 
+#include <string.h>
 #include "vice.h"
 
 #ifdef _M_ARM

@@ -12,6 +12,8 @@
 #include "tape.h"
 #include "vdrive.h"
 #include "diskimage.h"
+#include "vdrive-internal.h"
+#include "charset.h"
 #include "attach.h"
 #include "interrupt.h"
 #include "datasette.h"
@@ -137,6 +139,8 @@ static unsigned int manual_crop_right = 0;
 
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
+static unsigned int opt_work_disk_type = 0;
+static unsigned int opt_work_disk_unit = 8;
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
 static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
@@ -338,13 +342,9 @@ static int check_joystick_control(const char* filename)
     if (filename != NULL)
     {
         if (strcasestr(filename, "_j1.") || strcasestr(filename, "(j1)."))
-        {
             port = 1;
-        }
         else if (strcasestr(filename, "_j2.") || strcasestr(filename, "(j2)."))
-        {
             port = 2;
-        }
     }
     return port;
 }
@@ -680,7 +680,6 @@ static int process_cmdline(const char* argv)
                 // and we won't have to take care of cleaning it up
                 is_fliplist = true;
             }
-            // Was strstr, but I don't see the point
             else if (strcmp(arg, "-j1") == 0)
             {
                 cur_port = 1;
@@ -723,6 +722,8 @@ static int process_cmdline(const char* argv)
     return 0;
 }
 
+static void autodetect_drivetype(int unit);
+
 // Update autostart image from vice and add disk in drive to fliplist
 void update_from_vice()
 {
@@ -732,12 +733,71 @@ void update_from_vice()
     free(autostartString);
     autostartString = x_strdup(cmdline_get_autostart_string());
     if (autostartString)
-    {
         log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
+    else
+        log_cb(RETRO_LOG_INFO, "No image for autostart\n");
+
+    // Work disk
+    // Skip if device unit collides with autostart
+    if (autostartString && opt_work_disk_unit == 8)
+        opt_work_disk_type = 0;
+    if (opt_work_disk_type)
+    {
+        // Path vars
+        char opt_work_disk_filename[RETRO_PATH_MAX] = {0};
+        char opt_work_disk_filepath[RETRO_PATH_MAX] = {0};
+        char opt_work_disk_extension[4] = {0};
+        switch (opt_work_disk_type)
+        {
+            default:
+            case DISK_IMAGE_TYPE_D64:
+                snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d64");
+                break;
+            case DISK_IMAGE_TYPE_D71:
+                snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d71");
+                break;
+            case DISK_IMAGE_TYPE_D81:
+                snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d81");
+                break;
+        }
+        snprintf(opt_work_disk_filename, sizeof(opt_work_disk_filename), "vice_work.%s", opt_work_disk_extension);
+        path_join((char*)&opt_work_disk_filepath, retro_save_directory, opt_work_disk_filename);
+
+        // Create disk
+        if (!file_exists(opt_work_disk_filepath))
+        {
+            // Label format
+            char format_name[28];
+            snprintf(format_name, sizeof(format_name), "%s-%s", "work", opt_work_disk_extension);
+            charset_petconvstring((uint8_t *)format_name, 0);
+
+            if (vdrive_internal_create_format_disk_image(opt_work_disk_filepath, format_name, opt_work_disk_type))
+                log_cb(RETRO_LOG_INFO, "Work disk creation failed: '%s'\n", opt_work_disk_filepath);
+            else
+                log_cb(RETRO_LOG_INFO, "Work disk created: '%s'\n", opt_work_disk_filepath);
+        }
+
+        // Attach disk
+        if (file_exists(opt_work_disk_filepath))
+        {
+            if (opt_work_disk_unit == 8)
+                log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
+            else
+                log_resources_set_int("Drive9Type", opt_work_disk_type);
+
+            file_system_attach_disk(opt_work_disk_unit, opt_work_disk_filepath);
+            autodetect_drivetype(opt_work_disk_unit);
+            log_cb(RETRO_LOG_INFO, "Work disk '%s' attached in drive #%d\n", opt_work_disk_filepath, opt_work_disk_unit);
+        }
     }
     else
     {
-        log_cb(RETRO_LOG_INFO, "No image for autostart\n");
+        // Detach work disk if disabled while running
+        if ((attachedImage = file_system_get_disk_name(8)) != NULL)
+        {
+            if (strstr(attachedImage, "vice_work"))
+                file_system_detach_disk(8);
+        }
     }
 
     // If flip list is empty, get current tape or floppy image name and add to the list
@@ -750,6 +810,7 @@ void update_from_vice()
         }
         else
         {
+#if 0
             int unit;
             for (unit = 8; unit <= 11; ++unit)
             {
@@ -760,6 +821,16 @@ void update_from_vice()
                     break;
                 }
             }
+#else
+            // Only add images to the list from device 8, otherwise leads to confusion when other devices have disks,
+            // because Disk Control operates only on device 8 for now. Also skip work disks.
+            int unit = 8;
+            if ((attachedImage = file_system_get_disk_name(unit)) != NULL && !strstr(attachedImage, "vice_work"))
+            {
+                dc->unit = unit;
+                dc_add_file(dc, attachedImage);
+            }
+#endif
         }
     }
 
@@ -1201,7 +1272,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autostart",
          "Autostart",
-         "'Enabled' always runs content, 'Disabled' runs only PRG/CRT, 'Warp' turns warp mode on during autostart loading.",
+         "'ON' always runs content, 'OFF' runs only PRG/CRT, 'Warp' turns warp mode on during autostart loading.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1220,6 +1291,22 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "enabled"
+      },
+      {
+         "vice_work_disk",
+         "Global Work Disk",
+         "Global disk in device 8 will only be inserted when starting the core without content.\nReset required.",
+         {
+            { "disabled", NULL },
+            { "8_d64", "D64 - 664 blocks, 170KB - Device 8" },
+            { "9_d64", "D64 - 664 blocks, 170KB - Device 9" },
+            { "8_d71", "D71 - 1328 blocks, 340KB - Device 8" },
+            { "9_d71", "D71 - 1328 blocks, 340KB - Device 9" },
+            { "8_d81", "D81 - 3160 blocks, 800KB - Device 8" },
+            { "9_d81", "D81 - 3160 blocks, 800KB - Device 9" },
+            { NULL, NULL },
+         },
+         "disabled"
       },
       {
          "vice_video_options_display",
@@ -2469,6 +2556,28 @@ static void update_variables(void)
          noautostart = true;
       else
          noautostart = false;
+   }
+
+   var.key = "vice_work_disk";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int work_disk_type = opt_work_disk_type;
+      int work_disk_unit = opt_work_disk_unit;
+
+      if (strcmp(var.value, "disabled") == 0) opt_work_disk_type=0;
+      else
+      {
+         if (strstr(var.value, "_d64")) opt_work_disk_type=DISK_IMAGE_TYPE_D64;
+         else if (strstr(var.value, "_d71")) opt_work_disk_type=DISK_IMAGE_TYPE_D71;
+         else if (strstr(var.value, "_d81")) opt_work_disk_type=DISK_IMAGE_TYPE_D81;
+
+         if (strstr(var.value, "8_")) opt_work_disk_unit=8;
+         else if (strstr(var.value, "9_")) opt_work_disk_unit=9;
+      }
+
+      if (work_disk_type != opt_work_disk_type || work_disk_unit != opt_work_disk_unit)
+         request_reload_restart = 1;
    }
 
    var.key = "vice_drive_true_emulation";
@@ -3922,6 +4031,58 @@ struct DiskImage {
     char* fname;
 };
 
+static void autodetect_drivetype(int unit)
+{
+    int drive_type;
+    char drive_type_resource_var[20] = {0};
+    snprintf(drive_type_resource_var, sizeof(drive_type_resource_var), "Drive%dType", unit);
+    resources_get_int(drive_type_resource_var, &drive_type);
+
+    // Autodetect drive type
+    vdrive_t *vdrive;
+    struct disk_image_s *diskimg;
+
+    vdrive = file_system_get_vdrive(unit);
+    if (vdrive == NULL)
+        log_cb(RETRO_LOG_ERROR, "Failed to get vdrive reference for unit %d.\n", unit);
+    else
+    {
+        diskimg = vdrive->image;
+
+        // G64 will set a nonexistent drivetype, therefore force 1541
+        if (diskimg != NULL && diskimg->type == DISK_IMAGE_TYPE_G64)
+            diskimg->type = 1541;
+
+        // G71 will set a nonexistent drivetype, therefore force 1571
+        if (diskimg != NULL && diskimg->type == DISK_IMAGE_TYPE_G71)
+            diskimg->type = 1571;
+
+        if (diskimg == NULL)
+            log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit %d.\n", unit);
+        else if (diskimg->type != drive_type)
+        {
+            log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
+            if (log_resources_set_int(drive_type_resource_var, diskimg->type) < 0)
+                log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
+
+            // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
+            file_system_attach_disk(unit, dc->files[dc->index]);
+
+            // Drive motor sound keeps on playing if the drive type is changed while the motor is running
+            // Also happens when toggling TDE
+            switch (diskimg->type)
+            {
+                case 1581:
+                    resources_set_int("DriveSoundEmulationVolume", 0);
+                    break;
+                default:
+                    resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+                    break;
+            }
+        }
+    }
+}
+
 static bool retro_set_eject_state(bool ejected)
 {
     if (dc)
@@ -3952,49 +4113,7 @@ static bool retro_set_eject_state(bool ejected)
             else
             {
                 file_system_attach_disk(unit, dc->files[dc->index]);
-
-                int drive_type;
-                resources_get_int("Drive8Type", &drive_type);
-
-                // Autodetect drive type
-                vdrive_t *vdrive;
-                struct disk_image_s *diskimg;
-
-                vdrive = file_system_get_vdrive(8);
-                if (vdrive == NULL)
-                    log_cb(RETRO_LOG_ERROR, "Failed to get vdrive reference for unit 8.\n");
-                else
-                {
-                    diskimg = vdrive->image;
-
-                    /* G64 will set a nonexistent drivetype, therefore force 1541 */
-                    if (diskimg != NULL && diskimg->type == 100)
-                        diskimg->type = 1541;
-
-                    if (diskimg == NULL)
-                        log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit 8.\n");
-                    else if (diskimg->type != drive_type)
-                    {
-                        log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
-                        if (log_resources_set_int("Drive8Type", diskimg->type) < 0)
-                            log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
-
-                        // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
-                        file_system_attach_disk(unit, dc->files[dc->index]);
-
-                        // Drive motor sound keeps on playing if the drive type is changed while the motor is running
-                        // Also happens when toggling TDE
-                        switch (diskimg->type)
-                        {
-                            case 1581:
-                                resources_set_int("DriveSoundEmulationVolume", 0);
-                                break;
-                            default:
-                                resources_set_int("DriveSoundEmulationVolume", RETRODSE);
-                                break;
-                        }
-                    }
-                }
+                autodetect_drivetype(unit);
             }
 
             display_current_image(dc->files[dc->index], true);
@@ -4820,18 +4939,15 @@ void retro_run(void)
 bool retro_load_game(const struct retro_game_info *info)
 {
    if (info)
-   {
       process_cmdline(info->path);
-   }
 
    update_variables();
 
 #if defined(__VIC20__)
-   /* Moved this here so it also applies without loading content */
+   /* VIC20 joyport limit has to also apply when starting without content */
    cur_port = 1;
    cur_port_locked = 1;
 #endif
-   
    if (runstate == RUNSTATE_RUNNING) {
       /* load game was called while core is already running */
       /* so we update runstate and do the deferred autostart_reset in retro_run */

@@ -17,7 +17,7 @@ Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.t
 - System-subdir renamed to `vice` and created automatically
 - Cursor keys disabled while using RetroPad
 - New settings:
-  - Drive Sound Emulation (D64 only)
+  - Drive Sound Emulation (D64 & D71 only)
   - Reset Type (Autostart, Soft, Hard)
   - Customizable hotkeys for essential functions (virtual keyboard, statusbar, joyport switch, reset, Datasette controls)
   - Keyrah joystick maps

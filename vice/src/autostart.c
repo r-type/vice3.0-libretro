@@ -1212,6 +1212,9 @@ int autostart_disk(const char *file_name, const char *program_name,
                     drive_cpu_trigger_reset(0);
                 }
             }
+
+            // Autostarting D71s will fail without re-attaching (?!)
+            file_system_attach_disk(8, file_name);
 #endif
 
             reboot_for_autostart(name, AUTOSTART_HASDISK, runmode);

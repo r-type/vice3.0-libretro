@@ -31,7 +31,10 @@
 #endif
 
 // Our virtual time counter, increased by retro_run()
-long microSecCounter = 0;
+//long microSecCounter = 0;
+// Accurate tick for statusbar FPS counter
+long retro_now = 0;
+// Main CPU loop
 int cpuloop = 1;
 
 // VKBD 
@@ -1026,7 +1029,8 @@ long GetTicks(void) {
    // * Networking
    // Returning a frame based msec counter could potentially break
    // networking but it's not something libretro uses at the moment.
-   return microSecCounter;
+   //return microSecCounter;
+   return retro_now;
 }
 
 #include "libretro-keyboard.i"
@@ -4006,7 +4010,7 @@ void emu_reset(void)
 
 void retro_reset(void)
 {
-   microSecCounter = 0;
+   //microSecCounter = 0;
 
    // Always stop datasette, or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
@@ -4443,7 +4447,7 @@ void retro_init(void)
    static uint32_t quirks =  RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE | RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE;
    environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);
 
-   microSecCounter = 0;
+   //microSecCounter = 0;
 }
 
 void retro_deinit(void)
@@ -4890,6 +4894,7 @@ void retro_run(void)
 
       retro_time_t t_begin=pcb.get_time_usec();
       retro_time_t t_interframe=MIN((t_end_prev ? t_begin-t_end_prev : 0), 20000-t_frame);
+      retro_now = t_begin;
 
       for (int frame_count=0;frame_count<(retro_warp_mode_enabled() ? (t_interframe+t_frame)/t_frame : 1);++frame_count)
       {
@@ -4901,10 +4906,10 @@ void retro_run(void)
          {
             retro_time_t t_end=pcb.get_time_usec();
             t_end_prev=t_end;
-            if (!(t_frame=MIN(t_end-t_begin, 20000)))
+            if (!(t_frame=MIN(t_end-t_begin, 1000)))
                /* It was seen with x64 that mainloop actually returned within one nanosecond, so make sure
                we don't end up with 0 here. */
-               t_frame=20000;
+               t_frame=1000;
          }
       }
    }
@@ -4933,7 +4938,7 @@ void retro_run(void)
       imagename_timer--;
 
    video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retroW<<(pix_bytes/4))), zoomed_width, zoomed_height, retroW<<(pix_bytes/2));
-   microSecCounter += (1000000/(retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
+   //microSecCounter += (1000000/(retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
 bool retro_load_game(const struct retro_game_info *info)

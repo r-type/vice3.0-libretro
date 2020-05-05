@@ -211,7 +211,8 @@ void display_current_image(const char *image, bool inserted)
     else
     {
         drive_empty = 1;
-        snprintf(imagename, sizeof(imagename), "%.38s", imagename_prev);
+        if (strcmp(imagename_prev, ""))
+            snprintf(imagename, sizeof(imagename), "%.38s", imagename_prev);
     }
 
     snprintf(&statusbar_text[STATUSBAR_JOY_POS], sizeof(statusbar_text), "%-38s", imagename);

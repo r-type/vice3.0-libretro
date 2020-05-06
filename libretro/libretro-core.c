@@ -31,7 +31,10 @@
 #endif
 
 // Our virtual time counter, increased by retro_run()
-long microSecCounter = 0;
+//long microSecCounter = 0;
+// Accurate tick for statusbar FPS counter
+long retro_now = 0;
+// Main CPU loop
 int cpuloop = 1;
 
 // VKBD 
@@ -47,6 +50,7 @@ char slash = FSDEV_DIR_SEP_CHR;
 bool retro_load_ok = false;
 static bool noautostart = false;
 static char* autostartString = NULL;
+static char full_path[RETRO_PATH_MAX] = {0};
 char RETRO_DIR[RETRO_PATH_MAX];
 static char* core_options_legacy_strings = NULL;
 
@@ -137,6 +141,10 @@ static unsigned int manual_crop_bottom = 0;
 static unsigned int manual_crop_left = 0;
 static unsigned int manual_crop_right = 0;
 
+static unsigned int request_reload_restart = 0;
+static bool request_update_work_disk = false;
+static int request_model_set = -1;
+static bool opt_model_auto = true;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int opt_work_disk_type = 0;
@@ -146,7 +154,6 @@ static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
 static unsigned int opt_jiffydos_prev = 0;
 #endif
-static unsigned int request_reload_restart = 0;
 static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
 unsigned int opt_statusbar = 0;
@@ -459,8 +466,6 @@ static int process_cmdline(const char* argv)
                 token = strtok(NULL, "#");
             }
         }
-
-        char full_path[RETRO_PATH_MAX] = {0};
         snprintf(full_path, sizeof(full_path), "%s", argv);
 
         // ZIP + NIB vars, use the same temp directory for single NIBs
@@ -722,24 +727,72 @@ static int process_cmdline(const char* argv)
     return 0;
 }
 
-static void autodetect_drivetype(int unit);
-
-// Update autostart image from vice and add disk in drive to fliplist
-void update_from_vice()
+static void autodetect_drivetype(int unit)
 {
-    const char* attachedImage = NULL;
+    int drive_type;
+    char drive_type_resource_var[20] = {0};
+    snprintf(drive_type_resource_var, sizeof(drive_type_resource_var), "Drive%dType", unit);
+    resources_get_int(drive_type_resource_var, &drive_type);
+    const char* attached_image = NULL;
+    attached_image = file_system_get_disk_name(unit);
 
-    // Get autostart string from vice
-    free(autostartString);
-    autostartString = x_strdup(cmdline_get_autostart_string());
-    if (autostartString)
-        log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
+    // Autodetect drive type
+    vdrive_t *vdrive;
+    struct disk_image_s *diskimg;
+
+    vdrive = file_system_get_vdrive(unit);
+    if (vdrive == NULL)
+        log_cb(RETRO_LOG_ERROR, "Failed to get vdrive reference for unit %d.\n", unit);
     else
-        log_cb(RETRO_LOG_INFO, "No image for autostart\n");
+    {
+        diskimg = vdrive->image;
 
-    // Work disk
+        // G64 will set a nonexistent drivetype, therefore force 1541
+        if (diskimg != NULL && diskimg->type == DISK_IMAGE_TYPE_G64)
+            diskimg->type = 1541;
+
+        // G71 will set a nonexistent drivetype, therefore force 1571
+        if (diskimg != NULL && diskimg->type == DISK_IMAGE_TYPE_G71)
+            diskimg->type = 1571;
+
+        if (diskimg == NULL)
+            log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit %d.\n", unit);
+        else if (diskimg->type != drive_type)
+        {
+            log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
+            if (log_resources_set_int(drive_type_resource_var, diskimg->type) < 0)
+                log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
+
+            // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
+            file_system_attach_disk(unit, attached_image);
+
+            // Drive motor sound keeps on playing if the drive type is changed while the motor is running
+            // Also happens when toggling TDE
+            vdrive = file_system_get_vdrive(unit);
+            if (vdrive != NULL)
+               diskimg = vdrive->image;
+            switch (diskimg->type)
+            {
+                case 1541:
+                case 1571:
+                    resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+                    break;
+                case 1581:
+                default:
+                    resources_set_int("DriveSoundEmulationVolume", 0);
+                    break;
+            }
+        }
+    }
+}
+
+void update_work_disk()
+{
+    request_update_work_disk = false;
+    const char* attached_image = NULL;
+
     // Skip if device unit collides with autostart
-    if (autostartString && opt_work_disk_unit == 8)
+    if (!string_is_empty(full_path) && opt_work_disk_unit == 8)
         opt_work_disk_type = 0;
     if (opt_work_disk_type)
     {
@@ -780,25 +833,87 @@ void update_from_vice()
         // Attach disk
         if (file_exists(opt_work_disk_filepath))
         {
-            if (opt_work_disk_unit == 8)
-                log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
-            else
-                log_resources_set_int("Drive9Type", opt_work_disk_type);
+            // Detach previous disks
+            if ((attached_image = file_system_get_disk_name(8)) != NULL)
+                file_system_detach_disk(8);
 
+            if ((attached_image = file_system_get_disk_name(9)) != NULL)
+            {
+                file_system_detach_disk(9);
+                log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
+            }
+
+            if (opt_work_disk_unit == 9)
+                log_resources_set_int("Drive9Type", opt_work_disk_type);
             file_system_attach_disk(opt_work_disk_unit, opt_work_disk_filepath);
             autodetect_drivetype(opt_work_disk_unit);
             log_cb(RETRO_LOG_INFO, "Work disk '%s' attached in drive #%d\n", opt_work_disk_filepath, opt_work_disk_unit);
+            display_current_image(opt_work_disk_filename, true);
         }
     }
     else
     {
         // Detach work disk if disabled while running
-        if ((attachedImage = file_system_get_disk_name(8)) != NULL)
+        if ((attached_image = file_system_get_disk_name(8)) != NULL && strstr(attached_image, "vice_work"))
         {
-            if (strstr(attachedImage, "vice_work"))
+            if (full_path == NULL || (full_path != NULL && !strstr(full_path, "vice_work")))
+            {
+                log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
                 file_system_detach_disk(8);
+                log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
+                display_current_image(attached_image, false);
+            }
+        }
+
+        if ((attached_image = file_system_get_disk_name(9)) != NULL && strstr(attached_image, "vice_work"))
+        {
+            log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 9);
+            file_system_detach_disk(9);
+            log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
         }
     }
+}
+
+// Update autostart image from vice and add disk in drive to fliplist
+void update_from_vice()
+{
+    const char* attachedImage = NULL;
+
+    // Get autostart string from vice
+    free(autostartString);
+    autostartString = x_strdup(cmdline_get_autostart_string());
+    if (autostartString)
+        log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
+    else
+        log_cb(RETRO_LOG_INFO, "No image for autostart\n");
+
+#if defined(__X64__) || defined(__X64SC__)
+    // Automatic model request
+    if (opt_model_auto && autostartString)
+    {
+        if (strstr(autostartString, "NTSC") != NULL || strstr(autostartString, "(USA)") != NULL)
+        {
+            fprintf(stdout, "[libretro-vice]: Found 'NTSC' or '(USA)' in: '%s'\n", autostartString);
+
+            if (RETROC64MODL == C64MODEL_C64_PAL)
+                request_model_set = C64MODEL_C64_NTSC;
+            else if (RETROC64MODL == C64MODEL_C64C_PAL)
+                request_model_set = C64MODEL_C64C_NTSC;
+        }
+
+        if (strstr(autostartString, "PAL") != NULL || strstr(autostartString, "(Europe)") != NULL)
+        {
+            fprintf(stdout, "[libretro-vice]: Found 'PAL' or '(Europe)' in: '%s'\n", autostartString);
+
+            if (RETROC64MODL == C64MODEL_C64_NTSC)
+                request_model_set = C64MODEL_C64_PAL;
+            else if (RETROC64MODL == C64MODEL_C64C_NTSC)
+                request_model_set = C64MODEL_C64C_PAL;
+        }
+    }
+    else
+        request_model_set = -1;
+#endif
 
     // If flip list is empty, get current tape or floppy image name and add to the list
     if (dc->count == 0)
@@ -823,9 +938,9 @@ void update_from_vice()
             }
 #else
             // Only add images to the list from device 8, otherwise leads to confusion when other devices have disks,
-            // because Disk Control operates only on device 8 for now. Also skip work disks.
+            // because Disk Control operates only on device 8 for now.
             int unit = 8;
-            if ((attachedImage = file_system_get_disk_name(unit)) != NULL && !strstr(attachedImage, "vice_work"))
+            if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
             {
                 dc->unit = unit;
                 dc_add_file(dc, attachedImage);
@@ -839,7 +954,7 @@ void update_from_vice()
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
         if (opt_jiffydos)
         {
-            /* Disable JiffyDOS with tapes */
+            // Disable JiffyDOS with tapes
             opt_jiffydos_allow = 0;
             opt_jiffydos = 0;
             runstate = RUNSTATE_LOADED_CONTENT;
@@ -909,7 +1024,10 @@ void update_from_vice()
         display_current_image(attachedImage, true);
     }
     else
+    {
         dc->eject_state = true;
+        display_current_image("", false);
+    }
 }
 
 void build_params()
@@ -1026,7 +1144,8 @@ long GetTicks(void) {
    // * Networking
    // Returning a frame based msec counter could potentially break
    // networking but it's not something libretro uses at the moment.
-   return microSecCounter;
+   //return microSecCounter;
+   return retro_now;
 }
 
 #include "libretro-keyboard.i"
@@ -1209,24 +1328,28 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c64_model",
          "Model",
-         "",
+         "'Automatic' switches region per filename and directory tags.",
          {
+            { "C64 PAL auto", "C64 PAL Automatic" },
+            { "C64 NTSC auto", "C64 NTSC Automatic" },
+            { "C64C PAL auto", "C64C PAL Automatic" },
+            { "C64C NTSC auto", "C64C NTSC Automatic" },
             { "C64 PAL", NULL },
-            { "C64C PAL", NULL },
-            //{ "C64 OLD PAL", NULL },
             { "C64 NTSC", NULL },
+            { "C64C PAL", NULL },
             { "C64C NTSC", NULL },
-            //{ "C64 OLD NTSC", NULL },
+            { "C64SX PAL", "SX-64 PAL" },
+            { "C64SX NTSC", "SX-64 NTSC" },
+            { "PET64 PAL", "Educator 64 (PET 64) PAL" },
+            { "PET64 NTSC", "Educator 64 (PET 64) NTSC" },
+            { "C64 GS PAL", "C64 Games System PAL" },
+            { "C64 JAP NTSC", "C64 Japanese NTSC" },
+            //{ "C64 OLD PAL", NULL },
             //{ "C64 PAL N", NULL },
-            { "C64 GS PAL", NULL },
-            { "C64 JAP NTSC", NULL },
-            { "C64SX PAL", NULL },
-            { "C64SX NTSC", NULL },
-            { "PET64 PAL", NULL },
-            { "PET64 NTSC", NULL },
+            //{ "C64 OLD NTSC", NULL },
             { NULL, NULL },
          },
-         "C64 PAL"
+         "C64 PAL auto"
       },
 #endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
@@ -1295,7 +1418,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_work_disk",
          "Global Work Disk",
-         "Global disk in device 8 will only be inserted when starting the core without content.\nReset required.",
+         "Global disk in device 8 will only be inserted when the core is started without content.",
          {
             { "disabled", NULL },
             { "8_d64", "D64 - 664 blocks, 170KB - Device 8" },
@@ -2577,7 +2700,7 @@ static void update_variables(void)
       }
 
       if (work_disk_type != opt_work_disk_type || work_disk_unit != opt_work_disk_unit)
-         request_reload_restart = 1;
+         request_update_work_disk = true;
    }
 
    var.key = "vice_drive_true_emulation";
@@ -2896,22 +3019,34 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strcmp(var.value, "C64 PAL") == 0) modl=C64MODEL_C64_PAL;
-      else if (strcmp(var.value, "C64C PAL") == 0) modl=C64MODEL_C64C_PAL;
-      //else if (strcmp(var.value, "C64 OLD PAL") == 0) modl=C64MODEL_C64_OLD_PAL;
+      if (strstr(var.value, "auto")) opt_model_auto = true;
+      else opt_model_auto = false;
+
+      if (strcmp(var.value, "C64 PAL auto") == 0) modl=C64MODEL_C64_PAL;
+      else if (strcmp(var.value, "C64 NTSC auto") == 0) modl=C64MODEL_C64_NTSC;
+      else if (strcmp(var.value, "C64C PAL auto") == 0) modl=C64MODEL_C64C_PAL;
+      else if (strcmp(var.value, "C64C NTSC auto") == 0) modl=C64MODEL_C64C_NTSC;
+      else if (strcmp(var.value, "C64 PAL") == 0) modl=C64MODEL_C64_PAL;
       else if (strcmp(var.value, "C64 NTSC") == 0) modl=C64MODEL_C64_NTSC;
+      else if (strcmp(var.value, "C64C PAL") == 0) modl=C64MODEL_C64C_PAL;
       else if (strcmp(var.value, "C64C NTSC") == 0) modl=C64MODEL_C64C_NTSC;
-      //else if (strcmp(var.value, "C64 OLD NTSC") == 0)modl=C64MODEL_C64_OLD_NTSC;
-      //else if (strcmp(var.value, "C64 PAL N") == 0)modl=C64MODEL_C64_PAL_N;
       else if (strcmp(var.value, "C64SX PAL") == 0) modl=C64MODEL_C64SX_PAL;
       else if (strcmp(var.value, "C64SX NTSC") == 0) modl=C64MODEL_C64SX_NTSC;
-      else if (strcmp(var.value, "C64 JAP NTSC") == 0) modl=C64MODEL_C64_JAP;
-      else if (strcmp(var.value, "C64 GS PAL") == 0) modl=C64MODEL_C64_GS;
       else if (strcmp(var.value, "PET64 PAL") == 0) modl=C64MODEL_PET64_PAL;
       else if (strcmp(var.value, "PET64 NTSC") == 0) modl=C64MODEL_PET64_NTSC;
+      else if (strcmp(var.value, "C64 GS PAL") == 0) modl=C64MODEL_C64_GS;
+      else if (strcmp(var.value, "C64 JAP NTSC") == 0) modl=C64MODEL_C64_JAP;
+      //else if (strcmp(var.value, "C64 PAL N") == 0) modl=C64MODEL_C64_PAL_N;
+      //else if (strcmp(var.value, "C64 OLD PAL") == 0) modl=C64MODEL_C64_OLD_PAL;
+      //else if (strcmp(var.value, "C64 OLD NTSC") == 0) modl=C64MODEL_C64_OLD_NTSC;
+
+      if (retro_ui_finalized && RETROC64MODL != modl && !opt_model_auto)
+         c64model_set(modl);
+      else if (retro_ui_finalized && RETROC64MODL != modl && opt_model_auto)
+         request_reload_restart = 1;
 
       if (retro_ui_finalized && RETROC64MODL != modl)
-         c64model_set(modl);
+         retro_reset();
 
       RETROC64MODL=modl;
    }
@@ -4006,7 +4141,7 @@ void emu_reset(void)
 
 void retro_reset(void)
 {
-   microSecCounter = 0;
+   //microSecCounter = 0;
 
    // Always stop datasette, or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
@@ -4031,57 +4166,6 @@ struct DiskImage {
     char* fname;
 };
 
-static void autodetect_drivetype(int unit)
-{
-    int drive_type;
-    char drive_type_resource_var[20] = {0};
-    snprintf(drive_type_resource_var, sizeof(drive_type_resource_var), "Drive%dType", unit);
-    resources_get_int(drive_type_resource_var, &drive_type);
-
-    // Autodetect drive type
-    vdrive_t *vdrive;
-    struct disk_image_s *diskimg;
-
-    vdrive = file_system_get_vdrive(unit);
-    if (vdrive == NULL)
-        log_cb(RETRO_LOG_ERROR, "Failed to get vdrive reference for unit %d.\n", unit);
-    else
-    {
-        diskimg = vdrive->image;
-
-        // G64 will set a nonexistent drivetype, therefore force 1541
-        if (diskimg != NULL && diskimg->type == DISK_IMAGE_TYPE_G64)
-            diskimg->type = 1541;
-
-        // G71 will set a nonexistent drivetype, therefore force 1571
-        if (diskimg != NULL && diskimg->type == DISK_IMAGE_TYPE_G71)
-            diskimg->type = 1571;
-
-        if (diskimg == NULL)
-            log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit %d.\n", unit);
-        else if (diskimg->type != drive_type)
-        {
-            log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
-            if (log_resources_set_int(drive_type_resource_var, diskimg->type) < 0)
-                log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
-
-            // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
-            file_system_attach_disk(unit, dc->files[dc->index]);
-
-            // Drive motor sound keeps on playing if the drive type is changed while the motor is running
-            // Also happens when toggling TDE
-            switch (diskimg->type)
-            {
-                case 1581:
-                    resources_set_int("DriveSoundEmulationVolume", 0);
-                    break;
-                default:
-                    resources_set_int("DriveSoundEmulationVolume", RETRODSE);
-                    break;
-            }
-        }
-    }
-}
 
 static bool retro_set_eject_state(bool ejected)
 {
@@ -4443,7 +4527,7 @@ void retro_init(void)
    static uint32_t quirks =  RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE | RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE;
    environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);
 
-   microSecCounter = 0;
+   //microSecCounter = 0;
 }
 
 void retro_deinit(void)
@@ -4810,6 +4894,23 @@ void retro_run(void)
 
    if (retro_ui_finalized)
    {
+#if defined(__X64__) || defined(__X64SC__)
+      /* Set model when requested */
+      if (opt_model_auto && request_model_set > -1)
+      {
+         if (request_model_set == C64MODEL_C64_NTSC || request_model_set == C64MODEL_C64C_NTSC)
+            fprintf(stdout, "[libretro-vice]: Forcing NTSC mode\n");
+         else if (request_model_set == C64MODEL_C64_PAL || request_model_set == C64MODEL_C64C_PAL)
+            fprintf(stdout, "[libretro-vice]: Forcing PAL mode\n");
+
+         c64model_set(request_model_set);
+         request_model_set = -1;
+      }
+#endif
+      /* Update work disk */
+      if (request_update_work_disk)
+         update_work_disk();
+
       /* Update samplerate if changed by core option */
       if (prev_audio_sample_rate != RETROSOUNDSAMPLERATE)
       {
@@ -4890,6 +4991,7 @@ void retro_run(void)
 
       retro_time_t t_begin=pcb.get_time_usec();
       retro_time_t t_interframe=MIN((t_end_prev ? t_begin-t_end_prev : 0), 20000-t_frame);
+      retro_now = t_begin;
 
       for (int frame_count=0;frame_count<(retro_warp_mode_enabled() ? (t_interframe+t_frame)/t_frame : 1);++frame_count)
       {
@@ -4901,10 +5003,10 @@ void retro_run(void)
          {
             retro_time_t t_end=pcb.get_time_usec();
             t_end_prev=t_end;
-            if (!(t_frame=MIN(t_end-t_begin, 20000)))
+            if (!(t_frame=MIN(t_end-t_begin, 1000)))
                /* It was seen with x64 that mainloop actually returned within one nanosecond, so make sure
                we don't end up with 0 here. */
-               t_frame=20000;
+               t_frame=1000;
          }
       }
    }
@@ -4933,7 +5035,7 @@ void retro_run(void)
       imagename_timer--;
 
    video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retroW<<(pix_bytes/4))), zoomed_width, zoomed_height, retroW<<(pix_bytes/2));
-   microSecCounter += (1000000/(retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
+   //microSecCounter += (1000000/(retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
 bool retro_load_game(const struct retro_game_info *info)
@@ -4948,7 +5050,9 @@ bool retro_load_game(const struct retro_game_info *info)
    cur_port = 1;
    cur_port_locked = 1;
 #endif
-   if (runstate == RUNSTATE_RUNNING) {
+
+   if (runstate == RUNSTATE_RUNNING)
+   {
       /* load game was called while core is already running */
       /* so we update runstate and do the deferred autostart_reset in retro_run */
       /* the autostart_reset has to be deferred because a bunch of other init stuff */

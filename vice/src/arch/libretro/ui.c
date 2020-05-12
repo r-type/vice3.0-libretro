@@ -67,7 +67,6 @@ BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 
 int RETROTDE=0;
 int RETRODSE=0;
-int RETRORESET=0;
 int RETROSIDENGINE=0;
 int RETROSIDMODL=0;
 int RETRORESIDSAMPLING=0;
@@ -77,7 +76,10 @@ int RETRORESIDGAIN=0;
 int RETRORESIDFILTERBIAS=0;
 int RETRORESID8580FILTERBIAS=0;
 int RETROAUDIOLEAK=0;
-int RETROC64MODL=0;
+int RETROMODEL=0;
+int RETROAUTOSTARTWARP=0;
+int RETROUSERPORTJOY=-1;
+char RETROEXTPALNAME[512]="default";
 #if defined(__X128__)
 int RETROC128COLUMNKEY=1;
 int RETROC128GO64=0;
@@ -86,13 +88,6 @@ int RETROC128GO64=0;
 int RETROVIC20MEM=0;
 int vic20mem_forced=-1;
 #endif
-int RETROUSERPORTJOY=-1;
-int RETROEXTPAL=-1;
-int RETROAUTOSTARTWARP=0;
-int RETROTHEME=0;
-int RETROKEYRAHKEYPAD=0;
-int RETROKEYBOARDPASSTHROUGH=0;
-char RETROEXTPALNAME[512]="pepto-pal";
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
 int RETROVICIICOLORGAMMA=2200;
 int RETROVICIICOLORSATURATION=1250;
@@ -200,7 +195,7 @@ int ui_init_finalize(void)
 
    /* Core options */
 #if defined(__VIC20__)
-   if (RETROEXTPAL==-1)
+   if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("VICExternalPalette", 0);
    else
    {
@@ -208,7 +203,7 @@ int ui_init_finalize(void)
       log_resources_set_string("VICPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__PLUS4__)
-   if (RETROEXTPAL==-1)
+   if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("TEDExternalPalette", 0);
    else
    {
@@ -216,7 +211,7 @@ int ui_init_finalize(void)
       log_resources_set_string("TEDPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__PET__)
-   if (RETROEXTPAL==-1)
+   if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("CrtcExternalPalette", 0);
    else
    {
@@ -224,7 +219,7 @@ int ui_init_finalize(void)
       log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
    }
 #elif defined(__CBM2__)
-   if (RETROEXTPAL==-1)
+   if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("CrtcExternalPalette", 0);
    else
    {
@@ -232,7 +227,7 @@ int ui_init_finalize(void)
       log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
    }
 #else
-   if (RETROEXTPAL==-1)
+   if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("VICIIExternalPalette", 0);
    else
    {
@@ -256,7 +251,7 @@ int ui_init_finalize(void)
       log_resources_set_int("UserportJoyType", RETROUSERPORTJOY);
    }
 
-   if (RETROTDE==1)
+   if (RETROTDE)
    {
       log_resources_set_int("DriveTrueEmulation", 1);
       log_resources_set_int("VirtualDevices", 0);
@@ -267,13 +262,13 @@ int ui_init_finalize(void)
       log_resources_set_int("VirtualDevices", 1);
    }
 
-   if (RETRODSE==0)
-      log_resources_set_int("DriveSoundEmulation", 0);
-   else
+   if (RETRODSE)
    {
       log_resources_set_int("DriveSoundEmulation", 1);
       log_resources_set_int("DriveSoundEmulationVolume", RETRODSE);
    }
+   else
+      log_resources_set_int("DriveSoundEmulation", 0);
 
    log_resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 
@@ -325,20 +320,20 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__VIC20__) 
-   vic20model_set(RETROC64MODL);
+   vic20model_set(RETROMODEL);
 #elif defined(__PLUS4__)
-   plus4model_set(RETROC64MODL);
+   plus4model_set(RETROMODEL);
 #elif defined(__X128__)
-   c128model_set(RETROC64MODL);
+   c128model_set(RETROMODEL);
 #elif defined(__PET__)
-   petmodel_set(RETROC64MODL);
+   petmodel_set(RETROMODEL);
    keyboard_init();
 #elif defined(__CBM2__)
-   cbm2model_set(RETROC64MODL);
+   cbm2model_set(RETROMODEL);
 #elif defined(__XSCPU64__)
-   ;
+   c64model_set(RETROMODEL);
 #else
-   c64model_set(RETROC64MODL);
+   c64model_set(RETROMODEL);
 #endif
 
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
@@ -363,6 +358,11 @@ int ui_init_finalize(void)
 #if defined(__VIC20__)
    static unsigned int vic20mem = 0;
    vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : RETROVIC20MEM;
+
+   // Super VIC uses memory blocks 1+2 by default
+   if (!vic20mem && RETROMODEL == VIC20MODEL_VIC21)
+       vic20mem = 3;
+
    switch (vic20mem)
    {
       case 0:
@@ -414,9 +414,7 @@ int ui_init_finalize(void)
          break;
   }
 #endif
-
    retro_ui_finalized = 1;
-
    return 0;
 }
 

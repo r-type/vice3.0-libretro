@@ -30,6 +30,13 @@
 #include "tape.h"
 #include "resources.h"
 
+#ifdef __XSCPU64__
+int tape_deinstall(void)
+{
+    return 0;
+}
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

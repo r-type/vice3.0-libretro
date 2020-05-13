@@ -137,7 +137,8 @@ static unsigned int manual_crop_right = 0;
 static unsigned int request_reload_restart = 0;
 static bool request_update_work_disk = false;
 static int request_model_set = -1;
-static bool opt_model_auto = true;
+static int request_model_prev = -1;
+static unsigned int opt_model_auto = 1;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int opt_work_disk_type = 0;
@@ -891,9 +892,8 @@ void update_from_vice()
         {
             fprintf(stdout, "[libretro-vice]: Found 'NTSC' or '(USA)' in: '%s'\n", autostartString);
 
-            if (RETROMODEL == C64MODEL_C64_PAL)
-                request_model_set = C64MODEL_C64_NTSC;
-            else if (RETROMODEL == C64MODEL_C64C_PAL)
+            request_model_set = C64MODEL_C64_NTSC;
+            if (RETROMODEL == C64MODEL_C64C_PAL)
                 request_model_set = C64MODEL_C64C_NTSC;
         }
 
@@ -901,9 +901,8 @@ void update_from_vice()
         {
             fprintf(stdout, "[libretro-vice]: Found 'PAL' or '(Europe)' in: '%s'\n", autostartString);
 
-            if (RETROMODEL == C64MODEL_C64_NTSC)
-                request_model_set = C64MODEL_C64_PAL;
-            else if (RETROMODEL == C64MODEL_C64C_NTSC)
+            request_model_set = C64MODEL_C64_PAL;
+            if (RETROMODEL == C64MODEL_C64C_NTSC)
                 request_model_set = C64MODEL_C64C_PAL;
         }
     }
@@ -3033,8 +3032,8 @@ static void update_variables(void)
    {
       int modl=0;
 
-      if (strstr(var.value, "auto")) opt_model_auto = true;
-      else opt_model_auto = false;
+      if (strstr(var.value, "auto")) opt_model_auto = 1;
+      else opt_model_auto = 0;
 
       if (strcmp(var.value, "C64 PAL auto") == 0) modl=C64MODEL_C64_PAL;
       else if (strcmp(var.value, "C64 NTSC auto") == 0) modl=C64MODEL_C64_NTSC;
@@ -3054,13 +3053,11 @@ static void update_variables(void)
       //else if (strcmp(var.value, "C64 OLD PAL") == 0) modl=C64MODEL_C64_OLD_PAL;
       //else if (strcmp(var.value, "C64 OLD NTSC") == 0) modl=C64MODEL_C64_OLD_NTSC;
 
-      if (retro_ui_finalized && RETROMODEL != modl && !opt_model_auto)
-         c64model_set(modl);
-      else if (retro_ui_finalized && RETROMODEL != modl && opt_model_auto)
-         request_reload_restart = 1;
-
       if (retro_ui_finalized && RETROMODEL != modl)
-         retro_reset();
+      {
+         c64model_set(modl);
+         request_model_prev = -1;
+      }
 
       RETROMODEL=modl;
    }
@@ -4815,15 +4812,19 @@ void retro_run(void)
    {
 #if defined(__X64__) || defined(__X64SC__)
       /* Set model when requested */
-      if (opt_model_auto && request_model_set > -1)
+      if (opt_model_auto == 1 && request_model_set > -1)
       {
-         if (request_model_set == C64MODEL_C64_NTSC || request_model_set == C64MODEL_C64C_NTSC)
-            fprintf(stdout, "[libretro-vice]: Forcing NTSC mode\n");
-         else if (request_model_set == C64MODEL_C64_PAL || request_model_set == C64MODEL_C64C_PAL)
-            fprintf(stdout, "[libretro-vice]: Forcing PAL mode\n");
+         if (request_model_prev != request_model_set)
+         {
+             if (request_model_set == C64MODEL_C64_NTSC || request_model_set == C64MODEL_C64C_NTSC)
+                fprintf(stdout, "[libretro-vice]: Forcing NTSC mode\n");
+             else if (request_model_set == C64MODEL_C64_PAL || request_model_set == C64MODEL_C64C_PAL)
+                fprintf(stdout, "[libretro-vice]: Forcing PAL mode\n");
 
-         c64model_set(request_model_set);
-         request_model_set = -1;
+             c64model_set(request_model_set);
+             request_model_prev = request_model_set;
+         }
+         opt_model_auto = 2;
       }
 #endif
       /* Update work disk */

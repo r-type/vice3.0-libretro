@@ -129,8 +129,6 @@ unsigned int zoomed_height;
 unsigned int zoomed_XS_offset;
 unsigned int zoomed_YS_offset;
 static unsigned int opt_aspect_ratio = 0;
-
-static bool manual_crop_update = false;
 static unsigned int manual_crop_top = 0;
 static unsigned int manual_crop_bottom = 0;
 static unsigned int manual_crop_left = 0;
@@ -1454,12 +1452,13 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode",
          "Zoom Mode",
-         "Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
+         "Crops the borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
          {
             { "none", "disabled" },
             { "small", "Small" },
             { "medium", "Medium" },
             { "maximum", "Maximum" },
+            { "manual", "Manual" },
             { NULL, NULL },
          },
          "none"
@@ -1467,7 +1466,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode_crop",
          "Zoom Mode Crop",
-         "Use 'Both' & 'Maximum' to remove borders completely. Manual cropping overrides zoom.",
+         "Use 'Both' & 'Maximum' to remove borders completely. Ignored with 'Manual' zoom.",
          {
             { "both", "Both" },
             { "vertical", "Vertical" },
@@ -1483,28 +1482,52 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_manual_crop_top",
          "Manual Crop Top",
-         "",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+         "VIC-II top border height:\n- 35px PAL\n- 23px NTSC",
+#elif defined(__VIC20__)
+         "VIC top border height:\n- 48px PAL\n- 22px NTSC",
+#elif defined(__PLUS4__)
+         "TED top border height:\n- 40px PAL\n- 18px NTSC",
+#endif
          MANUAL_CROP_OPTIONS,
          "0",
       },
       {
          "vice_manual_crop_bottom",
          "Manual Crop Bottom",
-         "",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+         "VIC-II bottom border height:\n- 37px PAL\n- 24px NTSC",
+#elif defined(__VIC20__)
+         "VIC bottom border height:\n- 52px PAL\n- 28px NTSC",
+#elif defined(__PLUS4__)
+         "TED bottom border height:\n- 48px PAL\n- 24px NTSC",
+#endif
          MANUAL_CROP_OPTIONS,
          "0",
       },
       {
          "vice_manual_crop_left",
          "Manual Crop Left",
-         "",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+         "VIC-II left border width:\n- 32px",
+#elif defined(__VIC20__)
+         "VIC left border width:\n- 48px PAL\n- 32px NTSC",
+#elif defined(__PLUS4__)
+         "TED left border width:\n- 32px",
+#endif
          MANUAL_CROP_OPTIONS,
          "0",
       },
       {
          "vice_manual_crop_right",
          "Manual Crop Right",
-         "",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+         "VIC-II right border width:\n- 32px",
+#elif defined(__VIC20__)
+         "VIC right border width:\n- 48px PAL\n- 16px NTSC",
+#elif defined(__PLUS4__)
+         "TED right border width:\n- 32px",
+#endif
          MANUAL_CROP_OPTIONS,
          "0",
       },
@@ -3167,6 +3190,7 @@ static void update_variables(void)
       else if (strcmp(var.value, "small") == 0) zoom_mode_id=1;
       else if (strcmp(var.value, "medium") == 0) zoom_mode_id=2;
       else if (strcmp(var.value, "maximum") == 0) zoom_mode_id=3;
+      else if (strcmp(var.value, "manual") == 0) zoom_mode_id=4;
 
 #if defined(__X128__)
       if (RETROC128COLUMNKEY==0)
@@ -3218,7 +3242,7 @@ static void update_variables(void)
       int manual_crop_top_prev = manual_crop_top;
       manual_crop_top = atoi(var.value);
       if (manual_crop_top != manual_crop_top_prev)
-         manual_crop_update = true;
+         zoom_mode_id_prev = -1;
    }
    var.key = "vice_manual_crop_bottom";
    var.value = NULL;
@@ -3227,7 +3251,7 @@ static void update_variables(void)
       int manual_crop_bottom_prev = manual_crop_bottom;
       manual_crop_bottom = atoi(var.value);
       if (manual_crop_bottom != manual_crop_bottom_prev)
-         manual_crop_update = true;
+         zoom_mode_id_prev = -1;
    }
    var.key = "vice_manual_crop_left";
    var.value = NULL;
@@ -3236,7 +3260,7 @@ static void update_variables(void)
       int manual_crop_left_prev = manual_crop_left;
       manual_crop_left = atoi(var.value);
       if (manual_crop_left != manual_crop_left_prev)
-         manual_crop_update = true;
+         zoom_mode_id_prev = -1;
    }
    var.key = "vice_manual_crop_right";
    var.value = NULL;
@@ -3245,16 +3269,8 @@ static void update_variables(void)
       int manual_crop_right_prev = manual_crop_right;
       manual_crop_right = atoi(var.value);
       if (manual_crop_right != manual_crop_right_prev)
-         manual_crop_update = true;
+         zoom_mode_id_prev = -1;
    }
-
-   // Reset zoom when crops are disabled
-   if (manual_crop_update && manual_crop_top == 0 && manual_crop_bottom == 0 && manual_crop_left == 0 && manual_crop_right == 0)
-   {
-      zoom_mode_id_prev = -1;
-      manual_crop_update = false;
-   }
-
 #endif
 
    var.key = "vice_gfx_colors";
@@ -4577,9 +4593,6 @@ void update_geometry(int mode)
          if (zoom_mode_id != zoom_mode_id_prev)
          {
             zoom_mode_id_prev = zoom_mode_id;
-            if (manual_crop_top > 0 || manual_crop_bottom > 0 || manual_crop_left > 0 || manual_crop_right > 0)
-               manual_crop_update = true;
-
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
             // PAL: 384x272, NTSC: 384x247, VIC-II: 320x200
             int zoom_width_max      = 320;
@@ -4643,18 +4656,24 @@ void update_geometry(int mode)
                         break;
                      case 5: // 4:3
                         zoom_dar = (double)4/3;
-                        zoom_crop_height = zoom_crop_height / (double)zoom_dar / (double)zoom_par;
+                        zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
                         zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
+                        if (retroW - zoom_crop_width <= zoom_width_max)
+                           zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                         break;
                      case 6: // 5:4
                         zoom_dar = (double)5/4;
-                        zoom_crop_height = zoom_crop_height / (double)zoom_dar / (double)zoom_par;
+                        zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
                         zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
+                        if (retroW - zoom_crop_width <= zoom_width_max)
+                           zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                         break;
                   }
 
                   if (retroW - zoom_crop_width < zoom_width_max)
                      zoom_crop_width = retroW - zoom_width_max;
+                  if (retroH - zoom_crop_height < zoom_height_max)
+                     zoom_crop_height = retroH - zoom_height_max;
 
                   if (zoom_crop_width < 0)
                      zoom_crop_width = 0;
@@ -4663,7 +4682,7 @@ void update_geometry(int mode)
 
                   zoomed_width        = retroW - zoom_crop_width;
                   zoomed_height       = retroH - zoom_crop_height;
-                  //printf("zoom: %f %f - x-%d y-%d = %dx%d\n", zoom_dar, zoom_par, zoom_crop_width, zoom_crop_height, zoomed_width, zoomed_height);
+                  //printf("zoom: dar:%f par:%f - x-%3d y-%3d = %3dx%3d = %f * %f = %f\n", zoom_dar, zoom_par, zoom_crop_width, zoom_crop_height, zoomed_width, zoomed_height, ((double)zoomed_width / (double)zoomed_height), zoom_par, ((double)zoomed_width / (double)zoomed_height * zoom_par));
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
                   zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
@@ -4675,6 +4694,16 @@ void update_geometry(int mode)
                   zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
                   zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 4 : 3) : 0;
 #endif
+                  break;
+
+               case 4:
+                  zoom_crop_width    = manual_crop_left + manual_crop_right;
+                  zoom_crop_height   = manual_crop_top + manual_crop_bottom;
+
+                  zoomed_width       = retroW - zoom_crop_width;
+                  zoomed_height      = retroH - zoom_crop_height;
+                  zoomed_XS_offset   = manual_crop_left;
+                  zoomed_YS_offset   = manual_crop_top;
                   break;
 
                default:
@@ -4691,26 +4720,6 @@ void update_geometry(int mode)
             system_av_info.geometry.base_height = zoomed_height;
             system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(zoomed_width, zoomed_height, false);
          }
-#endif
-         break;
-
-      case 2:
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
-         manual_crop_update = false;
-
-         int zoom_crop_width = 0;
-         int zoom_crop_height = 0;
-         zoom_crop_width    = manual_crop_left + manual_crop_right;
-         zoom_crop_height   = manual_crop_top + manual_crop_bottom;
-
-         zoomed_width       = retroW - zoom_crop_width;
-         zoomed_height      = retroH - zoom_crop_height;
-         zoomed_XS_offset   = manual_crop_left;
-         zoomed_YS_offset   = manual_crop_top;
-
-         system_av_info.geometry.base_width = zoomed_width;
-         system_av_info.geometry.base_height = zoomed_height;
-         system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(zoomed_width, zoomed_height, false);
 #endif
          break;
    }
@@ -4838,14 +4847,10 @@ void retro_run(void)
       }
 
       /* Update geometry if model or zoom mode changes */
-      if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev && !manual_crop_update)
+      if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev)
          update_geometry(1);
       else if (lastW != retroW || lastH != retroH)
          update_geometry(0);
-
-      /* Manual cropping */
-      if (manual_crop_update)
-         update_geometry(2);
    }
 
    if (retro_ui_finalized && !prev_ui_finalized)

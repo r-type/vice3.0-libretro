@@ -157,13 +157,6 @@ static char* get_label(const char* filename)
         }
     }
 
-    // Nothing found, fallback to short pathname
-    char image_label[512];
-    image_label[0] = '\0';
-    fill_short_pathname_representation(image_label, filename, sizeof(image_label));
-    if (!have_disk_label && !have_tape_label)
-        return strdup((char*)image_label);
-
     // Special processing for disk label - sanity check and trimming
     if (have_disk_label)
     {
@@ -175,7 +168,7 @@ static char* get_label(const char* filename)
             unsigned char c = label[i];
             if (c != PETSCII_NBSP && (c < PETSCII_SPACE || c > PETSCII_SHIFTED_Z))
             {
-                return strdup((char*)image_label);
+                return strdup((char*)label);
             }
         }
 #endif
@@ -202,7 +195,7 @@ static char* get_label(const char* filename)
         if (c >= PETSCII_SHIFTED_A)
         {
 #if defined(DISK_LABEL_FORBID_SHIFTED)
-            return strdup((char*)image_label);
+            return strdup((char*)label);
 #endif
             // Have shifted chars
             have_shifted = true;
@@ -251,7 +244,7 @@ static char* get_label(const char* filename)
 
     if (is_ugly((char*)label))
     {
-        return strdup((char*)image_label);
+        return strdup((char*)label);
     }
 
     return strdup((char*)label);
@@ -370,14 +363,12 @@ bool dc_add_file(dc_storage* dc, const char* filename)
     // Determine if tape or disk fliplist from first entry
     if (dc->unit != -1)
     {
-        if (strendswith(filename, "tap") || strendswith(filename, "t64"))
-        {
+        if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_TAPE)
             dc->unit = 1;
-        }
-        else
-        {
+        else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_FLOPPY)
             dc->unit = 8;
-        }
+        else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_MEM)
+            dc->unit = 0;
     }
 
     // Get 'name' - just the filename without extension
@@ -519,17 +510,12 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
                 // Multi file mode, generate playlist
                 if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
                  || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
+                 || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM
                 )
                 {
                     zip_mode = 1;
                     zip_m3u_num++;
                     snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_dirp->d_name);
-                }
-                // Single file mode
-                else if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM)
-                {
-                    zip_mode = 2;
-                    snprintf(full_path_replace, sizeof(full_path_replace), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
                 }
             }
             closedir(zip_dir);
@@ -539,8 +525,6 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
                 case 0: // Extracted path
                     dc_reset(dc);
                     return true;
-                    break;
-                case 2: // Single image
                     break;
                 case 1: // Generated playlist
                     if (zip_m3u_num == 1)
@@ -791,14 +775,13 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
     // M3U - Determine if tape or disk fliplist from first entry
     if (dc->count != 0)
     {
-        if (strendswith(dc->files[0], "tap") || strendswith(dc->files[0], "t64"))
-        {
+        //if (strendswith(dc->files[0], "tap") || strendswith(dc->files[0], "t64"))
+        if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_TAPE)
             dc->unit = 1;
-        }
-        else
-        {
+        else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_FLOPPY)
             dc->unit = 8;
-        }
+        else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_MEM)
+            dc->unit = 0;
 
         if (runstate == RUNSTATE_RUNNING)
         {
@@ -808,11 +791,18 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
                 file_system_detach_disk(8);
                 log_resources_set_int("Drive8Type", DRIVE_TYPE_NONE);
             }
-            else
+            else if (dc->unit == 8)
             {
                 // Detach & disable tape, enable drive 8
                 tape_deinstall();
                 log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
+            }
+            else if (dc->unit == 0)
+            {
+                // Detach & disable tape, detach & disable drive 8
+                tape_deinstall();
+                file_system_detach_disk(8);
+                log_resources_set_int("Drive8Type", DRIVE_TYPE_NONE);
             }
         }
     }

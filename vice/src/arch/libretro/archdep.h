@@ -29,8 +29,13 @@
 #ifndef _ARCHDEP_H
 #define _ARCHDEP_H
 
-extern  char retro_system_data_directory[512];
+extern char retro_system_data_directory[512];
 #define LIBDIR retro_system_data_directory
+
+extern char retro_save_directory[512];
+#define SAVEDIR retro_save_directory
+
+#define ARCHDEP_PRINTER_DEFAULT "vice_printer.txt"
 //#define RETRO_DEBUG 1
 
 #define VICE_ARCHAPI_PRIVATE_API

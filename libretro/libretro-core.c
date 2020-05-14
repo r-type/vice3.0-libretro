@@ -2746,15 +2746,9 @@ static void update_variables(void)
       if (retro_ui_finalized)
       {
          if (strcmp(var.value, "disabled") == 0 && RETROTDE)
-         {
             log_resources_set_int("DriveTrueEmulation", 0);
-            log_resources_set_int("VirtualDevices", 1);
-         }
          else if (strcmp(var.value, "enabled") == 0 && !RETROTDE)
-         {
             log_resources_set_int("DriveTrueEmulation", 1);
-            log_resources_set_int("VirtualDevices", 0);
-         }
       }
 
       if (strcmp(var.value, "disabled") == 0) RETROTDE=0;

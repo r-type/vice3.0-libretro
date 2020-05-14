@@ -184,6 +184,8 @@ int ui_init_finalize(void)
    /* Sensible defaults */
    log_resources_set_int("Mouse", 1);
    log_resources_set_int("AutostartPrgMode", 1);
+   log_resources_set_int("VirtualDevices", 1);
+   log_resources_set_int("Printer4", 1);
 
    /* Mute sound at startup to hide 6581 ReSID init pop, and set back to 100 in retro_run() after 3 frames */
    log_resources_set_int("SoundVolume", 0);
@@ -252,15 +254,9 @@ int ui_init_finalize(void)
    }
 
    if (RETROTDE)
-   {
       log_resources_set_int("DriveTrueEmulation", 1);
-      log_resources_set_int("VirtualDevices", 0);
-   }
    else
-   {
       log_resources_set_int("DriveTrueEmulation", 0);
-      log_resources_set_int("VirtualDevices", 1);
-   }
 
    if (RETRODSE)
    {

@@ -241,7 +241,7 @@ char *archdep_default_sysfile_pathlist(const char *emu_id)
                                    NULL);
         lib_free(default_path_temp);
 #elif defined(__WIN32__) 
-       default_path = util_concat( home_path, "\\", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
+        default_path = util_concat(home_path, "\\", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                    home_path, "\\DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                    home_path, "\\PRINTER", NULL);
 

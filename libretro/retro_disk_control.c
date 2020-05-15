@@ -369,6 +369,8 @@ bool dc_add_file(dc_storage* dc, const char* filename)
             dc->unit = 8;
         else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_MEM)
             dc->unit = 0;
+        else
+            dc->unit = 8;
     }
 
     // Get 'name' - just the filename without extension
@@ -775,13 +777,14 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
     // M3U - Determine if tape or disk fliplist from first entry
     if (dc->count != 0)
     {
-        //if (strendswith(dc->files[0], "tap") || strendswith(dc->files[0], "t64"))
         if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_TAPE)
             dc->unit = 1;
         else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_FLOPPY)
             dc->unit = 8;
         else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_MEM)
             dc->unit = 0;
+        else
+            dc->unit = 8;
 
         if (runstate == RUNSTATE_RUNNING)
         {
@@ -834,31 +837,31 @@ enum dc_image_type dc_get_image_type(const char* filename)
 		return DC_IMAGE_TYPE_NONE;
 
 	// Floppy image
-	if (strendswith(filename, ".d64") ||
-	    strendswith(filename, ".d71") ||
-	    strendswith(filename, ".d80") ||
-	    strendswith(filename, ".d81") ||
-	    strendswith(filename, ".d82") ||
-	    strendswith(filename, ".g64") ||
-	    strendswith(filename, ".x64") ||
-	    strendswith(filename, ".d6z") ||
-	    strendswith(filename, ".d7z") ||
-	    strendswith(filename, ".d8z") ||
-	    strendswith(filename, ".g6z") ||
-	    strendswith(filename, ".g4z") ||
-	    strendswith(filename, ".x6z"))
+	if (strendswith(filename, "d64") ||
+	    strendswith(filename, "d71") ||
+	    strendswith(filename, "d80") ||
+	    strendswith(filename, "d81") ||
+	    strendswith(filename, "d82") ||
+	    strendswith(filename, "g64") ||
+	    strendswith(filename, "x64") ||
+	    strendswith(filename, "d6z") ||
+	    strendswith(filename, "d7z") ||
+	    strendswith(filename, "d8z") ||
+	    strendswith(filename, "g6z") ||
+	    strendswith(filename, "g4z") ||
+	    strendswith(filename, "x6z"))
 	   return DC_IMAGE_TYPE_FLOPPY;
 
 	// Tape image
-	if (strendswith(filename, ".tap") ||
-	    strendswith(filename, ".t64"))
+	if (strendswith(filename, "tap") ||
+	    strendswith(filename, "t64"))
 	   return DC_IMAGE_TYPE_TAPE;
 
 	// Memory image
-	if (strendswith(filename, ".prg") ||
-	    strendswith(filename, ".p00") ||
-	    strendswith(filename, ".crt") ||
-	    strendswith(filename, ".bin"))
+	if (strendswith(filename, "prg") ||
+	    strendswith(filename, "p00") ||
+	    strendswith(filename, "crt") ||
+	    strendswith(filename, "bin"))
 	   return DC_IMAGE_TYPE_MEM;
 
 	// Fallback

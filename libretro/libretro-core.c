@@ -365,6 +365,8 @@ static int get_image_unit()
             dc->unit = 8;
         else if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_MEM)
             dc->unit = 0;
+        else
+            dc->unit = 8;
     }
     else
         unit = 8;

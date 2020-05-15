@@ -17,7 +17,7 @@
 extern retro_input_poll_t input_poll_cb;
 extern retro_input_state_t input_state_cb;
 
-extern void emu_reset(void);
+extern void emu_reset(int type);
 extern unsigned int vice_devices[5];
 
 #ifdef POINTER_DEBUG
@@ -134,7 +134,7 @@ void emu_function(int function)
             if (cur_port>2) cur_port = 1;
             break;
         case EMU_RESET:
-            emu_reset();
+            emu_reset(-1);
             break;
         case EMU_ZOOM_MODE:
             if (zoom_mode_id == 0 && opt_zoom_mode_id == 0)

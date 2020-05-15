@@ -17,14 +17,15 @@
 #include "attach.h"
 #include "interrupt.h"
 #include "datasette.h"
-#ifdef __PET__
-#include "keyboard.h"
-#else
 #include "cartridge.h"
-#endif
 #include "initcmdline.h"
 #include "vsync.h"
 #include "log.h"
+
+#ifdef __PET__
+#include "keyboard.h"
+void cartridge_detach_image(int type) {}
+#endif
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -358,10 +359,12 @@ static int get_image_unit()
     int unit = dc->unit;
     if (dc->index < dc->count)
     {
-        if (strendswith(dc->files[dc->index], "tap") || strendswith(dc->files[dc->index], "t64"))
-           unit = 1;
-        else
-           unit = 8;
+        if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_TAPE)
+            dc->unit = 1;
+        else if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_FLOPPY)
+            dc->unit = 8;
+        else if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_MEM)
+            dc->unit = 0;
     }
     else
         unit = 8;
@@ -383,8 +386,10 @@ static void log_disk_in_tray(bool display)
         // Build message do display
         if (unit == 1)
             snprintf(queued_msg, sizeof(queued_msg), "Tape: ");
-        else
+        else if (unit == 8)
             snprintf(queued_msg, sizeof(queued_msg), "Drive %d: ", unit);
+        else
+            snprintf(queued_msg, sizeof(queued_msg), "Cart: ");
         pos = strlen(queued_msg);
         snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "(%d/%d) %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
         pos += strlen(queued_msg + pos);
@@ -527,17 +532,12 @@ static int process_cmdline(const char* argv)
                 // Multi file mode, generate playlist
                 if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
                  || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
+                 || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM
                 )
                 {
                     zip_mode = 1;
                     zip_m3u_num++;
                     snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_dirp->d_name);
-                }
-                // Single file mode
-                else if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM)
-                {
-                    zip_mode = 2;
-                    snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
                 }
             }
             closedir(zip_dir);
@@ -545,7 +545,6 @@ static int process_cmdline(const char* argv)
             switch (zip_mode)
             {
                 case 0: // Extracted path
-                case 2: // Single image
                     if (browsed_file[0] != '\0')
                     {
                         if (strendswith(browsed_file, ".nib"))
@@ -568,11 +567,9 @@ static int process_cmdline(const char* argv)
         }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-        // Disable JiffyDOS with PRGs & CRTs
-        if (strendswith(argv, ".prg")
-         || strendswith(argv, ".crt")
-         || strendswith(argv, ".t64")
-         || strendswith(argv, ".tap"))
+        // Do not allow JiffyDOS with non-floppies
+        if (dc_get_image_type(argv) == DC_IMAGE_TYPE_TAPE
+         || dc_get_image_type(argv) == DC_IMAGE_TYPE_MEM)
             opt_jiffydos_allow = 0;
         else
             opt_jiffydos_allow = 1;
@@ -876,9 +873,18 @@ void update_from_vice()
 {
     const char* attachedImage = NULL;
 
-    // Get autostart string from vice
-    free(autostartString);
-    autostartString = x_strdup(cmdline_get_autostart_string());
+    // Get autostart string from vice, handle carts differently
+    if (dc->unit == 0 && autostartString != NULL)
+    {
+        autostartString = NULL;
+        attachedImage = dc->files[dc->index];
+    }
+    else
+    {
+        free(autostartString);
+        autostartString = x_strdup(cmdline_get_autostart_string());
+    }
+
     if (autostartString)
         log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
     else
@@ -944,27 +950,30 @@ void update_from_vice()
         }
     }
 
-    if (dc->unit == 1)
-    {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-        if (opt_jiffydos)
-        {
-            // Disable JiffyDOS with tapes
-            opt_jiffydos_allow = 0;
-            opt_jiffydos = 0;
-            runstate = RUNSTATE_LOADED_CONTENT;
-        }
+    // Disable JiffyDOS with tapes and carts
+    if (opt_jiffydos && dc->unit <= 1 && dc->count > 0)
+    {
+        opt_jiffydos_allow = 0;
+        opt_jiffydos = 0;
+        runstate = RUNSTATE_LOADED_CONTENT;
+    }
 #endif
-        log_cb(RETRO_LOG_INFO, "Image list is active for tape\n");
-    }
-    else if (dc->unit != 0)
+
+    // Logging
+    if (dc->count > 0)
     {
-        log_cb(RETRO_LOG_INFO, "Image list is active for drive #%d\n", dc->unit);
-    }
-    log_cb(RETRO_LOG_INFO, "Image list has %d file(s)\n", dc->count);
-    for(unsigned i = 0; i < dc->count; i++)
-    {
-        log_cb(RETRO_LOG_INFO, "File %d: %s\n", i+1, dc->files[i]);
+        if (dc->unit == 1)
+            log_cb(RETRO_LOG_INFO, "Image list is active for tape\n");
+        else if (dc->unit >= 8 && dc->unit <= 11)
+            log_cb(RETRO_LOG_INFO, "Image list is active for drive #%d\n", dc->unit);
+        else if (dc->unit == 0)
+            log_cb(RETRO_LOG_INFO, "Image list is active for cart\n");
+
+        log_cb(RETRO_LOG_INFO, "Image list has %d file(s)\n", dc->count);
+
+        for(unsigned i = 0; i < dc->count; i++)
+            log_cb(RETRO_LOG_INFO, "File %d: %s\n", i+1, dc->files[i]);
     }
 
     // If flip list is not empty, but there is no image attached to drive, attach the first one from list.
@@ -980,11 +989,11 @@ void update_from_vice()
                 if (autostartString != NULL || noautostart)
                 {
                     log_cb(RETRO_LOG_INFO, "Attaching first tape %s\n", attachedImage);
-                    tape_image_attach(1, attachedImage);
+                    tape_image_attach(dc->unit, attachedImage);
                 }
             }
         }
-        else if (dc->unit != 0)
+        else if (dc->unit == 8)
         {
             if ((attachedImage = file_system_get_disk_name(dc->unit)) == NULL)
             {
@@ -994,6 +1003,19 @@ void update_from_vice()
                 {
                     log_cb(RETRO_LOG_INFO, "Attaching first disk %s to drive #%d\n", attachedImage, dc->unit);
                     file_system_attach_disk(dc->unit, attachedImage);
+                }
+            }
+        }
+        if (dc->unit == 0)
+        {
+            if (attachedImage == NULL)
+            {
+                attachedImage = dc->files[0];
+                // Don't attach if we will autostart from it just in a moment
+                if (autostartString != NULL || noautostart)
+                {
+                    log_cb(RETRO_LOG_INFO, "Attaching first cart %s\n", attachedImage);
+                    cartridge_attach_image(dc->unit, attachedImage);
                 }
             }
         }
@@ -1011,7 +1033,6 @@ void update_from_vice()
         autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
     }
 
-    dc->index = 0;
     // If vice has image attached to drive, tell libretro that the 'tray' is closed
     if (attachedImage != NULL)
     {
@@ -2725,15 +2746,9 @@ static void update_variables(void)
       if (retro_ui_finalized)
       {
          if (strcmp(var.value, "disabled") == 0 && RETROTDE)
-         {
             log_resources_set_int("DriveTrueEmulation", 0);
-            log_resources_set_int("VirtualDevices", 1);
-         }
          else if (strcmp(var.value, "enabled") == 0 && !RETROTDE)
-         {
             log_resources_set_int("DriveTrueEmulation", 1);
-            log_resources_set_int("VirtualDevices", 0);
-         }
       }
 
       if (strcmp(var.value, "disabled") == 0) RETROTDE=0;
@@ -4032,7 +4047,7 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 }
 
-void emu_reset(void)
+void emu_reset(int type)
 {
    // Always stop datasette or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
@@ -4044,10 +4059,14 @@ void emu_reset(void)
    if (request_reload_restart)
       reload_restart();
 
-   switch (opt_reset_type)
+   // Follow core option type with -1
+   type = (type == -1) ? opt_reset_type : type;
+   switch (type)
    {
       case 0:
+         // Hard reset before autostart
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+
          // Allow autostarting with a different disk
          if (dc->count > 1)
             autostartString = x_strdup(dc->files[dc->index]);
@@ -4079,6 +4098,7 @@ void retro_reset(void)
 
    // Retro reset should always hard reset & autostart
    machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+
    // Allow autostarting with a different disk
    if (dc->count > 1)
       autostartString = x_strdup(dc->files[dc->index]);
@@ -4089,7 +4109,6 @@ void retro_reset(void)
 struct DiskImage {
     char* fname;
 };
-
 
 static bool retro_set_eject_state(bool ejected)
 {
@@ -4107,9 +4126,10 @@ static bool retro_set_eject_state(bool ejected)
             dc->eject_state = ejected;
             if (unit == 1)
                 tape_image_detach(unit);
-            else
+            else if (unit >= 8 && unit <= 11)
                 file_system_detach_disk(unit);
-
+            else if (unit == 0)
+                cartridge_detach_image(-1);
             display_current_image("", false);
             return true;
         }
@@ -4118,12 +4138,18 @@ static bool retro_set_eject_state(bool ejected)
             dc->eject_state = ejected;
             if (unit == 1)
                 tape_image_attach(unit, dc->files[dc->index]);
-            else
+            else if (unit >= 8 && unit <= 11)
             {
                 file_system_attach_disk(unit, dc->files[dc->index]);
                 autodetect_drivetype(unit);
             }
-
+            else if (unit == 0)
+            {
+                cartridge_attach_image(0, dc->files[dc->index]);
+                // PRGs must autostart on attach
+                if (strendswith(dc->files[dc->index], ".prg"))
+                    emu_reset(0);
+            }
             display_current_image(dc->files[dc->index], true);
             return true;
         }
@@ -4983,9 +5009,7 @@ void retro_unload_game(void)
 {
    file_system_detach_disk(8);
    tape_image_detach(1);
-#ifndef __PET__
    cartridge_detach_image(-1);
-#endif
    dc_reset(dc);
    free(autostartString);
    autostartString = NULL;

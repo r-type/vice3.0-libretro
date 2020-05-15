@@ -74,6 +74,11 @@ static int set_printer_device(int prn_dev, void *param)
 }
 
 static const resource_string_t resources_string[] = {
+#ifdef __LIBRETRO__
+    { "PrinterTextDevice1", ARCHDEP_PRINTER_DEFAULT,
+      RES_EVENT_NO, NULL,
+      &PrinterDev[0], set_printer_device_name, (void *)0 },
+#else
     { "PrinterTextDevice1", ARCHDEP_PRINTER_DEFAULT_DEV1,
       RES_EVENT_NO, NULL,
       &PrinterDev[0], set_printer_device_name, (void *)0 },
@@ -83,6 +88,7 @@ static const resource_string_t resources_string[] = {
     { "PrinterTextDevice3", ARCHDEP_PRINTER_DEFAULT_DEV3,
       RES_EVENT_NO, NULL,
       &PrinterDev[2], set_printer_device_name, (void *)2 },
+#endif
     RESOURCE_STRING_LIST_END
 };
 
@@ -166,7 +172,13 @@ static FILE *fopen_or_pipe(char *name)
         return NULL;
 #endif
     } else {
+#ifdef __LIBRETRO__
+        char *path;
+        path = util_concat(SAVEDIR, FSDEV_DIR_SEP_STR, name, NULL);
+        return fopen(path, MODE_APPEND);
+#else
         return fopen(name, MODE_APPEND);
+#endif
     }
 }
 

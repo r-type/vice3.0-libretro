@@ -484,7 +484,7 @@ static int process_cmdline(const char* argv)
         char nib_output[RETRO_PATH_MAX] = {0};
 
         // NIB convert to G64
-        if (strendswith(argv, ".nib"))
+        if (dc_get_image_type(argv) == DC_IMAGE_TYPE_NIBBLER)
         {
             snprintf(nib_input, sizeof(nib_input), "%s", argv);
             snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
@@ -516,7 +516,7 @@ static int process_cmdline(const char* argv)
             zip_dir = opendir(zip_path);
             while ((zip_dirp = readdir(zip_dir)) != NULL)
             {
-                if (strendswith(zip_dirp->d_name, ".nib"))
+                if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
                 {
                     snprintf(nib_input, sizeof(nib_input), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
                     snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
@@ -549,7 +549,7 @@ static int process_cmdline(const char* argv)
                 case 0: // Extracted path
                     if (browsed_file[0] != '\0')
                     {
-                        if (strendswith(browsed_file, ".nib"))
+                        if (dc_get_image_type(browsed_file) == DC_IMAGE_TYPE_NIBBLER)
                             snprintf(full_path, sizeof(full_path), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, path_remove_extension(browsed_file));
                         else
                             snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, browsed_file);
@@ -4516,9 +4516,9 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.3" GIT_VERSION;
 #if defined(__VIC20__)
-   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|nib|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf";
+   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
 #else
-   info->valid_extensions = "d64|d71|d80|d81|d82|nib|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
 #endif
    info->need_fullpath    = true;
    info->block_extract    = true;

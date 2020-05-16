@@ -462,7 +462,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
         char nib_output[RETRO_PATH_MAX] = {0};
 
         // NIB convert to G64
-        if (strendswith(full_path_replace, ".nib"))
+        if (dc_get_image_type(full_path_replace) == DC_IMAGE_TYPE_NIBBLER)
         {
             snprintf(nib_input, sizeof(nib_input), "%s", full_path_replace);
             snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
@@ -494,7 +494,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             zip_dir = opendir(zip_path);
             while ((zip_dirp = readdir(zip_dir)) != NULL)
             {
-                if (strendswith(zip_dirp->d_name, ".nib"))
+                if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
                 {
                     snprintf(nib_input, sizeof(nib_input), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
                     snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
@@ -863,6 +863,11 @@ enum dc_image_type dc_get_image_type(const char* filename)
 	    strendswith(filename, "crt") ||
 	    strendswith(filename, "bin"))
 	   return DC_IMAGE_TYPE_MEM;
+
+	// Nibbler floppy image, requires conversion
+	if (strendswith(filename, "nib") ||
+	    strendswith(filename, "nbz"))
+	   return DC_IMAGE_TYPE_NIBBLER;
 
 	// Fallback
 	return DC_IMAGE_TYPE_UNKNOWN;

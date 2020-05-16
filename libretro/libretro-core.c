@@ -140,6 +140,7 @@ static bool request_update_work_disk = false;
 static int request_model_set = -1;
 static int request_model_prev = -1;
 static unsigned int opt_model_auto = 1;
+unsigned int opt_autoloadwarp = 0;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int opt_work_disk_type = 0;
@@ -1418,6 +1419,17 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "enabled"
+      },
+      {
+         "vice_autoloadwarp",
+         "Automatic Load Warp",
+         "Toggles warp mode always during disk and tape loading.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
       },
       {
          "vice_drive_true_emulation",
@@ -2717,6 +2729,14 @@ static void update_variables(void)
          noautostart = true;
       else
          noautostart = false;
+   }
+
+   var.key = "vice_autoloadwarp";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (strcmp(var.value, "disabled") == 0) opt_autoloadwarp=0;
+      else opt_autoloadwarp=1;
    }
 
    var.key = "vice_work_disk";

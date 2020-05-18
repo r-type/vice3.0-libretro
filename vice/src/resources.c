@@ -1174,7 +1174,7 @@ static char* disabled_resources[] =
     "CrtcExternalPalette", "CrtcPaletteFile", "VICIIExternalPalette", "VICIIPaletteFile",
     "VICIIColorGamma", "VICIIColorSaturation", "VICIIColorContrast", "VICIIColorBrightness", "VICIIColorTint",
     "UserportJoy", "UserportJoyType", "DriveTrueEmulation", "DriveSoundEmulation", "DriveSoundEmulationVolume",
-    "AutostartWarp", "VICIIAudioLeak", "VICAudioLeak",
+    "AutostartWarp", "VICIIAudioLeak", "VICAudioLeak", "SidStereo", "SidStereoAddressStart",
     "SidEngine", "SidModel", "SidResidSampling", "SidResidPassband", "SidResidGain", "SidResidFilterBias",
     "SidResid8580Passband", "SidResid8580Gain", "SidResid8580FilterBias",
     "Go64Mode", "C128ColumnKey", "RAMBlock0", "RAMBlock1", "RAMBlock2", "RAMBlock3", "RAMBlock5",

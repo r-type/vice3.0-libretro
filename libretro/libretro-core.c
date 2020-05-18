@@ -95,6 +95,7 @@ extern int RETROTDE;
 extern int RETRODSE;
 extern int RETROSIDENGINE;
 extern int RETROSIDMODL;
+extern int RETROSIDEXTRA;
 extern int RETRORESIDSAMPLING;
 extern int RETROSOUNDSAMPLERATE;
 extern int RETRORESIDPASSBAND;
@@ -1995,6 +1996,20 @@ void retro_set_environment(retro_environment_t cb)
          "Default"
       },
       {
+         "vice_sid_extra",
+         "SID Extra",
+         "Second SID base address.",
+         {
+            { "disabled", NULL },
+            { "0xd420", "$D420" },
+            { "0xd500", "$D500" },
+            { "0xde00", "$DE00" },
+            { "0xdf00", "$DF00" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
          "vice_resid_sampling",
          "ReSID Sampling",
          "'Resampling' provides best quality. 'Fast' improves performance dramatically on PS Vita.",
@@ -3137,6 +3152,29 @@ static void update_variables(void)
          sid_set_engine_model(RETROSIDENGINE, modl);
 
       RETROSIDMODL=modl;
+   }
+
+   var.key = "vice_sid_extra";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int sid_extra = atoi(var.value);
+      if (strcmp(var.value, "disabled"))
+         sid_extra = strtol(var.value, NULL, 16);
+
+      if (retro_ui_finalized && RETROSIDEXTRA != sid_extra)
+      {
+         if (!sid_extra)
+            log_resources_set_int("SidStereo", 0);
+         else
+         {
+            if (!RETROSIDEXTRA)
+               log_resources_set_int("SidStereo", 1);
+            log_resources_set_int("SidStereoAddressStart", sid_extra);
+         }
+      }
+
+      RETROSIDEXTRA=sid_extra;
    }
 
    var.key = "vice_resid_sampling";
@@ -4842,9 +4880,9 @@ void retro_audio_render(signed short int *sound_buffer, int sndbufsize)
 {
    int x;
 #if 1
-   for (x=0; x<sndbufsize; x++) audio_cb(sound_buffer[x], sound_buffer[x]);
+   for (x=0; x<sndbufsize; x++) audio_cb(sound_buffer[x], sound_buffer[x]); // Mono output
 #else
-   //FIXME audio_batch_cb(sound_buffer, sndbufsize);
+   audio_batch_cb(sound_buffer, sndbufsize/2); // Stereo output, fails with reSIDfp!
 #endif
 }
 
@@ -4950,28 +4988,21 @@ void retro_run(void)
       static struct retro_perf_callback pcb;
       if (!pcb.get_time_usec)
          environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &pcb);
+      retro_now = pcb.get_time_usec();
 
-      static retro_time_t t_frame=1, t_end_prev=0;
-
-      retro_time_t t_begin=pcb.get_time_usec();
-      retro_time_t t_interframe=MIN((t_end_prev ? t_begin-t_end_prev : 0), 20000-t_frame);
-      retro_now = t_begin;
-
-      for (int frame_count=0;frame_count<(retro_warp_mode_enabled() ? (t_interframe+t_frame)/t_frame : 1);++frame_count)
+      static unsigned int f_time = 1, f_minimum = 1;
+      static double f_refresh = 0;
+      if (!f_refresh)
       {
-         while(cpuloop==1)
+          f_refresh = retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC;
+          f_time = 1000000 / f_refresh;
+          f_minimum = f_time / f_refresh;
+      }
+      for (int frame_count = 1; frame_count <= (retro_warp_mode_enabled() ? f_time/f_minimum : 1); ++frame_count)
+      {
+         while (cpuloop)
             maincpu_mainloop_retro();
-         cpuloop=1;
-
-         if (!frame_count)
-         {
-            retro_time_t t_end=pcb.get_time_usec();
-            t_end_prev=t_end;
-            if (!(t_frame=MIN(t_end-t_begin, 1000)))
-               /* It was seen with x64 that mainloop actually returned within one nanosecond, so make sure
-               we don't end up with 0 here. */
-               t_frame=1000;
-         }
+         cpuloop = 1;
       }
    }
 

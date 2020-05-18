@@ -72,6 +72,7 @@ int RETROTDE=0;
 int RETRODSE=0;
 int RETROSIDENGINE=0;
 int RETROSIDMODL=0;
+int RETROSIDEXTRA=0;
 int RETRORESIDSAMPLING=0;
 int RETROSOUNDSAMPLERATE=0;
 int RETRORESIDPASSBAND=0;
@@ -353,6 +354,14 @@ int ui_init_finalize(void)
    log_resources_set_int("SidResid8580Passband", RETRORESIDPASSBAND);
    log_resources_set_int("SidResid8580Gain", RETRORESIDGAIN);
    log_resources_set_int("SidResid8580FilterBias", RETRORESID8580FILTERBIAS);
+
+   if (RETROSIDEXTRA)
+   {
+      log_resources_set_int("SidStereo", 1);
+      log_resources_set_int("SidStereoAddressStart", RETROSIDEXTRA);
+   }
+   else
+      log_resources_set_int("SidStereo", 0);
 #endif
 
 #if defined(__X128__)

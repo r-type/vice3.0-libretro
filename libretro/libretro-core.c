@@ -21,11 +21,7 @@
 #include "initcmdline.h"
 #include "vsync.h"
 #include "log.h"
-
-#ifdef __PET__
 #include "keyboard.h"
-void cartridge_detach_image(int type) {}
-#endif
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -179,6 +175,8 @@ extern unsigned int turbo_pulse;
 #if defined(__VIC20__)
 #include "c64model.h"
 #include "vic20model.h"
+#include "vic20mem.h"
+#include "vic20cart.h"
 #elif defined(__PLUS4__)
 #include "c64model.h"
 #include "plus4model.h"
@@ -187,6 +185,7 @@ extern unsigned int turbo_pulse;
 #include "c128model.h"
 #elif defined(__PET__)
 #include "petmodel.h"
+void cartridge_detach_image(int type) {}
 #elif defined(__CBM2__)
 #include "cbm2model.h"
 #else
@@ -1019,7 +1018,11 @@ void update_from_vice()
                 if (autostartString != NULL || noautostart)
                 {
                     log_cb(RETRO_LOG_INFO, "Attaching first cart %s\n", attachedImage);
+#if defined(__VIC20__)
+                    cartridge_attach_image(CARTRIDGE_VIC20_DETECT, attachedImage);
+#else
                     cartridge_attach_image(dc->unit, attachedImage);
+#endif
                 }
             }
         }
@@ -2892,56 +2895,38 @@ static void update_variables(void)
 
       if (retro_ui_finalized && RETROVIC20MEM != vic20mem)
       {
+         unsigned int vic_blocks = 0;
          switch (vic20mem)
          {
-            case 0:
-               log_resources_set_int("RAMBlock0", 0);
-               log_resources_set_int("RAMBlock1", 0);
-               log_resources_set_int("RAMBlock2", 0);
-               log_resources_set_int("RAMBlock3", 0);
-               log_resources_set_int("RAMBlock5", 0);
-               break;
-
             case 1:
-               log_resources_set_int("RAMBlock0", 1);
-               log_resources_set_int("RAMBlock1", 0);
-               log_resources_set_int("RAMBlock2", 0);
-               log_resources_set_int("RAMBlock3", 0);
-               log_resources_set_int("RAMBlock5", 0);
+               vic_blocks |= VIC_BLK0;
                break;
 
             case 2:
-               log_resources_set_int("RAMBlock0", 0);
-               log_resources_set_int("RAMBlock1", 1);
-               log_resources_set_int("RAMBlock2", 0);
-               log_resources_set_int("RAMBlock3", 0);
-               log_resources_set_int("RAMBlock5", 0);
+               vic_blocks |= VIC_BLK1;
                break;
 
             case 3:
-               log_resources_set_int("RAMBlock0", 0);
-               log_resources_set_int("RAMBlock1", 1);
-               log_resources_set_int("RAMBlock2", 1);
-               log_resources_set_int("RAMBlock3", 0);
-               log_resources_set_int("RAMBlock5", 0);
+               vic_blocks |= VIC_BLK1;
+               vic_blocks |= VIC_BLK2;
                break;
 
             case 4:
-               log_resources_set_int("RAMBlock0", 0);
-               log_resources_set_int("RAMBlock1", 1);
-               log_resources_set_int("RAMBlock2", 1);
-               log_resources_set_int("RAMBlock3", 1);
-               log_resources_set_int("RAMBlock5", 0);
+               vic_blocks |= VIC_BLK1;
+               vic_blocks |= VIC_BLK2;
+               vic_blocks |= VIC_BLK3;
                break;
 
             case 5:
-               log_resources_set_int("RAMBlock0", 1);
-               log_resources_set_int("RAMBlock1", 1);
-               log_resources_set_int("RAMBlock2", 1);
-               log_resources_set_int("RAMBlock3", 1);
-               log_resources_set_int("RAMBlock5", 1);
+               vic_blocks = VIC_BLK_ALL;
                break;
          }
+
+         log_resources_set_int("RAMBlock0", (vic_blocks & VIC_BLK0) ? 1 : 0);
+         log_resources_set_int("RAMBlock1", (vic_blocks & VIC_BLK1) ? 1 : 0);
+         log_resources_set_int("RAMBlock2", (vic_blocks & VIC_BLK2) ? 1 : 0);
+         log_resources_set_int("RAMBlock3", (vic_blocks & VIC_BLK3) ? 1 : 0);
+         log_resources_set_int("RAMBlock5", (vic_blocks & VIC_BLK5) ? 1 : 0);
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
       }
 
@@ -4205,9 +4190,13 @@ static bool retro_set_eject_state(bool ejected)
             }
             else if (unit == 0)
             {
+#if defined(__VIC20__)
+                cartridge_attach_image(CARTRIDGE_VIC20_DETECT, dc->files[dc->index]);
+#else
                 cartridge_attach_image(0, dc->files[dc->index]);
-                // PRGs must autostart on attach
-                if (strendswith(dc->files[dc->index], ".prg"))
+#endif
+                // PRGs must autostart on attach, cartridges reset anyway
+                if (strendswith(dc->files[dc->index], "prg"))
                     emu_reset(0);
             }
             display_current_image(dc->files[dc->index], true);

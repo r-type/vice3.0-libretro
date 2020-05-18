@@ -860,6 +860,11 @@ enum dc_image_type dc_get_image_type(const char* filename)
 	// Memory image
 	if (strendswith(filename, "prg") ||
 	    strendswith(filename, "p00") ||
+	    strendswith(filename, "20")  ||
+	    strendswith(filename, "40")  ||
+	    strendswith(filename, "60")  ||
+	    strendswith(filename, "a0")  ||
+	    strendswith(filename, "b0")  ||
 	    strendswith(filename, "crt") ||
 	    strendswith(filename, "bin"))
 	   return DC_IMAGE_TYPE_MEM;

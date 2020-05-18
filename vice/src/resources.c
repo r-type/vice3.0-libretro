@@ -1163,7 +1163,78 @@ int resources_load(const char *fname)
     return err ? RESERR_FILE_INVALID : 0;
 }
 
+#ifdef __LIBRETRO__
+#include "cmdline.h"
+extern cmdline_option_ram_t *options;
+static char* disabled_resources[] =
+{
+    // Core options
+    "Mouse", "AutostartPrgMode", "VirtualDevices", "CrtcFilter", "CrtcStretchVertical",
+    "VICExternalPalette", "VICPaletteFile", "TEDExternalPalette", "TEDPaletteFile",
+    "CrtcExternalPalette", "CrtcPaletteFile", "VICIIExternalPalette", "VICIIPaletteFile",
+    "VICIIColorGamma", "VICIIColorSaturation", "VICIIColorContrast", "VICIIColorBrightness", "VICIIColorTint",
+    "UserportJoy", "UserportJoyType", "DriveTrueEmulation", "DriveSoundEmulation", "DriveSoundEmulationVolume",
+    "AutostartWarp", "VICIIAudioLeak", "VICAudioLeak",
+    "SidEngine", "SidModel", "SidResidSampling", "SidResidPassband", "SidResidGain", "SidResidFilterBias",
+    "SidResid8580Passband", "SidResid8580Gain", "SidResid8580FilterBias",
+    "Go64Mode", "C128ColumnKey", "RAMBlock0", "RAMBlock1", "RAMBlock2", "RAMBlock3", "RAMBlock5",
+    "Drive8Type", "WarpMode",
 
+    // Frontend resources
+    "SDLStatusbar", "ExitScreenshotName", "RefreshRate", "SoundRecordDeviceName", "SoundRecordDeviceArg",
+    "SoundDeviceName", "Sound", "SoundSampleRate", "SoundBufferSize", "SoundFragmentSize", "SoundDeviceArg",
+    "SoundSuspendTime", "SoundSpeedAdjustment", "SoundVolume", "SoundOutput", "MachineVideoStandard",
+    "VICIIVideoCache", "VICIIDoubleScan", "VICIIHwScale", "VICIIDoubleSize", "VICIIBorderMode",
+    "VICIIPALScanLineShade", "VICIIPALBlur", "VICIIPALOddLinePhase", "VICIIPALOddLineOffset", "VICIIFilter",
+    "EventSnapshotDir", "EventStartSnapshot", "EventEndSnapshot", "EventStartMode", "EventImageInclude"
+};
+static int disabled_resources_num;
+static char *resources_get_description(const char *name)
+{
+    for (int i = 0; i < num_resources; i++)
+    {
+        if (options[i].resource_name == NULL)
+            continue;
+        if (!strcmp(options[i].resource_name, name))
+            return (char *)options[i].description;
+    }
+    return "No description";
+}
+
+static char *string_resource_item(int num, const char *delim)
+{
+    // Skip core optionized & frontend resources
+    for (int d = 0; d < disabled_resources_num; d++)
+    {
+        if (!strcmp(resources[num].name, disabled_resources[d]))
+            return NULL;
+    }
+
+    char *line = NULL;
+    resource_value_t v;
+
+    switch (resources[num].type) {
+        case RES_INTEGER:
+            v = (resource_value_t) uint_to_void_ptr(*(int *)resources[num].value_ptr);
+            line = lib_msprintf("%s=%d ### %s%s", resources[num].name, vice_ptr_to_int(v), resources_get_description(resources[num].name), delim);
+            break;
+        case RES_STRING:
+            v = *resources[num].value_ptr;
+            if ((char *)v != NULL) {
+                line = lib_msprintf("%s=\"%s\" ### %s%s", resources[num].name, (char *)v,
+                                    resources_get_description(resources[num].name), delim);
+            } else {
+                line = lib_msprintf("%s= ### %s%s", resources[num].name, resources_get_description(resources[num].name), delim);
+            }
+            break;
+        default:
+            log_error(LOG_DEFAULT, "Unknown value type for resource `%s'.",
+                      resources[num].name);
+            break;
+    }
+    return line;
+}
+#else
 static char *string_resource_item(int num, const char *delim)
 {
     char *line = NULL;
@@ -1190,6 +1261,7 @@ static char *string_resource_item(int num, const char *delim)
     }
     return line;
 }
+#endif
 
 /* Write the resource specification for resource number `num' to file
    descriptor `f'.  */
@@ -1373,6 +1445,10 @@ int resources_save(const char *fname)
 /* dump ALL resources of the current machine into a file */
 int resources_dump(const char *fname)
 {
+#ifdef __LIBRETRO__
+    disabled_resources_num = sizeof(disabled_resources) / sizeof(disabled_resources[0]);
+    num_resources -= disabled_resources_num;
+#endif
     FILE *out_file;
     unsigned int i;
 

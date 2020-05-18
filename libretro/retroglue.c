@@ -191,11 +191,13 @@ void zip_uncompress(char *in, char *out, char *lastfile)
 typedef unsigned char BYTE;
 typedef unsigned char __u_char;
 #include "deps/nibtools/nibtools.h"
+#include "deps/nibtools/lz.h"
 
 #include "deps/nibtools/gcr.c"
 #include "deps/nibtools/prot.c"
 #include "deps/nibtools/crc.c"
 #include "deps/nibtools/bitshifter.c"
+#include "deps/nibtools/lz.c"
 
 int write_dword(FILE * fd, unsigned int * buf, int num)
 {
@@ -623,8 +625,6 @@ int old_g64=0;
 int nib_convert(char *in, char *out)
 {
 	char inname[256], outname[256];
-	//char *dotpos;
-	//FILE *fp;
 	int t;
 
 	start_track = 1 * 2;
@@ -642,7 +642,7 @@ int nib_convert(char *in, char *out)
 
 	/* default is to reduce sync */
 	//memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541 + 2); 
-	/* Lowered + 2 to + 1, because: "warning: 'memset' writing 44 bytes into a region of size 43 overflows the destination" */
+	/* libretro: Lowered + 2 to + 1, because: "warning: 'memset' writing 44 bytes into a region of size 43 overflows the destination" */
 	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541 + 1);
 
 	//memset(track_length, 0, MAX_TRACKS_1541 + 2);
@@ -654,14 +654,23 @@ int nib_convert(char *in, char *out)
 	memset(file_buffer, 0x00, sizeof(file_buffer));
 	memset(track_buffer, 0x00, sizeof(track_buffer));
 
-	snprintf(inname, sizeof(inname), "%s", in);//strcpy(inname, in);
-	snprintf(outname, sizeof(outname), "%s", out);//strcpy(outname, out);
+	snprintf(inname, sizeof(inname), "%s", in);
+	snprintf(outname, sizeof(outname), "%s", out);
 
 	/* convert */
 	if (compare_extension((unsigned char *)inname, (unsigned char *)"NIB"))
 	{
 		if(!(file_buffer_size = load_file(inname, file_buffer))) return 0;
 		if(!(read_nib(file_buffer, file_buffer_size, track_buffer, track_density, track_length))) return 0;
+		if( (compare_extension((unsigned char *)outname, (unsigned char *)"G64")) || (compare_extension((unsigned char *)outname, (unsigned char *)"D64")) )
+			align_tracks(track_buffer, track_density, track_length, track_alignment);
+		search_fat_tracks(track_buffer, track_density, track_length);
+	}
+	else if (compare_extension((unsigned char *)inname, (unsigned char *)"NBZ"))
+	{
+		if(!(file_buffer_size = load_file(inname, compressed_buffer))) exit(0);
+		if(!(file_buffer_size = LZ_Uncompress(compressed_buffer, file_buffer, file_buffer_size))) exit(0);
+		if(!(read_nib(file_buffer, file_buffer_size, track_buffer, track_density, track_length))) exit(0);
 		if( (compare_extension((unsigned char *)outname, (unsigned char *)"G64")) || (compare_extension((unsigned char *)outname, (unsigned char *)"D64")) )
 			align_tracks(track_buffer, track_density, track_length, track_alignment);
 		search_fat_tracks(track_buffer, track_density, track_length);

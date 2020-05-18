@@ -687,6 +687,11 @@ void drive_gcr_data_writeback_all(void)
 }
 
 /* ------------------------------------------------------------------------- */
+#ifdef __LIBRETRO__
+extern unsigned int opt_autoloadwarp;
+extern int retro_warp_mode_enabled();
+static int warpmode_counter = 0;
+#endif
 
 static void drive_led_update(drive_t *drive, drive_t *drive0)
 {
@@ -739,6 +744,22 @@ static void drive_led_update(drive_t *drive, drive_t *drive0)
         drive->led_last_pwm = led_pwm;
         drive->old_led_status = my_led_status;
     }
+
+#ifdef __LIBRETRO__
+    if (opt_autoloadwarp)
+    {
+        if (led_pwm != 0 && !retro_warp_mode_enabled())
+            resources_set_int("WarpMode", 1);
+        else if (led_pwm == 0 && retro_warp_mode_enabled())
+        {
+            warpmode_counter++;
+            if (warpmode_counter > 12)
+                resources_set_int("WarpMode", 0);
+        }
+        else
+            warpmode_counter = 0;
+    }
+#endif
 }
 
 /* Update the status bar in the UI.  */

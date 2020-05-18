@@ -32,6 +32,7 @@
 #include "sid.h"
 #include "sid-resources.h"
 #include "userport_joystick.h"
+#include "util.h"
 #if defined(__VIC20__)
 #include "c64model.h"
 #include "vic20model.h"
@@ -65,6 +66,8 @@ BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 #include <string.h>
 #include <stdarg.h>
 
+#include "retro_files.h"
+
 int RETROTDE=0;
 int RETRODSE=0;
 int RETROSIDENGINE=0;
@@ -79,7 +82,7 @@ int RETROAUDIOLEAK=0;
 int RETROMODEL=0;
 int RETROAUTOSTARTWARP=0;
 int RETROUSERPORTJOY=-1;
-char RETROEXTPALNAME[512]="default";
+char RETROEXTPALNAME[RETRO_PATH_MAX]="default";
 #if defined(__X128__)
 int RETROC128COLUMNKEY=1;
 int RETROC128GO64=0;
@@ -98,7 +101,7 @@ int RETROVICIICOLORBRIGHTNESS=1000;
 int retro_ui_finalized = 0;
 int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
 extern unsigned int opt_jiffydos;
-extern char retro_system_data_directory[512];
+extern char retro_system_data_directory[RETRO_PATH_MAX];
 
 static const cmdline_option_t cmdline_options[] = {
      { NULL }
@@ -181,6 +184,12 @@ extern int log_resources_set_string(const char *name, const char* value);
 
 int ui_init_finalize(void)
 {
+   /* Dump machine specific defaults for 'vicerc' usage, if not already dumped */
+   char resources_dump_path[RETRO_PATH_MAX] = {0};
+   snprintf(resources_dump_path, sizeof(resources_dump_path), "%s%s%s%s", retro_system_data_directory, FSDEV_DIR_SEP_STR, "vicerc-dump-", machine_get_name());
+   if (!util_file_exists(resources_dump_path))
+      resources_dump(resources_dump_path);
+
    /* Sensible defaults */
    log_resources_set_int("Mouse", 1);
    log_resources_set_int("AutostartPrgMode", 1);
@@ -282,7 +291,7 @@ int ui_init_finalize(void)
    memcpy(c128kernal64_embedded, c128memrom_kernal64_rom_original, C128_KERNAL64_ROM_SIZE);
    memcpy(kernal_int, c128memrom_kernal128_rom_original, C128_KERNAL_ROM_IMAGE_SIZE);
 #endif
-   static char tmp_str[512] = {0};
+   static char tmp_str[RETRO_PATH_MAX] = {0};
    if (opt_jiffydos)
    {
 #if defined(__X64__) || defined(__X64SC__)

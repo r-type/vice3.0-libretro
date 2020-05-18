@@ -48,7 +48,11 @@
 #endif
 
 static unsigned int num_options, num_allocated_options;
+#ifdef __LIBRETRO__
+cmdline_option_ram_t *options;
+#else
 static cmdline_option_ram_t *options;
+#endif
 
 static char *combined_string = NULL;
 

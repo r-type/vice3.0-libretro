@@ -687,11 +687,6 @@ void drive_gcr_data_writeback_all(void)
 }
 
 /* ------------------------------------------------------------------------- */
-#ifdef __LIBRETRO__
-extern unsigned int opt_autoloadwarp;
-extern int retro_warp_mode_enabled();
-static int warpmode_counter = 0;
-#endif
 
 static void drive_led_update(drive_t *drive, drive_t *drive0)
 {
@@ -744,23 +739,15 @@ static void drive_led_update(drive_t *drive, drive_t *drive0)
         drive->led_last_pwm = led_pwm;
         drive->old_led_status = my_led_status;
     }
+}
 
 #ifdef __LIBRETRO__
-    if (opt_autoloadwarp)
-    {
-        if (led_pwm != 0 && !retro_warp_mode_enabled())
-            resources_set_int("WarpMode", 1);
-        else if (led_pwm == 0 && retro_warp_mode_enabled())
-        {
-            warpmode_counter++;
-            if (warpmode_counter > 12)
-                resources_set_int("WarpMode", 0);
-        }
-        else
-            warpmode_counter = 0;
-    }
+extern unsigned int opt_autoloadwarp;
+extern int retro_warp_mode_enabled();
+static int warpmode_counter = 0;
+static int drive_half_track = 0;
+static int drive_half_track_prev = 0;
 #endif
-}
 
 /* Update the status bar in the UI.  */
 void drive_update_ui_status(void)
@@ -793,6 +780,31 @@ void drive_update_ui_status(void)
                                        dual ? 0 : 8,
                                        drive->current_half_track + (drive->side * DRIVE_HALFTRACKS_1571));
             }
+#ifdef __LIBRETRO__
+            if (opt_autoloadwarp && drive->image)
+            {
+                drive_half_track = drive->current_half_track;
+                //printf("track:%2d prev:%2d led:%d timer:%2d\n", drive_half_track, drive_half_track_prev, drive->led_status, warpmode_counter);
+                if ((drive_half_track != drive_half_track_prev || drive->led_status != 0) && !retro_warp_mode_enabled())
+                {
+                    warpmode_counter = 0;
+                    resources_set_int("WarpMode", 1);
+                    //printf("warp on\n");
+                }
+                else if (drive_half_track == drive_half_track_prev && drive->led_status == 0 && retro_warp_mode_enabled())
+                {
+                    warpmode_counter++;
+                    if (warpmode_counter > 19)
+                    {
+                        resources_set_int("WarpMode", 0);
+                        //printf("warp off\n");
+                    }
+                }
+                else
+                    warpmode_counter = 0;
+                drive_half_track_prev = drive_half_track;
+            }
+#endif
         }
     }
 }

@@ -16,7 +16,7 @@ static int retro_sound_init(const char *param, int *speed, int *fragsize, int *f
 {
     *speed = RETROSOUNDSAMPLERATE;
     //*fragsize = 32;
-    *fragnr = 0;
+    //*fragnr = 0;
     //*channels = 1;
     //printf("speed:%d fragsize:%d fragnr:%d channels:%d\n", *speed, *fragsize, *fragnr, *channels);
     return 0;

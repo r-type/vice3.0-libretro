@@ -177,17 +177,21 @@ extern unsigned int turbo_pulse;
 #include "vic20model.h"
 #include "vic20mem.h"
 #include "vic20cart.h"
+void cartridge_trigger_freeze(void) {}
 #elif defined(__PLUS4__)
 #include "c64model.h"
 #include "plus4model.h"
+void cartridge_trigger_freeze(void) {}
 #elif defined(__X128__)
 #include "c64model.h"
 #include "c128model.h"
 #elif defined(__PET__)
 #include "petmodel.h"
 void cartridge_detach_image(int type) {}
+void cartridge_trigger_freeze(void) {}
 #elif defined(__CBM2__)
 #include "cbm2model.h"
+void cartridge_trigger_freeze(void) {}
 #else
 #include "c64model.h"
 #endif
@@ -1403,11 +1407,12 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_reset",
          "Reset Type",
-         "'Autostart' does hard reset and reruns content. 'Soft' keeps some code in memory, 'Hard' erases all memory.",
+         "'Autostart' does hard reset and reruns content. 'Soft' keeps some code in memory, 'Hard' erases all memory. 'Freeze' is for cartridges.",
          {
             { "Autostart", NULL },
             { "Soft", NULL },
             { "Hard", NULL },
+            { "Freeze", NULL },
             { NULL, NULL },
          },
          "Autostart"
@@ -3616,6 +3621,7 @@ static void update_variables(void)
       if (strcmp(var.value, "Autostart") == 0) opt_reset_type=0;
       else if (strcmp(var.value, "Soft") == 0) opt_reset_type=1;
       else if (strcmp(var.value, "Hard") == 0) opt_reset_type=2;
+      else if (strcmp(var.value, "Freeze") == 0) opt_reset_type=3;
    }
 
    var.key = "vice_vkbd_theme";
@@ -4127,6 +4133,9 @@ void emu_reset(int type)
          break;
       case 2:
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+         break;
+      case 3:
+         cartridge_trigger_freeze();
          break;
    }
 }

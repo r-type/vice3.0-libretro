@@ -43,8 +43,10 @@ extern char retro_save_directory[512];
 #undef VICE_ARCHAPI_PRIVATE_API
 
 /* Default sound output mode */
-#define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_SYSTEM
-#define ARCHDEP_SOCKET_ERROR errno
+#define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_MONO
+
+/* Default sound fragment size */
+#define ARCHDEP_SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_VERY_SMALL
 
 #if defined(__WIN32__) 
 /* Filesystem dependant operators.  */
@@ -151,9 +153,6 @@ extern char retro_save_directory[512];
 
 #endif
 
-/* Default sound fragment size */
-#define ARCHDEP_SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_VERY_SMALL
-
 /* Video chip scaling.  */
 #define ARCHDEP_VICII_DSIZE   1
 #define ARCHDEP_VICII_DSCAN   1
@@ -178,15 +177,16 @@ extern char retro_save_directory[512];
 #define ARCHDEP_CRTC_DBUF  0
 #define ARCHDEP_TED_DBUF   0
 
+#define ARCHDEP_SOCKET_ERROR errno
 
 /* No key symcode.  */
 #define ARCHDEP_KEYBOARD_SYM_NONE 0
 /* Keyword to use for a static prototype */
 #define STATIC_PROTOTYPE static
-extern const char *archdep_home_path(void);
 
 /* set this path to customize the preference storage */ 
 extern const char *archdep_pref_path;
+extern const char *archdep_home_path(void);
 
 /* Define the default system directory (where the ROMs are).  */
 #ifndef __LIBRETRO__
@@ -205,6 +205,4 @@ extern const char *archdep_pref_path;
 
 #define VICEUSERDIR     ".vice"
 
-#endif
-
-
+#endif // _ARCHDEP_H

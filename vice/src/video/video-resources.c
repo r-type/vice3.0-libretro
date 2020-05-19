@@ -196,7 +196,9 @@ static int set_hwscale_enabled(int val, void *param)
         && !hwscale_possible)
 #endif
     {
+#ifndef __LIBRETRO__
         log_message(LOG_DEFAULT, "HW scale not available, forcing to disabled");
+#endif
         return 0;
     }
 

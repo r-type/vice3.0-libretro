@@ -36,6 +36,7 @@
 #if defined(__VIC20__)
 #include "c64model.h"
 #include "vic20model.h"
+#include "vic20mem.h"
 #elif defined(__PLUS4__)
 #include "c64model.h"
 #include "plus4model.h"
@@ -72,6 +73,7 @@ int RETROTDE=0;
 int RETRODSE=0;
 int RETROSIDENGINE=0;
 int RETROSIDMODL=0;
+int RETROSIDEXTRA=0;
 int RETRORESIDSAMPLING=0;
 int RETROSOUNDSAMPLERATE=0;
 int RETRORESIDPASSBAND=0;
@@ -291,7 +293,7 @@ int ui_init_finalize(void)
    memcpy(c128kernal64_embedded, c128memrom_kernal64_rom_original, C128_KERNAL64_ROM_SIZE);
    memcpy(kernal_int, c128memrom_kernal128_rom_original, C128_KERNAL_ROM_IMAGE_SIZE);
 #endif
-   static char tmp_str[RETRO_PATH_MAX] = {0};
+   char tmp_str[RETRO_PATH_MAX] = {0};
    if (opt_jiffydos)
    {
 #if defined(__X64__) || defined(__X64SC__)
@@ -353,6 +355,14 @@ int ui_init_finalize(void)
    log_resources_set_int("SidResid8580Passband", RETRORESIDPASSBAND);
    log_resources_set_int("SidResid8580Gain", RETRORESIDGAIN);
    log_resources_set_int("SidResid8580FilterBias", RETRORESID8580FILTERBIAS);
+
+   if (RETROSIDEXTRA)
+   {
+      log_resources_set_int("SidStereo", 1);
+      log_resources_set_int("SidStereoAddressStart", RETROSIDEXTRA);
+   }
+   else
+      log_resources_set_int("SidStereo", 0);
 #endif
 
 #if defined(__X128__)
@@ -361,63 +371,45 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__VIC20__)
-   static unsigned int vic20mem = 0;
+   unsigned int vic20mem = 0;
    vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : RETROVIC20MEM;
 
    // Super VIC uses memory blocks 1+2 by default
    if (!vic20mem && RETROMODEL == VIC20MODEL_VIC21)
-       vic20mem = 3;
+      vic20mem = 3;
 
+   unsigned int vic_blocks = 0;
    switch (vic20mem)
    {
-      case 0:
-         log_resources_set_int("RAMBlock0", 0);
-         log_resources_set_int("RAMBlock1", 0);
-         log_resources_set_int("RAMBlock2", 0);
-         log_resources_set_int("RAMBlock3", 0);
-         log_resources_set_int("RAMBlock5", 0);
-         break;
-
       case 1:
-         log_resources_set_int("RAMBlock0", 1);
-         log_resources_set_int("RAMBlock1", 0);
-         log_resources_set_int("RAMBlock2", 0);
-         log_resources_set_int("RAMBlock3", 0);
-         log_resources_set_int("RAMBlock5", 0);
+         vic_blocks |= VIC_BLK0;
          break;
 
       case 2:
-         log_resources_set_int("RAMBlock0", 0);
-         log_resources_set_int("RAMBlock1", 1);
-         log_resources_set_int("RAMBlock2", 0);
-         log_resources_set_int("RAMBlock3", 0);
-         log_resources_set_int("RAMBlock5", 0);
+         vic_blocks |= VIC_BLK1;
          break;
 
       case 3:
-         log_resources_set_int("RAMBlock0", 0);
-         log_resources_set_int("RAMBlock1", 1);
-         log_resources_set_int("RAMBlock2", 1);
-         log_resources_set_int("RAMBlock3", 0);
-         log_resources_set_int("RAMBlock5", 0);
+         vic_blocks |= VIC_BLK1;
+         vic_blocks |= VIC_BLK2;
          break;
 
       case 4:
-         log_resources_set_int("RAMBlock0", 0);
-         log_resources_set_int("RAMBlock1", 1);
-         log_resources_set_int("RAMBlock2", 1);
-         log_resources_set_int("RAMBlock3", 1);
-         log_resources_set_int("RAMBlock5", 0);
+         vic_blocks |= VIC_BLK1;
+         vic_blocks |= VIC_BLK2;
+         vic_blocks |= VIC_BLK3;
          break;
 
       case 5:
-         log_resources_set_int("RAMBlock0", 1);
-         log_resources_set_int("RAMBlock1", 1);
-         log_resources_set_int("RAMBlock2", 1);
-         log_resources_set_int("RAMBlock3", 1);
-         log_resources_set_int("RAMBlock5", 1);
+         vic_blocks = VIC_BLK_ALL;
          break;
-  }
+   }
+
+   log_resources_set_int("RAMBlock0", (vic_blocks & VIC_BLK0) ? 1 : 0);
+   log_resources_set_int("RAMBlock1", (vic_blocks & VIC_BLK1) ? 1 : 0);
+   log_resources_set_int("RAMBlock2", (vic_blocks & VIC_BLK2) ? 1 : 0);
+   log_resources_set_int("RAMBlock3", (vic_blocks & VIC_BLK3) ? 1 : 0);
+   log_resources_set_int("RAMBlock5", (vic_blocks & VIC_BLK5) ? 1 : 0);
 #endif
    retro_ui_finalized = 1;
    return 0;

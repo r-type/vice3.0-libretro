@@ -65,7 +65,7 @@
 #ifdef __LIBRETRO__
 #define SOUND_SAMPLE_RATE 44100
 #define SOUND_CHANNELS_MAX 1
-#define SOUND_BUFSIZE 1024
+#define SOUND_BUFSIZE 2048 // 1024 will crash with 96kHz
 #define SOUND_SIDS_MAX 4
 #define SOUND_SAMPLE_BUFFER_SIZE 0
 

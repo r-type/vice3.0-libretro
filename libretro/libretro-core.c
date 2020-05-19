@@ -1476,7 +1476,7 @@ void retro_set_environment(retro_environment_t cb)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
       {
          "vice_aspect_ratio",
-         "Pixel Aspect Ratio",
+         "Video > Pixel Aspect Ratio",
          "",
          {
             { "auto", "Automatic" },
@@ -1489,7 +1489,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_zoom_mode",
-         "Zoom Mode",
+         "Video > Zoom Mode",
          "Crops the borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
          {
             { "none", "disabled" },
@@ -1503,7 +1503,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_zoom_mode_crop",
-         "Zoom Mode Crop",
+         "Video > Zoom Mode Crop",
          "Use 'Both' & 'Maximum' to remove borders completely. Ignored with 'Manual' zoom.",
          {
             { "both", "Both" },
@@ -1519,7 +1519,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_manual_crop_top",
-         "Manual Crop Top",
+         "Video > Manual Crop Top",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "VIC-II top border height:\n- 35px PAL\n- 23px NTSC",
 #elif defined(__VIC20__)
@@ -1532,7 +1532,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_manual_crop_bottom",
-         "Manual Crop Bottom",
+         "Video > Manual Crop Bottom",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "VIC-II bottom border height:\n- 37px PAL\n- 24px NTSC",
 #elif defined(__VIC20__)
@@ -1545,7 +1545,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_manual_crop_left",
-         "Manual Crop Left",
+         "Video > Manual Crop Left",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "VIC-II left border width:\n- 32px",
 #elif defined(__VIC20__)
@@ -1558,7 +1558,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_manual_crop_right",
-         "Manual Crop Right",
+         "Video > Manual Crop Right",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "VIC-II right border width:\n- 32px",
 #elif defined(__VIC20__)
@@ -1572,7 +1572,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_statusbar",
-         "Statusbar Mode",
+         "Video > Statusbar Mode",
          "- Full: Joyports + Current image + LEDs\n- Basic: Current image + LEDs\n- Minimal: Track number + FPS hidden",
          {
             { "bottom", "Bottom Full" },
@@ -1589,8 +1589,8 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_vkbd_theme",
-         "Virtual Keyboard Theme",
-         "By default, the keyboard comes up with SELECT button or F11 key.",
+         "Video > Virtual KBD Theme",
+         "By default, the keyboard comes up with RetroPad Select or F11.",
          {
             { "0", "C64" },
             { "1", "C64C" },
@@ -1602,8 +1602,8 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_vkbd_alpha",
-         "Virtual Keyboard Transparency",
-         "",
+         "Video > Virtual KBD Transparency",
+         "Keyboard transparency can be toggled with RetroPad A.",
          {
             { "0\%", NULL },
             { "5\%", NULL },
@@ -1631,7 +1631,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_gfx_colors",
-         "Color Depth",
+         "Video > Color Depth",
          "24-bit is slower and not available on all platforms. Full restart required.",
          {
             { "16bit", "Thousands (16-bit)" },
@@ -1643,7 +1643,7 @@ void retro_set_environment(retro_environment_t cb)
 #if defined(__VIC20__)
       {
          "vice_vic20_external_palette",
-         "Color Palette",
+         "Video > Color Palette",
          "Colodore is recommended for the most accurate colors.",
          {
             { "default", "Default" },
@@ -1658,7 +1658,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif defined(__PLUS4__) 
       {
          "vice_plus4_external_palette",
-         "Color Palette",
+         "Video > Color Palette",
          "Colodore is recommended for the most accurate colors.",
          {
             { "default", "Default" },
@@ -1672,7 +1672,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif defined(__PET__)
       {
          "vice_pet_external_palette",
-         "Color Palette",
+         "Video > Color Palette",
          "",
          {
             { "default", "Default" },
@@ -1686,7 +1686,7 @@ void retro_set_environment(retro_environment_t cb)
 #elif defined(__CBM2__)
       {
          "vice_cbm2_external_palette",
-         "Color Palette",
+         "Video > Color Palette",
          "",
          {
             { "default", "Default" },
@@ -1700,7 +1700,7 @@ void retro_set_environment(retro_environment_t cb)
 #else
       {
          "vice_external_palette",
-         "Color Palette",
+         "Video > Color Palette",
          "Colodore is recommended for most accurate colors.",
          {
             { "default", "Default" },
@@ -1727,7 +1727,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_vicii_color_gamma",
-         "VIC-II Color Gamma",
+         "Video > VIC-II Color Gamma",
          "Gamma for the internal default palette.",
          {
             { "1000", "1.00" },
@@ -1767,7 +1767,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_vicii_color_saturation",
-         "VIC-II Color Saturation",
+         "Video > VIC-II Color Saturation",
          "Saturation for the internal default palette.",
          {
             { "400", "20\%" },
@@ -1809,7 +1809,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_vicii_color_contrast",
-         "VIC-II Color Contrast",
+         "Video > VIC-II Color Contrast",
          "Contrast for the internal default palette.",
          {
             { "400", "20\%" },
@@ -1851,7 +1851,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_vicii_color_brightness",
-         "VIC-II Color Brightness",
+         "Video > VIC-II Color Brightness",
          "Brightness for the internal default palette.",
          {
             { "400", "20\%" },
@@ -1905,7 +1905,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_drive_sound_emulation",
-         "Drive Sound Emulation",
+         "Audio > Drive Sound Emulation",
          "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 or D71 disk image required.",
          {
             { "disabled", NULL },
@@ -1936,9 +1936,9 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_audio_leak_emulation",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-         "VIC-II Audio Leak Emulation",
+         "Audio > VIC-II Audio Leak Emulation",
 #elif defined(__VIC20__)
-         "VIC Audio Leak Emulation",
+         "Audio > VIC Audio Leak Emulation",
 #endif
          "",
          {
@@ -1960,7 +1960,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_sound_sample_rate",
-         "Sound Output Sample Rate",
+         "Audio > Sound Output Sample Rate",
          "Slightly higher quality or higher performance.",
          {
             { "22050", NULL },
@@ -1974,7 +1974,7 @@ void retro_set_environment(retro_environment_t cb)
 #if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
       {
          "vice_sid_engine",
-         "SID Engine",
+         "Audio > SID Engine",
          "ReSID is accurate but slower.",
          {
             { "FastSID", NULL },
@@ -1987,7 +1987,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_sid_model",
-         "SID Model",
+         "Audio > SID Model",
          "The original C64 uses 6581, C64C uses 8580.",
          {
             { "Default", NULL },
@@ -2000,7 +2000,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_sid_extra",
-         "SID Extra",
+         "Audio > SID Extra",
          "Second SID base address.",
          {
             { "disabled", NULL },
@@ -2014,7 +2014,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_resid_sampling",
-         "ReSID Sampling",
+         "Audio > ReSID Sampling",
          "'Resampling' provides best quality. 'Fast' improves performance dramatically on PS Vita.",
          {
             { "Fast", NULL },
@@ -2031,7 +2031,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_resid_passband",
-         "ReSID Filter Passband",
+         "Audio > ReSID Filter Passband",
          "Parameters for SID Filter.",
          {
             { "0", NULL },
@@ -2050,7 +2050,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_resid_gain",
-         "ReSID Filter Gain",
+         "Audio > ReSID Filter Gain",
          "Parameters for SID Filter.",
          {
             { "90", NULL },
@@ -2070,7 +2070,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_resid_filterbias",
-         "ReSID Filter Bias",
+         "Audio > ReSID Filter Bias",
          "Parameters for SID Filter.",
          {
             { "-5000", NULL },
@@ -2100,7 +2100,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_resid_8580filterbias",
-         "ReSID Filter 8580 Bias",
+         "Audio > ReSID Filter 8580 Bias",
          "Parameters for SID Filter.",
          {
             { "-5000", NULL },
@@ -2130,36 +2130,6 @@ void retro_set_environment(retro_environment_t cb)
       },
 #endif
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
-      {
-         "vice_joyport",
-         "RetroPad Port",
-         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling will disable this option until core restart.",
-         {
-            { "Port 2", NULL },
-            { "Port 1", NULL },
-            { NULL, NULL },
-         },
-         "Port 2"
-      },
-      {
-         "vice_joyport_type",
-         "RetroPad Port Type",
-         "Non-joysticks will be plugged into current port only and are controlled with the left analog stick or a real mouse. Paddles will be split to 1st and 2nd RetroPort.",
-         {
-            { "1", "Joystick" },
-            { "2", "Paddles" },
-            { "3", "Mouse (1351)" },
-            { "4", "Mouse (NEOS)" },
-            { "5", "Mouse (Amiga)" },
-            { "6", "Trackball (Atari CX-22)" },
-            { "7", "Mouse (Atari ST)" },
-            { "8", "Mouse (SmartMouse)" },
-            { "9", "Mouse (Micromys)" },
-            { "10", "Koalapad" },
-            { NULL, NULL },
-         },
-         "1"
-      },
       {
          "vice_analogmouse_deadzone",
          "Analog Stick Mouse Deadzone",
@@ -2289,6 +2259,17 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
       {
+         "vice_datasette_hotkeys",
+         "Datasette Hotkeys",
+         "Enable/disable all Datasette hotkeys.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
          "vice_mapping_options_display",
          "Show Mapping Options",
          "Show options for hotkeys & RetroPad mappings.\nCore options page refresh required.",
@@ -2302,14 +2283,14 @@ void retro_set_environment(retro_environment_t cb)
       /* Hotkeys */
       {
          "vice_mapper_vkbd",
-         "Hotkey: Toggle Virtual Keyboard",
+         "Hotkey > Toggle Virtual Keyboard",
          "Press the mapped key to toggle the virtual keyboard.",
          {{ NULL, NULL }},
          "RETROK_F11"
       },
       {
          "vice_mapper_statusbar",
-         "Hotkey: Toggle Statusbar",
+         "Hotkey > Toggle Statusbar",
          "Press the mapped key to toggle the statusbar.",
          {{ NULL, NULL }},
          "RETROK_F12"
@@ -2317,7 +2298,7 @@ void retro_set_environment(retro_environment_t cb)
 #if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
       {
          "vice_mapper_joyport_switch",
-         "Hotkey: Switch Joyports",
+         "Hotkey > Switch Joyports",
          "Press the mapped key to switch joyports 1 & 2.\nSwitching will disable 'RetroPad Port' option until core restart.",
          {{ NULL, NULL }},
          "RETROK_RCTRL"
@@ -2325,7 +2306,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_mapper_reset",
-         "Hotkey: Reset",
+         "Hotkey > Reset",
          "Press the mapped key to trigger reset.",
          {{ NULL, NULL }},
          "RETROK_END"
@@ -2333,7 +2314,7 @@ void retro_set_environment(retro_environment_t cb)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
       {
          "vice_mapper_zoom_mode_toggle",
-         "Hotkey: Toggle Zoom Mode",
+         "Hotkey > Toggle Zoom Mode",
          "Press the mapped key to toggle zoom mode.",
          {{ NULL, NULL }},
          "---"
@@ -2341,7 +2322,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_mapper_warp_mode",
-         "Hotkey: Hold Warp Mode",
+         "Hotkey > Hold Warp Mode",
          "Hold the mapped key for warp mode.",
          {{ NULL, NULL }},
          ""
@@ -2349,53 +2330,42 @@ void retro_set_environment(retro_environment_t cb)
       /* Datasette controls */
       {
          "vice_mapper_datasette_toggle_hotkeys",
-         "Hotkey: Toggle Datasette Hotkeys",
+         "Hotkey > Toggle Datasette Hotkeys",
          "Press the mapped key to toggle the Datasette hotkeys.",
          {{ NULL, NULL }},
          "---"
       },
       {
-         "vice_datasette_hotkeys",
-         "Datasette Hotkeys",
-         "Enable/disable all Datasette hotkeys.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
          "vice_mapper_datasette_start",
-         "Hotkey: Datasette Start",
+         "Hotkey > Datasette Start",
          "Press start on tape.",
          {{ NULL, NULL }},
          "RETROK_UP"
       },
       {
          "vice_mapper_datasette_stop",
-         "Hotkey: Datasette Stop",
+         "Hotkey > Datasette Stop",
          "Press stop on tape.",
          {{ NULL, NULL }},
          "RETROK_DOWN"
       },
       {
          "vice_mapper_datasette_rewind",
-         "Hotkey: Datasette Rewind",
+         "Hotkey > Datasette Rewind",
          "Press rewind on tape.",
          {{ NULL, NULL }},
          "RETROK_LEFT"
       },
       {
          "vice_mapper_datasette_forward",
-         "Hotkey: Datasette Fast Forward",
+         "Hotkey > Datasette Fast Forward",
          "Press fast forward on tape.",
          {{ NULL, NULL }},
          "RETROK_RIGHT"
       },
       {
          "vice_mapper_datasette_reset",
-         "Hotkey: Datasette Reset",
+         "Hotkey > Datasette Reset",
          "Press reset on tape.",
          {{ NULL, NULL }},
          "---"
@@ -2576,6 +2546,38 @@ void retro_set_environment(retro_environment_t cb)
          },
          "4"
       },
+#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
+      {
+         "vice_joyport",
+         "RetroPad Port",
+         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling will disable this option until core restart.",
+         {
+            { "Port 2", NULL },
+            { "Port 1", NULL },
+            { NULL, NULL },
+         },
+         "Port 2"
+      },
+      {
+         "vice_joyport_type",
+         "RetroPad Port Type",
+         "Non-joysticks will be plugged into current port only and are controlled with the left analog stick or a real mouse. Paddles will be split to 1st and 2nd RetroPort.",
+         {
+            { "1", "Joystick" },
+            { "2", "Paddles" },
+            { "3", "Mouse (1351)" },
+            { "4", "Mouse (NEOS)" },
+            { "5", "Mouse (Amiga)" },
+            { "6", "Trackball (Atari CX-22)" },
+            { "7", "Mouse (Atari ST)" },
+            { "8", "Mouse (SmartMouse)" },
+            { "9", "Mouse (Micromys)" },
+            { "10", "Koalapad" },
+            { NULL, NULL },
+         },
+         "1"
+      },
+#endif
       {
          "vice_retropad_options",
          "RetroPad Face Button Options",
@@ -4026,6 +4028,8 @@ static void update_variables(void)
    option_display.key = "vice_sid_engine";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_sid_model";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_sid_extra";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_resid_sampling";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);

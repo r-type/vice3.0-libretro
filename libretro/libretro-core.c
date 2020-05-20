@@ -4176,12 +4176,9 @@ static bool retro_set_eject_state(bool ejected)
 
         if (dc->eject_state == ejected)
             return true;
-        else
-            dc->eject_state = ejected;
 
-        if (ejected && dc->index <= dc->count)
+        if (ejected && dc->index <= dc->count && dc->files[dc->index] != NULL)
         {
-            dc->eject_state = ejected;
             if (unit == 1)
                 tape_image_detach(unit);
             else if (unit >= 8 && unit <= 11)
@@ -4189,11 +4186,9 @@ static bool retro_set_eject_state(bool ejected)
             else if (unit == 0)
                 cartridge_detach_image(-1);
             display_current_image("", false);
-            return true;
         }
         else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
         {
-            dc->eject_state = ejected;
             if (unit == 1)
                 tape_image_attach(unit, dc->files[dc->index]);
             else if (unit >= 8 && unit <= 11)
@@ -4213,15 +4208,17 @@ static bool retro_set_eject_state(bool ejected)
                     emu_reset(0);
             }
             display_current_image(dc->files[dc->index], true);
-            return true;
         }
+
+        dc->eject_state = ejected;
+        return true;
     }
 
     return false;
 }
 
 /* Gets current eject state. The initial state is 'not ejected'. */
-static bool retro_get_eject_state(void)
+bool retro_get_eject_state(void)
 {
     if (dc)
         return dc->eject_state;

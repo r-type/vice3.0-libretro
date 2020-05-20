@@ -175,12 +175,6 @@ static void display_speed(void)
     //char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';
     char fps_str[3];
     sprintf(fps_str, "%2d", fps);
-    //sprintf(fps_str, "%2s", "");
-    //if (warp)
-    {
-        fps_str[0] = (fps_str[0] | 0x80);
-        fps_str[1] = (fps_str[1] | 0x80);
-    }
 
     len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2s", fps_str);
     //statusbar_text[STATUSBAR_SPEED_POS + len] = ' '; /* No end separator for last element */
@@ -199,7 +193,6 @@ void display_current_image(const char *image, bool inserted)
     static char imagename[PATH_MAX_LENGTH] = {0};
     static char imagename_prev[PATH_MAX_LENGTH] = {0};
     static char imagelabel[PATH_MAX_LENGTH] = {0};
-    imagename_timer = 150;
 
     if (strcmp(image, ""))
     {
@@ -217,12 +210,16 @@ void display_current_image(const char *image, bool inserted)
             snprintf(imagename, sizeof(imagename), "%.38s", imagename_prev);
     }
 
-    snprintf(&statusbar_text[STATUSBAR_JOY_POS], sizeof(statusbar_text), "%-38s", imagename);
+    if (strcmp(imagename, ""))
+    {
+        snprintf(&statusbar_text[STATUSBAR_JOY_POS], sizeof(statusbar_text), "%-38s", imagename);
+        imagename_timer = 150;
 
-    if (inserted)
-        statusbar_text[0] = 8 | 0x80;
-    else if (!strcmp(image, ""))
-        statusbar_text[0] = 9 | 0x80;
+        if (inserted)
+            statusbar_text[0] = 8 | 0x80;
+        else if (!strcmp(image, ""))
+            statusbar_text[0] = 9 | 0x80;
+    }
 
     if (drive_empty)
     {
@@ -523,24 +520,26 @@ void uistatusbar_draw(void)
     BYTE c;
 
     unsigned short int color_f_16, color_b_16;
-    unsigned short int color_black_16, color_white_16, color_red_16, color_green_16, color_greend_16, color_brown_16;
+    unsigned short int color_black_16, color_white_16, color_red_16, color_green_16, color_greenb_16, color_greend_16, color_brown_16;
     color_white_16  = RGB565(255, 255, 255);
-    color_black_16  = 0;//RGB565(0, 4, 0);
-    color_red_16    = RGB565(187, 0 , 0);
-    color_green_16  = RGB565(0, 187, 0);
-    color_greend_16 = RGB565(0, 68 , 0);
-    color_brown_16  = RGB565(89, 79, 78);
+    color_black_16  = 0;
+    color_red_16    = RGB565(187,   0,   0);
+    color_greenb_16 = RGB565(  0, 187,   0);
+    color_green_16  = RGB565(  0,  85,   0);
+    color_greend_16 = RGB565(  0,  34,   0);
+    color_brown_16  = RGB565( 89,  79,  78);
     color_f_16      = color_white_16;
     color_b_16      = color_black_16;
 
     unsigned int color_f_32, color_b_32;
-    unsigned int color_black_32, color_white_32, color_red_32, color_green_32, color_greend_32, color_brown_32;
+    unsigned int color_black_32, color_white_32, color_red_32, color_green_32, color_greenb_32, color_greend_32, color_brown_32;
     color_white_32  = ARGB888(255, 255, 255, 255);
-    color_black_32  = 0;//0x00010101;
-    color_red_32    = ARGB888(255, 187, 0, 0);//0xffbb0000;
-    color_green_32  = ARGB888(255, 0, 187, 0);//0xff00bb00;
-    color_greend_32 = ARGB888(255, 0, 68, 0);//0xff004400;
-    color_brown_32  = ARGB888(255, 89, 79, 78);
+    color_black_32  = 0;
+    color_red_32    = ARGB888(255, 187,   0,   0);//0xffbb0000;
+    color_greenb_32 = ARGB888(255,   0, 187,   0);//0xff00bb00;
+    color_green_32  = ARGB888(255,   0,  85,   0);//0xff005500;
+    color_greend_32 = ARGB888(255,   0,  34,   0);//0xff002200;
+    color_brown_32  = ARGB888(255,  89,  79,  78);
     color_f_32      = color_white_32;
     color_b_32      = color_black_32;
 
@@ -605,8 +604,8 @@ void uistatusbar_draw(void)
         {
             if (drive_enabled)
             {
-                color_f_16 = color_green_16;
-                color_f_32 = color_green_32;
+                color_f_16 = color_black_16;
+                color_f_32 = color_black_32;
             }
             else if (tape_enabled)
             {
@@ -620,21 +619,18 @@ void uistatusbar_draw(void)
         // Drive loading
         if ((i == STATUSBAR_DRIVE8_TRACK_POS || i == STATUSBAR_DRIVE8_TRACK_POS + 1) && drive_enabled)
         {
-            if (drive_pwm > 300)
+            color_b_16 = color_green_16;
+            color_b_32 = color_green_32;
+
+            if (drive_pwm > 1)
             {
-                c = c | 0x80;
-                if (opt_statusbar & STATUSBAR_MINIMAL)
-                {
-                    color_b_16 = color_green_16;
-                    color_b_32 = color_green_32;
-                }
+                color_b_16 = color_greenb_16;
+                color_b_32 = color_greenb_32;
             }
-            else
+            else if (drive_empty)
             {
                 color_b_16 = color_greend_16;
                 color_b_32 = color_greend_32;
-                color_f_16 = color_black_16;
-                color_f_32 = color_black_32;
             }
 
             if (opt_statusbar & STATUSBAR_MINIMAL)
@@ -643,15 +639,11 @@ void uistatusbar_draw(void)
         // Power LED color
         else if (i == STATUSBAR_SPEED_POS || i == STATUSBAR_SPEED_POS + 1)
         {
-            color_f_16 = color_red_16;
-            color_f_32 = color_red_32;
+            color_b_16 = color_red_16;
+            color_b_32 = color_red_32;
 
             if (opt_statusbar & STATUSBAR_MINIMAL)
-            {
                 c = ' ';
-                color_b_16 = color_red_16;
-                color_b_32 = color_red_32;
-            }
         }
 
         // Right alignment for tape/drive/power

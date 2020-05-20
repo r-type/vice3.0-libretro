@@ -417,7 +417,12 @@ static int process_cmdline(const char* argv)
     bool is_fliplist = false;
     int joystick_control = 0;
 
+#if defined(__PLUS4__)
+    // Do not reset noautostart if already set, PLUS/4 has issues with starting carts via autostart (?!)
+    noautostart = (noautostart) ? noautostart : false;
+#else
     noautostart = false;
+#endif
     PARAMCOUNT = 0;
     dc_reset(dc);
 
@@ -617,6 +622,9 @@ static int process_cmdline(const char* argv)
                 break;
             }
         }
+#elif defined(__PLUS4__)
+        if (dc_get_image_type(argv) == DC_IMAGE_TYPE_MEM)
+            Add_Option("-cart");
 #endif
 
         if (strendswith(argv, ".m3u"))
@@ -1024,6 +1032,10 @@ void update_from_vice()
                     log_cb(RETRO_LOG_INFO, "Attaching first cart %s\n", attachedImage);
 #if defined(__VIC20__)
                     cartridge_attach_image(CARTRIDGE_VIC20_DETECT, attachedImage);
+#elif defined(__PLUS4__)
+                    cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, attachedImage);
+                    // No autostarting carts, otherwise gfx gets corrupted (?!)
+                    noautostart = true;
 #else
                     cartridge_attach_image(dc->unit, attachedImage);
 #endif
@@ -4176,12 +4188,9 @@ static bool retro_set_eject_state(bool ejected)
 
         if (dc->eject_state == ejected)
             return true;
-        else
-            dc->eject_state = ejected;
 
-        if (ejected && dc->index <= dc->count)
+        if (ejected && dc->index <= dc->count && dc->files[dc->index] != NULL)
         {
-            dc->eject_state = ejected;
             if (unit == 1)
                 tape_image_detach(unit);
             else if (unit >= 8 && unit <= 11)
@@ -4189,11 +4198,9 @@ static bool retro_set_eject_state(bool ejected)
             else if (unit == 0)
                 cartridge_detach_image(-1);
             display_current_image("", false);
-            return true;
         }
         else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
         {
-            dc->eject_state = ejected;
             if (unit == 1)
                 tape_image_attach(unit, dc->files[dc->index]);
             else if (unit >= 8 && unit <= 11)
@@ -4205,6 +4212,10 @@ static bool retro_set_eject_state(bool ejected)
             {
 #if defined(__VIC20__)
                 cartridge_attach_image(CARTRIDGE_VIC20_DETECT, dc->files[dc->index]);
+#elif defined(__PLUS4__)
+                cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, dc->files[dc->index]);
+                // Soft reset required, otherwise gfx gets corrupted (?!)
+                emu_reset(1);
 #else
                 cartridge_attach_image(0, dc->files[dc->index]);
 #endif
@@ -4213,15 +4224,17 @@ static bool retro_set_eject_state(bool ejected)
                     emu_reset(0);
             }
             display_current_image(dc->files[dc->index], true);
-            return true;
         }
+
+        dc->eject_state = ejected;
+        return true;
     }
 
     return false;
 }
 
 /* Gets current eject state. The initial state is 'not ejected'. */
-static bool retro_get_eject_state(void)
+bool retro_get_eject_state(void)
 {
     if (dc)
         return dc->eject_state;

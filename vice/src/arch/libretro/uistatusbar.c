@@ -602,17 +602,13 @@ void uistatusbar_draw(void)
         // Drive/tape LED color
         if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 1)
         {
-            if (drive_enabled)
-            {
-                color_f_16 = color_black_16;
-                color_f_32 = color_black_32;
-            }
-            else if (tape_enabled)
+            color_f_16 = color_black_16;
+            color_f_32 = color_black_32;
+
+            if (tape_enabled)
             {
                 color_b_16 = color_brown_16;
                 color_b_32 = color_brown_32;
-                color_f_16 = color_black_16;
-                color_f_32 = color_black_32;
             }
         }
 
@@ -639,6 +635,8 @@ void uistatusbar_draw(void)
         // Power LED color
         else if (i == STATUSBAR_SPEED_POS || i == STATUSBAR_SPEED_POS + 1)
         {
+            color_f_16 = color_black_16;
+            color_f_32 = color_black_32;
             color_b_16 = color_red_16;
             color_b_32 = color_red_32;
 

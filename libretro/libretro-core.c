@@ -2398,28 +2398,28 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_start",
          "RetroPad Start",
-         "",
+         "VKBD: Press 'Return'. Remapping to non-keyboard keys overrides VKBD function!",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_b",
          "RetroPad B",
-         "Unmapped defaults to fire button.",
+         "Unmapped defaults to fire button.\nVKBD: Press key.",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_a",
          "RetroPad A",
-         "",
+         "VKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_y",
          "RetroPad Y",
-         "",
+         "VKBD: Toggle 'CapsLock'. Remapping to non-keyboard keys overrides VKBD function!",
          {{ NULL, NULL }},
          "---"
       },

@@ -412,9 +412,20 @@ void update_input(int disable_physical_cursor_keys)
                 int just_released = 0;
                 if ((i < 4 || i > 7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad */
                 {
-                    /* Skip VKBD keys if VKBD is visible */
-                    if (SHOWKEY==1 && (i==RETRO_DEVICE_ID_JOYPAD_B || i==RETRO_DEVICE_ID_JOYPAD_A || i==RETRO_DEVICE_ID_JOYPAD_Y || i==RETRO_DEVICE_ID_JOYPAD_START))
-                        continue;
+                    /* Skip the VKBD buttons if VKBD is visible and buttons are mapped to keyboard keys */
+                    if (SHOWKEY==1)
+                    {
+                        switch (i)
+                        {
+                            case RETRO_DEVICE_ID_JOYPAD_B:
+                            case RETRO_DEVICE_ID_JOYPAD_Y:
+                            case RETRO_DEVICE_ID_JOYPAD_A:
+                            case RETRO_DEVICE_ID_JOYPAD_START:
+                                if (mapper_keys[i] >= 0)
+                                    continue;
+                                break;
+                        }
+                    }
 
                     if (input_state_cb(j, RETRO_DEVICE_JOYPAD, 0, i) && jbt[j][i]==0 && i!=turbo_fire_button)
                         just_pressed = 1;
@@ -656,7 +667,7 @@ void update_input(int disable_physical_cursor_keys)
 
         /* Press Return, RetroPad Start */
         i=RETRO_DEVICE_ID_JOYPAD_START;
-        if (vkflag[7]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        if (vkflag[7]==0 && mapper_keys[i] >= 0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
         {
             vkflag[7]=1;
             Keymap_KeyDown(RETROK_RETURN);
@@ -669,7 +680,7 @@ void update_input(int disable_physical_cursor_keys)
 
         /* ShiftLock, RetroPad Y */
         i=RETRO_DEVICE_ID_JOYPAD_Y;
-        if (vkflag[6]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        if (vkflag[6]==0 && mapper_keys[i] >= 0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
         {
             vkflag[6]=1;
             Keymap_KeyDown(RETROK_CAPSLOCK);
@@ -682,7 +693,7 @@ void update_input(int disable_physical_cursor_keys)
 
         /* Transparency toggle, RetroPad A */
         i=RETRO_DEVICE_ID_JOYPAD_A;
-        if (vkflag[5]==0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+        if (vkflag[5]==0 && mapper_keys[i] >= 0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
         {
             vkflag[5]=1;
             SHOWKEYTRANS=-SHOWKEYTRANS;

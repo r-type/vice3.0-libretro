@@ -775,6 +775,9 @@ static void autodetect_drivetype(int unit)
             // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
             file_system_attach_disk(unit, attached_image);
 
+            // Don't bother with drive sound muting when autoloadwarp is on
+            if (opt_autoloadwarp)
+               return;
             // Drive motor sound keeps on playing if the drive type is changed while the motor is running
             // Also happens when toggling TDE
             vdrive = file_system_get_vdrive(unit);
@@ -1444,7 +1447,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading.",
+         "Toggles warp mode always during disk and tape loading. Drive Sound Emulation will be muted.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1521,11 +1524,11 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode_crop",
          "Video > Zoom Mode Crop",
-         "Use 'Both' & 'Maximum' to remove borders completely. Ignored with 'Manual' zoom.",
+         "Use 'Horizontal + Vertical' & 'Maximum' to remove borders completely. Ignored with 'Manual' zoom.",
          {
-            { "both", "Both" },
-            { "vertical", "Vertical" },
+            { "both", "Horizontal + Vertical" },
             { "horizontal", "Horizontal" },
+            { "vertical", "Vertical" },
             { "16:9", "16:9" },
             { "16:10", "16:10" },
             { "4:3", "4:3" },
@@ -1977,7 +1980,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_sound_sample_rate",
-         "Audio > Sound Output Sample Rate",
+         "Audio > Output Sample Rate",
          "Slightly higher quality or higher performance.",
          {
             { "22050", NULL },
@@ -2774,6 +2777,10 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "disabled") == 0) opt_autoloadwarp=0;
       else opt_autoloadwarp=1;
+
+      // Silently restore sounds when autoloadwarp is disabled and DSE is enabled
+      if (retro_ui_finalized && RETRODSE && RETROTDE && !opt_autoloadwarp)
+         resources_set_int("DriveSoundEmulationVolume", RETRODSE);
    }
 
    var.key = "vice_work_disk";
@@ -2842,7 +2849,8 @@ static void update_variables(void)
 
       // Silently mute sounds without TDE,
       // because motor sound will not stop if TDE is changed during motor spinning
-      if (retro_ui_finalized && RETRODSE && !RETROTDE)
+      // and also with autoloadwarping, because warping is muted anyway
+      if (retro_ui_finalized && RETRODSE && (!RETROTDE || opt_autoloadwarp))
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 

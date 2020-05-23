@@ -103,6 +103,7 @@ int RETROVICIICOLORBRIGHTNESS=1000;
 int retro_ui_finalized = 0;
 int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
 extern unsigned int opt_jiffydos;
+extern unsigned int opt_autoloadwarp;
 extern char retro_system_data_directory[RETRO_PATH_MAX];
 
 static const cmdline_option_t cmdline_options[] = {
@@ -276,6 +277,8 @@ int ui_init_finalize(void)
    }
    else
       log_resources_set_int("DriveSoundEmulation", 0);
+   if (opt_autoloadwarp)
+      log_resources_set_int("DriveSoundEmulationVolume", 0);
 
    log_resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 

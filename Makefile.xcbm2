@@ -1,4 +1,4 @@
-COMMONFLAGS += -D__CBM2__
+COMMONFLAGS += -D__XCBM2__
 
 INCFLAGS += \
         -I$(EMU)/sid \

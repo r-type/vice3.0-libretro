@@ -1,4 +1,4 @@
-COMMONFLAGS += -D__PLUS4__
+COMMONFLAGS += -D__XPLUS4__
 
 INCFLAGS += \
 		-I$(EMU)/sid \

@@ -5,7 +5,7 @@ static void libretro_keyboard()
     keyboard_keyconvmap_alloc();
     keyboard_keyword_clear();
 
-#if defined(__CBM2__)
+#if defined(__XCBM2__)
     kbd_lshiftrow = 8;
     kbd_lshiftcol = 4;
     kbd_rshiftrow = 8;
@@ -116,7 +116,7 @@ static void libretro_keyboard()
     keyboard_parse_set_pos_row(266, 5, 5, 8);        /*     Numpad . -> Numpad .     */
     keyboard_parse_set_pos_row(271, 7, 4, 8);        /* Numpad Enter -> Numpad Enter */
 
-#elif defined(__PET__)
+#elif defined(__XPET__)
     switch (machine_keyboard_type)
     {
         case 0: // Business (US)
@@ -301,7 +301,7 @@ static void libretro_keyboard()
             break;
     }
 
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
     kbd_lshiftrow = 1;
     kbd_lshiftcol = 3;
     kbd_rshiftrow = 6;
@@ -485,7 +485,7 @@ static void libretro_keyboard()
             break;
     }
 
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
     kbd_lshiftrow = 1;
     kbd_lshiftcol = 7;
     kbd_rshiftrow = 6;

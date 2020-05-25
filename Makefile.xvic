@@ -1,4 +1,4 @@
-COMMONFLAGS += -D__VIC20__
+COMMONFLAGS += -D__XVIC__
 
 INCFLAGS += \
 		-I$(EMU)/sid \

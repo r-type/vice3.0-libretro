@@ -119,7 +119,7 @@ void print_virtual_kbd(unsigned short int *pixels)
    int BKG_PADDING_X_DEFAULT = -3;
    int BKG_PADDING_Y_DEFAULT = -3;
 
-#if defined(__VIC20__)
+#if defined(__XVIC__)
    if (retro_region == RETRO_REGION_NTSC)
    {
       XOFFSET           = 9;
@@ -150,7 +150,7 @@ void print_virtual_kbd(unsigned short int *pixels)
             YOFFSET = -6;
       }
    }
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
    if (retro_region == RETRO_REGION_NTSC)
    {
       XOFFSET           = 0;

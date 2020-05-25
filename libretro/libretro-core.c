@@ -152,6 +152,7 @@ unsigned int opt_audio_leak_volume = 0;
 unsigned int opt_statusbar = 0;
 unsigned int opt_reset_type = 0;
 unsigned int opt_keyrah_keypad = 0;
+unsigned int opt_keyboard_keymap = KBD_INDEX_POS;
 unsigned int opt_keyboard_passthrough = 0;
 unsigned int opt_retropad_options = 0;
 unsigned int opt_joyport_type = 0;
@@ -2259,7 +2260,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_keyrah_keypad_mappings",
          "Keyrah Keypad Mappings",
-         "Hardcoded keypad to joy mappings for Keyrah hardware.",
+         "Hardcoded keypad to joyport mappings for Keyrah hardware.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2267,6 +2268,29 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#if !defined(__CBM2__) && !defined(__PET__)
+      {
+         "vice_keyboard_keymap",
+         "Keyboard Keymap",
+#if defined(__PLUS4__)
+         "User-defined keymap location is 'system/vice/PLUS4'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#elif defined(__VIC20__)
+         "User-defined keymap location is 'system/vice/VIC20'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#elif defined(__X128__)
+         "User-defined keymap location is 'system/vice/C128'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#else
+         "User-defined keymap location is 'system/vice/C64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#endif
+         {
+            { "positional", "Positional" },
+            { "symbolic", "Symbolic" },
+            { "positional-user", "Positional (User-defined)" },
+            { "symbolic-user", "Symbolic (User-defined)" },
+            { NULL, NULL },
+         },
+         "positional"
+      },
+#endif
       {
          "vice_physical_keyboard_pass_through",
          "Physical Keyboard Pass-through",
@@ -3591,6 +3615,20 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "disabled") == 0) opt_keyrah_keypad=0;
       else if (strcmp(var.value, "enabled") == 0) opt_keyrah_keypad=1;
+   }
+
+   var.key = "vice_keyboard_keymap";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int val = opt_keyboard_keymap;
+      if (strcmp(var.value, "symbolic") == 0) opt_keyboard_keymap=KBD_INDEX_SYM;
+      else if (strcmp(var.value, "positional") == 0) opt_keyboard_keymap=KBD_INDEX_POS;
+      else if (strcmp(var.value, "symbolic-user") == 0) opt_keyboard_keymap=KBD_INDEX_USERSYM;
+      else if (strcmp(var.value, "positional-user") == 0) opt_keyboard_keymap=KBD_INDEX_USERPOS;
+
+      if (retro_ui_finalized && opt_keyboard_keymap != val)
+         keyboard_init();
    }
 
    var.key = "vice_physical_keyboard_pass_through";

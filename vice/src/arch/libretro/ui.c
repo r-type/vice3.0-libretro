@@ -33,11 +33,11 @@
 #include "sid-resources.h"
 #include "userport_joystick.h"
 #include "util.h"
-#if defined(__VIC20__)
+#if defined(__XVIC__)
 #include "c64model.h"
 #include "vic20model.h"
 #include "vic20mem.h"
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
 #include "c64model.h"
 #include "plus4model.h"
 #elif defined(__X128__)
@@ -49,10 +49,10 @@
 #include "c128kernal64.h"
 BYTE c128memrom_kernal128_rom_original[C128_KERNAL_ROM_IMAGE_SIZE] = {0};
 BYTE c128memrom_kernal64_rom_original[C128_KERNAL64_ROM_SIZE] = {0};
-#elif defined(__PET__)
+#elif defined(__XPET__)
 #include "petmodel.h"
 #include "keyboard.h"
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
 #include "cbm2model.h"
 #else
 #include "c64model.h"
@@ -89,7 +89,7 @@ char RETROEXTPALNAME[RETRO_PATH_MAX]="default";
 int RETROC128COLUMNKEY=1;
 int RETROC128GO64=0;
 #endif
-#if defined(__VIC20__)
+#if defined(__XVIC__)
 int RETROVIC20MEM=0;
 int vic20mem_forced=-1;
 #endif
@@ -103,6 +103,7 @@ int RETROVICIICOLORBRIGHTNESS=1000;
 int retro_ui_finalized = 0;
 int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
 extern unsigned int opt_jiffydos;
+extern unsigned int opt_autoloadwarp;
 extern char retro_system_data_directory[RETRO_PATH_MAX];
 
 static const cmdline_option_t cmdline_options[] = {
@@ -201,13 +202,13 @@ int ui_init_finalize(void)
    /* Mute sound at startup to hide 6581 ReSID init pop, and set back to 100 in retro_run() after 3 frames */
    log_resources_set_int("SoundVolume", 0);
 
-#if defined(__CBM2__) || defined(__PET__)
+#if defined(__XCBM2__) || defined(__XPET__)
    log_resources_set_int("CrtcFilter", 0);
    log_resources_set_int("CrtcStretchVertical", 0);
 #endif
 
    /* Core options */
-#if defined(__VIC20__)
+#if defined(__XVIC__)
    if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("VICExternalPalette", 0);
    else
@@ -215,7 +216,7 @@ int ui_init_finalize(void)
       log_resources_set_int("VICExternalPalette", 1);
       log_resources_set_string("VICPaletteFile", RETROEXTPALNAME);
    }
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
    if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("TEDExternalPalette", 0);
    else
@@ -223,7 +224,7 @@ int ui_init_finalize(void)
       log_resources_set_int("TEDExternalPalette", 1);
       log_resources_set_string("TEDPaletteFile", RETROEXTPALNAME);
    }
-#elif defined(__PET__)
+#elif defined(__XPET__)
    if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("CrtcExternalPalette", 0);
    else
@@ -231,7 +232,7 @@ int ui_init_finalize(void)
       log_resources_set_int("CrtcExternalPalette", 1);
       log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
    }
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
    if (strcmp(RETROEXTPALNAME, "default") == 0)
       log_resources_set_int("CrtcExternalPalette", 0);
    else
@@ -276,12 +277,14 @@ int ui_init_finalize(void)
    }
    else
       log_resources_set_int("DriveSoundEmulation", 0);
+   if (opt_autoloadwarp)
+      log_resources_set_int("DriveSoundEmulationVolume", 0);
 
    log_resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
    log_resources_set_int("VICIIAudioLeak", RETROAUDIOLEAK);
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
    log_resources_set_int("VICAudioLeak", RETROAUDIOLEAK);
 #endif
 
@@ -326,16 +329,16 @@ int ui_init_finalize(void)
    }
 #endif
 
-#if defined(__VIC20__) 
+#if defined(__XVIC__)
    vic20model_set(RETROMODEL);
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
    plus4model_set(RETROMODEL);
 #elif defined(__X128__)
    c128model_set(RETROMODEL);
-#elif defined(__PET__)
+#elif defined(__XPET__)
    petmodel_set(RETROMODEL);
    keyboard_init();
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
    cbm2model_set(RETROMODEL);
 #elif defined(__XSCPU64__)
    c64model_set(RETROMODEL);
@@ -343,7 +346,7 @@ int ui_init_finalize(void)
    c64model_set(RETROMODEL);
 #endif
 
-#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
    if (RETROSIDMODL == 0xff)
       resources_set_int("SidEngine", RETROSIDENGINE);
    else
@@ -370,7 +373,7 @@ int ui_init_finalize(void)
    log_resources_set_int("C128ColumnKey", RETROC128COLUMNKEY);
 #endif
 
-#if defined(__VIC20__)
+#if defined(__XVIC__)
    unsigned int vic20mem = 0;
    vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : RETROVIC20MEM;
 
@@ -445,22 +448,22 @@ int c128ui_init_early(void)
    memcpy(c128memrom_kernal64_rom_original, c128kernal64_embedded, C128_KERNAL64_ROM_SIZE);
    return 0;
 }
-#elif defined(__VIC20__) 
+#elif defined(__XVIC__)
 int vic20ui_init_early(void)
 {
    return 0;
 }
-#elif defined(__PET__) 
+#elif defined(__XPET__)
 int petui_init_early(void)
 {
    return 0;
 }
-#elif defined(__PLUS4__) 
+#elif defined(__XPLUS4__)
 int plus4ui_init_early(void)
 {
    return 0;
 }
-#elif defined(__CBM2__) 
+#elif defined(__XCBM2__)
 int cbm2ui_init_early(void)
 {
    return 0;

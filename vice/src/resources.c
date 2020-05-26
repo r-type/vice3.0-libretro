@@ -1178,10 +1178,10 @@ static char* disabled_resources[] =
     "SidEngine", "SidModel", "SidResidSampling", "SidResidPassband", "SidResidGain", "SidResidFilterBias",
     "SidResid8580Passband", "SidResid8580Gain", "SidResid8580FilterBias",
     "Go64Mode", "C128ColumnKey", "RAMBlock0", "RAMBlock1", "RAMBlock2", "RAMBlock3", "RAMBlock5",
-    "Drive8Type", "WarpMode",
+    "Drive8Type", "WarpMode", "KeymapSymFile", "KeymapPosFile", "KeymapIndex",
 
     // Frontend resources
-    "SDLStatusbar", "ExitScreenshotName", "RefreshRate", "SoundRecordDeviceName", "SoundRecordDeviceArg",
+    "SDLStatusbar", "ExitScreenshotName", "ExitScreenshotName1", "RefreshRate", "SoundRecordDeviceName", "SoundRecordDeviceArg",
     "SoundDeviceName", "Sound", "SoundSampleRate", "SoundBufferSize", "SoundFragmentSize", "SoundDeviceArg",
     "SoundSuspendTime", "SoundSpeedAdjustment", "SoundVolume", "SoundOutput", "MachineVideoStandard",
     "VICIIVideoCache", "VICIIDoubleScan", "VICIIHwScale", "VICIIDoubleSize", "VICIIBorderMode",
@@ -1445,14 +1445,15 @@ int resources_save(const char *fname)
 /* dump ALL resources of the current machine into a file */
 int resources_dump(const char *fname)
 {
-#ifdef __LIBRETRO__
-    disabled_resources_num = sizeof(disabled_resources) / sizeof(disabled_resources[0]);
-    num_resources -= disabled_resources_num;
-#endif
     FILE *out_file;
     unsigned int i;
 
+#ifdef __LIBRETRO__
+    disabled_resources_num = sizeof(disabled_resources) / sizeof(disabled_resources[0]);
+    log_message(LOG_DEFAULT, "Dumping resources to file `%s'.", fname);
+#else
     log_message(LOG_DEFAULT, "Dumping %d resources to file `%s'.", num_resources, fname);
+#endif
 
     out_file = fopen(fname, MODE_WRITE_TEXT);
     if (!out_file) {

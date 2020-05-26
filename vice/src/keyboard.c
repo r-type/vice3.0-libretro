@@ -1527,6 +1527,7 @@ static int switch_keymap_file(int *idxp, int *mapp, int *typep)
     if(try_set_keymap_file(atidx, idx, mapping, type) >= 0) {
         goto ok;
     }
+#ifndef __LIBRETRO__
     /* if a positional map was not found, we cant really do any better
        than trying a symbolic map for the same keyboard instead */
     if (idx != KBD_INDEX_SYM) {
@@ -1544,6 +1545,7 @@ static int switch_keymap_file(int *idxp, int *mapp, int *typep)
     }
     DBG(("<switch_keymap_file ERROR idx %d mapping %d type %d\n", idx, mapping, type));
     return -1;
+#endif
 
 ok:
     DBG(("<switch_keymap_file OK idx %d mapping %d type %d\n", idx, mapping, type));
@@ -1743,7 +1745,8 @@ int keyboard_cmdline_options_init(void)
 
 /*--------------------------------------------------------------------------*/
 #ifdef __LIBRETRO__
-#include "defaultkey.inc"
+extern unsigned int opt_keyboard_keymap;
+#include "keymap.c"
 #endif
 
 void keyboard_init(void)
@@ -1758,6 +1761,14 @@ void keyboard_init(void)
     kbd_arch_init();
 #ifdef __LIBRETRO__
     libretro_keyboard();
+    load_keymap_ok = 0;
+    // Only load files with user-defined maps
+    if (opt_keyboard_keymap > KBD_INDEX_POS)
+    {
+        load_keymap_ok = 1;
+        keyboard_set_keymap_index(opt_keyboard_keymap, NULL);
+    }
+    return;
 #endif
 
     if (machine_class != VICE_MACHINE_VSID) {

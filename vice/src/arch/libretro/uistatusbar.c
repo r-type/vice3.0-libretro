@@ -106,7 +106,7 @@ static void display_joyport(void)
     int len;
     char tmpstr[25];
 
-#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
     char joy1[2];
     char joy2[2];
     sprintf(joy1, "%s", "1");

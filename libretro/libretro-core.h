@@ -46,13 +46,13 @@ typedef uint8_t uint8;
 #if defined(__X128__)
 #define WINDOW_WIDTH    856
 #define WINDOW_HEIGHT   312
-#elif defined(__PET__)
+#elif defined(__XPET__)
 #define WINDOW_WIDTH    704
 #define WINDOW_HEIGHT   288
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
 #define WINDOW_WIDTH    704
 #define WINDOW_HEIGHT   366
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
 #define WINDOW_WIDTH    448
 #define WINDOW_HEIGHT   288
 #else

@@ -1,4 +1,4 @@
-COMMONFLAGS += -D__PET__
+COMMONFLAGS += -D__XPET__
 
 INCFLAGS += \
         -I$(EMU)/sid \

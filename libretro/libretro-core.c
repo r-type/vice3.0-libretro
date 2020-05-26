@@ -107,7 +107,7 @@ extern char RETROEXTPALNAME[512];
 extern int RETROC128COLUMNKEY;
 extern int RETROC128GO64;
 #endif
-#if defined(__VIC20__)
+#if defined(__XVIC__)
 extern int RETROVIC20MEM;
 extern int vic20mem_forced;
 #endif
@@ -152,6 +152,7 @@ unsigned int opt_audio_leak_volume = 0;
 unsigned int opt_statusbar = 0;
 unsigned int opt_reset_type = 0;
 unsigned int opt_keyrah_keypad = 0;
+unsigned int opt_keyboard_keymap = KBD_INDEX_POS;
 unsigned int opt_keyboard_passthrough = 0;
 unsigned int opt_retropad_options = 0;
 unsigned int opt_joyport_type = 0;
@@ -172,24 +173,24 @@ extern unsigned int turbo_pulse;
 #include "resources.h"
 #include "sid.h"
 #include "userport_joystick.h"
-#if defined(__VIC20__)
+#if defined(__XVIC__)
 #include "c64model.h"
 #include "vic20model.h"
 #include "vic20mem.h"
 #include "vic20cart.h"
 void cartridge_trigger_freeze(void) {}
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
 #include "c64model.h"
 #include "plus4model.h"
 void cartridge_trigger_freeze(void) {}
 #elif defined(__X128__)
 #include "c64model.h"
 #include "c128model.h"
-#elif defined(__PET__)
+#elif defined(__XPET__)
 #include "petmodel.h"
 void cartridge_detach_image(int type) {}
 void cartridge_trigger_freeze(void) {}
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
 #include "cbm2model.h"
 void cartridge_trigger_freeze(void) {}
 #else
@@ -417,7 +418,7 @@ static int process_cmdline(const char* argv)
     bool is_fliplist = false;
     int joystick_control = 0;
 
-#if defined(__PLUS4__)
+#if defined(__XPLUS4__)
     // Do not reset noautostart if already set, PLUS/4 has issues with starting carts via autostart (?!)
     noautostart = (noautostart) ? noautostart : false;
 #else
@@ -587,7 +588,7 @@ static int process_cmdline(const char* argv)
             opt_jiffydos_allow = 1;
 #endif
 
-#if defined(__VIC20__)
+#if defined(__XVIC__)
         if (strendswith(argv, ".20"))
             Add_Option("-cart2");
         else if (strendswith(argv, ".40"))
@@ -622,7 +623,7 @@ static int process_cmdline(const char* argv)
                 break;
             }
         }
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
         if (dc_get_image_type(argv) == DC_IMAGE_TYPE_MEM)
             Add_Option("-cart");
 #endif
@@ -775,6 +776,9 @@ static void autodetect_drivetype(int unit)
             // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
             file_system_attach_disk(unit, attached_image);
 
+            // Don't bother with drive sound muting when autoloadwarp is on
+            if (opt_autoloadwarp)
+               return;
             // Drive motor sound keeps on playing if the drive type is changed while the motor is running
             // Also happens when toggling TDE
             vdrive = file_system_get_vdrive(unit);
@@ -1030,9 +1034,9 @@ void update_from_vice()
                 if (autostartString != NULL || noautostart)
                 {
                     log_cb(RETRO_LOG_INFO, "Attaching first cart %s\n", attachedImage);
-#if defined(__VIC20__)
+#if defined(__XVIC__)
                     cartridge_attach_image(CARTRIDGE_VIC20_DETECT, attachedImage);
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
                     cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, attachedImage);
                     // No autostarting carts, otherwise gfx gets corrupted (?!)
                     noautostart = true;
@@ -1239,7 +1243,7 @@ void retro_set_environment(retro_environment_t cb)
 
    static struct retro_core_option_definition core_options[] =
    {
-#if defined(__VIC20__)
+#if defined(__XVIC__)
       {
          "vice_vic20_model",
          "Model",
@@ -1267,7 +1271,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "none"
       },
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
       {
          "vice_plus4_model",
          "Model",
@@ -1319,7 +1323,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#elif defined(__PET__)
+#elif defined(__XPET__)
       {
          "vice_pet_model",
          "Model",
@@ -1341,7 +1345,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "8032"
       },
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
       {
          "vice_cbm2_model",
          "Model",
@@ -1444,7 +1448,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading.",
+         "Toggles warp mode always during disk and tape loading. Drive Sound Emulation will be muted.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1490,7 +1494,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
          "vice_aspect_ratio",
          "Video > Pixel Aspect Ratio",
@@ -1521,11 +1525,11 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode_crop",
          "Video > Zoom Mode Crop",
-         "Use 'Both' & 'Maximum' to remove borders completely. Ignored with 'Manual' zoom.",
+         "Use 'Horizontal + Vertical' & 'Maximum' to remove borders completely. Ignored with 'Manual' zoom.",
          {
-            { "both", "Both" },
-            { "vertical", "Vertical" },
+            { "both", "Horizontal + Vertical" },
             { "horizontal", "Horizontal" },
+            { "vertical", "Vertical" },
             { "16:9", "16:9" },
             { "16:10", "16:10" },
             { "4:3", "4:3" },
@@ -1539,9 +1543,9 @@ void retro_set_environment(retro_environment_t cb)
          "Video > Manual Crop Top",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "VIC-II top border height:\n- 35px PAL\n- 23px NTSC",
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
          "VIC top border height:\n- 48px PAL\n- 22px NTSC",
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
          "TED top border height:\n- 40px PAL\n- 18px NTSC",
 #endif
          MANUAL_CROP_OPTIONS,
@@ -1552,9 +1556,9 @@ void retro_set_environment(retro_environment_t cb)
          "Video > Manual Crop Bottom",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "VIC-II bottom border height:\n- 37px PAL\n- 24px NTSC",
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
          "VIC bottom border height:\n- 52px PAL\n- 28px NTSC",
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
          "TED bottom border height:\n- 48px PAL\n- 24px NTSC",
 #endif
          MANUAL_CROP_OPTIONS,
@@ -1565,9 +1569,9 @@ void retro_set_environment(retro_environment_t cb)
          "Video > Manual Crop Left",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "VIC-II left border width:\n- 32px",
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
          "VIC left border width:\n- 48px PAL\n- 32px NTSC",
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
          "TED left border width:\n- 32px",
 #endif
          MANUAL_CROP_OPTIONS,
@@ -1578,9 +1582,9 @@ void retro_set_environment(retro_environment_t cb)
          "Video > Manual Crop Right",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "VIC-II right border width:\n- 32px",
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
          "VIC right border width:\n- 48px PAL\n- 16px NTSC",
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
          "TED right border width:\n- 32px",
 #endif
          MANUAL_CROP_OPTIONS,
@@ -1657,7 +1661,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "16bit"
       },
-#if defined(__VIC20__)
+#if defined(__XVIC__)
       {
          "vice_vic20_external_palette",
          "Video > Color Palette",
@@ -1672,7 +1676,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "default"
       },
-#elif defined(__PLUS4__) 
+#elif defined(__XPLUS4__)
       {
          "vice_plus4_external_palette",
          "Video > Color Palette",
@@ -1686,7 +1690,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "default"
       },
-#elif defined(__PET__)
+#elif defined(__XPET__)
       {
          "vice_pet_external_palette",
          "Video > Color Palette",
@@ -1700,7 +1704,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "default"
       },
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
       {
          "vice_cbm2_external_palette",
          "Video > Color Palette",
@@ -1949,12 +1953,12 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20\%"
       },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__)
       {
          "vice_audio_leak_emulation",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          "Audio > VIC-II Audio Leak Emulation",
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
          "Audio > VIC Audio Leak Emulation",
 #endif
          "",
@@ -1977,7 +1981,7 @@ void retro_set_environment(retro_environment_t cb)
 #endif
       {
          "vice_sound_sample_rate",
-         "Audio > Sound Output Sample Rate",
+         "Audio > Output Sample Rate",
          "Slightly higher quality or higher performance.",
          {
             { "22050", NULL },
@@ -1988,7 +1992,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "48000"
       },
-#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
       {
          "vice_sid_engine",
          "Audio > SID Engine",
@@ -2146,7 +2150,7 @@ void retro_set_environment(retro_environment_t cb)
          "1500"
       },
 #endif
-#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
          "vice_analogmouse_deadzone",
          "Analog Stick Mouse Deadzone",
@@ -2256,7 +2260,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_keyrah_keypad_mappings",
          "Keyrah Keypad Mappings",
-         "Hardcoded keypad to joy mappings for Keyrah hardware.",
+         "Hardcoded keypad to joyport mappings for Keyrah hardware.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2264,6 +2268,29 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#if !defined(__XCBM2__) && !defined(__XPET__)
+      {
+         "vice_keyboard_keymap",
+         "Keyboard Keymap",
+#if defined(__XPLUS4__)
+         "User-defined keymap location is 'system/vice/PLUS4'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#elif defined(__XVIC__)
+         "User-defined keymap location is 'system/vice/VIC20'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#elif defined(__X128__)
+         "User-defined keymap location is 'system/vice/C128'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#else
+         "User-defined keymap location is 'system/vice/C64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#endif
+         {
+            { "positional", "Positional" },
+            { "symbolic", "Symbolic" },
+            { "positional-user", "Positional (User-defined)" },
+            { "symbolic-user", "Symbolic (User-defined)" },
+            { NULL, NULL },
+         },
+         "positional"
+      },
+#endif
       {
          "vice_physical_keyboard_pass_through",
          "Physical Keyboard Pass-through",
@@ -2312,7 +2339,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_F12"
       },
-#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
          "vice_mapper_joyport_switch",
          "Hotkey > Switch Joyports",
@@ -2328,7 +2355,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_END"
       },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
          "vice_mapper_zoom_mode_toggle",
          "Hotkey > Toggle Zoom Mode",
@@ -2563,7 +2590,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "4"
       },
-#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
          "vice_joyport",
          "RetroPad Port",
@@ -2774,6 +2801,10 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "disabled") == 0) opt_autoloadwarp=0;
       else opt_autoloadwarp=1;
+
+      // Silently restore sounds when autoloadwarp is disabled and DSE is enabled
+      if (retro_ui_finalized && RETRODSE && RETROTDE && !opt_autoloadwarp)
+         resources_set_int("DriveSoundEmulationVolume", RETRODSE);
    }
 
    var.key = "vice_work_disk";
@@ -2842,11 +2873,12 @@ static void update_variables(void)
 
       // Silently mute sounds without TDE,
       // because motor sound will not stop if TDE is changed during motor spinning
-      if (retro_ui_finalized && RETRODSE && !RETROTDE)
+      // and also with autoloadwarping, because warping is muted anyway
+      if (retro_ui_finalized && RETRODSE && (!RETROTDE || opt_autoloadwarp))
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__)
    var.key = "vice_audio_leak_emulation";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2860,7 +2892,7 @@ static void update_variables(void)
       if (retro_ui_finalized && RETROAUDIOLEAK != audioleak)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
          log_resources_set_int("VICIIAudioLeak", audioleak);
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
          log_resources_set_int("VICAudioLeak", audioleak);
 #endif
       RETROAUDIOLEAK=audioleak;
@@ -2874,7 +2906,7 @@ static void update_variables(void)
       RETROSOUNDSAMPLERATE=atoi(var.value);
    }
 
-#if defined(__VIC20__)
+#if defined(__XVIC__)
    var.key = "vice_vic20_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2951,7 +2983,7 @@ static void update_variables(void)
 
       RETROVIC20MEM=vic20mem;
    }
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
    var.key = "vice_plus4_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3031,7 +3063,7 @@ static void update_variables(void)
       }
       RETROC128GO64=c128go64;
    }
-#elif defined(__PET__)
+#elif defined(__XPET__)
    var.key = "vice_pet_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3059,7 +3091,7 @@ static void update_variables(void)
       }
       RETROMODEL=modl;
    }
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
    var.key = "vice_cbm2_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3119,7 +3151,7 @@ static void update_variables(void)
    }
 #endif
 
-#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
    var.key = "vice_sid_engine";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3257,7 +3289,7 @@ static void update_variables(void)
    }
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
    var.key = "vice_zoom_mode";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3362,7 +3394,7 @@ static void update_variables(void)
       }
    }
 
-#if defined(__VIC20__)
+#if defined(__XVIC__)
    var.key = "vice_vic20_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3380,7 +3412,7 @@ static void update_variables(void)
 
       sprintf(RETROEXTPALNAME, "%s", var.value);
    }
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
    var.key = "vice_plus4_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3398,7 +3430,7 @@ static void update_variables(void)
 
       sprintf(RETROEXTPALNAME, "%s", var.value);
    }
-#elif defined(__PET__)
+#elif defined(__XPET__)
    var.key = "vice_pet_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3416,7 +3448,7 @@ static void update_variables(void)
 
       sprintf(RETROEXTPALNAME, "%s", var.value);
    }
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
    var.key = "vice_cbm2_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3531,7 +3563,7 @@ static void update_variables(void)
       RETROUSERPORTJOY=joyadaptertype;
    }
 
-#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
    var.key = "vice_joyport";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3583,6 +3615,20 @@ static void update_variables(void)
    {
       if (strcmp(var.value, "disabled") == 0) opt_keyrah_keypad=0;
       else if (strcmp(var.value, "enabled") == 0) opt_keyrah_keypad=1;
+   }
+
+   var.key = "vice_keyboard_keymap";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int val = opt_keyboard_keymap;
+      if (strcmp(var.value, "symbolic") == 0) opt_keyboard_keymap=KBD_INDEX_SYM;
+      else if (strcmp(var.value, "positional") == 0) opt_keyboard_keymap=KBD_INDEX_POS;
+      else if (strcmp(var.value, "symbolic-user") == 0) opt_keyboard_keymap=KBD_INDEX_USERSYM;
+      else if (strcmp(var.value, "positional-user") == 0) opt_keyboard_keymap=KBD_INDEX_USERPOS;
+
+      if (retro_ui_finalized && opt_keyboard_keymap != val)
+         keyboard_init();
    }
 
    var.key = "vice_physical_keyboard_pass_through";
@@ -4006,11 +4052,11 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if !defined(__PET__) && !defined(__CBM2__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
    option_display.key = "vice_mapper_joyport_switch";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_mapper_zoom_mode_toggle";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -4036,13 +4082,13 @@ static void update_variables(void)
 
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__)
    option_display.key = "vice_audio_leak_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
    option_display.key = "vice_sound_sample_rate";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if !defined(__PET__) && !defined(__PLUS4__) && !defined(__VIC20__)
+#if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
    option_display.key = "vice_sid_engine";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_sid_model";
@@ -4064,7 +4110,7 @@ static void update_variables(void)
    /* Video options */
    option_display.visible = opt_video_options_display;
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_zoom_mode";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_zoom_mode_crop";
@@ -4082,16 +4128,16 @@ static void update_variables(void)
 #endif
    option_display.key = "vice_gfx_colors";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if defined(__VIC20__)
+#if defined(__XVIC__)
    option_display.key = "vice_vic20_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
    option_display.key = "vice_plus4_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#elif defined(__PET__)
+#elif defined(__XPET__)
    option_display.key = "vice_pet_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#elif defined(__CBM2__)
+#elif defined(__XCBM2__)
    option_display.key = "vice_cbm2_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #else
@@ -4210,9 +4256,9 @@ static bool retro_set_eject_state(bool ejected)
             }
             else if (unit == 0)
             {
-#if defined(__VIC20__)
+#if defined(__XVIC__)
                 cartridge_attach_image(CARTRIDGE_VIC20_DETECT, dc->files[dc->index]);
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
                 cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, dc->files[dc->index]);
                 // Soft reset required, otherwise gfx gets corrupted (?!)
                 emu_reset(1);
@@ -4592,7 +4638,7 @@ void retro_get_system_info(struct retro_system_info *info)
    memset(info, 0, sizeof(*info));
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.3" GIT_VERSION;
-#if defined(__VIC20__)
+#if defined(__XVIC__)
    info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
 #else
    info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
@@ -4631,13 +4677,13 @@ double retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixe
       if (RETROC128COLUMNKEY == 0)
          ar = ((double)width / (double)height) / (double)2.0;
 #endif
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
       if (region == RETRO_REGION_NTSC)
          par = ((double)1.50411479 / (double)2.0);
       else
          par = ((double)1.66574035 / (double)2.0);
       ar = ((double)width / (double)height) * par;
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
       if (region == RETRO_REGION_NTSC)
          par = (double)0.85760931;
       else
@@ -4691,7 +4737,7 @@ void update_geometry(int mode)
          break;
 
       case 1:
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__VIC20__) || defined(__PLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
          if (zoom_mode_id != zoom_mode_id_prev)
          {
             zoom_mode_id_prev = zoom_mode_id;
@@ -4699,11 +4745,11 @@ void update_geometry(int mode)
             // PAL: 384x272, NTSC: 384x247, VIC-II: 320x200
             int zoom_width_max      = 320;
             int zoom_height_max     = 200;
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
             // PAL: 448x284, NTSC: 400x234, VIC: 352x184
             int zoom_width_max      = 352;
             int zoom_height_max     = 184;
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
             // PAL: 384x288, NTSC: 384x242, TED: 320x200
             int zoom_width_max      = 320;
             int zoom_height_max     = 200;
@@ -4789,10 +4835,10 @@ void update_geometry(int mode)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
                   zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
                   zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 1 : 0) : 0;
-#elif defined(__VIC20__)
+#elif defined(__XVIC__)
                   zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) - ((retro_region == RETRO_REGION_PAL) ? 0 : -8) : 0;
                   zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 2 : 3) : 0;
-#elif defined(__PLUS4__)
+#elif defined(__XPLUS4__)
                   zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
                   zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 4 : 3) : 0;
 #endif
@@ -5059,7 +5105,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
    update_variables();
 
-#if defined(__VIC20__)
+#if defined(__XVIC__)
    /* VIC20 joyport limit has to also apply when starting without content */
    cur_port = 1;
    cur_port_locked = 1;

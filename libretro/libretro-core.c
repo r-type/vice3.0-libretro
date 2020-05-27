@@ -142,7 +142,7 @@ unsigned int opt_read_vicerc = 0;
 static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int opt_work_disk_type = 0;
 static unsigned int opt_work_disk_unit = 8;
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
 static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
 static unsigned int opt_jiffydos_prev = 0;
@@ -579,7 +579,7 @@ static int process_cmdline(const char* argv)
             argv = full_path;
         }
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
         // Do not allow JiffyDOS with non-floppies
         if (dc_get_image_type(argv) == DC_IMAGE_TYPE_TAPE
          || dc_get_image_type(argv) == DC_IMAGE_TYPE_MEM)
@@ -909,7 +909,7 @@ void update_from_vice()
     else
         log_cb(RETRO_LOG_INFO, "No image for autostart\n");
 
-#if defined(__X64__) || defined(__X64SC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
     // Automatic model request
     if (opt_model_auto && autostartString)
     {
@@ -969,7 +969,7 @@ void update_from_vice()
         }
     }
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
     // Disable JiffyDOS with tapes and carts
     if (opt_jiffydos && dc->unit <= 1 && dc->count > 0)
     {
@@ -1392,11 +1392,11 @@ void retro_set_environment(retro_environment_t cb)
          "C64 PAL auto"
       },
 #endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
       {
          "vice_jiffydos",
          "Use JiffyDOS",
-#if defined(__X64__) || defined(__X64SC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
          "For D64, D71 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #elif defined(__X128__)
          "For D64, D71 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
@@ -1494,7 +1494,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
          "vice_aspect_ratio",
          "Video > Pixel Aspect Ratio",
@@ -1541,7 +1541,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_manual_crop_top",
          "Video > Manual Crop Top",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
          "VIC-II top border height:\n- 35px PAL\n- 23px NTSC",
 #elif defined(__XVIC__)
          "VIC top border height:\n- 48px PAL\n- 22px NTSC",
@@ -1554,7 +1554,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_manual_crop_bottom",
          "Video > Manual Crop Bottom",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
          "VIC-II bottom border height:\n- 37px PAL\n- 24px NTSC",
 #elif defined(__XVIC__)
          "VIC bottom border height:\n- 52px PAL\n- 28px NTSC",
@@ -1567,7 +1567,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_manual_crop_left",
          "Video > Manual Crop Left",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
          "VIC-II left border width:\n- 32px",
 #elif defined(__XVIC__)
          "VIC left border width:\n- 48px PAL\n- 32px NTSC",
@@ -1580,7 +1580,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_manual_crop_right",
          "Video > Manual Crop Right",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
          "VIC-II right border width:\n- 32px",
 #elif defined(__XVIC__)
          "VIC right border width:\n- 48px PAL\n- 16px NTSC",
@@ -1953,10 +1953,10 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20\%"
       },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__)
       {
          "vice_audio_leak_emulation",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
          "Audio > VIC-II Audio Leak Emulation",
 #elif defined(__XVIC__)
          "Audio > VIC Audio Leak Emulation",
@@ -2355,7 +2355,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_END"
       },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
          "vice_mapper_zoom_mode_toggle",
          "Hotkey > Toggle Zoom Mode",
@@ -2878,7 +2878,7 @@ static void update_variables(void)
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__)
    var.key = "vice_audio_leak_emulation";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2890,7 +2890,7 @@ static void update_variables(void)
       else audioleak=1;
 
       if (retro_ui_finalized && RETROAUDIOLEAK != audioleak)
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
          log_resources_set_int("VICIIAudioLeak", audioleak);
 #elif defined(__XVIC__)
          log_resources_set_int("VICAudioLeak", audioleak);
@@ -3289,7 +3289,7 @@ static void update_variables(void)
    }
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__) || defined(__XPLUS4__)
    var.key = "vice_zoom_mode";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3750,7 +3750,7 @@ static void update_variables(void)
       opt_read_vicerc_prev = opt_read_vicerc;
    }
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
    var.key = "vice_jiffydos";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -4056,7 +4056,7 @@ static void update_variables(void)
    option_display.key = "vice_mapper_joyport_switch";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_mapper_zoom_mode_toggle";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -4082,7 +4082,7 @@ static void update_variables(void)
 
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__)
    option_display.key = "vice_audio_leak_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -4110,7 +4110,7 @@ static void update_variables(void)
    /* Video options */
    option_display.visible = opt_video_options_display;
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_zoom_mode";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_zoom_mode_crop";
@@ -4667,7 +4667,7 @@ double retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixe
          break;
    }
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
       if (region == RETRO_REGION_NTSC)
          par = (double)0.75000000;
       else
@@ -4737,11 +4737,11 @@ void update_geometry(int mode)
          break;
 
       case 1:
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XVIC__) || defined(__XPLUS4__)
          if (zoom_mode_id != zoom_mode_id_prev)
          {
             zoom_mode_id_prev = zoom_mode_id;
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
             // PAL: 384x272, NTSC: 384x247, VIC-II: 320x200
             int zoom_width_max      = 320;
             int zoom_height_max     = 200;
@@ -4832,7 +4832,7 @@ void update_geometry(int mode)
                   zoomed_height       = retroH - zoom_crop_height;
                   //printf("zoom: dar:%f par:%f - x-%3d y-%3d = %3dx%3d = %f * %f = %f\n", zoom_dar, zoom_par, zoom_crop_width, zoom_crop_height, zoomed_width, zoomed_height, ((double)zoomed_width / (double)zoomed_height), zoom_par, ((double)zoomed_width / (double)zoomed_height * zoom_par));
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
                   zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
                   zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 1 : 0) : 0;
 #elif defined(__XVIC__)
@@ -4961,7 +4961,7 @@ void retro_run(void)
 
    if (retro_ui_finalized)
    {
-#if defined(__X64__) || defined(__X64SC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
       /* Set model when requested */
       if (opt_model_auto == 1 && request_model_set > -1)
       {

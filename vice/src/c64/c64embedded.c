@@ -63,6 +63,10 @@
 #include "c64sxkernal.h"
 #include "c64jpkernal.h"
 #include "c64jpchrgen.h"
+#ifdef __XSCPU64__
+#include "scpu64mem.h"
+#include "scpu64kernal.h"
+#endif
 #endif
 
 static embedded_t c64files[] = {
@@ -75,6 +79,11 @@ static embedded_t c64files[] = {
     { "sxkernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_sxkernal64_rom },
     { "jpkernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_jpkernal64_rom },
     { "jpchrgen", C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, mem_jpchrgen_rom },
+#ifdef __XSCPU64__
+    { "scpu64", SCPU64_SCPU64_ROM_MINSIZE, SCPU64_SCPU64_ROM_MAXSIZE, SCPU64_SCPU64_ROM_MAXSIZE, scpu64rom_scpu64_rom },
+    { "chargen", SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE, mem_chargen_rom },
+    { "jpchrgen", SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE, mem_jpchrgen_rom },
+#endif
 #endif
     EMBEDDED_LIST_END
 };

@@ -250,7 +250,7 @@ int ui_init_finalize(void)
    }
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
    log_resources_set_int("VICIIColorGamma", RETROVICIICOLORGAMMA);
    log_resources_set_int("VICIIColorSaturation", RETROVICIICOLORSATURATION);
    log_resources_set_int("VICIIColorContrast", RETROVICIICOLORCONTRAST);
@@ -282,13 +282,13 @@ int ui_init_finalize(void)
 
    log_resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
    log_resources_set_int("VICIIAudioLeak", RETROAUDIOLEAK);
 #elif defined(__XVIC__)
    log_resources_set_int("VICAudioLeak", RETROAUDIOLEAK);
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
    // Replace kernal always from backup, because kernal loading replaces the embedded variable
 #if defined(__X64__) || defined(__X64SC__)
    memcpy(c64memrom_kernal64_rom, c64memrom_kernal64_rom_original, C64_KERNAL_ROM_SIZE);
@@ -329,19 +329,17 @@ int ui_init_finalize(void)
    }
 #endif
 
-#if defined(__XVIC__)
+#if defined(__XPET__)
+   petmodel_set(RETROMODEL);
+   keyboard_init();
+#elif defined(__XCBM2__)
+   cbm2model_set(RETROMODEL);
+#elif defined(__XVIC__)
    vic20model_set(RETROMODEL);
 #elif defined(__XPLUS4__)
    plus4model_set(RETROMODEL);
 #elif defined(__X128__)
    c128model_set(RETROMODEL);
-#elif defined(__XPET__)
-   petmodel_set(RETROMODEL);
-   keyboard_init();
-#elif defined(__XCBM2__)
-   cbm2model_set(RETROMODEL);
-#elif defined(__XSCPU64__)
-   c64model_set(RETROMODEL);
 #else
    c64model_set(RETROMODEL);
 #endif

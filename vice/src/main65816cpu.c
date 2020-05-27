@@ -242,7 +242,7 @@ void maincpu_mainloop_retro(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at
        least, on gcc 2.7.2.x).  */
- union regs {
+static union regs {
      uint16_t reg_s;
      uint8_t reg_q[2];
  } regs65802;

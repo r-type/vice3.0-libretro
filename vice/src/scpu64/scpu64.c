@@ -842,7 +842,13 @@ int machine_specific_init(void)
 
     resources_get_int("AutostartDelay", &delay);
     if (delay == 0) {
+#ifdef __LIBRETRO__
+        // scpu-dos-1.04.bin needs 5
+        // scpu-dos-2.04.bin needs 4
+        delay = 5;
+#else
         delay = 3; /* default */
+#endif
     }
 
     /* Initialize autostart.  */

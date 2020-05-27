@@ -10,15 +10,14 @@ Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.t
 
 - Automatic NIB->G64 conversion
 - Savestates
-- x64sc / xpet
 - Virtual keyboard revamped: more responsive, cleaner design, much easier to control
 - GUI removed
 - Autostart PRG mode to inject
 - System-subdir renamed to `vice` and created automatically
 - Cursor keys disabled while using RetroPad
 - New settings:
-  - Drive Sound Emulation (D64 & D71 only)
-  - Reset Type (Autostart, Soft, Hard)
+  - Drive Sound Emulation (1541 & 1571 only)
+  - Reset Type (Autostart, Soft, Hard, Freeze)
   - Customizable hotkeys for essential functions (virtual keyboard, statusbar, joyport switch, reset, Datasette controls)
   - Keyrah joystick maps
   - Zoom mode
@@ -124,10 +123,11 @@ Currently working EMUTYPEs:
 - `x64`
 - `x64sc`
 - `x128`
-- `xplus4`
-- `xvic`
-- `xpet`
 - `xcbm2`
+- `xpet`
+- `xplus4`
+- `xscpu64`
+- `xvic`
 
 ### Linux
 ```

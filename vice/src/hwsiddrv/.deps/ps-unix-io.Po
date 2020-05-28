@@ -1,5 +1,0 @@
-ps-unix-io.o: ps-unix-io.c ../../src/vice.h ../../src/config.h
-
-../../src/vice.h:
-
-../../src/config.h:

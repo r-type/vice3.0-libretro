@@ -1,6 +1,0 @@
-hs-amiga-openpci.o: hs-amiga-openpci.c ../../src/vice.h \
- ../../src/config.h
-
-../../src/vice.h:
-
-../../src/config.h:

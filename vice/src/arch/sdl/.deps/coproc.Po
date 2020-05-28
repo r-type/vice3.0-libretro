@@ -1,5 +1,0 @@
-coproc.o: coproc.c ../../../src/vice.h ../../../src/config.h
-
-../../../src/vice.h:
-
-../../../src/config.h:

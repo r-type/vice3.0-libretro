@@ -1,6 +1,0 @@
-hardsid-amiga-drv.o: hardsid-amiga-drv.c ../../src/vice.h \
- ../../src/config.h
-
-../../src/vice.h:
-
-../../src/config.h:

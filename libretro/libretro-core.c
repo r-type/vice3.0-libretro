@@ -5169,8 +5169,8 @@ bool retro_load_game(const struct retro_game_info *info)
 
    update_variables();
 
-#if defined(__XVIC__)
-   /* VIC20 joyport limit has to also apply when starting without content */
+#if defined(__XVIC__) || defined(__XPET__) || defined(__XCBM2__)
+   /* Joyport limit has to apply always */
    cur_port = 1;
    cur_port_locked = 1;
 #endif

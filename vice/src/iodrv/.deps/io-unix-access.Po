@@ -1,5 +1,0 @@
-io-unix-access.o: io-unix-access.c ../../src/vice.h ../../src/config.h
-
-../../src/vice.h:
-
-../../src/config.h:

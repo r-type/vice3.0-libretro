@@ -1,5 +1,0 @@
-hs-unix-isa.o: hs-unix-isa.c ../../src/vice.h ../../src/config.h
-
-../../src/vice.h:
-
-../../src/config.h:

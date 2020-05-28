@@ -1,5 +1,0 @@
-vic20embedded.o: vic20embedded.c ../../src/vice.h ../../src/config.h
-
-../../src/vice.h:
-
-../../src/config.h:

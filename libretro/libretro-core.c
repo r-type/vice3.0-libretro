@@ -3,8 +3,6 @@
 #include "encodings/utf.h"
 
 #include "archdep.h"
-#include "c64.h"
-#include "c64mem.h"
 #include "mem.h"
 #include "machine.h"
 #include "snapshot.h"
@@ -23,6 +21,11 @@
 #include "vsync.h"
 #include "log.h"
 #include "keyboard.h"
+#include "resources.h"
+#include "sid.h"
+#if !defined(__XCBM5x0__)
+#include "userport_joystick.h"
+#endif
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -62,7 +65,8 @@ unsigned int opt_mapping_options_display;
 unsigned int opt_video_options_display;
 unsigned int opt_audio_options_display;
 unsigned int retro_region;
-unsigned int prev_audio_sample_rate = 0;
+static double retro_refresh;
+static unsigned int prev_audio_sample_rate = 0;
 
 extern void retro_poll_event();
 extern int retro_ui_finalized;
@@ -171,33 +175,37 @@ extern int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
 //VICE DEF BEGIN
-#include "resources.h"
-#include "sid.h"
-#if !defined(__XCBM5x0__)
-#include "userport_joystick.h"
-#endif
-#if defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__)
+#include "c64.h"
+#include "c64mem.h"
 #include "c64model.h"
-#include "vic20model.h"
-#include "vic20mem.h"
-#include "vic20cart.h"
-void cartridge_trigger_freeze(void) {}
-#elif defined(__XPLUS4__)
-#include "c64model.h"
-#include "plus4model.h"
-void cartridge_trigger_freeze(void) {}
 #elif defined(__X128__)
-#include "c64model.h"
+#include "c128.h"
+#include "c128mem.h"
 #include "c128model.h"
+#elif defined(__XCBM2__) || defined(__XCBM5x0__)
+#include "cbm2.h"
+#include "cbm2model.h"
+void cartridge_trigger_freeze(void) {}
 #elif defined(__XPET__)
+#include "pet.h"
 #include "petmodel.h"
 void cartridge_detach_image(int type) {}
 void cartridge_trigger_freeze(void) {}
-#elif defined(__XCBM2__) || defined(__XCBM5x0__)
-#include "cbm2model.h"
+#elif defined(__XPLUS4__)
+#include "plus4.h"
+#include "plus4model.h"
 void cartridge_trigger_freeze(void) {}
-#else
+#elif defined(__XSCPU64__)
+#include "scpu64.h"
+#include "c64mem.h"
 #include "c64model.h"
+#elif defined(__XVIC__)
+#include "vic20.h"
+#include "vic20mem.h"
+#include "vic20model.h"
+#include "vic20cart.h"
+void cartridge_trigger_freeze(void) {}
 #endif
 //VICE DEF END
 
@@ -4940,16 +4948,24 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    // Remember region for av_info update
    retro_region = retro_get_region();
 
-   switch (retro_region)
-   {
-      case RETRO_REGION_PAL:
-         info->timing.fps = C64_PAL_RFSH_PER_SEC;
-         break;
-      
-      case RETRO_REGION_NTSC:
-         info->timing.fps = C64_NTSC_RFSH_PER_SEC;
-         break;
-   }
+#if defined(__X64__) || defined(__X64SC__)
+   retro_refresh = (retro_region == RETRO_REGION_PAL) ? C64_PAL_RFSH_PER_SEC : C64_NTSC_RFSH_PER_SEC;
+#elif defined(__X128__)
+   retro_refresh = (retro_region == RETRO_REGION_PAL) ? C128_PAL_RFSH_PER_SEC : C128_NTSC_RFSH_PER_SEC;
+#elif defined(__XCBM2__)
+   retro_refresh = (retro_region == RETRO_REGION_PAL) ? C610_PAL_RFSH_PER_SEC : C610_NTSC_RFSH_PER_SEC;
+#elif defined(__XCBM5x0__)
+   retro_refresh = (retro_region == RETRO_REGION_PAL) ? C500_PAL_RFSH_PER_SEC : C500_NTSC_RFSH_PER_SEC;
+#elif defined(__XPET__)
+   retro_refresh = (retro_region == RETRO_REGION_PAL) ? PET_PAL_RFSH_PER_SEC : PET_NTSC_RFSH_PER_SEC;
+#elif defined(__XPLUS4__)
+   retro_refresh = (retro_region == RETRO_REGION_PAL) ? PLUS4_PAL_RFSH_PER_SEC : PLUS4_NTSC_RFSH_PER_SEC;
+#elif defined(__XSCPU64__)
+   retro_refresh = (retro_region == RETRO_REGION_PAL) ? SCPU64_PAL_RFSH_PER_SEC : SCPU64_NTSC_RFSH_PER_SEC;
+#elif defined(__XVIC__)
+   retro_refresh = (retro_region == RETRO_REGION_PAL) ? VIC20_PAL_RFSH_PER_SEC : VIC20_NTSC_RFSH_PER_SEC;
+#endif
+   info->timing.fps = retro_refresh;
 }
 
 void retro_set_video_refresh(retro_video_refresh_t cb)
@@ -5095,11 +5111,11 @@ void retro_run(void)
       static double f_refresh = 0;
       if (!f_refresh)
       {
-          f_refresh = retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC;
+          f_refresh = retro_refresh;
           f_time = 1000000 / f_refresh;
           f_minimum = f_time / f_refresh;
       }
-      for (int frame_count = 1; frame_count <= (retro_warp_mode_enabled() ? f_time/f_minimum : 1); ++frame_count)
+      for (int frame_count = 1; frame_count <= (retro_warp_mode_enabled() ? (f_time / f_minimum) : 1); ++frame_count)
       {
          while (cpuloop)
             maincpu_mainloop_retro();

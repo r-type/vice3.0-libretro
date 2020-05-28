@@ -5,7 +5,7 @@ static void libretro_keyboard()
     keyboard_keyconvmap_alloc();
     keyboard_keyword_clear();
 
-#if defined(__XCBM2__)
+#if defined(__XCBM2__) || defined(__XCBM5x0__)
     kbd_lshiftrow = 8;
     kbd_lshiftcol = 4;
     kbd_rshiftrow = 8;

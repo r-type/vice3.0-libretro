@@ -31,8 +31,10 @@
 #include "resources.h"
 #include "sid.h"
 #include "sid-resources.h"
-#include "userport_joystick.h"
 #include "util.h"
+#if !defined(__XCBM5x0__)
+#include "userport_joystick.h"
+#endif
 #if defined(__XVIC__)
 #include "c64model.h"
 #include "vic20model.h"
@@ -52,7 +54,7 @@ BYTE c128memrom_kernal64_rom_original[C128_KERNAL64_ROM_SIZE] = {0};
 #elif defined(__XPET__)
 #include "petmodel.h"
 #include "keyboard.h"
-#elif defined(__XCBM2__)
+#elif defined(__XCBM2__) || defined(__XCBM5x0__)
 #include "cbm2model.h"
 #else
 #include "c64model.h"
@@ -93,7 +95,7 @@ int RETROC128GO64=0;
 int RETROVIC20MEM=0;
 int vic20mem_forced=-1;
 #endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
 int RETROVICIICOLORGAMMA=2200;
 int RETROVICIICOLORSATURATION=1250;
 int RETROVICIICOLORCONTRAST=1250;
@@ -250,13 +252,14 @@ int ui_init_finalize(void)
    }
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    log_resources_set_int("VICIIColorGamma", RETROVICIICOLORGAMMA);
    log_resources_set_int("VICIIColorSaturation", RETROVICIICOLORSATURATION);
    log_resources_set_int("VICIIColorContrast", RETROVICIICOLORCONTRAST);
    log_resources_set_int("VICIIColorBrightness", RETROVICIICOLORBRIGHTNESS);
 #endif
 
+#if !defined(__XCBM5x0__)
    if (RETROUSERPORTJOY==-1)
       log_resources_set_int("UserportJoy", 0);
    else
@@ -264,6 +267,7 @@ int ui_init_finalize(void)
       log_resources_set_int("UserportJoy", 1);
       log_resources_set_int("UserportJoyType", RETROUSERPORTJOY);
    }
+#endif
 
    if (RETROTDE)
       log_resources_set_int("DriveTrueEmulation", 1);
@@ -332,7 +336,7 @@ int ui_init_finalize(void)
 #if defined(__XPET__)
    petmodel_set(RETROMODEL);
    keyboard_init();
-#elif defined(__XCBM2__)
+#elif defined(__XCBM2__) || defined(__XCBM5x0__)
    cbm2model_set(RETROMODEL);
 #elif defined(__XVIC__)
    vic20model_set(RETROMODEL);
@@ -463,6 +467,11 @@ int plus4ui_init_early(void)
 }
 #elif defined(__XCBM2__)
 int cbm2ui_init_early(void)
+{
+   return 0;
+}
+#elif defined(__XCBM5x0__)
+int cbm5x0ui_init_early(void)
 {
    return 0;
 }

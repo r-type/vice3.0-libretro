@@ -1,5 +1,6 @@
 #include "libretro.h"
 #include "libretro-core.h"
+#include "encodings/utf.h"
 
 #include "archdep.h"
 #include "c64.h"
@@ -5100,8 +5101,20 @@ void retro_run(void)
 
 bool retro_load_game(const struct retro_game_info *info)
 {
+   char *local_path;
    if (info)
-      process_cmdline(info->path);
+   {
+      /* Special unicode chars won't work internally in VICE without conversion */
+      local_path = utf8_to_local_string_alloc(info->path);
+      if (local_path)
+      {
+         process_cmdline(local_path);
+         free(local_path);
+         local_path = NULL;
+      }
+      else
+         return false;
+   }
 
    update_variables();
 

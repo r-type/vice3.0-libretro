@@ -41,7 +41,9 @@
 
 static log_t scpu64rom_log = LOG_ERR;
 
+#ifndef __LIBRETRO__
 uint8_t scpu64rom_scpu64_rom[SCPU64_SCPU64_ROM_MAXSIZE];
+#endif
 
 /* Flag: nonzero if the ROMs have been loaded.  */
 static int rom_loaded = 0;

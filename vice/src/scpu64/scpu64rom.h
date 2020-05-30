@@ -30,6 +30,10 @@
 extern int scpu64rom_load_scpu64(const char *rom_name);
 extern int scpu64rom_load_chargen(const char *rom_name);
 
+#ifdef __LIBRETRO__
+extern BYTE scpu64rom_scpu64_rom[];
+#else
 extern uint8_t scpu64rom_scpu64_rom[];
+#endif
 
 #endif

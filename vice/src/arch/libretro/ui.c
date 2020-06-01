@@ -290,6 +290,8 @@ int ui_init_finalize(void)
    log_resources_set_int("VICIIAudioLeak", RETROAUDIOLEAK);
 #elif defined(__XVIC__)
    log_resources_set_int("VICAudioLeak", RETROAUDIOLEAK);
+#elif defined(__XPLUS4__)
+   log_resources_set_int("TEDAudioLeak", RETROAUDIOLEAK);
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)

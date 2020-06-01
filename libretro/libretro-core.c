@@ -1976,13 +1976,15 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20\%"
       },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
          "vice_audio_leak_emulation",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "Audio > VIC-II Audio Leak Emulation",
 #elif defined(__XVIC__)
          "Audio > VIC Audio Leak Emulation",
+#elif defined(__XPLUS4__)
+         "Audio > TED Audio Leak Emulation",
 #endif
          "",
          {
@@ -2905,7 +2907,7 @@ static void update_variables(void)
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    var.key = "vice_audio_leak_emulation";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -2921,6 +2923,8 @@ static void update_variables(void)
          log_resources_set_int("VICIIAudioLeak", audioleak);
 #elif defined(__XVIC__)
          log_resources_set_int("VICAudioLeak", audioleak);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDAudioLeak", audioleak);
 #endif
       RETROAUDIOLEAK=audioleak;
    }
@@ -4126,7 +4130,7 @@ static void update_variables(void)
 
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_audio_leak_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif

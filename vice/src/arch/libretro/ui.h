@@ -1,5 +1,5 @@
 /*
- * ui.h - RETRO user interface.
+ * ui.h - libretro user interface.
  *
  */
 

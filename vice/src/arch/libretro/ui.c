@@ -1,26 +1,5 @@
 /*
- * ui.c - PSP user interface.
- *
- * Written by
- *  Akop Karapetyan <dev@psp.akop.org>
- *
- * This file is part of VICE, the Versatile Commodore Emulator.
- * See README for copyright notice.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
- *  02111-1307  USA.
+ * ui.c - libretro user interface.
  *
  */
 
@@ -71,22 +50,26 @@ BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 
 #include "retro_files.h"
 
+int RETROMODEL=0;
+int RETROUSERPORTJOY=-1;
+int RETROAUTOSTARTWARP=0;
 int RETROTDE=0;
 int RETRODSE=0;
+int RETROAUDIOLEAK=0;
+int RETROSOUNDSAMPLERATE=0;
 int RETROSIDENGINE=0;
 int RETROSIDMODL=0;
 int RETROSIDEXTRA=0;
 int RETRORESIDSAMPLING=0;
-int RETROSOUNDSAMPLERATE=0;
 int RETRORESIDPASSBAND=0;
 int RETRORESIDGAIN=0;
 int RETRORESIDFILTERBIAS=0;
 int RETRORESID8580FILTERBIAS=0;
-int RETROAUDIOLEAK=0;
-int RETROMODEL=0;
-int RETROAUTOSTARTWARP=0;
-int RETROUSERPORTJOY=-1;
 char RETROEXTPALNAME[RETRO_PATH_MAX]="default";
+int RETROCOLORGAMMA=2200;
+int RETROCOLORSATURATION=1250;
+int RETROCOLORCONTRAST=1250;
+int RETROCOLORBRIGHTNESS=1000;
 #if defined(__X128__)
 int RETROC128COLUMNKEY=1;
 int RETROC128GO64=0;
@@ -94,12 +77,6 @@ int RETROC128GO64=0;
 #if defined(__XVIC__)
 int RETROVIC20MEM=0;
 int vic20mem_forced=-1;
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-int RETROVICIICOLORGAMMA=2200;
-int RETROVICIICOLORSATURATION=1250;
-int RETROVICIICOLORCONTRAST=1250;
-int RETROVICIICOLORBRIGHTNESS=1000;
 #endif
 
 int retro_ui_finalized = 0;
@@ -253,10 +230,20 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-   log_resources_set_int("VICIIColorGamma", RETROVICIICOLORGAMMA);
-   log_resources_set_int("VICIIColorSaturation", RETROVICIICOLORSATURATION);
-   log_resources_set_int("VICIIColorContrast", RETROVICIICOLORCONTRAST);
-   log_resources_set_int("VICIIColorBrightness", RETROVICIICOLORBRIGHTNESS);
+   log_resources_set_int("VICIIColorGamma", RETROCOLORGAMMA);
+   log_resources_set_int("VICIIColorSaturation", RETROCOLORSATURATION);
+   log_resources_set_int("VICIIColorContrast", RETROCOLORCONTRAST);
+   log_resources_set_int("VICIIColorBrightness", RETROCOLORBRIGHTNESS);
+#elif defined(__XVIC__)
+   log_resources_set_int("VICColorGamma", RETROCOLORGAMMA);
+   log_resources_set_int("VICColorSaturation", RETROCOLORSATURATION);
+   log_resources_set_int("VICColorContrast", RETROCOLORCONTRAST);
+   log_resources_set_int("VICColorBrightness", RETROCOLORBRIGHTNESS);
+#elif defined(__XPLUS4__)
+   log_resources_set_int("TEDColorGamma", RETROCOLORGAMMA);
+   log_resources_set_int("TEDColorSaturation", RETROCOLORSATURATION);
+   log_resources_set_int("TEDColorContrast", RETROCOLORCONTRAST);
+   log_resources_set_int("TEDColorBrightness", RETROCOLORBRIGHTNESS);
 #endif
 
 #if !defined(__XCBM5x0__)

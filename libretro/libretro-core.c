@@ -92,22 +92,26 @@ static bool pix_bytes_initialized = false;
 unsigned short int retro_bmp[RETRO_BMP_SIZE];
 
 // VICE options
+extern int RETROMODEL;
+extern int RETROUSERPORTJOY;
+extern int RETROAUTOSTARTWARP;
 extern int RETROTDE;
 extern int RETRODSE;
+extern int RETROAUDIOLEAK;
+extern int RETROSOUNDSAMPLERATE;
 extern int RETROSIDENGINE;
 extern int RETROSIDMODL;
 extern int RETROSIDEXTRA;
 extern int RETRORESIDSAMPLING;
-extern int RETROSOUNDSAMPLERATE;
 extern int RETRORESIDPASSBAND;
 extern int RETRORESIDGAIN;
 extern int RETRORESIDFILTERBIAS;
 extern int RETRORESID8580FILTERBIAS;
-extern int RETROAUDIOLEAK;
-extern int RETROMODEL;
-extern int RETROAUTOSTARTWARP;
-extern int RETROUSERPORTJOY;
-extern char RETROEXTPALNAME[512];
+extern char RETROEXTPALNAME[RETRO_PATH_MAX];
+extern int RETROCOLORGAMMA;
+extern int RETROCOLORSATURATION;
+extern int RETROCOLORCONTRAST;
+extern int RETROCOLORBRIGHTNESS;
 #if defined(__X128__)
 extern int RETROC128COLUMNKEY;
 extern int RETROC128GO64;
@@ -115,12 +119,6 @@ extern int RETROC128GO64;
 #if defined(__XVIC__)
 extern int RETROVIC20MEM;
 extern int vic20mem_forced;
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-extern int RETROVICIICOLORGAMMA;
-extern int RETROVICIICOLORSATURATION;
-extern int RETROVICIICOLORCONTRAST;
-extern int RETROVICIICOLORBRIGHTNESS;
 #endif
 
 unsigned int zoom_mode_id = 0;
@@ -1688,30 +1686,30 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vic20_external_palette",
          "Video > VIC Color Palette",
-         "Colodore is recommended for the most accurate colors.",
+         "'Colodore' is recommended for the most accurate colors.",
          {
-            { "default", "Default" },
-            { "colodore_vic", "Colodore VIC" },
-            { "mike-ntsc", "Mike NTSC" },
-            { "mike-pal", "Mike PAL" },
+            { "default", "Internal" },
+            { "colodore_vic", "Colodore" },
+            { "mike-pal", "Mike (PAL)" },
+            { "mike-ntsc", "Mike (NTSC)" },
             { "vice", "Vice" },
             { NULL, NULL },
          },
-         "default"
+         "colodore_vic"
       },
 #elif defined(__XPLUS4__)
       {
          "vice_plus4_external_palette",
          "Video > TED Color Palette",
-         "Colodore is recommended for the most accurate colors.",
+         "'Colodore' is recommended for the most accurate colors.",
          {
-            { "default", "Default" },
-            { "colodore_ted", "Colodore TED" },
-            { "yape-pal", "Yape PAL" },
-            { "yape-ntsc", "Yape NTSC" },
+            { "default", "Internal" },
+            { "colodore_ted", "Colodore" },
+            { "yape-pal", "Yape (PAL)" },
+            { "yape-ntsc", "Yape (NTSC)" },
             { NULL, NULL },
          },
-         "default"
+         "colodore_ted"
       },
 #elif defined(__XPET__)
       {
@@ -1719,7 +1717,7 @@ void retro_set_environment(retro_environment_t cb)
          "Video > CRTC Color Palette",
          "",
          {
-            { "default", "Default" },
+            { "default", "Internal" },
             { "amber", "Amber" },
             { "green", "Green" },
             { "white", "White" },
@@ -1733,7 +1731,7 @@ void retro_set_environment(retro_environment_t cb)
          "Video > CRTC Color Palette",
          "",
          {
-            { "default", "Default" },
+            { "default", "Internal" },
             { "amber", "Amber" },
             { "green", "Green" },
             { "white", "White" },
@@ -1745,10 +1743,10 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_external_palette",
          "Video > VIC-II Color Palette",
-         "Colodore is recommended for most accurate colors.",
+         "'Colodore' is recommended for most accurate colors.",
          {
-            { "default", "Default" },
-            { "colodore", "Colodore (PAL)" },
+            { "default", "Internal" },
+            { "colodore", "Colodore" },
             { "pepto-pal", "Pepto (PAL)" },
             //{ "pepto-palold", "Pepto (old PAL)" },
             { "pepto-ntsc", "Pepto (NTSC)" },
@@ -1767,12 +1765,22 @@ void retro_set_environment(retro_environment_t cb)
             { "vice", "VICE" },
             { NULL, NULL },
          },
-         "default"
+         "colodore"
       },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_color_gamma",
          "Video > VIC-II Color Gamma",
-         "Gamma for the internal default palette.",
+#elif defined(__XVIC__)
+         "vice_vic_color_gamma",
+         "Video > VIC Color Gamma",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_gamma",
+         "Video > TED Color Gamma",
+#endif
+         "Gamma for the internal palette.",
          {
             { "1000", "1.00" },
             { "1100", "1.10" },
@@ -1807,13 +1815,25 @@ void retro_set_environment(retro_environment_t cb)
             { "4000", "4.00" },
             { NULL, NULL },
          },
-         "2500"
+         "2800"
       },
       {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_color_saturation",
          "Video > VIC-II Color Saturation",
-         "Saturation for the internal default palette.",
+#elif defined(__XVIC__)
+         "vice_vic_color_saturation",
+         "Video > VIC Color Saturation",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_saturation",
+         "Video > TED Color Saturation",
+#endif
+         "Saturation for the internal palette.",
          {
+            { "200", "10\%" },
+            { "250", "12.5\%" },
+            { "300", "15\%" },
+            { "350", "17.5\%" },
             { "400", "20\%" },
             { "450", "22.5\%" },
             { "500", "25\%" },
@@ -1852,10 +1872,22 @@ void retro_set_environment(retro_environment_t cb)
          "1000"
       },
       {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_color_contrast",
          "Video > VIC-II Color Contrast",
-         "Contrast for the internal default palette.",
+#elif defined(__XVIC__)
+         "vice_vic_color_contrast",
+         "Video > VIC Color Contrast",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_contrast",
+         "Video > TED Color Contrast",
+#endif
+         "Contrast for the internal palette.",
          {
+            { "200", "10\%" },
+            { "250", "12.5\%" },
+            { "300", "15\%" },
+            { "350", "17.5\%" },
             { "400", "20\%" },
             { "450", "22.5\%" },
             { "500", "25\%" },
@@ -1891,13 +1923,25 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1000"
+         "1200"
       },
       {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_color_brightness",
          "Video > VIC-II Color Brightness",
-         "Brightness for the internal default palette.",
+#elif defined(__XVIC__)
+         "vice_vic_color_brightness",
+         "Video > VIC Color Brightness",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_brightness",
+         "Video > TED Color Brightness",
+#endif
+         "Brightness for the internal palette.",
          {
+            { "200", "10\%" },
+            { "250", "12.5\%" },
+            { "300", "15\%" },
+            { "350", "17.5\%" },
             { "400", "20\%" },
             { "450", "22.5\%" },
             { "500", "25\%" },
@@ -1933,7 +1977,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1000"
+         "900"
       },
 #endif
       {
@@ -3530,53 +3574,102 @@ static void update_variables(void)
 
       sprintf(RETROEXTPALNAME, "%s", var.value);
    }
+#endif
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_gamma";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_gamma";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_gamma";
+#endif
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int color_gamma = atoi(var.value);
 
-      if (retro_ui_finalized && RETROVICIICOLORGAMMA != color_gamma)
+      if (retro_ui_finalized && RETROCOLORGAMMA != color_gamma)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorGamma", color_gamma);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorGamma", color_gamma);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorGamma", color_gamma);
+#endif
 
-      RETROVICIICOLORGAMMA=color_gamma;
+      RETROCOLORGAMMA=color_gamma;
    }
-
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_saturation";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_saturation";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_saturation";
+#endif
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int color_saturation = atoi(var.value);
 
-      if (retro_ui_finalized && RETROVICIICOLORSATURATION != color_saturation)
+      if (retro_ui_finalized && RETROCOLORSATURATION != color_saturation)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorSaturation", color_saturation);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorSaturation", color_saturation);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorSaturation", color_saturation);
+#endif
 
-      RETROVICIICOLORSATURATION=color_saturation;
+      RETROCOLORSATURATION=color_saturation;
    }
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_contrast";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_contrast";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_contrast";
+#endif
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int color_contrast = atoi(var.value);
 
-      if (retro_ui_finalized && RETROVICIICOLORCONTRAST != color_contrast)
+      if (retro_ui_finalized && RETROCOLORCONTRAST != color_contrast)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorContrast", color_contrast);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorContrast", color_contrast);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorContrast", color_contrast);
+#endif
 
-      RETROVICIICOLORCONTRAST=color_contrast;
+      RETROCOLORCONTRAST=color_contrast;
    }
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_brightness";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_brightness";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_brightness";
+#endif
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int color_brightness = atoi(var.value);
 
-      if (retro_ui_finalized && RETROVICIICOLORBRIGHTNESS != color_brightness)
+      if (retro_ui_finalized && RETROCOLORBRIGHTNESS != color_brightness)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorBrightness", color_brightness);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorBrightness", color_brightness);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorBrightness", color_brightness);
+#endif
 
-      RETROVICIICOLORBRIGHTNESS=color_brightness;
+      RETROCOLORBRIGHTNESS=color_brightness;
    }
 #endif
 

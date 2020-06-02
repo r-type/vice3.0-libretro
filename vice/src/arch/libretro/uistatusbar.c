@@ -136,7 +136,7 @@ static void display_joyport(void)
     else
         sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2], 0));
 
-    if (RETROUSERPORTJOY != -1)
+    if (core_opt.UserportJoy != -1)
     {
         sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3], 0));
         sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4], 0));

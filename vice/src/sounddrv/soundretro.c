@@ -9,12 +9,11 @@
 
 #include "sound.h"
 
-extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
-extern int RETROSOUNDSAMPLERATE;
+#include "libretro-core.h"
 
 static int retro_sound_init(const char *param, int *speed, int *fragsize, int *fragnr, int *channels)
 {
-    *speed = RETROSOUNDSAMPLERATE;
+    *speed = core_opt.SoundSampleRate;
     //*fragsize = 32;
     //*fragnr = 0;
     //*channels = 1;

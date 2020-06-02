@@ -23,12 +23,12 @@
 #define RGB888(r, g, b) (((r * 255 / 31) << 16) | ((g * 255 / 31) << 8) | (b * 255 / 31))
 #define ARGB888(a, r, g, b) ((a << 24) | (r << 16) | (g << 8) | b)
 
-//DEVICES
+// Control devices
 #define RETRO_DEVICE_VICE_KEYBOARD RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_KEYBOARD, 0)
 #define RETRO_DEVICE_VICE_JOYSTICK RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
 
-//LOG
-#if  defined(__ANDROID__) || defined(ANDROID)
+// Log
+#if defined(__ANDROID__) || defined(ANDROID)
 #include <android/log.h>
 #define LOG_TAG "RetroArch.vice"
 #define LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
@@ -36,13 +36,13 @@
 #define LOGI printf
 #endif
 
-//TYPES
+// Types
 #define UINT16 uint16_t
 #define UINT32 uint32_t
 typedef uint32_t uint32;
 typedef uint8_t uint8;
 
-//SCREEN
+// Screen
 #if defined(__X128__)
 #define WINDOW_WIDTH    856
 #define WINDOW_HEIGHT   312
@@ -61,7 +61,7 @@ typedef uint8_t uint8;
 #endif
 #define RETRO_BMP_SIZE  (WINDOW_WIDTH * WINDOW_HEIGHT * 2)
 extern unsigned short int retro_bmp[RETRO_BMP_SIZE];
-extern int pix_bytes;
+extern unsigned int pix_bytes;
 
 #define MANUAL_CROP_OPTIONS \
    { \
@@ -75,7 +75,7 @@ extern int pix_bytes;
       { NULL, NULL }, \
    }
 
-//VKBD
+// VKBD
 #define NPLGN 11
 #define NLIGN 7
 #define NLETT 5
@@ -98,13 +98,13 @@ extern int vkbd_x_max;
 extern int vkbd_y_min;
 extern int vkbd_y_max;
 
-//STATUSBAR
+// Statusbar
 #define STATUSBAR_BOTTOM    0x01
 #define STATUSBAR_TOP       0x02
 #define STATUSBAR_BASIC     0x04
 #define STATUSBAR_MINIMAL   0x08
 
-//VARIABLES
+// Variables
 extern int cpuloop;
 extern int retroXS;
 extern int retroYS;
@@ -120,15 +120,47 @@ extern int imagename_timer;
 extern unsigned int opt_statusbar;
 extern unsigned int cur_port;
 extern unsigned int retro_region;
-extern int RETROUSERPORTJOY;
-
-//FUNCS
-extern void maincpu_mainloop_retro(void);
-extern long GetTicks(void);
 
 enum {
-	RUNSTATE_FIRST_START = 0,
-	RUNSTATE_LOADED_CONTENT,
-	RUNSTATE_RUNNING,
+    RUNSTATE_FIRST_START = 0,
+    RUNSTATE_LOADED_CONTENT,
+    RUNSTATE_RUNNING,
 };
+
+// Functions
+extern void maincpu_mainloop_retro(void);
+extern long GetTicks(void);
+extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
+
+// Core options
+struct libretro_core_options {
+    int Model;
+    int UserportJoy;
+    int AutostartWarp;
+    int DriveTrueEmulation;
+    int DriveSoundEmulation;
+    int AudioLeak;
+    int SoundSampleRate;
+    int SidEngine;
+    int SidModel;
+    int SidExtra;
+    int SidResidSampling;
+    int SidResidPassband;
+    int SidResidGain;
+    int SidResidFilterBias;
+    int SidResid8580FilterBias;
+    char ExternalPalette[RETRO_PATH_MAX];
+    int ColorGamma;
+    int ColorSaturation;
+    int ColorContrast;
+    int ColorBrightness;
+#if defined(__X128__)
+    int C128ColumnKey;
+    int Go64Mode;
+#elif defined(__XVIC__)
+    int VIC20Memory;
+#endif
+};
+
+extern struct libretro_core_options core_opt;
 #endif

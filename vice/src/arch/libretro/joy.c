@@ -66,11 +66,6 @@ int joystick_init_cmdline_options(void)
 
 int joy_arch_set_device(int port, int new_dev)
 {
-/*
-    if (new_dev < 0 || new_dev > JOYDEV_MAX) {
-        return -1;
-    }
-*/
     return 0;
 }
 

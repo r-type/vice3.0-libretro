@@ -259,8 +259,6 @@ void update_input(int disable_physical_cursor_keys)
     static int jbt[2][24] = {0};
     static int kbt[EMU_FUNCTION_COUNT] = {0};
     
-    if (!retro_load_ok)
-        return;
     now = GetTicks() / 1000;
 
     if (vkey_sticky && last_vkey_pressed != -1 && last_vkey_pressed > 0)

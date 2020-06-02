@@ -25,7 +25,7 @@
 struct video_canvas_s *RCANVAS;
 
 int machine_ui_done = 0;
-static int drive_led_on = 0, tape_led_on = 0;
+//static int drive_led_on = 0, tape_led_on = 0;
 
 static const cmdline_option_t cmdline_options[] = {
      { NULL }

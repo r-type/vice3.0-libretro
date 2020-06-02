@@ -1,31 +1,15 @@
 /*
- * ui.c - PSP user interface.
- *
- * Written by
- *  Akop Karapetyan <dev@psp.akop.org>
- *
- * This file is part of VICE, the Versatile Commodore Emulator.
- * See README for copyright notice.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
- *  02111-1307  USA.
+ * ui.c - libretro user interface.
  *
  */
 
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+
 #include "vice.h"
 #include "machine.h"
+#include "archdep.h"
 #include "cmdline.h"
 #include "uistatusbar.h"
 #include "resources.h"
@@ -35,6 +19,7 @@
 #if !defined(__XCBM5x0__)
 #include "userport_joystick.h"
 #endif
+
 #if defined(__XVIC__)
 #include "c64model.h"
 #include "vic20model.h"
@@ -63,43 +48,11 @@ BYTE c128memrom_kernal64_rom_original[C128_KERNAL64_ROM_SIZE] = {0};
 #include "c64memrom.h"
 BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 #endif
-#include "archdep.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
 
 #include "retro_files.h"
-
-int RETROTDE=0;
-int RETRODSE=0;
-int RETROSIDENGINE=0;
-int RETROSIDMODL=0;
-int RETROSIDEXTRA=0;
-int RETRORESIDSAMPLING=0;
-int RETROSOUNDSAMPLERATE=0;
-int RETRORESIDPASSBAND=0;
-int RETRORESIDGAIN=0;
-int RETRORESIDFILTERBIAS=0;
-int RETRORESID8580FILTERBIAS=0;
-int RETROAUDIOLEAK=0;
-int RETROMODEL=0;
-int RETROAUTOSTARTWARP=0;
-int RETROUSERPORTJOY=-1;
-char RETROEXTPALNAME[RETRO_PATH_MAX]="default";
-#if defined(__X128__)
-int RETROC128COLUMNKEY=1;
-int RETROC128GO64=0;
-#endif
+#include "libretro-core.h"
 #if defined(__XVIC__)
-int RETROVIC20MEM=0;
-int vic20mem_forced=-1;
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-int RETROVICIICOLORGAMMA=2200;
-int RETROVICIICOLORSATURATION=1250;
-int RETROVICIICOLORCONTRAST=1250;
-int RETROVICIICOLORBRIGHTNESS=1000;
+extern int vic20mem_forced;
 #endif
 
 int retro_ui_finalized = 0;
@@ -109,7 +62,7 @@ extern unsigned int opt_autoloadwarp;
 extern char retro_system_data_directory[RETRO_PATH_MAX];
 
 static const cmdline_option_t cmdline_options[] = {
-     { NULL }
+   { NULL }
 };
 
 /* Initialization  */
@@ -126,7 +79,7 @@ void ui_resources_shutdown(void)
 
 int ui_init(int argc, char **argv)
 {
-    return 0;
+   return 0;
 }
 
 void ui_shutdown(void)
@@ -139,27 +92,26 @@ void ui_check_mouse_cursor(void)
 
 void ui_error(const char *format, ...)
 {
-   char text[512];	   	
-   va_list	ap;	
+   char text[512];
+   va_list ap;
 
-   if (format == NULL)return;		
+   if (format == NULL)
+      return;
 
-   va_start(ap,format );		
-   vsprintf(text, format, ap);	
-   va_end(ap);	
+   va_start(ap, format);
+   vsprintf(text, format, ap);
+   va_end(ap);
    fprintf(stderr, "ui_error: %s\n", text);
 }
 
 int ui_emulation_is_paused(void)
 {
-    return 0;
+   return 0;
 }
 
 void ui_pause_emulation(int flag)
 {
 }
-
-/* Update all the menus according to the current settings.  */
 
 void ui_update_menus(void)
 {
@@ -211,85 +163,97 @@ int ui_init_finalize(void)
 
    /* Core options */
 #if defined(__XVIC__)
-   if (strcmp(RETROEXTPALNAME, "default") == 0)
+   if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("VICExternalPalette", 0);
    else
    {
       log_resources_set_int("VICExternalPalette", 1);
-      log_resources_set_string("VICPaletteFile", RETROEXTPALNAME);
+      log_resources_set_string("VICPaletteFile", core_opt.ExternalPalette);
    }
 #elif defined(__XPLUS4__)
-   if (strcmp(RETROEXTPALNAME, "default") == 0)
+   if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("TEDExternalPalette", 0);
    else
    {
       log_resources_set_int("TEDExternalPalette", 1);
-      log_resources_set_string("TEDPaletteFile", RETROEXTPALNAME);
+      log_resources_set_string("TEDPaletteFile", core_opt.ExternalPalette);
    }
 #elif defined(__XPET__)
-   if (strcmp(RETROEXTPALNAME, "default") == 0)
+   if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("CrtcExternalPalette", 0);
    else
    {
       log_resources_set_int("CrtcExternalPalette", 1);
-      log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
+      log_resources_set_string("CrtcPaletteFile", core_opt.ExternalPalette);
    }
 #elif defined(__XCBM2__)
-   if (strcmp(RETROEXTPALNAME, "default") == 0)
+   if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("CrtcExternalPalette", 0);
    else
    {
       log_resources_set_int("CrtcExternalPalette", 1);
-      log_resources_set_string("CrtcPaletteFile", RETROEXTPALNAME);
+      log_resources_set_string("CrtcPaletteFile", core_opt.ExternalPalette);
    }
 #else
-   if (strcmp(RETROEXTPALNAME, "default") == 0)
+   if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("VICIIExternalPalette", 0);
    else
    {
       log_resources_set_int("VICIIExternalPalette", 1);
-      log_resources_set_string("VICIIPaletteFile", RETROEXTPALNAME);
+      log_resources_set_string("VICIIPaletteFile", core_opt.ExternalPalette);
    }
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-   log_resources_set_int("VICIIColorGamma", RETROVICIICOLORGAMMA);
-   log_resources_set_int("VICIIColorSaturation", RETROVICIICOLORSATURATION);
-   log_resources_set_int("VICIIColorContrast", RETROVICIICOLORCONTRAST);
-   log_resources_set_int("VICIIColorBrightness", RETROVICIICOLORBRIGHTNESS);
+   log_resources_set_int("VICIIColorGamma", core_opt.ColorGamma);
+   log_resources_set_int("VICIIColorSaturation", core_opt.ColorSaturation);
+   log_resources_set_int("VICIIColorContrast", core_opt.ColorContrast);
+   log_resources_set_int("VICIIColorBrightness", core_opt.ColorBrightness);
+#elif defined(__XVIC__)
+   log_resources_set_int("VICColorGamma", core_opt.ColorGamma);
+   log_resources_set_int("VICColorSaturation", core_opt.ColorSaturation);
+   log_resources_set_int("VICColorContrast", core_opt.ColorContrast);
+   log_resources_set_int("VICColorBrightness", core_opt.ColorBrightness);
+#elif defined(__XPLUS4__)
+   log_resources_set_int("TEDColorGamma", core_opt.ColorGamma);
+   log_resources_set_int("TEDColorSaturation", core_opt.ColorSaturation);
+   log_resources_set_int("TEDColorContrast", core_opt.ColorContrast);
+   log_resources_set_int("TEDColorBrightness", core_opt.ColorBrightness);
 #endif
 
 #if !defined(__XCBM5x0__)
-   if (RETROUSERPORTJOY==-1)
+   if (core_opt.UserportJoy == -1)
       log_resources_set_int("UserportJoy", 0);
    else
    {
       log_resources_set_int("UserportJoy", 1);
-      log_resources_set_int("UserportJoyType", RETROUSERPORTJOY);
+      log_resources_set_int("UserportJoyType", core_opt.UserportJoy);
    }
 #endif
 
-   if (RETROTDE)
+   if (core_opt.DriveTrueEmulation)
       log_resources_set_int("DriveTrueEmulation", 1);
    else
       log_resources_set_int("DriveTrueEmulation", 0);
 
-   if (RETRODSE)
+   if (core_opt.DriveSoundEmulation)
    {
       log_resources_set_int("DriveSoundEmulation", 1);
-      log_resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+      log_resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
    }
    else
       log_resources_set_int("DriveSoundEmulation", 0);
    if (opt_autoloadwarp)
       log_resources_set_int("DriveSoundEmulationVolume", 0);
 
-   log_resources_set_int("AutostartWarp", RETROAUTOSTARTWARP);
+   log_resources_set_int("AutostartWarp", core_opt.AutostartWarp);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
-   log_resources_set_int("VICIIAudioLeak", RETROAUDIOLEAK);
+   log_resources_set_int("VICIIAudioLeak", core_opt.AudioLeak);
 #elif defined(__XVIC__)
-   log_resources_set_int("VICAudioLeak", RETROAUDIOLEAK);
+   log_resources_set_int("VICAudioLeak", core_opt.AudioLeak);
+#elif defined(__XPLUS4__)
+   log_resources_set_int("TEDAudioLeak", core_opt.AudioLeak);
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
@@ -334,53 +298,53 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__XPET__)
-   petmodel_set(RETROMODEL);
+   petmodel_set(core_opt.Model);
    keyboard_init();
 #elif defined(__XCBM2__) || defined(__XCBM5x0__)
-   cbm2model_set(RETROMODEL);
+   cbm2model_set(core_opt.Model);
 #elif defined(__XVIC__)
-   vic20model_set(RETROMODEL);
+   vic20model_set(core_opt.Model);
 #elif defined(__XPLUS4__)
-   plus4model_set(RETROMODEL);
+   plus4model_set(core_opt.Model);
 #elif defined(__X128__)
-   c128model_set(RETROMODEL);
+   c128model_set(core_opt.Model);
 #else
-   c64model_set(RETROMODEL);
+   c64model_set(core_opt.Model);
 #endif
 
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
-   if (RETROSIDMODL == 0xff)
-      resources_set_int("SidEngine", RETROSIDENGINE);
+   if (core_opt.SidModel == 0xff)
+      resources_set_int("SidEngine", core_opt.SidEngine);
    else
-      sid_set_engine_model(RETROSIDENGINE, RETROSIDMODL);
-   log_resources_set_int("SidResidSampling", RETRORESIDSAMPLING);
-   log_resources_set_int("SidResidPassband", RETRORESIDPASSBAND);
-   log_resources_set_int("SidResidGain", RETRORESIDGAIN);
-   log_resources_set_int("SidResidFilterBias", RETRORESIDFILTERBIAS);
-   log_resources_set_int("SidResid8580Passband", RETRORESIDPASSBAND);
-   log_resources_set_int("SidResid8580Gain", RETRORESIDGAIN);
-   log_resources_set_int("SidResid8580FilterBias", RETRORESID8580FILTERBIAS);
+      sid_set_engine_model(core_opt.SidEngine, core_opt.SidModel);
+   log_resources_set_int("SidResidSampling", core_opt.SidResidSampling);
+   log_resources_set_int("SidResidPassband", core_opt.SidResidPassband);
+   log_resources_set_int("SidResidGain", core_opt.SidResidGain);
+   log_resources_set_int("SidResidFilterBias", core_opt.SidResidFilterBias);
+   log_resources_set_int("SidResid8580Passband", core_opt.SidResidPassband);
+   log_resources_set_int("SidResid8580Gain", core_opt.SidResidGain);
+   log_resources_set_int("SidResid8580FilterBias", core_opt.SidResid8580FilterBias);
 
-   if (RETROSIDEXTRA)
+   if (core_opt.SidExtra)
    {
       log_resources_set_int("SidStereo", 1);
-      log_resources_set_int("SidStereoAddressStart", RETROSIDEXTRA);
+      log_resources_set_int("SidStereoAddressStart", core_opt.SidExtra);
    }
    else
       log_resources_set_int("SidStereo", 0);
 #endif
 
 #if defined(__X128__)
-   log_resources_set_int("Go64Mode", RETROC128GO64);
-   log_resources_set_int("C128ColumnKey", RETROC128COLUMNKEY);
+   log_resources_set_int("Go64Mode", core_opt.Go64Mode);
+   log_resources_set_int("C128ColumnKey", core_opt.C128ColumnKey);
 #endif
 
 #if defined(__XVIC__)
    unsigned int vic20mem = 0;
-   vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : RETROVIC20MEM;
+   vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : core_opt.VIC20Memory;
 
    // Super VIC uses memory blocks 1+2 by default
-   if (!vic20mem && RETROMODEL == VIC20MODEL_VIC21)
+   if (!vic20mem && core_opt.Model == VIC20MODEL_VIC21)
       vic20mem = 3;
 
    unsigned int vic_blocks = 0;
@@ -420,7 +384,7 @@ int ui_init_finalize(void)
    return 0;
 }
 
-char* ui_get_file(const char *format,...)
+char* ui_get_file(const char *format, ...)
 {
    return NULL;
 }

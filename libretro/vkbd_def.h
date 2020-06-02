@@ -47,7 +47,7 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ "J"  ,"J"   ,RETROK_j},
 	{ "K"  ,"K"   ,RETROK_k},
 	{ "L"  ,"L"   ,RETROK_l},
-	{ {31} ,{31}  ,RETROK_INSERT},
+	{ {31} ,{31}  ,RETROK_INSERT}, // £
 	{ "f5" ,"f6"  ,RETROK_F5},
 
 	// 33
@@ -64,22 +64,22 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ "f7" ,"f8"  ,RETROK_F7},
 
 	// 44
-	{ {25} ,{25}  ,RETROK_BACKQUOTE},
+	{ {25} ,{25}  ,RETROK_BACKQUOTE}, // Left arrow
 	{ "CTR","CTR" ,RETROK_TAB},
 	{ "+"  ,"+"   ,RETROK_MINUS},
 	{ "-"  ,"-"   ,RETROK_EQUALS},
 	{ "@"  ,"@"   ,RETROK_LEFTBRACKET},
 	{ "*"  ,"*"   ,RETROK_RIGHTBRACKET},
-	{ {26} ,{26}  ,RETROK_DELETE},
+	{ {26} ,{7}   ,RETROK_DELETE}, // Up arrow / Pi
 	{ ":"  ,"["   ,RETROK_SEMICOLON},
 	{ ";"  ,"]"   ,RETROK_QUOTE},
 	{ "="  ,"="   ,RETROK_BACKSLASH},
-	{ "STB","STB" ,-3},
+	{ "STB","STB" ,-3},  // Statusbar
 
 	// 55
 	{ {24} ,{24}  ,RETROK_LCTRL},
 	{ "R/S","R/S" ,RETROK_ESCAPE},	
-	{ "S/L","S/L" ,-5},
+	{ "S/L","S/L" ,-5},  // ShiftLock
 	{ "LSH","LSH" ,RETROK_LSHIFT},
 	{ "RSH","RSH" ,RETROK_RSHIFT},
 	{ "RST","RST" ,RETROK_PAGEUP},
@@ -87,7 +87,7 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ "DEL","DEL" ,RETROK_BACKSPACE},
 	{ {30} ,{30}  ,RETROK_UP},
 	{ "RET","RET" ,RETROK_RETURN},
-	{ "JOY","JOY" ,-4},
+	{ "JOY","JOY" ,-4},  // Switch joyport
 
 	// 66
 	{ {17} ,{17}  ,-2},  // Reset
@@ -100,7 +100,7 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ {27} ,{27}  ,RETROK_LEFT},
 	{ {28} ,{28}  ,RETROK_DOWN},
 	{ {29} ,{29}  ,RETROK_RIGHT},
-	{ "TTF","TTF" ,-20},
+	{ "TTF","TTF" ,-20}, // Toggle turbo fire
 };
 
 #endif

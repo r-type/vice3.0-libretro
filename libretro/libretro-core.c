@@ -40,15 +40,13 @@ int cpuloop = 1;
 
 // VKBD 
 extern int SHOWKEY;
-unsigned int opt_vkbd_theme;
+unsigned int opt_vkbd_theme = 0;
 unsigned int opt_vkbd_alpha = 204;
 unsigned int vkbd_alpha = 204;
 
 // Core vars
 extern char core_key_state[512];
 extern char core_old_key_state[512];
-char slash = FSDEV_DIR_SEP_CHR;
-bool retro_load_ok = false;
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char full_path[RETRO_PATH_MAX] = {0};
@@ -59,14 +57,14 @@ static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
-int mapper_keys[36] = { 0 };
+int mapper_keys[36] = {0};
 unsigned int vice_devices[5];
 unsigned int opt_mapping_options_display;
 unsigned int opt_video_options_display;
 unsigned int opt_audio_options_display;
 unsigned int retro_region;
 static double retro_refresh;
-static unsigned int prev_audio_sample_rate = 0;
+static unsigned int prev_sound_sample_rate = 0;
 
 extern void retro_poll_event();
 extern int retro_ui_finalized;
@@ -76,51 +74,26 @@ extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
 
 // Core geometry
-int retroXS=0;
-int retroYS=0;
-int retroXS_offset=0;
-int retroYS_offset=0;
-int defaultW=WINDOW_WIDTH;
-int defaultH=WINDOW_HEIGHT;
-int retroW=WINDOW_WIDTH;
-int retroH=WINDOW_HEIGHT;
-int lastW=0;
-int lastH=0;
+int retroXS = 0;
+int retroYS = 0;
+int retroXS_offset = 0;
+int retroYS_offset = 0;
+int defaultW = WINDOW_WIDTH;
+int defaultH = WINDOW_HEIGHT;
+int retroW = WINDOW_WIDTH;
+int retroH = WINDOW_HEIGHT;
+int lastW = 0;
+int lastH = 0;
 
-int pix_bytes = 2;
+unsigned int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
 unsigned short int retro_bmp[RETRO_BMP_SIZE];
 
-// VICE options
-extern int RETROTDE;
-extern int RETRODSE;
-extern int RETROSIDENGINE;
-extern int RETROSIDMODL;
-extern int RETROSIDEXTRA;
-extern int RETRORESIDSAMPLING;
-extern int RETROSOUNDSAMPLERATE;
-extern int RETRORESIDPASSBAND;
-extern int RETRORESIDGAIN;
-extern int RETRORESIDFILTERBIAS;
-extern int RETRORESID8580FILTERBIAS;
-extern int RETROAUDIOLEAK;
-extern int RETROMODEL;
-extern int RETROAUTOSTARTWARP;
-extern int RETROUSERPORTJOY;
-extern char RETROEXTPALNAME[512];
-#if defined(__X128__)
-extern int RETROC128COLUMNKEY;
-extern int RETROC128GO64;
-#endif
+// Core options
+struct libretro_core_options core_opt;
+
 #if defined(__XVIC__)
-extern int RETROVIC20MEM;
-extern int vic20mem_forced;
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-extern int RETROVICIICOLORGAMMA;
-extern int RETROVICIICOLORSATURATION;
-extern int RETROVICIICOLORCONTRAST;
-extern int RETROVICIICOLORBRIGHTNESS;
+int vic20mem_forced = -1;
 #endif
 
 unsigned int zoom_mode_id = 0;
@@ -174,7 +147,7 @@ extern int cur_port_locked;
 extern int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
-//VICE DEF BEGIN
+// VICE includes
 #if defined(__X64__) || defined(__X64SC__)
 #include "c64.h"
 #include "c64mem.h"
@@ -207,7 +180,6 @@ void cartridge_trigger_freeze(void) {}
 #include "vic20cart.h"
 void cartridge_trigger_freeze(void) {}
 #endif
-//VICE DEF END
 
 char retro_save_directory[RETRO_PATH_MAX] = {0};
 char retro_temp_directory[RETRO_PATH_MAX] = {0};
@@ -237,7 +209,7 @@ int disk_label_mode = DISK_LABEL_MODE_ASCII_OR_CAMELCASE;
 
 static char* x_strdup(const char* str)
 {
-    return str ? strdup(str) : NULL;
+   return str ? strdup(str) : NULL;
 }
 
 void retro_set_input_state(retro_input_state_t cb)
@@ -271,7 +243,7 @@ int loadcmdfile(const char *argv)
 
 #include <ctype.h>
 
-//Args for experimental_cmdline
+// Args for experimental_cmdline
 static char ARGUV[64][1024];
 static unsigned char ARGUC=0;
 
@@ -449,7 +421,7 @@ static int process_cmdline(const char* argv)
         {
             argv = trimwhitespace(CMDFILE);
             log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", argv);
-            RETROMODEL = 99; // set model to unknown for custom settings - prevents overriding of command line options
+            core_opt.Model = 99; // set model to unknown for custom settings - prevents overriding of command line options
         }
         else
         {
@@ -672,7 +644,7 @@ static int process_cmdline(const char* argv)
             {
                 // Re-parse command line from M3U #COMMAND:
                 log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", dc->command);
-                RETROMODEL = 99; // set model to unknown for custom settings - prevents overriding of command line options
+                core_opt.Model = 99; // set model to unknown for custom settings - prevents overriding of command line options
                 parse_cmdline(dc->command);
                 // Reset parameters list for Vice
                 PARAMCOUNT = 0;
@@ -799,7 +771,7 @@ static void autodetect_drivetype(int unit)
             {
                 case 1541:
                 case 1571:
-                    resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+                    resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
                     break;
                 case 1581:
                 default:
@@ -929,7 +901,7 @@ void update_from_vice()
             fprintf(stdout, "[libretro-vice]: Found 'NTSC' or '(USA)' in: '%s'\n", autostartString);
 
             request_model_set = C64MODEL_C64_NTSC;
-            if (RETROMODEL == C64MODEL_C64C_PAL)
+            if (core_opt.Model == C64MODEL_C64C_PAL)
                 request_model_set = C64MODEL_C64C_NTSC;
         }
 
@@ -938,7 +910,7 @@ void update_from_vice()
             fprintf(stdout, "[libretro-vice]: Found 'PAL' or '(Europe)' in: '%s'\n", autostartString);
 
             request_model_set = C64MODEL_C64_PAL;
-            if (RETROMODEL == C64MODEL_C64C_NTSC)
+            if (core_opt.Model == C64MODEL_C64C_NTSC)
                 request_model_set = C64MODEL_C64C_PAL;
         }
     }
@@ -1688,30 +1660,30 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vic20_external_palette",
          "Video > VIC Color Palette",
-         "Colodore is recommended for the most accurate colors.",
+         "'Colodore' is recommended for the most accurate colors.",
          {
-            { "default", "Default" },
-            { "colodore_vic", "Colodore VIC" },
-            { "mike-ntsc", "Mike NTSC" },
-            { "mike-pal", "Mike PAL" },
+            { "default", "Internal" },
+            { "colodore_vic", "Colodore" },
+            { "mike-pal", "Mike (PAL)" },
+            { "mike-ntsc", "Mike (NTSC)" },
             { "vice", "Vice" },
             { NULL, NULL },
          },
-         "default"
+         "colodore_vic"
       },
 #elif defined(__XPLUS4__)
       {
          "vice_plus4_external_palette",
          "Video > TED Color Palette",
-         "Colodore is recommended for the most accurate colors.",
+         "'Colodore' is recommended for the most accurate colors.",
          {
-            { "default", "Default" },
-            { "colodore_ted", "Colodore TED" },
-            { "yape-pal", "Yape PAL" },
-            { "yape-ntsc", "Yape NTSC" },
+            { "default", "Internal" },
+            { "colodore_ted", "Colodore" },
+            { "yape-pal", "Yape (PAL)" },
+            { "yape-ntsc", "Yape (NTSC)" },
             { NULL, NULL },
          },
-         "default"
+         "colodore_ted"
       },
 #elif defined(__XPET__)
       {
@@ -1719,7 +1691,7 @@ void retro_set_environment(retro_environment_t cb)
          "Video > CRTC Color Palette",
          "",
          {
-            { "default", "Default" },
+            { "default", "Internal" },
             { "amber", "Amber" },
             { "green", "Green" },
             { "white", "White" },
@@ -1733,7 +1705,7 @@ void retro_set_environment(retro_environment_t cb)
          "Video > CRTC Color Palette",
          "",
          {
-            { "default", "Default" },
+            { "default", "Internal" },
             { "amber", "Amber" },
             { "green", "Green" },
             { "white", "White" },
@@ -1745,10 +1717,10 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_external_palette",
          "Video > VIC-II Color Palette",
-         "Colodore is recommended for most accurate colors.",
+         "'Colodore' is recommended for most accurate colors.",
          {
-            { "default", "Default" },
-            { "colodore", "Colodore (PAL)" },
+            { "default", "Internal" },
+            { "colodore", "Colodore" },
             { "pepto-pal", "Pepto (PAL)" },
             //{ "pepto-palold", "Pepto (old PAL)" },
             { "pepto-ntsc", "Pepto (NTSC)" },
@@ -1767,12 +1739,22 @@ void retro_set_environment(retro_environment_t cb)
             { "vice", "VICE" },
             { NULL, NULL },
          },
-         "default"
+         "colodore"
       },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_color_gamma",
          "Video > VIC-II Color Gamma",
-         "Gamma for the internal default palette.",
+#elif defined(__XVIC__)
+         "vice_vic_color_gamma",
+         "Video > VIC Color Gamma",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_gamma",
+         "Video > TED Color Gamma",
+#endif
+         "Gamma for the internal palette.",
          {
             { "1000", "1.00" },
             { "1100", "1.10" },
@@ -1807,13 +1789,25 @@ void retro_set_environment(retro_environment_t cb)
             { "4000", "4.00" },
             { NULL, NULL },
          },
-         "2500"
+         "2800"
       },
       {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_color_saturation",
          "Video > VIC-II Color Saturation",
-         "Saturation for the internal default palette.",
+#elif defined(__XVIC__)
+         "vice_vic_color_saturation",
+         "Video > VIC Color Saturation",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_saturation",
+         "Video > TED Color Saturation",
+#endif
+         "Saturation for the internal palette.",
          {
+            { "200", "10\%" },
+            { "250", "12.5\%" },
+            { "300", "15\%" },
+            { "350", "17.5\%" },
             { "400", "20\%" },
             { "450", "22.5\%" },
             { "500", "25\%" },
@@ -1852,10 +1846,22 @@ void retro_set_environment(retro_environment_t cb)
          "1000"
       },
       {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_color_contrast",
          "Video > VIC-II Color Contrast",
-         "Contrast for the internal default palette.",
+#elif defined(__XVIC__)
+         "vice_vic_color_contrast",
+         "Video > VIC Color Contrast",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_contrast",
+         "Video > TED Color Contrast",
+#endif
+         "Contrast for the internal palette.",
          {
+            { "200", "10\%" },
+            { "250", "12.5\%" },
+            { "300", "15\%" },
+            { "350", "17.5\%" },
             { "400", "20\%" },
             { "450", "22.5\%" },
             { "500", "25\%" },
@@ -1891,13 +1897,25 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1000"
+         "1200"
       },
       {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_color_brightness",
          "Video > VIC-II Color Brightness",
-         "Brightness for the internal default palette.",
+#elif defined(__XVIC__)
+         "vice_vic_color_brightness",
+         "Video > VIC Color Brightness",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_brightness",
+         "Video > TED Color Brightness",
+#endif
+         "Brightness for the internal palette.",
          {
+            { "200", "10\%" },
+            { "250", "12.5\%" },
+            { "300", "15\%" },
+            { "350", "17.5\%" },
             { "400", "20\%" },
             { "450", "22.5\%" },
             { "500", "25\%" },
@@ -1933,7 +1951,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1000"
+         "900"
       },
 #endif
       {
@@ -1976,13 +1994,15 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20\%"
       },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
          "vice_audio_leak_emulation",
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "Audio > VIC-II Audio Leak Emulation",
 #elif defined(__XVIC__)
          "Audio > VIC Audio Leak Emulation",
+#elif defined(__XPLUS4__)
+         "Audio > TED Audio Leak Emulation",
 #endif
          "",
          {
@@ -2807,31 +2827,29 @@ static void update_variables(void)
    {
       if (retro_ui_finalized)
       {
-         if (strcmp(var.value, "warp") == 0 && !RETROAUTOSTARTWARP)
+         if (!strcmp(var.value, "warp") && !core_opt.AutostartWarp)
             log_resources_set_int("AutostartWarp", 1);
-         else if (RETROAUTOSTARTWARP)
+         else if (core_opt.AutostartWarp)
             log_resources_set_int("AutostartWarp", 0);
       }
 
-      if (strcmp(var.value, "warp") == 0) RETROAUTOSTARTWARP=1;
-      else RETROAUTOSTARTWARP=0;
+      if (!strcmp(var.value, "warp")) core_opt.AutostartWarp = 1;
+      else core_opt.AutostartWarp = 0;
 
-      if (strcmp(var.value, "disabled") == 0)
-         noautostart = true;
-      else
-         noautostart = false;
+      if (!strcmp(var.value, "disabled")) noautostart = true;
+      else noautostart = false;
    }
 
    var.key = "vice_autoloadwarp";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_autoloadwarp=0;
-      else opt_autoloadwarp=1;
+      if (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
+      else opt_autoloadwarp = 1;
 
       // Silently restore sounds when autoloadwarp is disabled and DSE is enabled
-      if (retro_ui_finalized && RETRODSE && RETROTDE && !opt_autoloadwarp)
-         resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+      if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation && !opt_autoloadwarp)
+         resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
    }
 
    var.key = "vice_work_disk";
@@ -2841,15 +2859,15 @@ static void update_variables(void)
       int work_disk_type = opt_work_disk_type;
       int work_disk_unit = opt_work_disk_unit;
 
-      if (strcmp(var.value, "disabled") == 0) opt_work_disk_type=0;
+      if (!strcmp(var.value, "disabled")) opt_work_disk_type = 0;
       else
       {
-         if (strstr(var.value, "_d64")) opt_work_disk_type=DISK_IMAGE_TYPE_D64;
-         else if (strstr(var.value, "_d71")) opt_work_disk_type=DISK_IMAGE_TYPE_D71;
-         else if (strstr(var.value, "_d81")) opt_work_disk_type=DISK_IMAGE_TYPE_D81;
+         if (strstr(var.value, "_d64")) opt_work_disk_type = DISK_IMAGE_TYPE_D64;
+         else if (strstr(var.value, "_d71")) opt_work_disk_type = DISK_IMAGE_TYPE_D71;
+         else if (strstr(var.value, "_d81")) opt_work_disk_type = DISK_IMAGE_TYPE_D81;
 
-         if (strstr(var.value, "8_")) opt_work_disk_unit=8;
-         else if (strstr(var.value, "9_")) opt_work_disk_unit=9;
+         if (strstr(var.value, "8_")) opt_work_disk_unit = 8;
+         else if (strstr(var.value, "9_")) opt_work_disk_unit = 9;
       }
 
       if (work_disk_type != opt_work_disk_type || work_disk_unit != opt_work_disk_unit)
@@ -2862,18 +2880,18 @@ static void update_variables(void)
    {
       if (retro_ui_finalized)
       {
-         if (strcmp(var.value, "disabled") == 0 && RETROTDE)
+         if (!strcmp(var.value, "disabled") && core_opt.DriveTrueEmulation)
             log_resources_set_int("DriveTrueEmulation", 0);
-         else if (strcmp(var.value, "enabled") == 0 && !RETROTDE)
+         else if (!strcmp(var.value, "enabled") && !core_opt.DriveTrueEmulation)
             log_resources_set_int("DriveTrueEmulation", 1);
       }
 
-      if (strcmp(var.value, "disabled") == 0) RETROTDE=0;
-      else RETROTDE=1;
+      if (!strcmp(var.value, "disabled")) core_opt.DriveTrueEmulation = 0;
+      else core_opt.DriveTrueEmulation = 1;
 
       // Silently restore sounds when TDE and DSE is enabled
-      if (retro_ui_finalized && RETRODSE && RETROTDE)
-         resources_set_int("DriveSoundEmulationVolume", RETRODSE);
+      if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation)
+         resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
    }
 
    var.key = "vice_drive_sound_emulation";
@@ -2882,9 +2900,9 @@ static void update_variables(void)
    {
       int val = atoi(var.value) * 20;
 
-      if (retro_ui_finalized && RETRODSE != val)
+      if (retro_ui_finalized && core_opt.DriveSoundEmulation != val)
       {
-         if (strcmp(var.value, "disabled") == 0)
+         if (!strcmp(var.value, "disabled"))
          {
             log_resources_set_int("DriveSoundEmulation", 0);
             log_resources_set_int("DriveSoundEmulationVolume", 0);
@@ -2896,33 +2914,35 @@ static void update_variables(void)
          }
       }
 
-      RETRODSE=val;
+      core_opt.DriveSoundEmulation = val;
 
       // Silently mute sounds without TDE,
       // because motor sound will not stop if TDE is changed during motor spinning
       // and also with autoloadwarping, because warping is muted anyway
-      if (retro_ui_finalized && RETRODSE && (!RETROTDE || opt_autoloadwarp))
+      if (retro_ui_finalized && core_opt.DriveSoundEmulation && (!core_opt.DriveTrueEmulation || opt_autoloadwarp))
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    var.key = "vice_audio_leak_emulation";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int audioleak=0;
+      int audioleak = 0;
       opt_audio_leak_volume=atoi(var.value);
 
-      if (strcmp(var.value, "disabled") == 0) audioleak=0;
-      else audioleak=1;
+      if (!strcmp(var.value, "disabled")) audioleak = 0;
+      else audioleak = 1;
 
-      if (retro_ui_finalized && RETROAUDIOLEAK != audioleak)
+      if (retro_ui_finalized && core_opt.AudioLeak != audioleak)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIAudioLeak", audioleak);
 #elif defined(__XVIC__)
          log_resources_set_int("VICAudioLeak", audioleak);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDAudioLeak", audioleak);
 #endif
-      RETROAUDIOLEAK=audioleak;
+      core_opt.AudioLeak = audioleak;
    }
 #endif
 
@@ -2930,7 +2950,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      RETROSOUNDSAMPLERATE=atoi(var.value);
+      core_opt.SoundSampleRate = atoi(var.value);
    }
 
 #if defined(__XVIC__)
@@ -2938,40 +2958,40 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int modl=0;
+      int model = 0;
 
-      if (strcmp(var.value, "VIC20 PAL") == 0) modl=VIC20MODEL_VIC20_PAL;
-      else if (strcmp(var.value, "VIC20 NTSC") == 0) modl=VIC20MODEL_VIC20_NTSC;
-      else if (strcmp(var.value, "VIC21") == 0) modl=VIC20MODEL_VIC21;
+      if (!strcmp(var.value, "VIC20 PAL")) model = VIC20MODEL_VIC20_PAL;
+      else if (!strcmp(var.value, "VIC20 NTSC")) model = VIC20MODEL_VIC20_NTSC;
+      else if (!strcmp(var.value, "VIC21")) model = VIC20MODEL_VIC21;
 
-      if (retro_ui_finalized && RETROMODEL != modl)
+      if (retro_ui_finalized && core_opt.Model != model)
       {
-         vic20model_set(modl);
+         vic20model_set(model);
          // Memory expansion needs to be reseted to get updated
-         RETROVIC20MEM=0xff;
+         core_opt.VIC20Memory = 0xff;
       }
 
-      RETROMODEL=modl;
+      core_opt.Model = model;
    }
 
    var.key = "vice_vic20_memory_expansions";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int vic20mem=0;
+      int vic20mem = 0;
 
-      if (strcmp(var.value, "none") == 0) vic20mem=0;
-      else if (strcmp(var.value, "3kB") == 0) vic20mem=1;
-      else if (strcmp(var.value, "8kB") == 0) vic20mem=2;
-      else if (strcmp(var.value, "16kB") == 0) vic20mem=3;
-      else if (strcmp(var.value, "24kB") == 0) vic20mem=4;
-      else if (strcmp(var.value, "all") == 0) vic20mem=5;
+      if (!strcmp(var.value, "none")) vic20mem = 0;
+      else if (!strcmp(var.value, "3kB")) vic20mem = 1;
+      else if (!strcmp(var.value, "8kB")) vic20mem = 2;
+      else if (!strcmp(var.value, "16kB")) vic20mem = 3;
+      else if (!strcmp(var.value, "24kB")) vic20mem = 4;
+      else if (!strcmp(var.value, "all")) vic20mem = 5;
 
       // Super VIC uses memory blocks 1+2 by default
-      if (!vic20mem && RETROMODEL == VIC20MODEL_VIC21)
+      if (!vic20mem && core_opt.Model == VIC20MODEL_VIC21)
          vic20mem = 3;
 
-      if (retro_ui_finalized && RETROVIC20MEM != vic20mem)
+      if (retro_ui_finalized && core_opt.VIC20Memory != vic20mem)
       {
          unsigned int vic_blocks = 0;
          switch (vic20mem)
@@ -3008,188 +3028,188 @@ static void update_variables(void)
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
       }
 
-      RETROVIC20MEM=vic20mem;
+      core_opt.VIC20Memory = vic20mem;
    }
 #elif defined(__XPLUS4__)
    var.key = "vice_plus4_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int modl=0;
+      int model = 0;
 
-      if (strcmp(var.value, "C16 PAL") == 0) modl=PLUS4MODEL_C16_PAL;
-      else if (strcmp(var.value, "C16 NTSC") == 0) modl=PLUS4MODEL_C16_NTSC;
-      else if (strcmp(var.value, "PLUS4 PAL") == 0) modl=PLUS4MODEL_PLUS4_PAL;
-      else if (strcmp(var.value, "PLUS4 NTSC") == 0) modl=PLUS4MODEL_PLUS4_NTSC;
-      else if (strcmp(var.value, "V364 NTSC") == 0) modl=PLUS4MODEL_V364_NTSC;
-      else if (strcmp(var.value, "232 NTSC") == 0) modl=PLUS4MODEL_232_NTSC;
+      if (!strcmp(var.value, "C16 PAL")) model = PLUS4MODEL_C16_PAL;
+      else if (!strcmp(var.value, "C16 NTSC")) model = PLUS4MODEL_C16_NTSC;
+      else if (!strcmp(var.value, "PLUS4 PAL")) model = PLUS4MODEL_PLUS4_PAL;
+      else if (!strcmp(var.value, "PLUS4 NTSC")) model = PLUS4MODEL_PLUS4_NTSC;
+      else if (!strcmp(var.value, "V364 NTSC")) model = PLUS4MODEL_V364_NTSC;
+      else if (!strcmp(var.value, "232 NTSC")) model = PLUS4MODEL_232_NTSC;
 
-      if (retro_ui_finalized && RETROMODEL != modl)
-         plus4model_set(modl);
+      if (retro_ui_finalized && core_opt.Model != model)
+         plus4model_set(model);
 
-      RETROMODEL=modl;
+      core_opt.Model = model;
    }
 #elif defined(__X128__)
    var.key = "vice_c128_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int modl=0;
+      int model = 0;
 
-      if (strcmp(var.value, "C128 PAL") == 0) modl=C128MODEL_C128_PAL;
-      else if (strcmp(var.value, "C128 NTSC") == 0) modl=C128MODEL_C128_NTSC;
-      else if (strcmp(var.value, "C128 DCR PAL") == 0) modl=C128MODEL_C128DCR_PAL;
-      else if (strcmp(var.value, "C128 DCR NTSC") == 0) modl=C128MODEL_C128DCR_NTSC;
+      if (!strcmp(var.value, "C128 PAL")) model = C128MODEL_C128_PAL;
+      else if (!strcmp(var.value, "C128 NTSC")) model = C128MODEL_C128_NTSC;
+      else if (!strcmp(var.value, "C128 DCR PAL")) model = C128MODEL_C128DCR_PAL;
+      else if (!strcmp(var.value, "C128 DCR NTSC")) model = C128MODEL_C128DCR_NTSC;
 
-      if (retro_ui_finalized && RETROMODEL != modl)
-         c128model_set(modl);
+      if (retro_ui_finalized && core_opt.Model != model)
+         c128model_set(model);
 
-      RETROMODEL=modl;
+      core_opt.Model = model;
    }
 
    var.key = "vice_c128_video_output";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int c128columnkey=1;
+      int c128columnkey = 1;
 
-      if (strcmp(var.value, "VICII") == 0) c128columnkey=1;
-      else if (strcmp(var.value, "VDC") == 0) c128columnkey=0;
+      if (!strcmp(var.value, "VICII")) c128columnkey = 1;
+      else if (!strcmp(var.value, "VDC")) c128columnkey = 0;
 
-      if (retro_ui_finalized && RETROC128COLUMNKEY != c128columnkey)
+      if (retro_ui_finalized && core_opt.C128ColumnKey != c128columnkey)
       {
          log_resources_set_int("C128ColumnKey", c128columnkey);
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
       }
 
-      RETROC128COLUMNKEY=c128columnkey;
+      core_opt.C128ColumnKey = c128columnkey;
    }
 
    var.key = "vice_c128_go64";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int c128go64=0;
+      int c128go64 = 0;
 
-      if (strcmp(var.value, "disabled") == 0) c128go64=0;
-      else if (strcmp(var.value, "enabled") == 0) c128go64=1;
+      if (!strcmp(var.value, "disabled")) c128go64 = 0;
+      else if (!strcmp(var.value, "enabled")) c128go64 = 1;
 
       // Force VIC-II with GO64
       if (c128go64)
       {
-         RETROC128COLUMNKEY=1;
+         core_opt.C128ColumnKey = 1;
          if (retro_ui_finalized)
             log_resources_set_int("C128ColumnKey", 1);
       }
 
-      if (retro_ui_finalized && RETROC128GO64 != c128go64)
+      if (retro_ui_finalized && core_opt.Go64Mode != c128go64)
       {
          log_resources_set_int("Go64Mode", c128go64);
-         // Skip reset for now, because going into 64 mode while running produces VDC related endless garbage?!
+         // Skip reset for now, because going into 64 mode while running produces VDC related endless garbage, but typing GO64 works?!
          //machine_trigger_reset(MACHINE_RESET_MODE_HARD);
       }
-      RETROC128GO64=c128go64;
+      core_opt.Go64Mode = c128go64;
    }
 #elif defined(__XPET__)
    var.key = "vice_pet_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int modl=0;
+      int model = 0;
 
-      if (strcmp(var.value, "2001") == 0) modl=PETMODEL_2001;
-      else if (strcmp(var.value, "3008") == 0) modl=PETMODEL_3008;
-      else if (strcmp(var.value, "3016") == 0) modl=PETMODEL_3016;
-      else if (strcmp(var.value, "3032") == 0) modl=PETMODEL_3032;
-      else if (strcmp(var.value, "3032B") == 0) modl=PETMODEL_3032B;
-      else if (strcmp(var.value, "4016") == 0) modl=PETMODEL_4016;
-      else if (strcmp(var.value, "4032") == 0) modl=PETMODEL_4032;
-      else if (strcmp(var.value, "4032B") == 0) modl=PETMODEL_4032B;
-      else if (strcmp(var.value, "8032") == 0) modl=PETMODEL_8032;
-      else if (strcmp(var.value, "8096") == 0) modl=PETMODEL_8096;
-      else if (strcmp(var.value, "8296") == 0) modl=PETMODEL_8296;
-      else if (strcmp(var.value, "SUPERPET") == 0) modl=PETMODEL_SUPERPET;
+      if (!strcmp(var.value, "2001")) model = PETMODEL_2001;
+      else if (!strcmp(var.value, "3008")) model = PETMODEL_3008;
+      else if (!strcmp(var.value, "3016")) model = PETMODEL_3016;
+      else if (!strcmp(var.value, "3032")) model = PETMODEL_3032;
+      else if (!strcmp(var.value, "3032B")) model = PETMODEL_3032B;
+      else if (!strcmp(var.value, "4016")) model = PETMODEL_4016;
+      else if (!strcmp(var.value, "4032")) model = PETMODEL_4032;
+      else if (!strcmp(var.value, "4032B")) model = PETMODEL_4032B;
+      else if (!strcmp(var.value, "8032")) model = PETMODEL_8032;
+      else if (!strcmp(var.value, "8096")) model = PETMODEL_8096;
+      else if (!strcmp(var.value, "8296")) model = PETMODEL_8296;
+      else if (!strcmp(var.value, "SUPERPET")) model = PETMODEL_SUPERPET;
       
-      if (retro_ui_finalized && RETROMODEL != modl)
+      if (retro_ui_finalized && core_opt.Model != model)
       {
-         petmodel_set(modl);
+         petmodel_set(model);
          // Keyboard layout refresh required. All models below 8032 except B models use graphics layout, others use business.
          keyboard_init();
       }
-      RETROMODEL=modl;
+      core_opt.Model = model;
    }
 #elif defined(__XCBM2__)
    var.key = "vice_cbm2_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int modl=0;
+      int model = 0;
 
-      if (strcmp(var.value, "610 PAL") == 0) modl=CBM2MODEL_610_PAL;
-      else if (strcmp(var.value, "610 NTSC") == 0) modl=CBM2MODEL_610_NTSC;
-      else if (strcmp(var.value, "620 PAL") == 0) modl=CBM2MODEL_620_PAL;
-      else if (strcmp(var.value, "620 NTSC") == 0) modl=CBM2MODEL_620_NTSC;
-      //else if (strcmp(var.value, "620PLUS PAL") == 0) modl=CBM2MODEL_620PLUS_PAL;
-      //else if (strcmp(var.value, "620PLUS NTSC") == 0) modl=CBM2MODEL_620PLUS_NTSC;
-      else if (strcmp(var.value, "710 NTSC") == 0) modl=CBM2MODEL_710_NTSC;
-      else if (strcmp(var.value, "720 NTSC") == 0) modl=CBM2MODEL_720_NTSC;
-      else if (strcmp(var.value, "720PLUS NTSC") == 0) modl=CBM2MODEL_720PLUS_NTSC;
+      if (!strcmp(var.value, "610 PAL")) model = CBM2MODEL_610_PAL;
+      else if (!strcmp(var.value, "610 NTSC")) model = CBM2MODEL_610_NTSC;
+      else if (!strcmp(var.value, "620 PAL")) model = CBM2MODEL_620_PAL;
+      else if (!strcmp(var.value, "620 NTSC")) model = CBM2MODEL_620_NTSC;
+      //else if (!strcmp(var.value, "620PLUS PAL")) model = CBM2MODEL_620PLUS_PAL;
+      //else if (!strcmp(var.value, "620PLUS NTSC")) model = CBM2MODEL_620PLUS_NTSC;
+      else if (!strcmp(var.value, "710 NTSC")) model = CBM2MODEL_710_NTSC;
+      else if (!strcmp(var.value, "720 NTSC")) model = CBM2MODEL_720_NTSC;
+      else if (!strcmp(var.value, "720PLUS NTSC")) model = CBM2MODEL_720PLUS_NTSC;
 
-      if (retro_ui_finalized && RETROMODEL != modl)
-         cbm2model_set(modl);
+      if (retro_ui_finalized && core_opt.Model != model)
+         cbm2model_set(model);
 
-      RETROMODEL=modl;
+      core_opt.Model = model;
    }
 #elif defined(__XCBM5x0__)
    var.key = "vice_cbm5x0_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int modl=0;
+      int model = 0;
 
-      if (strcmp(var.value, "510 PAL") == 0) modl=CBM2MODEL_510_PAL;
-      else if (strcmp(var.value, "510 NTSC") == 0) modl=CBM2MODEL_510_NTSC;
+      if (!strcmp(var.value, "510 PAL")) model = CBM2MODEL_510_PAL;
+      else if (!strcmp(var.value, "510 NTSC")) model = CBM2MODEL_510_NTSC;
 
-      if (retro_ui_finalized && RETROMODEL != modl)
-         cbm2model_set(modl);
+      if (retro_ui_finalized && core_opt.Model != model)
+         cbm2model_set(model);
 
-      RETROMODEL=modl;
+      core_opt.Model = model;
    }
 #else
    var.key = "vice_c64_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int modl=0;
+      int model = 0;
 
       if (strstr(var.value, "auto")) opt_model_auto = 1;
       else opt_model_auto = 0;
 
-      if (strcmp(var.value, "C64 PAL auto") == 0) modl=C64MODEL_C64_PAL;
-      else if (strcmp(var.value, "C64 NTSC auto") == 0) modl=C64MODEL_C64_NTSC;
-      else if (strcmp(var.value, "C64C PAL auto") == 0) modl=C64MODEL_C64C_PAL;
-      else if (strcmp(var.value, "C64C NTSC auto") == 0) modl=C64MODEL_C64C_NTSC;
-      else if (strcmp(var.value, "C64 PAL") == 0) modl=C64MODEL_C64_PAL;
-      else if (strcmp(var.value, "C64 NTSC") == 0) modl=C64MODEL_C64_NTSC;
-      else if (strcmp(var.value, "C64C PAL") == 0) modl=C64MODEL_C64C_PAL;
-      else if (strcmp(var.value, "C64C NTSC") == 0) modl=C64MODEL_C64C_NTSC;
-      else if (strcmp(var.value, "C64SX PAL") == 0) modl=C64MODEL_C64SX_PAL;
-      else if (strcmp(var.value, "C64SX NTSC") == 0) modl=C64MODEL_C64SX_NTSC;
-      else if (strcmp(var.value, "PET64 PAL") == 0) modl=C64MODEL_PET64_PAL;
-      else if (strcmp(var.value, "PET64 NTSC") == 0) modl=C64MODEL_PET64_NTSC;
-      else if (strcmp(var.value, "C64 GS PAL") == 0) modl=C64MODEL_C64_GS;
-      else if (strcmp(var.value, "C64 JAP NTSC") == 0) modl=C64MODEL_C64_JAP;
-      //else if (strcmp(var.value, "C64 PAL N") == 0) modl=C64MODEL_C64_PAL_N;
-      //else if (strcmp(var.value, "C64 OLD PAL") == 0) modl=C64MODEL_C64_OLD_PAL;
-      //else if (strcmp(var.value, "C64 OLD NTSC") == 0) modl=C64MODEL_C64_OLD_NTSC;
+      if (!strcmp(var.value, "C64 PAL auto")) model = C64MODEL_C64_PAL;
+      else if (!strcmp(var.value, "C64 NTSC auto")) model = C64MODEL_C64_NTSC;
+      else if (!strcmp(var.value, "C64C PAL auto")) model = C64MODEL_C64C_PAL;
+      else if (!strcmp(var.value, "C64C NTSC auto")) model = C64MODEL_C64C_NTSC;
+      else if (!strcmp(var.value, "C64 PAL")) model = C64MODEL_C64_PAL;
+      else if (!strcmp(var.value, "C64 NTSC")) model = C64MODEL_C64_NTSC;
+      else if (!strcmp(var.value, "C64C PAL")) model = C64MODEL_C64C_PAL;
+      else if (!strcmp(var.value, "C64C NTSC")) model = C64MODEL_C64C_NTSC;
+      else if (!strcmp(var.value, "C64SX PAL")) model = C64MODEL_C64SX_PAL;
+      else if (!strcmp(var.value, "C64SX NTSC")) model = C64MODEL_C64SX_NTSC;
+      else if (!strcmp(var.value, "PET64 PAL")) model = C64MODEL_PET64_PAL;
+      else if (!strcmp(var.value, "PET64 NTSC")) model = C64MODEL_PET64_NTSC;
+      else if (!strcmp(var.value, "C64 GS PAL")) model = C64MODEL_C64_GS;
+      else if (!strcmp(var.value, "C64 JAP NTSC")) model = C64MODEL_C64_JAP;
+      //else if (!strcmp(var.value, "C64 PAL N")) model = C64MODEL_C64_PAL_N;
+      //else if (!strcmp(var.value, "C64 OLD PAL")) model = C64MODEL_C64_OLD_PAL;
+      //else if (!strcmp(var.value, "C64 OLD NTSC")) model = C64MODEL_C64_OLD_NTSC;
 
-      if (retro_ui_finalized && RETROMODEL != modl)
+      if (retro_ui_finalized && core_opt.Model != model)
       {
-         c64model_set(modl);
+         c64model_set(model);
          request_model_prev = -1;
       }
 
-      RETROMODEL=modl;
+      core_opt.Model = model;
    }
 #endif
 
@@ -3198,38 +3218,38 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int eng=0;
+      int sid_engine = 0;
 
-      if (strcmp(var.value, "ReSID") == 0) eng=1;
-      else if (strcmp(var.value, "ReSID-3.3") == 0) eng=6;
-      else if (strcmp(var.value, "ReSID-FP") == 0) eng=7;
+      if (!strcmp(var.value, "ReSID")) sid_engine = 1;
+      else if (!strcmp(var.value, "ReSID-3.3")) sid_engine = 6;
+      else if (!strcmp(var.value, "ReSID-FP")) sid_engine = 7;
 
-      if (retro_ui_finalized && RETROSIDENGINE != eng)
+      if (retro_ui_finalized && core_opt.SidEngine != sid_engine)
       {
-         if (RETROSIDMODL == 0xff)
-            resources_set_int("SidEngine", eng);
+         if (core_opt.SidModel == 0xff)
+            resources_set_int("SidEngine", sid_engine);
          else
-            sid_set_engine_model(eng, RETROSIDMODL);
+            sid_set_engine_model(sid_engine, core_opt.SidModel);
       }
 
-      RETROSIDENGINE=eng;
+      core_opt.SidEngine = sid_engine;
    }
 
    var.key = "vice_sid_model";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int modl=0xff;
+      int sid_model = 0xff;
 
-      if (strcmp(var.value, "6581") == 0) modl=0;
-      else if (strcmp(var.value, "8580") == 0) modl=1;
+      if (!strcmp(var.value, "6581")) sid_model = 0;
+      else if (!strcmp(var.value, "8580")) sid_model = 1;
       /* There is no digiboost for FastSID (and it's not needed either) */
-      else if (strcmp(var.value, "8580RD") == 0) modl=(!RETROSIDENGINE ? 1 : 2);
+      else if (!strcmp(var.value, "8580RD")) sid_model = (!core_opt.SidEngine ? 1 : 2);
 
-      if (retro_ui_finalized && modl != 0xff)
-         sid_set_engine_model(RETROSIDENGINE, modl);
+      if (retro_ui_finalized && sid_model != 0xff)
+         sid_set_engine_model(core_opt.SidEngine, sid_model);
 
-      RETROSIDMODL=modl;
+      core_opt.SidModel = sid_model;
    }
 
    var.key = "vice_sid_extra";
@@ -3240,81 +3260,78 @@ static void update_variables(void)
       if (strcmp(var.value, "disabled"))
          sid_extra = strtol(var.value, NULL, 16);
 
-      if (retro_ui_finalized && RETROSIDEXTRA != sid_extra)
+      if (retro_ui_finalized && core_opt.SidExtra != sid_extra)
       {
          if (!sid_extra)
             log_resources_set_int("SidStereo", 0);
          else
          {
-            if (!RETROSIDEXTRA)
+            if (!core_opt.SidExtra)
                log_resources_set_int("SidStereo", 1);
             log_resources_set_int("SidStereoAddressStart", sid_extra);
          }
       }
 
-      RETROSIDEXTRA=sid_extra;
+      core_opt.SidExtra = sid_extra;
    }
 
    var.key = "vice_resid_sampling";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int resid=0;
+      int val = 0;
 
-      if (strcmp(var.value, "Fast") == 0) resid=0;
-      else if (strcmp(var.value, "Interpolation") == 0) resid=1;
-      else if (strcmp(var.value, "Resampling") == 0) resid=2;
-      else if (strcmp(var.value, "Fast resampling") == 0) resid=3;
+      if (!strcmp(var.value, "Fast")) val = 0;
+      else if (!strcmp(var.value, "Interpolation")) val = 1;
+      else if (!strcmp(var.value, "Resampling")) val = 2;
+      else if (!strcmp(var.value, "Fast resampling")) val = 3;
 
-      if (retro_ui_finalized && RETRORESIDSAMPLING != resid)
-         log_resources_set_int("SidResidSampling", resid);
+      if (retro_ui_finalized && core_opt.SidResidSampling != val)
+         log_resources_set_int("SidResidSampling", val);
 
-      RETRORESIDSAMPLING=resid;
+      core_opt.SidResidSampling = val;
    }
 
    var.key = "vice_resid_passband";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized && RETRORESIDPASSBAND != val)
+      if (retro_ui_finalized && core_opt.SidResidPassband != val)
       {
          log_resources_set_int("SidResidPassband", val);
          log_resources_set_int("SidResid8580Passband", val);
       }
 
-      RETRORESIDPASSBAND=val;
+      core_opt.SidResidPassband = val;
    }
 
    var.key = "vice_resid_gain";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized && RETRORESIDGAIN != val)
+      if (retro_ui_finalized && core_opt.SidResidGain != val)
       {
          log_resources_set_int("SidResidGain", val);
          log_resources_set_int("SidResid8580Gain", val);
       }
 
-      RETRORESIDGAIN=val;
+      core_opt.SidResidGain = val;
    }
 
    var.key = "vice_resid_filterbias";
    var.value = NULL;
-
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized && RETRORESIDFILTERBIAS != val)
+      if (retro_ui_finalized && core_opt.SidResidFilterBias != val)
          log_resources_set_int("SidResidFilterBias", val);
 
-      RETRORESIDFILTERBIAS=val;
+      core_opt.SidResidFilterBias = val;
    }
 
    var.key = "vice_resid_8580filterbias";
@@ -3324,10 +3341,10 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized && RETRORESID8580FILTERBIAS != val)
+      if (retro_ui_finalized && core_opt.SidResid8580FilterBias != val)
          log_resources_set_int("SidResid8580FilterBias", val);
 
-      RETRORESID8580FILTERBIAS=val;
+      core_opt.SidResid8580FilterBias = val;
    }
 #endif
 
@@ -3336,14 +3353,14 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "none") == 0) zoom_mode_id=0;
-      else if (strcmp(var.value, "small") == 0) zoom_mode_id=1;
-      else if (strcmp(var.value, "medium") == 0) zoom_mode_id=2;
-      else if (strcmp(var.value, "maximum") == 0) zoom_mode_id=3;
-      else if (strcmp(var.value, "manual") == 0) zoom_mode_id=4;
+      if (!strcmp(var.value, "none")) zoom_mode_id = 0;
+      else if (!strcmp(var.value, "small")) zoom_mode_id = 1;
+      else if (!strcmp(var.value, "medium")) zoom_mode_id = 2;
+      else if (!strcmp(var.value, "maximum")) zoom_mode_id = 3;
+      else if (!strcmp(var.value, "manual")) zoom_mode_id = 4;
 
 #if defined(__X128__)
-      if (RETROC128COLUMNKEY==0)
+      if (core_opt.C128ColumnKey == 0)
          zoom_mode_id = 0;
 #endif
 
@@ -3356,13 +3373,13 @@ static void update_variables(void)
    {
       int zoom_mode_crop_id_prev = zoom_mode_crop_id;
 
-      if (strcmp(var.value, "both") == 0) zoom_mode_crop_id=0;
-      else if (strcmp(var.value, "vertical") == 0) zoom_mode_crop_id=1;
-      else if (strcmp(var.value, "horizontal") == 0) zoom_mode_crop_id=2;
-      else if (strcmp(var.value, "16:9") == 0) zoom_mode_crop_id=3;
-      else if (strcmp(var.value, "16:10") == 0) zoom_mode_crop_id=4;
-      else if (strcmp(var.value, "4:3") == 0) zoom_mode_crop_id=5;
-      else if (strcmp(var.value, "5:4") == 0) zoom_mode_crop_id=6;
+      if (!strcmp(var.value, "both")) zoom_mode_crop_id = 0;
+      else if (!strcmp(var.value, "vertical")) zoom_mode_crop_id = 1;
+      else if (!strcmp(var.value, "horizontal")) zoom_mode_crop_id = 2;
+      else if (!strcmp(var.value, "16:9")) zoom_mode_crop_id = 3;
+      else if (!strcmp(var.value, "16:10")) zoom_mode_crop_id = 4;
+      else if (!strcmp(var.value, "4:3")) zoom_mode_crop_id = 5;
+      else if (!strcmp(var.value, "5:4")) zoom_mode_crop_id = 6;
 
       // Zoom reset
       if (zoom_mode_crop_id != zoom_mode_crop_id_prev)
@@ -3375,10 +3392,10 @@ static void update_variables(void)
    {
       int opt_aspect_ratio_prev = opt_aspect_ratio;
 
-      if (strcmp(var.value, "auto") == 0) opt_aspect_ratio=0;
-      else if (strcmp(var.value, "pal") == 0) opt_aspect_ratio=1;
-      else if (strcmp(var.value, "ntsc") == 0) opt_aspect_ratio=2;
-      else if (strcmp(var.value, "raw") == 0) opt_aspect_ratio=3;
+      if (!strcmp(var.value, "auto")) opt_aspect_ratio = 0;
+      else if (!strcmp(var.value, "pal")) opt_aspect_ratio = 1;
+      else if (!strcmp(var.value, "ntsc")) opt_aspect_ratio = 2;
+      else if (!strcmp(var.value, "raw")) opt_aspect_ratio = 3;
 
       // Zoom reset
       if (opt_aspect_ratio != opt_aspect_ratio_prev)
@@ -3430,8 +3447,8 @@ static void update_variables(void)
       // Only allow screenmode change after restart
       if (!pix_bytes_initialized)
       {
-         if (strcmp(var.value, "16bit") == 0) pix_bytes=2;
-         else if (strcmp(var.value, "24bit") == 0) pix_bytes=4;
+         if (!strcmp(var.value, "16bit")) pix_bytes = 2;
+         else if (!strcmp(var.value, "24bit")) pix_bytes = 4;
          pix_bytes_initialized = true;
       }
    }
@@ -3441,9 +3458,9 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, RETROEXTPALNAME))
+      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
       {
-         if (strcmp(var.value, "default") == 0)
+         if (!strcmp(var.value, "default"))
             log_resources_set_int("VICExternalPalette", 0);
          else
          {
@@ -3452,16 +3469,16 @@ static void update_variables(void)
          }
       }
 
-      sprintf(RETROEXTPALNAME, "%s", var.value);
+      sprintf(core_opt.ExternalPalette, "%s", var.value);
    }
 #elif defined(__XPLUS4__)
    var.key = "vice_plus4_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, RETROEXTPALNAME))
+      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
       {
-         if (strcmp(var.value, "default") == 0)
+         if (!strcmp(var.value, "default"))
             log_resources_set_int("TEDExternalPalette", 0);
          else
          {
@@ -3470,16 +3487,16 @@ static void update_variables(void)
          }
       }
 
-      sprintf(RETROEXTPALNAME, "%s", var.value);
+      sprintf(core_opt.ExternalPalette, "%s", var.value);
    }
 #elif defined(__XPET__)
    var.key = "vice_pet_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, RETROEXTPALNAME))
+      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
       {
-         if (strcmp(var.value, "default") == 0)
+         if (!strcmp(var.value, "default"))
             log_resources_set_int("CrtcExternalPalette", 0);
          else
          {
@@ -3488,16 +3505,16 @@ static void update_variables(void)
          }
       }
 
-      sprintf(RETROEXTPALNAME, "%s", var.value);
+      sprintf(core_opt.ExternalPalette, "%s", var.value);
    }
 #elif defined(__XCBM2__)
    var.key = "vice_cbm2_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, RETROEXTPALNAME))
+      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
       {
-         if (strcmp(var.value, "default") == 0)
+         if (!strcmp(var.value, "default"))
             log_resources_set_int("CrtcExternalPalette", 0);
          else
          {
@@ -3506,16 +3523,16 @@ static void update_variables(void)
          }
       }
 
-      sprintf(RETROEXTPALNAME, "%s", var.value);
+      sprintf(core_opt.ExternalPalette, "%s", var.value);
    }
 #else
    var.key = "vice_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, RETROEXTPALNAME))
+      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
       {
-         if (strcmp(var.value, "default") == 0)
+         if (!strcmp(var.value, "default"))
             log_resources_set_int("VICIIExternalPalette", 0);
          else
          {
@@ -3524,55 +3541,104 @@ static void update_variables(void)
          }
       }
 
-      sprintf(RETROEXTPALNAME, "%s", var.value);
+      sprintf(core_opt.ExternalPalette, "%s", var.value);
    }
+#endif
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_gamma";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_gamma";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_gamma";
+#endif
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int color_gamma = atoi(var.value);
 
-      if (retro_ui_finalized && RETROVICIICOLORGAMMA != color_gamma)
+      if (retro_ui_finalized && core_opt.ColorGamma != color_gamma)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorGamma", color_gamma);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorGamma", color_gamma);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorGamma", color_gamma);
+#endif
 
-      RETROVICIICOLORGAMMA=color_gamma;
+      core_opt.ColorGamma = color_gamma;
    }
-
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_saturation";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_saturation";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_saturation";
+#endif
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int color_saturation = atoi(var.value);
 
-      if (retro_ui_finalized && RETROVICIICOLORSATURATION != color_saturation)
+      if (retro_ui_finalized && core_opt.ColorSaturation != color_saturation)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorSaturation", color_saturation);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorSaturation", color_saturation);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorSaturation", color_saturation);
+#endif
 
-      RETROVICIICOLORSATURATION=color_saturation;
+      core_opt.ColorSaturation = color_saturation;
    }
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_contrast";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_contrast";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_contrast";
+#endif
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int color_contrast = atoi(var.value);
 
-      if (retro_ui_finalized && RETROVICIICOLORCONTRAST != color_contrast)
+      if (retro_ui_finalized && core_opt.ColorContrast != color_contrast)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorContrast", color_contrast);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorContrast", color_contrast);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorContrast", color_contrast);
+#endif
 
-      RETROVICIICOLORCONTRAST=color_contrast;
+      core_opt.ColorContrast = color_contrast;
    }
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_brightness";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_brightness";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_brightness";
+#endif
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int color_brightness = atoi(var.value);
 
-      if (retro_ui_finalized && RETROVICIICOLORBRIGHTNESS != color_brightness)
+      if (retro_ui_finalized && core_opt.ColorBrightness != color_brightness)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorBrightness", color_brightness);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorBrightness", color_brightness);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorBrightness", color_brightness);
+#endif
 
-      RETROVICIICOLORBRIGHTNESS=color_brightness;
+      core_opt.ColorBrightness = color_brightness;
    }
 #endif
 
@@ -3581,18 +3647,18 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int joyadaptertype=-1;
+      int joyadaptertype = -1;
 
-      if (strcmp(var.value, "None") == 0) joyadaptertype=-1;
-      else if (strcmp(var.value, "Protovision CGA") == 0) joyadaptertype=USERPORT_JOYSTICK_CGA;
-      else if (strcmp(var.value, "PET") == 0) joyadaptertype=USERPORT_JOYSTICK_PET;
-      else if (strcmp(var.value, "Hummer") == 0) joyadaptertype=USERPORT_JOYSTICK_HUMMER;
-      else if (strcmp(var.value, "OEM") == 0) joyadaptertype=USERPORT_JOYSTICK_OEM;
-      else if (strcmp(var.value, "Hit") == 0) joyadaptertype=USERPORT_JOYSTICK_HIT;
-      else if (strcmp(var.value, "Kingsoft") == 0) joyadaptertype=USERPORT_JOYSTICK_KINGSOFT;
-      else if (strcmp(var.value, "Starbyte") == 0) joyadaptertype=USERPORT_JOYSTICK_STARBYTE;
+      if (!strcmp(var.value, "None")) joyadaptertype = -1;
+      else if (!strcmp(var.value, "Protovision CGA")) joyadaptertype = USERPORT_JOYSTICK_CGA;
+      else if (!strcmp(var.value, "PET")) joyadaptertype = USERPORT_JOYSTICK_PET;
+      else if (!strcmp(var.value, "Hummer")) joyadaptertype = USERPORT_JOYSTICK_HUMMER;
+      else if (!strcmp(var.value, "OEM")) joyadaptertype = USERPORT_JOYSTICK_OEM;
+      else if (!strcmp(var.value, "Hit")) joyadaptertype = USERPORT_JOYSTICK_HIT;
+      else if (!strcmp(var.value, "Kingsoft")) joyadaptertype = USERPORT_JOYSTICK_KINGSOFT;
+      else if (!strcmp(var.value, "Starbyte")) joyadaptertype = USERPORT_JOYSTICK_STARBYTE;
 
-      if (retro_ui_finalized && RETROUSERPORTJOY != joyadaptertype)
+      if (retro_ui_finalized && core_opt.UserportJoy != joyadaptertype)
       {
          if (joyadaptertype == -1)
             log_resources_set_int("UserportJoy", 0);
@@ -3603,7 +3669,7 @@ static void update_variables(void)
          }
       }
 
-      RETROUSERPORTJOY=joyadaptertype;
+      core_opt.UserportJoy = joyadaptertype;
    }
 #endif
 
@@ -3612,8 +3678,8 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "Port 2") == 0 && !cur_port_locked) cur_port=2;
-      else if (strcmp(var.value, "Port 1") == 0 && !cur_port_locked) cur_port=1;
+      if (!strcmp(var.value, "Port 2") && !cur_port_locked) cur_port = 2;
+      else if (!strcmp(var.value, "Port 1") && !cur_port_locked) cur_port = 1;
    }
 
    var.key = "vice_joyport_type";
@@ -3650,15 +3716,14 @@ static void update_variables(void)
    {
       opt_mouse_speed = atoi(var.value);
    }
-
 #endif
 
    var.key = "vice_keyrah_keypad_mappings";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_keyrah_keypad=0;
-      else if (strcmp(var.value, "enabled") == 0) opt_keyrah_keypad=1;
+      if (!strcmp(var.value, "disabled")) opt_keyrah_keypad = 0;
+      else if (!strcmp(var.value, "enabled")) opt_keyrah_keypad = 1;
    }
 
    var.key = "vice_keyboard_keymap";
@@ -3666,10 +3731,11 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int val = opt_keyboard_keymap;
-      if (strcmp(var.value, "symbolic") == 0) opt_keyboard_keymap=KBD_INDEX_SYM;
-      else if (strcmp(var.value, "positional") == 0) opt_keyboard_keymap=KBD_INDEX_POS;
-      else if (strcmp(var.value, "symbolic-user") == 0) opt_keyboard_keymap=KBD_INDEX_USERSYM;
-      else if (strcmp(var.value, "positional-user") == 0) opt_keyboard_keymap=KBD_INDEX_USERPOS;
+
+      if (!strcmp(var.value, "symbolic")) opt_keyboard_keymap = KBD_INDEX_SYM;
+      else if (!strcmp(var.value, "positional")) opt_keyboard_keymap = KBD_INDEX_POS;
+      else if (!strcmp(var.value, "symbolic-user")) opt_keyboard_keymap = KBD_INDEX_USERSYM;
+      else if (!strcmp(var.value, "positional-user")) opt_keyboard_keymap = KBD_INDEX_USERPOS;
 
       if (retro_ui_finalized && opt_keyboard_keymap != val)
          keyboard_init();
@@ -3679,51 +3745,51 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_keyboard_passthrough=0;
-      else if (strcmp(var.value, "enabled") == 0) opt_keyboard_passthrough=1;
+      if (!strcmp(var.value, "disabled")) opt_keyboard_passthrough = 0;
+      else if (!strcmp(var.value, "enabled")) opt_keyboard_passthrough = 1;
    }
 
    var.key = "vice_retropad_options";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_retropad_options=0;
-      else if (strcmp(var.value, "rotate") == 0) opt_retropad_options=1;
-      else if (strcmp(var.value, "jump") == 0) opt_retropad_options=2;
-      else if (strcmp(var.value, "rotate_jump") == 0) opt_retropad_options=3;
+      if (!strcmp(var.value, "disabled")) opt_retropad_options = 0;
+      else if (!strcmp(var.value, "rotate")) opt_retropad_options = 1;
+      else if (!strcmp(var.value, "jump")) opt_retropad_options = 2;
+      else if (!strcmp(var.value, "rotate_jump")) opt_retropad_options = 3;
    }
 
    var.key = "vice_turbo_fire_button";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) turbo_fire_button=-1;
-      else if (strcmp(var.value, "A") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_A;
-      else if (strcmp(var.value, "Y") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_Y;
-      else if (strcmp(var.value, "X") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_X;
-      else if (strcmp(var.value, "L") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_L;
-      else if (strcmp(var.value, "R") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_R;
-      else if (strcmp(var.value, "L2") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_L2;
-      else if (strcmp(var.value, "R2") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_R2;
-      else if (strcmp(var.value, "L3") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_L3;
-      else if (strcmp(var.value, "R3") == 0) turbo_fire_button=RETRO_DEVICE_ID_JOYPAD_R3;
+      if (!strcmp(var.value, "disabled")) turbo_fire_button = -1;
+      else if (!strcmp(var.value, "A")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_A;
+      else if (!strcmp(var.value, "Y")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
+      else if (!strcmp(var.value, "X")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_X;
+      else if (!strcmp(var.value, "L")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L;
+      else if (!strcmp(var.value, "R")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R;
+      else if (!strcmp(var.value, "L2")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L2;
+      else if (!strcmp(var.value, "R2")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R2;
+      else if (!strcmp(var.value, "L3")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L3;
+      else if (!strcmp(var.value, "R3")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R3;
    }
 
    var.key = "vice_turbo_pulse";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      turbo_pulse=atoi(var.value);
+      turbo_pulse = atoi(var.value);
    }
 
    var.key = "vice_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "Autostart") == 0) opt_reset_type=0;
-      else if (strcmp(var.value, "Soft") == 0) opt_reset_type=1;
-      else if (strcmp(var.value, "Hard") == 0) opt_reset_type=2;
-      else if (strcmp(var.value, "Freeze") == 0) opt_reset_type=3;
+      if (!strcmp(var.value, "Autostart")) opt_reset_type = 0;
+      else if (!strcmp(var.value, "Soft")) opt_reset_type = 1;
+      else if (!strcmp(var.value, "Hard")) opt_reset_type = 2;
+      else if (!strcmp(var.value, "Freeze")) opt_reset_type = 3;
    }
 
    var.key = "vice_vkbd_theme";
@@ -3747,48 +3813,43 @@ static void update_variables(void)
    {
       opt_statusbar = 0;
 
-      if (strstr(var.value, "top"))
-         opt_statusbar |= STATUSBAR_TOP;
-      else
-         opt_statusbar |= STATUSBAR_BOTTOM;
+      if (strstr(var.value, "top")) opt_statusbar |= STATUSBAR_TOP;
+      else opt_statusbar |= STATUSBAR_BOTTOM;
 
-      if (strstr(var.value, "basic"))
-         opt_statusbar |= STATUSBAR_BASIC;
-
-      if (strstr(var.value, "minimal"))
-         opt_statusbar |= STATUSBAR_MINIMAL;
+      if (strstr(var.value, "basic")) opt_statusbar |= STATUSBAR_BASIC;
+      if (strstr(var.value, "minimal")) opt_statusbar |= STATUSBAR_MINIMAL;
    }
 
    var.key = "vice_mapping_options_display";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_mapping_options_display=0;
-      else if (strcmp(var.value, "enabled") == 0) opt_mapping_options_display=1;
+      if (!strcmp(var.value, "disabled")) opt_mapping_options_display = 0;
+      else if (!strcmp(var.value, "enabled")) opt_mapping_options_display = 1;
    }
 
    var.key = "vice_audio_options_display";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_audio_options_display=0;
-      else if (strcmp(var.value, "enabled") == 0) opt_audio_options_display=1;
+      if (!strcmp(var.value, "disabled")) opt_audio_options_display = 0;
+      else if (!strcmp(var.value, "enabled")) opt_audio_options_display = 1;
    }
 
    var.key = "vice_video_options_display";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_video_options_display=0;
-      else if (strcmp(var.value, "enabled") == 0) opt_video_options_display=1;
+      if (!strcmp(var.value, "disabled")) opt_video_options_display = 0;
+      else if (!strcmp(var.value, "enabled")) opt_video_options_display = 1;
    }
 
    var.key = "vice_read_vicerc";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_read_vicerc=0;
-      else if (strcmp(var.value, "enabled") == 0) opt_read_vicerc=1;
+      if (!strcmp(var.value, "disabled")) opt_read_vicerc = 0;
+      else if (!strcmp(var.value, "enabled")) opt_read_vicerc = 1;
 
       request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? 1 : request_reload_restart;
       opt_read_vicerc_prev = opt_read_vicerc;
@@ -3799,8 +3860,8 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "disabled") == 0) opt_jiffydos=0;
-      else if (strcmp(var.value, "enabled") == 0) opt_jiffydos=1;
+      if (!strcmp(var.value, "disabled")) opt_jiffydos = 0;
+      else if (!strcmp(var.value, "enabled")) opt_jiffydos = 1;
 
       if (!opt_jiffydos_allow)
          opt_jiffydos = 0;
@@ -4126,7 +4187,7 @@ static void update_variables(void)
 
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_audio_leak_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -4718,7 +4779,7 @@ double retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixe
          par = (double)0.93650794;
       ar = ((double)width / (double)height) * par;
 #if defined(__X128__)
-      if (RETROC128COLUMNKEY == 0)
+      if (core_opt.C128ColumnKey == 0)
          ar = ((double)width / (double)height) / (double)2.0;
 #endif
 #elif defined(__XVIC__)
@@ -4942,8 +5003,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.base_width = retroW;
    info->geometry.base_height = retroH;
    info->geometry.aspect_ratio = retro_get_aspect_ratio(retroW, retroH, false);
-   info->timing.sample_rate = RETROSOUNDSAMPLERATE;
-   prev_audio_sample_rate = RETROSOUNDSAMPLERATE;
+   info->timing.sample_rate = core_opt.SoundSampleRate;
+   prev_sound_sample_rate = core_opt.SoundSampleRate;
 
    // Remember region for av_info update
    retro_region = retro_get_region();
@@ -5035,9 +5096,9 @@ void retro_run(void)
          update_work_disk();
 
       /* Update samplerate if changed by core option */
-      if (prev_audio_sample_rate != RETROSOUNDSAMPLERATE)
+      if (prev_sound_sample_rate != core_opt.SoundSampleRate)
       {
-         prev_audio_sample_rate = RETROSOUNDSAMPLERATE;
+         prev_sound_sample_rate = core_opt.SoundSampleRate;
 
          /* Ensure audio rendering is reinitialized on next use. */
          sound_close();
@@ -5078,7 +5139,6 @@ void retro_run(void)
 #ifdef RETRO_DEBUG
       log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
 #endif
-      retro_load_ok = true;
       runstate = RUNSTATE_RUNNING;
       pre_main();
       reload_restart();
@@ -5199,7 +5259,7 @@ void retro_unload_game(void)
 
 unsigned retro_get_region(void)
 {
-    unsigned machine_sync = 0;
+    int machine_sync = 0;
     if (retro_ui_finalized)
         resources_get_int("MachineVideoStandard", &machine_sync);
     switch (machine_sync)

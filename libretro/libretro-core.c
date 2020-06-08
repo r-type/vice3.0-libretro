@@ -31,8 +31,6 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-// Our virtual time counter, increased by retro_run()
-//long microSecCounter = 0;
 // Accurate tick for statusbar FPS counter
 long retro_now = 0;
 // Main CPU loop
@@ -1165,15 +1163,6 @@ void reload_restart()
 }
 
 long GetTicks(void) {
-   // NOTE: Cores should normally not depend on real time, so we return a
-   // counter here
-   // GetTicks() is used by vsyncarch_gettime() which is used by
-   // * Vsync (together with sleep) to sync to 50Hz
-   // * Mouse timestamps
-   // * Networking
-   // Returning a frame based msec counter could potentially break
-   // networking but it's not something libretro uses at the moment.
-   //return microSecCounter;
    return retro_now;
 }
 
@@ -4308,8 +4297,6 @@ void emu_reset(int type)
 
 void retro_reset(void)
 {
-   //microSecCounter = 0;
-
    // Always stop datasette, or autostart from tape will fail
    datasette_control(DATASETTE_CONTROL_STOP);
 
@@ -4708,8 +4695,6 @@ void retro_init(void)
 
    bool achievements = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
-
-   //microSecCounter = 0;
 }
 
 void retro_deinit(void)
@@ -5168,16 +5153,19 @@ void retro_run(void)
       static struct retro_perf_callback pcb;
       if (!pcb.get_time_usec)
          environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &pcb);
-      retro_now = pcb.get_time_usec();
 
-      static unsigned int f_time = 1, f_minimum = 1;
-      static double f_refresh = 0;
-      if (!f_refresh)
+      static unsigned int f_time = 0, f_minimum = 1;
+      if (!f_time)
       {
-          f_refresh = retro_refresh;
-          f_time = 1000000 / f_refresh;
-          f_minimum = f_time / f_refresh;
+          f_time = 1000000 / retro_refresh;
+          f_minimum = f_time / 100;
       }
+
+      if (pcb.get_time_usec)
+         retro_now = pcb.get_time_usec();
+      else
+         retro_now += f_time;
+
       for (int frame_count = 1; frame_count <= (retro_warp_mode_enabled() ? (f_time / f_minimum) : 1); ++frame_count)
       {
          while (cpuloop)
@@ -5210,7 +5198,6 @@ void retro_run(void)
       imagename_timer--;
 
    video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retroW<<(pix_bytes/4))), zoomed_width, zoomed_height, retroW<<(pix_bytes/2));
-   //microSecCounter += (1000000/(retro_region == RETRO_REGION_NTSC ? C64_NTSC_RFSH_PER_SEC : C64_PAL_RFSH_PER_SEC));
 }
 
 bool retro_load_game(const struct retro_game_info *info)

@@ -880,6 +880,9 @@ void update_from_vice()
     {
         autostartString = NULL;
         attachedImage = dc->files[dc->index];
+        // Disable AutostartWarp & WarpMode, otherwise warp gets stuck with PRGs in M3Us
+        resources_set_int("AutostartWarp", 0);
+        resources_set_int("WarpMode", 0);
     }
     else
     {

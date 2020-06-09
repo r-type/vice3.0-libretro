@@ -605,7 +605,7 @@ static int process_cmdline(const char* argv)
             }
         }
 #elif defined(__XPLUS4__)
-        if (dc_get_image_type(argv) == DC_IMAGE_TYPE_MEM)
+        if (strendswith(argv, ".crt") || strendswith(argv, ".bin"))
             Add_Option("-cart");
 #endif
 

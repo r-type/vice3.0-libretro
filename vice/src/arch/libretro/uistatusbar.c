@@ -369,11 +369,11 @@ static void display_tape(void)
     if (drive_enabled)
         return;
 
-    if (opt_autoloadwarp)
+    if (opt_autoloadwarp && tape_enabled)
     {
-        if (tape_control == 1 && tape_motor && !retro_warp_mode_enabled())
+        if (tape_control && tape_motor && !retro_warp_mode_enabled())
             resources_set_int("WarpMode", 1);
-        else if ((tape_control == 0 || !tape_motor) && retro_warp_mode_enabled())
+        else if ((!tape_control || !tape_motor) && retro_warp_mode_enabled())
             resources_set_int("WarpMode", 0);
     }
 

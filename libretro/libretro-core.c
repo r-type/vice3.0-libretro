@@ -2361,7 +2361,7 @@ void retro_set_environment(retro_environment_t cb)
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled"
+         "enabled"
       },
       /* Hotkeys */
       {

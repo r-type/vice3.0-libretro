@@ -123,6 +123,9 @@ static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
 static unsigned int opt_jiffydos_prev = 0;
 #endif
+#if defined(__XSCPU64__)
+unsigned int opt_supercpu_kernal = 0;
+#endif
 static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
 unsigned int opt_statusbar = 0;
@@ -1377,6 +1380,20 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "C64 PAL auto"
+      },
+#endif
+#if defined(__XSCPU64__)
+      {
+         "vice_supercpu_kernal",
+         "SuperCPU Kernal",
+         "JiffyDOS does not work with the internal kernal! ROMs required in 'system/vice/SCPU64':\n- 'scpu-dos-1.4.bin'\n- 'scpu-dos-2.04.bin'",
+         {
+            { "0", "Internal" },
+            { "1", "1.40" },
+            { "2", "2.04" },
+            { NULL, NULL },
+         },
+         "0"
       },
 #endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
@@ -3846,6 +3863,18 @@ static void update_variables(void)
       request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? 1 : request_reload_restart;
       opt_read_vicerc_prev = opt_read_vicerc;
    }
+
+#if defined(__XSCPU64__)
+   var.key = "vice_supercpu_kernal";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int opt_supercpu_kernal_prev = opt_supercpu_kernal;
+      opt_supercpu_kernal = atoi(var.value);
+
+      request_reload_restart = (opt_supercpu_kernal != opt_supercpu_kernal_prev) ? 1 : request_reload_restart;
+   }
+#endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
    var.key = "vice_jiffydos";

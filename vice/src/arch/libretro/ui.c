@@ -54,6 +54,13 @@ BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 #if defined(__XVIC__)
 extern int vic20mem_forced;
 #endif
+#if defined(__XSCPU64__)
+#include "scpu64.h"
+#include "scpu64mem.h"
+#include "scpu64rom.h"
+extern unsigned int opt_supercpu_kernal;
+BYTE scpu64rom_scpu64_rom_original[SCPU64_SCPU64_ROM_MAXSIZE] = {0};
+#endif
 
 int retro_ui_finalized = 0;
 int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
@@ -256,6 +263,23 @@ int ui_init_finalize(void)
    log_resources_set_int("TEDAudioLeak", core_opt.AudioLeak);
 #endif
 
+#if defined(__XSCPU64__)
+   // Replace kernal always from backup, because kernal loading replaces the embedded variable
+   memcpy(scpu64rom_scpu64_rom, scpu64rom_scpu64_rom_original, SCPU64_SCPU64_ROM_MAXSIZE);
+   switch (opt_supercpu_kernal)
+   {
+      case 2:
+         log_resources_set_string("SCPU64Name", "scpu-dos-2.04.bin");
+         break;
+      case 1:
+         log_resources_set_string("SCPU64Name", "scpu-dos-1.4.bin");
+         break;
+      default:
+         log_resources_set_string("SCPU64Name", "scpu64");
+         break;
+   }
+#endif
+
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
    // Replace kernal always from backup, because kernal loading replaces the embedded variable
 #if defined(__X64__) || defined(__X64SC__)
@@ -405,6 +429,7 @@ int c64scui_init_early(void)
 #elif defined(__XSCPU64__)
 int scpu64ui_init_early(void)
 {
+   memcpy(scpu64rom_scpu64_rom_original, scpu64rom_scpu64_rom, SCPU64_SCPU64_ROM_MAXSIZE);
    return 0;
 }
 #elif defined(__X128__)

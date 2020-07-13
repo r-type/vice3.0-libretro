@@ -414,9 +414,11 @@ int vsync_do_vsync(struct video_canvas_s *c, int been_skipped)
         skipped_frames = 0;
     }
 
+#ifndef __LIBRETRO__
     if (been_skipped) {
         skipped_frames++;
     }
+#endif
 
     /* Flush sound buffer, get delay in seconds. */
     sound_delay = sound_flush();
@@ -451,7 +453,6 @@ int vsync_do_vsync(struct video_canvas_s *c, int been_skipped)
     }
 
 
-#ifndef __LIBRETRO__
     /* This is the time between the start of the next frame and now. */
     delay = (signed long)(now - next_frame_start);
     /*
@@ -506,7 +507,6 @@ int vsync_do_vsync(struct video_canvas_s *c, int been_skipped)
         skip_next_frame = 0;
         skipped_redraw = 0;
     }
-#endif
 
     /*
      * Check whether the hardware can keep up.
@@ -517,7 +517,6 @@ int vsync_do_vsync(struct video_canvas_s *c, int been_skipped)
         next_frame_start = now;
     }
 
-#ifndef __LIBRETRO__
     /* Adjust frame output frequency to match sound speed.
        This only kicks in for cycle based sound and SOUND_ADJUST_EXACT. */
     if (frames_adjust < INT_MAX) {
@@ -547,7 +546,6 @@ int vsync_do_vsync(struct video_canvas_s *c, int been_skipped)
         signed long sdelay = (signed long)(sound_delay * vsyncarch_freq);
         avg_sdelay += sdelay;
     }
-#endif
 
     /* FIXME: The #if 0ed code below improves the FPS rate when
        "SoundDeviceName" == "pulse" && "RefreshRate" == 0 ("auto") but 

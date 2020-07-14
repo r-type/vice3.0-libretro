@@ -2511,7 +2511,7 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad X",
          "",
          {{ NULL, NULL }},
-         "---"
+         "RETROK_SPACE"
       },
       {
          "vice_mapper_l",
@@ -2620,6 +2620,7 @@ void retro_set_environment(retro_environment_t cb)
          "Replaces the mapped button with a turbo fire button.",
          {
             { "disabled", NULL },
+            { "B", "RetroPad B" },
             { "A", "RetroPad A" },
             { "Y", "RetroPad Y" },
             { "X", "RetroPad X" },
@@ -3773,6 +3774,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "disabled")) turbo_fire_button = -1;
+      else if (!strcmp(var.value, "B")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_B;
       else if (!strcmp(var.value, "A")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_A;
       else if (!strcmp(var.value, "Y")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
       else if (!strcmp(var.value, "X")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_X;
@@ -3780,8 +3782,6 @@ static void update_variables(void)
       else if (!strcmp(var.value, "R")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R;
       else if (!strcmp(var.value, "L2")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L2;
       else if (!strcmp(var.value, "R2")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R2;
-      else if (!strcmp(var.value, "L3")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L3;
-      else if (!strcmp(var.value, "R3")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R3;
    }
 
    var.key = "vice_turbo_pulse";

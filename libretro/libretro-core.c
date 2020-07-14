@@ -2511,7 +2511,7 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad X",
          "",
          {{ NULL, NULL }},
-         "---"
+         "RETROK_SPACE"
       },
       {
          "vice_mapper_l",

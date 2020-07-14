@@ -30,8 +30,9 @@ Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.t
 |RetroPad button|Action|
 |---|---|
 |B|Fire button|
-|L2|Run/Stop (Escape)|
-|R2|Return (Enter)|
+|X|Space|
+|L2|Escape (RUN/STOP)|
+|R2|Enter (RETURN)|
 |Select|Toggle virtual keyboard|
 
 |Keyboard key|Action|

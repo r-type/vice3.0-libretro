@@ -900,7 +900,7 @@ void retro_poll_event()
 
             /* Fire button */
             int fire_button = (opt_retropad_options == 1 || opt_retropad_options == 3) ? RETRO_DEVICE_ID_JOYPAD_Y : RETRO_DEVICE_ID_JOYPAD_B;
-            if (mapper_keys[fire_button] != 0)
+            if (mapper_keys[fire_button] != 0 || fire_button == turbo_fire_button)
                 fire_button = -1;
 
             if ((fire_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, fire_button)) ||
@@ -923,7 +923,7 @@ void retro_poll_event()
                     break;
             }
 
-            if (jump_button > -1 && mapper_keys[jump_button] != 0)
+            if (mapper_keys[jump_button] != 0 || jump_button == turbo_fire_button)
                 jump_button = -1;
 
             if (jump_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, jump_button))

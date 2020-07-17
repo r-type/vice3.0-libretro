@@ -723,7 +723,7 @@ static int process_cmdline(const char* argv)
 
 static void autodetect_drivetype(int unit)
 {
-    int drive_type;
+    int drive_type, set_drive_type;
     char drive_type_resource_var[20] = {0};
     snprintf(drive_type_resource_var, sizeof(drive_type_resource_var), "Drive%dType", unit);
     resources_get_int(drive_type_resource_var, &drive_type);
@@ -740,21 +740,23 @@ static void autodetect_drivetype(int unit)
     else
     {
         diskimg = vdrive->image;
-
-        // G64 will set a nonexistent drivetype, therefore force 1541
-        if (diskimg != NULL && diskimg->type == DISK_IMAGE_TYPE_G64)
-            diskimg->type = 1541;
-
-        // G71 will set a nonexistent drivetype, therefore force 1571
-        if (diskimg != NULL && diskimg->type == DISK_IMAGE_TYPE_G71)
-            diskimg->type = 1571;
-
         if (diskimg == NULL)
             log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit %d.\n", unit);
-        else if (diskimg->type != drive_type)
+        else
         {
+            // G64/G71 exceptions for preventing unwanted drive type sets
+            if (diskimg->type == DISK_IMAGE_TYPE_G64)
+                set_drive_type = DISK_IMAGE_TYPE_D64;
+            else if (diskimg->type == DISK_IMAGE_TYPE_G71)
+                set_drive_type = DISK_IMAGE_TYPE_D71;
+            else
+                set_drive_type = diskimg->type;
+
+            if (set_drive_type == drive_type)
+                return;
+
             log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
-            if (log_resources_set_int(drive_type_resource_var, diskimg->type) < 0)
+            if (log_resources_set_int(drive_type_resource_var, set_drive_type) < 0)
                 log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
 
             // Change from 1581 to 1541 will not detect disk properly without reattaching (?!)
@@ -765,16 +767,14 @@ static void autodetect_drivetype(int unit)
                return;
             // Drive motor sound keeps on playing if the drive type is changed while the motor is running
             // Also happens when toggling TDE
-            vdrive = file_system_get_vdrive(unit);
-            if (vdrive != NULL)
-               diskimg = vdrive->image;
-            switch (diskimg->type)
+            switch (set_drive_type)
             {
-                case 1541:
-                case 1571:
+                case DISK_IMAGE_TYPE_G64:
+                case DISK_IMAGE_TYPE_G71:
+                case DISK_IMAGE_TYPE_D64:
+                case DISK_IMAGE_TYPE_D71:
                     resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
                     break;
-                case 1581:
                 default:
                     resources_set_int("DriveSoundEmulationVolume", 0);
                     break;

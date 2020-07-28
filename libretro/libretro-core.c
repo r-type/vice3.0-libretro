@@ -5312,7 +5312,7 @@ static void save_trap(uint16_t addr, void *success)
    int save_disks;
    int drive_type;
    resources_get_int("Drive8Type", &drive_type);
-   save_disks = (drive_type < 1550) ? 1 : 0;
+   save_disks = (drive_type == 1541) ? 1 : 0;
 
    /* params: stream, save_roms, save_disks, event_mode */
    if (machine_write_snapshot_to_stream(snapshot_stream, 0, save_disks, 0) >= 0)

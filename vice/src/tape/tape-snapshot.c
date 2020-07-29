@@ -132,6 +132,14 @@ static int tape_snapshot_write_tapimage_module(snapshot_t *s)
 
 static int tape_snapshot_read_tapimage_module(snapshot_t *s)
 {
+#ifdef __LIBRETRO__
+    // Enable Datasette and press play by force to solve https://sourceforge.net/p/vice-emu/bugs/860/
+    // Also skip included tape image to prevent unwanted temp file writes
+    resources_set_int("Datasette", 1);
+    datasette_control(DATASETTE_CONTROL_START);
+    return 0;
+#endif
+
     uint8_t major_version, minor_version;
     snapshot_module_t *m;
     char *filename = NULL;

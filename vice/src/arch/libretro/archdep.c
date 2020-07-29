@@ -487,7 +487,6 @@ char *archdep_quote_parameter(const char *name)
 
 char *archdep_tmpnam(void)
 {
-
 #ifdef HAVE_MKSTEMP
     char *tmpName;
     const char mkstempTemplate[] = "/vice.XXXXXX";
@@ -512,12 +511,10 @@ char *archdep_tmpnam(void)
 #else
     return lib_stralloc(tmpnam(NULL));
 #endif
-
 }
 
 FILE *archdep_mkstemp_fd(char **filename, const char *mode)
- {
-
+{
 #if defined HAVE_MKSTEMP
     char *tmp;
     const char template[] = "/vice.XXXXXX";
@@ -525,7 +522,11 @@ FILE *archdep_mkstemp_fd(char **filename, const char *mode)
     FILE *fd;
     char *tmpdir;
 
+#if defined(__WIN32__)
+    tmpdir = getenv("TMP");
+#else
     tmpdir = getenv("TMPDIR");
+#endif
 
     if (tmpdir != NULL ) 
         tmp = util_concat(tmpdir, template, NULL);
@@ -551,6 +552,7 @@ FILE *archdep_mkstemp_fd(char **filename, const char *mode)
     return fd;
 #else
     char *tmp;
+    FILE *fd;
 
     tmp = tmpnam(NULL);
 

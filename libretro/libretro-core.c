@@ -109,19 +109,18 @@ static unsigned int manual_crop_left = 0;
 static unsigned int manual_crop_right = 0;
 
 static unsigned int request_reload_restart = 0;
+static bool request_restart = false;
 static bool request_update_work_disk = false;
 static int request_model_set = -1;
 static int request_model_prev = -1;
 static unsigned int opt_model_auto = 1;
 unsigned int opt_autoloadwarp = 0;
 unsigned int opt_read_vicerc = 0;
-static unsigned int opt_read_vicerc_prev = 0;
 static unsigned int opt_work_disk_type = 0;
 static unsigned int opt_work_disk_unit = 8;
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
 static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
-static unsigned int opt_jiffydos_prev = 0;
 #endif
 #if defined(__XSCPU64__)
 unsigned int opt_supercpu_kernal = 0;
@@ -3857,11 +3856,12 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
+      int opt_read_vicerc_prev = opt_read_vicerc;
       if (!strcmp(var.value, "disabled")) opt_read_vicerc = 0;
       else if (!strcmp(var.value, "enabled")) opt_read_vicerc = 1;
 
-      request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? 1 : request_reload_restart;
-      opt_read_vicerc_prev = opt_read_vicerc;
+      if (retro_ui_finalized)
+         request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? 1 : request_reload_restart;
    }
 
 #if defined(__XSCPU64__)
@@ -3872,7 +3872,8 @@ static void update_variables(void)
       int opt_supercpu_kernal_prev = opt_supercpu_kernal;
       opt_supercpu_kernal = atoi(var.value);
 
-      request_reload_restart = (opt_supercpu_kernal != opt_supercpu_kernal_prev) ? 1 : request_reload_restart;
+      if (retro_ui_finalized)
+         request_reload_restart = (opt_supercpu_kernal != opt_supercpu_kernal_prev) ? 1 : request_reload_restart;
    }
 #endif
 
@@ -3881,14 +3882,15 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
+      int opt_jiffydos_prev = opt_jiffydos;
       if (!strcmp(var.value, "disabled")) opt_jiffydos = 0;
       else if (!strcmp(var.value, "enabled")) opt_jiffydos = 1;
 
       if (!opt_jiffydos_allow)
          opt_jiffydos = 0;
 
-      request_reload_restart = (opt_jiffydos != opt_jiffydos_prev) ? 1 : request_reload_restart;
-      opt_jiffydos_prev = opt_jiffydos;
+      if (retro_ui_finalized)
+         request_reload_restart = (opt_jiffydos != opt_jiffydos_prev) ? 1 : request_reload_restart;
    }
 #endif
 
@@ -4326,24 +4328,8 @@ void emu_reset(int type)
 
 void retro_reset(void)
 {
-   // Always stop datasette, or autostart from tape will fail
-   datasette_control(DATASETTE_CONTROL_STOP);
-
-   // Always disable Warp
-   resources_set_int("WarpMode", 0);
-
-   // Changing opt_read_vicerc requires reloading
-   if (request_reload_restart)
-      reload_restart();
-
-   // Retro reset should always hard reset & autostart
-   machine_trigger_reset(MACHINE_RESET_MODE_HARD);
-
-   // Allow autostarting with a different disk
-   if (dc->count > 1)
-      autostartString = x_strdup(dc->files[dc->index]);
-   if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
-      autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+   // Trigger autostart-reset in retro_run()
+   request_restart = true;
 }
 
 struct DiskImage {
@@ -5227,6 +5213,13 @@ void retro_run(void)
       imagename_timer--;
 
    video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retroW<<(pix_bytes/4))), zoomed_width, zoomed_height, retroW<<(pix_bytes/2));
+
+   /* retro_reset() needs to postponed here for proper JiffyDOS+vicerc core option refresh operation */
+   if (request_restart)
+   {
+      request_restart = false;
+      emu_reset(0);
+   }
 }
 
 bool retro_load_game(const struct retro_game_info *info)
@@ -5312,7 +5305,7 @@ static void save_trap(uint16_t addr, void *success)
    int save_disks;
    int drive_type;
    resources_get_int("Drive8Type", &drive_type);
-   save_disks = (drive_type < 1550) ? 1 : 0;
+   save_disks = (drive_type == 1541) ? 1 : 0;
 
    /* params: stream, save_roms, save_disks, event_mode */
    if (machine_write_snapshot_to_stream(snapshot_stream, 0, save_disks, 0) >= 0)

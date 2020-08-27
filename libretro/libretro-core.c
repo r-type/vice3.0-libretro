@@ -395,6 +395,83 @@ static void log_disk_in_tray(bool display)
     }
 }
 
+#if defined(__XVIC__)
+static int autodetect_vic20_cartridge_type(const char* argv)
+{
+    FILE *fd;
+    int addr = 0, len = 0, type = 0;
+    char buf[RETRO_PATH_MAX] = {0};
+
+    fd = fopen(argv, MODE_READ);
+    fseek(fd, 0, SEEK_END);
+    len = ftell(fd);
+    fseek(fd, 0, SEEK_SET);
+    switch (len & 0xfff)
+    {
+        case 0: /* plain binary */
+            addr = 0;
+            type = CARTRIDGE_VIC20_GENERIC;
+            break;
+        case 2: /* load address */
+            addr = fgetc(fd);
+            addr = (addr & 0xff) | ((fgetc(fd) << 8) & 0xff00);
+            len -= 2; /* remove load address from length */
+            type = CARTRIDGE_VIC20_GENERIC;
+            break;
+        default: /* not a valid file */
+            break;
+    }
+
+    if (type > 0)
+    {
+        if (len == 0)
+            type = -1;
+        else if ((addr == 0x6000 || addr == 0x7000) && (len <= 0x4000))
+            type = CARTRIDGE_VIC20_16KB_6000;
+        else if ((addr == 0xA000) && (len <= 0x2000))
+            type = CARTRIDGE_VIC20_8KB_A000;
+        else if ((addr == 0x2000 || addr == 0x3000) && (len <= 0x4000))
+            type = CARTRIDGE_VIC20_16KB_2000;
+        else if ((addr == 0xB000) && (len <= 0x1000))
+            type = CARTRIDGE_VIC20_4KB_B000;
+        else if ((addr == 0x4000 || addr == 0x5000) && (len <= 0x4000))
+            type = CARTRIDGE_VIC20_16KB_4000;
+        else if (len <= 0x2000)
+            type = CARTRIDGE_VIC20_8KB_A000;
+        else if (len <= 0x4000)
+            type = CARTRIDGE_VIC20_16KB_6000;
+    }
+
+    // Separate ROM combinations (type = -1)
+    if (strcasestr(argv, "-2000.") || strcasestr(argv, "-6000.") || strcasestr(argv, "-a000."))
+        type = -1;
+
+    // M3U analyzing
+    if (strcasestr(argv, ".m3u"))
+    {
+        fseek(fd, 0, SEEK_SET);
+        if (fgets(buf, sizeof(buf), fd) != NULL)
+        {
+            if (strcasestr(buf, "-2000.") || strcasestr(buf, "-6000.") || strcasestr(buf, "-a000."))
+                type = -1;
+            if (strcasestr(buf, ".20"))
+                type = CARTRIDGE_VIC20_16KB_2000;
+            else if (strcasestr(buf, ".40"))
+                type = CARTRIDGE_VIC20_16KB_4000;
+            else if (strcasestr(buf, ".60"))
+                type = CARTRIDGE_VIC20_16KB_6000;
+            else if (strcasestr(buf, ".a0"))
+                type = CARTRIDGE_VIC20_8KB_A000;
+            else if (strcasestr(buf, ".b0"))
+                type = CARTRIDGE_VIC20_4KB_B000;
+        }
+    }
+
+    fclose(fd);
+    return type;
+}
+#endif
+
 static int process_cmdline(const char* argv)
 {
     int i = 0;
@@ -582,9 +659,90 @@ static int process_cmdline(const char* argv)
             Add_Option("-cartA");
         else if (strendswith(argv, ".b0"))
             Add_Option("-cartB");
+        else if (strendswith(argv, ".prg")
+              || strendswith(argv, ".crt")
+              || strendswith(argv, ".bin")
+              || strendswith(argv, ".m3u"))
+        {
+            // There are PRGs that are actually carts, so we need to save the hassle
+            // of mass renaming by differentiating them from regular program-PRGs.
+            // Also separated cart PRGs meant to be assigned to specific memory
+            // addresses require special care for hassle-free usage.
+            if (file_exists(argv))
+            {
+                char cart_2000[RETRO_PATH_MAX] = {0};
+                char cart_6000[RETRO_PATH_MAX] = {0};
+                char cart_A000[RETRO_PATH_MAX] = {0};
 
-        char vic20buf1[6]   = "\0";
-        char vic20buf2[6]   = "\0";
+                int type = autodetect_vic20_cartridge_type(argv);
+                switch (type)
+                {
+                    case CARTRIDGE_VIC20_16KB_2000:
+                        Add_Option("-cart2");
+                        break;
+                    case CARTRIDGE_VIC20_16KB_4000:
+                        Add_Option("-cart4");
+                        break;
+                    case CARTRIDGE_VIC20_16KB_6000:
+                        Add_Option("-cart6");
+                        break;
+                    case CARTRIDGE_VIC20_8KB_A000:
+                        Add_Option("-cartA");
+                        break;
+                    case CARTRIDGE_VIC20_4KB_B000:
+                        Add_Option("-cartB");
+                        break;
+                    case CARTRIDGE_VIC20_GENERIC:
+                        Add_Option("-cartgeneric");
+                        break;
+                    case -1: // Separate ROM combination shenanigans
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", path_remove_extension(cart_2000));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-2000", ""));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-6000", ""));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-a000", ""));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s%s%s", cart_2000, "-2000", ".prg");
+
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", path_remove_extension(cart_6000));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-2000", ""));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-6000", ""));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-a000", ""));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s%s%s", cart_6000, "-6000", ".prg");
+
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", path_remove_extension(cart_A000));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-2000", ""));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-6000", ""));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-a000", ""));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s%s%s", cart_A000, "-a000", ".prg");
+
+                        if (file_exists(cart_2000))
+                        {
+                            Add_Option("-cart2");
+                            Add_Option(cart_2000);
+                        }
+                        if (file_exists(cart_6000))
+                        {
+                            Add_Option("-cart6");
+                            Add_Option(cart_6000);
+                        }
+                        if (file_exists(cart_A000))
+                        {
+                            Add_Option("-cartA");
+                            Add_Option(cart_A000);
+                        }
+
+                        argv = "";
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        char vic20buf1[6]   = {0};
+        char vic20buf2[6]   = {0};
         int vic20mem        = 0;
         int vic20mems[5]    = {0, 3, 8, 16, 24};
 

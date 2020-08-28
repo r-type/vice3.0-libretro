@@ -4,7 +4,7 @@ Port of VICE 3.3 for libretro with virtual keyboard
 
 Supported platforms: Linux Windows Apple Android emscripten Switch Vita
 
-Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz
+Source base: `https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz`
 
 ## Recent improvements
 
@@ -14,7 +14,7 @@ Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.t
 - GUI removed
 - Autostart PRG mode to inject
 - System-subdir renamed to `vice` and created automatically
-- Cursor keys disabled while using RetroPad
+- Keyboard keys disabled while using RetroPad
 - New settings:
   - Drive Sound Emulation (1541 & 1571 only)
   - Reset Type (Autostart, Soft, Hard, Freeze)
@@ -50,20 +50,22 @@ Source base: https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.t
 |Y|Toggle ShiftLock|
 |Start|Press Return|
 
-Long press for sticky keys. Stickying a third key will replace the second.
+Long press for sticky keys. Stickying the third key will replace the second.
 
 
-## Joyport control via filename
+## Joyport control
 
 C64 games sometimes use joystick port 1 and sometimes joystick port 2 for player 1. There are several ways to switch ports in this core:
-- Use the core option for it: `Quick Menu -> Options -> RetroPad Port`.
-- Bring up the virtual keyboard with `Select` button, and press the key labeled `JOY` there.
-- Rename your games, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2.
+- Use the core option: `Quick Menu -> Options -> RetroPad Port`.
+- Bring up the virtual keyboard with `Select` button, and press the key labeled `JOY`.
+- Press the default keyboard shortcut `Right Control`.
+- Assign `SWITCH_JOYPORT` to any RetroPad button under `Quick Menu -> Options`.
+- Rename the game, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2.
 
 ## M3U support and disk control
-When you have a multi disk game, you can use a M3U file to specify each disk of the game and change them from the RetroArch Disk Control interface.
+When you have a multi disk game, you can use a M3U file to be able to change disks via the RetroArch Disc Control interface.
 
-A M3U file is a simple text file with one disk per line (see https://en.wikipedia.org/wiki/M3U).
+A M3U file is a simple text file with one disk per line (see `https://en.wikipedia.org/wiki/M3U`).
 
 Example:
 
@@ -78,10 +80,10 @@ Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 3 of 3 Side B)(Populac
 ```
 Path can be absolute or relative to the location of the M3U file.
 
-When a game ask for it, you can change the current disk in the RetroArch 'Disk Control' menu:
-- Eject the current disk with 'Disk Cycle Tray Status'.
-- Select the right disk index.
-- Insert the new disk with 'Disk Cycle Tray Status'.
+When a game ask for it, you can change the current disk in the RetroArch "Disc Control" menu:
+- Eject the current disk with "Eject Disc"
+- Select the right disk index with "Current Disc Index"
+- Insert the new disk with "Insert Disc"
 
 Note: ZIP support is provided by the core, which allows the use of zipped images in M3Us.
 
@@ -101,17 +103,19 @@ External ROM files required in `system/vice`:
 
 ## Command file operation
 
-VICE command line options are supported with RetroArch by by placing the desired command line in a text file with a `.cmd` file extension. The command line format is as documented in the Vice documentation (see http://vice-emu.sourceforge.net/vice_6.html).
+VICE command line options are supported with RetroArch by by placing the desired command line in a text file with a `.cmd` file extension. The command line format is as documented in the Vice documentation (see `http://vice-emu.sourceforge.net/vice_6.html`).
 
-Using this you can overcome limitations of the GUI and set advanced configurations required for running problematic files. Here are a couple of examples for the xvic core  ...
+Using this you can overcome limitations of the GUI and set advanced configurations required for running problematic files. Here are a couple of examples for the xvic core:
 
 VIC-20 megacart support:
 ```
 xvic -cartmega /path/to/rom/mega-cart-name.rom
 ```
-VIC-20 games which require specific memory configs such as 8k expansion:
+VIC-20 games which require specific memory configs such as 8k expansion (`-memory (3k/8k/16k/24k/all) / (0/1/2/3/5) / (04/20/40/60/a0)`):
 ```
 xvic -memory 1 /path/to/rom/some-8k-game.d64
+xvic -memory 8k /path/to/rom/some-8k-game.d64
+xvic -memory 20 /path/to/rom/some-8k-game.d64
 ```
 
 VIC-20 memory expansion will also be set with filename tags or directory matching: `some game (8k).prg` or `/8k/some game.prg`.
@@ -125,6 +129,7 @@ Currently working EMUTYPEs:
 - `x64sc`
 - `x128`
 - `xcbm2`
+- `xcbm5x0`
 - `xpet`
 - `xplus4`
 - `xscpu64`
@@ -371,8 +376,8 @@ ndk-build
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
   02111-1307  USA
 
- The ROM files in the `C128', `C64', `CBM-II', `DRIVES', `PET', `PLUS4'
- `PRINTER' and `VIC20' directories are Copyright C by Commodore
+ The ROM files in the `C128`, `C64`, `CBM-II`, `DRIVES`, `PET`, `PLUS4`
+ `PRINTER` and `VIC20` directories are Copyright C by Commodore
  Business Machines.
 
  The ROM files in the `C64DTV` directory are Copyright C by Commodore

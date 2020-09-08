@@ -137,6 +137,7 @@ struct libretro_core_options {
     int Model;
     int UserportJoy;
     int AutostartWarp;
+    int AttachDevice8Readonly;
     int DriveTrueEmulation;
     int DriveSoundEmulation;
     int AudioLeak;
@@ -151,6 +152,7 @@ struct libretro_core_options {
     int SidResid8580FilterBias;
     char ExternalPalette[RETRO_PATH_MAX];
     int ColorGamma;
+    int ColorTint;
     int ColorSaturation;
     int ColorContrast;
     int ColorBrightness;

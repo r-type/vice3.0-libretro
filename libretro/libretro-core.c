@@ -1394,7 +1394,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vic20_memory_expansions",
          "Memory Expansions",
-         "Expansion change will reset the system.",
+         "Expansion change resets the system!",
          {
             { "none", "disabled" },
             { "3kB", "3KB" },
@@ -1609,7 +1609,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading. Drive Sound Emulation will be muted.",
+         "Toggles warp mode always during disk and tape loading. Mutes Drive Sound Emulation.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1629,9 +1629,20 @@ void retro_set_environment(retro_environment_t cb)
          "enabled"
       },
       {
+         "vice_floppy_write_protection",
+         "Floppy Write Protection",
+         "Makes device 8 read only.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
          "vice_work_disk",
          "Global Work Disk",
-         "Global disk in device 8 will only be inserted when the core is started without content.",
+         "Global disk in device 8 is only inserted when the core is started without content.",
          {
             { "disabled", NULL },
             { "8_d64", "D64 - 664 blocks, 170KB - Device 8" },
@@ -1959,16 +1970,16 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "vice_vicii_color_saturation",
-         "Video > VIC-II Color Saturation",
+         "vice_vicii_color_brightness",
+         "Video > VIC-II Color Brightness",
 #elif defined(__XVIC__)
-         "vice_vic_color_saturation",
-         "Video > VIC Color Saturation",
+         "vice_vic_color_brightness",
+         "Video > VIC Color Brightness",
 #elif defined(__XPLUS4__)
-         "vice_ted_color_saturation",
-         "Video > TED Color Saturation",
+         "vice_ted_color_brightness",
+         "Video > TED Color Brightness",
 #endif
-         "Saturation for the internal palette.",
+         "Brightness for the internal palette.",
          {
             { "200", "10\%" },
             { "250", "12.5\%" },
@@ -2009,7 +2020,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1000"
+         "900"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2067,16 +2078,16 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "vice_vicii_color_brightness",
-         "Video > VIC-II Color Brightness",
+         "vice_vicii_color_saturation",
+         "Video > VIC-II Color Saturation",
 #elif defined(__XVIC__)
-         "vice_vic_color_brightness",
-         "Video > VIC Color Brightness",
+         "vice_vic_color_saturation",
+         "Video > VIC Color Saturation",
 #elif defined(__XPLUS4__)
-         "vice_ted_color_brightness",
-         "Video > TED Color Brightness",
+         "vice_ted_color_saturation",
+         "Video > TED Color Saturation",
 #endif
-         "Brightness for the internal palette.",
+         "Saturation for the internal palette.",
          {
             { "200", "10\%" },
             { "250", "12.5\%" },
@@ -2117,7 +2128,61 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "900"
+         "1000"
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_color_tint",
+         "Video > VIC-II Color Tint",
+#elif defined(__XVIC__)
+         "vice_vic_color_tint",
+         "Video > VIC Color Tint",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_tint",
+         "Video > TED Color Tint",
+#endif
+         "Tint for the internal palette.",
+         {
+            { "200", "10\%" },
+            { "250", "12.5\%" },
+            { "300", "15\%" },
+            { "350", "17.5\%" },
+            { "400", "20\%" },
+            { "450", "22.5\%" },
+            { "500", "25\%" },
+            { "550", "27.5\%" },
+            { "600", "30\%" },
+            { "650", "32.5\%" },
+            { "700", "35\%" },
+            { "750", "37.5\%" },
+            { "800", "40\%" },
+            { "850", "42.5\%" },
+            { "900", "45\%" },
+            { "950", "47.5\%" },
+            { "1000", "50\%" },
+            { "1050", "52.5\%" },
+            { "1100", "55\%" },
+            { "1150", "57.5\%" },
+            { "1200", "60\%" },
+            { "1250", "62.5\%" },
+            { "1300", "65\%" },
+            { "1350", "67.5\%" },
+            { "1400", "70\%" },
+            { "1450", "72.5\%" },
+            { "1500", "75\%" },
+            { "1550", "77.5\%" },
+            { "1600", "80\%" },
+            { "1650", "82.5\%" },
+            { "1700", "85\%" },
+            { "1750", "87.5\%" },
+            { "1800", "90\%" },
+            { "1850", "92.5\%" },
+            { "1900", "95\%" },
+            { "1950", "97.5\%" },
+            { "2000", "100\%" },
+            { NULL, NULL },
+         },
+         "1000"
       },
 #endif
       {
@@ -2507,7 +2572,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_physical_keyboard_pass_through",
          "Physical Keyboard Pass-through",
-         "Pass all physical keyboard events to the core. Disable this to prevent cursor keys and fire key from generating key events.",
+         "'ON' passes all physical keyboard events to the core. 'OFF' prevents RetroPad keys from generating keyboard events.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2518,7 +2583,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_datasette_hotkeys",
          "Datasette Hotkeys",
-         "Enable/disable all Datasette hotkeys.",
+         "Toggles all Datasette hotkeys.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2556,7 +2621,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_joyport_switch",
          "Hotkey > Switch Joyports",
-         "Press the mapped key to switch joyports 1 & 2.\nSwitching will disable 'RetroPad Port' option until core restart.",
+         "Press the mapped key to switch joyports 1 & 2.\nSwitching disables 'RetroPad Port' option until core restart.",
          {{ NULL, NULL }},
          "RETROK_RCTRL"
       },
@@ -2588,7 +2653,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_datasette_toggle_hotkeys",
          "Hotkey > Toggle Datasette Hotkeys",
-         "Press the mapped key to toggle the Datasette hotkeys.",
+         "Press the mapped key to toggle Datasette hotkeys.",
          {{ NULL, NULL }},
          "---"
       },
@@ -2808,7 +2873,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport",
          "RetroPad Port",
-         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling will disable this option until core restart.",
+         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling disables this option until core restart.",
          {
             { "Port 2", NULL },
             { "Port 1", NULL },
@@ -2819,7 +2884,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport_type",
          "RetroPad Port Type",
-         "Non-joysticks will be plugged into current port only and are controlled with the left analog stick or a real mouse. Paddles will be split to 1st and 2nd RetroPort.",
+         "Non-joysticks are plugged into current port only and are controlled with the left analog stick or a real mouse. Paddles are split to 1st and 2nd RetroPort.",
          {
             { "1", "Joystick" },
             { "2", "Paddles" },
@@ -2839,7 +2904,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_retropad_options",
          "RetroPad Face Button Options",
-         "Rotate face buttons clockwise and/or make 2nd fire press up.",
+         "Rotates face buttons clockwise and/or makes 2nd fire press up.",
          {
             { "disabled", "B = Fire" },
             { "jump", "B = Fire, A = Up" },
@@ -3017,6 +3082,17 @@ static void update_variables(void)
       // Silently restore sounds when autoloadwarp is disabled and DSE is enabled
       if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation && !opt_autoloadwarp)
          resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
+   }
+
+   var.key = "vice_floppy_write_protection";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "disabled")) core_opt.AttachDevice8Readonly = 0;
+      else core_opt.AttachDevice8Readonly = 1;
+
+      if (retro_ui_finalized)
+         log_resources_set_int("AttachDevice8Readonly", core_opt.AttachDevice8Readonly);
    }
 
    var.key = "vice_work_disk";
@@ -3736,6 +3812,31 @@ static void update_variables(void)
 
       core_opt.ColorGamma = color_gamma;
    }
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+   var.key = "vice_vicii_color_tint";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_color_tint";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_color_tint";
+#endif
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int color_tint = atoi(var.value);
+
+      if (retro_ui_finalized && core_opt.ColorTint != color_tint)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         log_resources_set_int("VICIIColorTint", color_tint);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICColorTint", color_tint);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDColorTint", color_tint);
+#endif
+
+      core_opt.ColorTint = color_tint;
+   }
+
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    var.key = "vice_vicii_color_saturation";
 #elif defined(__XVIC__)
@@ -5420,6 +5521,8 @@ bool retro_load_game(const struct retro_game_info *info)
 void retro_unload_game(void)
 {
    file_system_detach_disk(8);
+   if (opt_work_disk_type && opt_work_disk_unit == 9)
+      file_system_detach_disk(9);
    tape_image_detach(1);
    cartridge_detach_image(-1);
    dc_reset(dc);

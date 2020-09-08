@@ -1,10 +1,10 @@
-# Vice 3.3 LIBRETRO
+# VICE LIBRETRO
 
-Port of VICE 3.3 for libretro with virtual keyboard
+Port of VICE, the Versatile Commodore Emulator 3.3 with virtual keyboard
 
 Supported platforms: Linux Windows Apple Android emscripten Switch Vita
 
-Source base: `https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz`
+Source base: [https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz](https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz)
 
 ## Recent improvements
 
@@ -23,7 +23,6 @@ Source base: `https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.
   - Zoom mode
   - Paddles & mouse
   - JiffyDOS support
-
 
 ## Default controls
 
@@ -52,7 +51,6 @@ Source base: `https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.
 
 Long press for sticky keys. Stickying the third key will replace the second.
 
-
 ## Joyport control
 
 C64 games sometimes use joystick port 1 and sometimes joystick port 2 for player 1. There are several ways to switch ports in this core:
@@ -63,13 +61,13 @@ C64 games sometimes use joystick port 1 and sometimes joystick port 2 for player
 - Rename the game, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2.
 
 ## M3U support and disk control
-When you have a multi disk game, you can use a M3U file to be able to change disks via the RetroArch Disc Control interface.
+When you have a multi disk game, you can use a M3U playlist file to be able to change disks via RetroArch Disc Control interface.
 
-A M3U file is a simple text file with one disk per line (see `https://en.wikipedia.org/wiki/M3U`).
+A M3U file is a simple text file with one disk per line ([Wikipedia](https://en.wikipedia.org/wiki/M3U)).
 
 Example:
 
-Ultima VI - The False Prophet (1990)(Origin Systems).m3u
+`Ultima VI - The False Prophet (1990)(Origin Systems).m3u`
 ```
 Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 1 of 3 Side A)(Game).d64
 Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 1 of 3 Side B)(Surface).d64
@@ -80,13 +78,14 @@ Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 3 of 3 Side B)(Populac
 ```
 Path can be absolute or relative to the location of the M3U file.
 
-When a game ask for it, you can change the current disk in the RetroArch "Disc Control" menu:
+When the game asks for it, you can change the current disk in the RetroArch "Disc Control" menu:
 - Eject the current disk with "Eject Disc"
 - Select the right disk index with "Current Disc Index"
 - Insert the new disk with "Insert Disc"
 
-Note: ZIP support is provided by the core, which allows the use of zipped images in M3Us.
-
+ZIP support is provided by the core, which allows:
+- Automatic M3U playlist generation of all files
+- The use of zipped images in M3Us
 
 ## JiffyDOS support
 
@@ -100,10 +99,9 @@ External ROM files required in `system/vice`:
 |**JiffyDOS_1571_repl310654.bin**|32 768|41c6cc528e9515ffd0ed9b180f8467c0|
 |**JiffyDOS_1581.bin**|32 768|20b6885c6dc2d42c38754a365b043d71|
 
-
 ## Command file operation
 
-VICE command line options are supported with RetroArch by by placing the desired command line in a text file with a `.cmd` file extension. The command line format is as documented in the Vice documentation (see `http://vice-emu.sourceforge.net/vice_6.html`).
+VICE command line options are supported by placing the desired command line in a text file with `.cmd` file extension. The command line format is as documented in the [VICE manual](http://vice-emu.sourceforge.net/vice_6.html).
 
 Using this you can overcome limitations of the GUI and set advanced configurations required for running problematic files. Here are a couple of examples for the xvic core:
 
@@ -384,7 +382,6 @@ ndk-build
  Business Machines, as well as Mammoth Toys, a division of nsi ltd.,
  Digital Concepts DC studios inc., Ironstone Partners ltd., and
  Toy:Lobster company ltd.
-
 
 ### NIBTOOLS
 

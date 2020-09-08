@@ -137,6 +137,7 @@ struct libretro_core_options {
     int Model;
     int UserportJoy;
     int AutostartWarp;
+    int AttachDevice8Readonly;
     int DriveTrueEmulation;
     int DriveSoundEmulation;
     int AudioLeak;

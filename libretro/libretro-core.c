@@ -1394,7 +1394,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vic20_memory_expansions",
          "Memory Expansions",
-         "Expansion change will reset the system.",
+         "Expansion change resets the system!",
          {
             { "none", "disabled" },
             { "3kB", "3KB" },
@@ -1609,7 +1609,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading. Drive Sound Emulation will be muted.",
+         "Toggles warp mode always during disk and tape loading. Mutes Drive Sound Emulation.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1629,9 +1629,20 @@ void retro_set_environment(retro_environment_t cb)
          "enabled"
       },
       {
+         "vice_floppy_write_protection",
+         "Floppy Write Protection",
+         "Makes device 8 read only.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
          "vice_work_disk",
          "Global Work Disk",
-         "Global disk in device 8 will only be inserted when the core is started without content.",
+         "Global disk in device 8 is only inserted when the core is started without content.",
          {
             { "disabled", NULL },
             { "8_d64", "D64 - 664 blocks, 170KB - Device 8" },
@@ -2507,7 +2518,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_physical_keyboard_pass_through",
          "Physical Keyboard Pass-through",
-         "Pass all physical keyboard events to the core. Disable this to prevent cursor keys and fire key from generating key events.",
+         "'ON' passes all physical keyboard events to the core. 'OFF' prevents RetroPad keys from generating keyboard events.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2518,7 +2529,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_datasette_hotkeys",
          "Datasette Hotkeys",
-         "Enable/disable all Datasette hotkeys.",
+         "Toggles all Datasette hotkeys.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2556,7 +2567,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_joyport_switch",
          "Hotkey > Switch Joyports",
-         "Press the mapped key to switch joyports 1 & 2.\nSwitching will disable 'RetroPad Port' option until core restart.",
+         "Press the mapped key to switch joyports 1 & 2.\nSwitching disables 'RetroPad Port' option until core restart.",
          {{ NULL, NULL }},
          "RETROK_RCTRL"
       },
@@ -2588,7 +2599,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_datasette_toggle_hotkeys",
          "Hotkey > Toggle Datasette Hotkeys",
-         "Press the mapped key to toggle the Datasette hotkeys.",
+         "Press the mapped key to toggle Datasette hotkeys.",
          {{ NULL, NULL }},
          "---"
       },
@@ -2808,7 +2819,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport",
          "RetroPad Port",
-         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling will disable this option until core restart.",
+         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling disables this option until core restart.",
          {
             { "Port 2", NULL },
             { "Port 1", NULL },
@@ -2819,7 +2830,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport_type",
          "RetroPad Port Type",
-         "Non-joysticks will be plugged into current port only and are controlled with the left analog stick or a real mouse. Paddles will be split to 1st and 2nd RetroPort.",
+         "Non-joysticks are plugged into current port only and are controlled with the left analog stick or a real mouse. Paddles are split to 1st and 2nd RetroPort.",
          {
             { "1", "Joystick" },
             { "2", "Paddles" },
@@ -2839,7 +2850,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_retropad_options",
          "RetroPad Face Button Options",
-         "Rotate face buttons clockwise and/or make 2nd fire press up.",
+         "Rotates face buttons clockwise and/or makes 2nd fire press up.",
          {
             { "disabled", "B = Fire" },
             { "jump", "B = Fire, A = Up" },
@@ -3017,6 +3028,17 @@ static void update_variables(void)
       // Silently restore sounds when autoloadwarp is disabled and DSE is enabled
       if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation && !opt_autoloadwarp)
          resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
+   }
+
+   var.key = "vice_floppy_write_protection";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "disabled")) core_opt.AttachDevice8Readonly = 0;
+      else core_opt.AttachDevice8Readonly = 1;
+
+      if (retro_ui_finalized)
+         log_resources_set_int("AttachDevice8Readonly", core_opt.AttachDevice8Readonly);
    }
 
    var.key = "vice_work_disk";

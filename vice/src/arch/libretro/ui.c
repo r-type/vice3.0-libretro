@@ -238,10 +238,9 @@ int ui_init_finalize(void)
    }
 #endif
 
-   if (core_opt.DriveTrueEmulation)
-      log_resources_set_int("DriveTrueEmulation", 1);
-   else
-      log_resources_set_int("DriveTrueEmulation", 0);
+   log_resources_set_int("DriveTrueEmulation", core_opt.DriveTrueEmulation);
+   log_resources_set_int("AttachDevice8Readonly", core_opt.AttachDevice8Readonly);
+   log_resources_set_int("AutostartWarp", core_opt.AutostartWarp);
 
    if (core_opt.DriveSoundEmulation)
    {
@@ -250,10 +249,9 @@ int ui_init_finalize(void)
    }
    else
       log_resources_set_int("DriveSoundEmulation", 0);
+
    if (opt_autoloadwarp)
       log_resources_set_int("DriveSoundEmulationVolume", 0);
-
-   log_resources_set_int("AutostartWarp", core_opt.AutostartWarp);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
    log_resources_set_int("VICIIAudioLeak", core_opt.AudioLeak);

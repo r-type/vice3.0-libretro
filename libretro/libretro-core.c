@@ -5442,6 +5442,8 @@ bool retro_load_game(const struct retro_game_info *info)
 void retro_unload_game(void)
 {
    file_system_detach_disk(8);
+   if (opt_work_disk_type && opt_work_disk_unit == 9)
+      file_system_detach_disk(9);
    tape_image_detach(1);
    cartridge_detach_image(-1);
    dc_reset(dc);

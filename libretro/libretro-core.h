@@ -152,6 +152,7 @@ struct libretro_core_options {
     int SidResid8580FilterBias;
     char ExternalPalette[RETRO_PATH_MAX];
     int ColorGamma;
+    int ColorTint;
     int ColorSaturation;
     int ColorContrast;
     int ColorBrightness;

@@ -785,7 +785,8 @@ static int process_cmdline(const char* argv)
         if (!is_fliplist)
         {
             // Add image name as autostart parameter
-            Add_Option(argv);
+            if (argv[0])
+                Add_Option(argv);
         }
         else
         {
@@ -875,6 +876,18 @@ static int process_cmdline(const char* argv)
         }
     }
 
+#if defined(__XVIC__) || defined(__XPLUS4__)
+     // Disable floppy drive when using carts with cores that won't disable it via autostart
+     for (int i = 0; i < PARAMCOUNT; i++)
+     {
+         if (strstr(XARGV[i], "-cart"))
+         {
+             Add_Option("-drive8type");
+             Add_Option("0");
+             break;
+         }
+     }
+#endif
     return 0;
 }
 
@@ -1046,6 +1059,8 @@ void update_from_vice()
     {
         free(autostartString);
         autostartString = x_strdup(cmdline_get_autostart_string());
+        if (!autostartString && !string_is_empty(full_path))
+            autostartString = x_strdup(full_path);
     }
 
     if (autostartString)
@@ -1053,26 +1068,39 @@ void update_from_vice()
     else
         log_cb(RETRO_LOG_INFO, "No image for autostart\n");
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
     // Automatic model request
     if (opt_model_auto && autostartString)
     {
-        if (strstr(autostartString, "NTSC") != NULL || strstr(autostartString, "(USA)") != NULL)
+        if (strstr(autostartString, "NTSC") != NULL ||
+            strstr(autostartString, "(USA)") != NULL ||
+            strstr(autostartString, "(Japan)") != NULL ||
+            strstr(autostartString, "(Japan, USA)") != NULL)
         {
-            fprintf(stdout, "[libretro-vice]: Found 'NTSC' or '(USA)' in: '%s'\n", autostartString);
-
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_NTSC;
             if (core_opt.Model == C64MODEL_C64C_PAL)
                 request_model_set = C64MODEL_C64C_NTSC;
+#elif defined(__XVIC__)
+            request_model_set = VIC20MODEL_VIC20_NTSC;
+#endif
         }
 
-        if (strstr(autostartString, "PAL") != NULL || strstr(autostartString, "(Europe)") != NULL)
+        if (strstr(autostartString, "PAL") != NULL ||
+            strstr(autostartString, "(Europe)") != NULL ||
+            strstr(autostartString, "(Finland)") != NULL ||
+            strstr(autostartString, "(France)") != NULL ||
+            strstr(autostartString, "(Germany)") != NULL ||
+            strstr(autostartString, "(Netherlands)") != NULL ||
+            strstr(autostartString, "(Sweden)") != NULL)
         {
-            fprintf(stdout, "[libretro-vice]: Found 'PAL' or '(Europe)' in: '%s'\n", autostartString);
-
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_PAL;
             if (core_opt.Model == C64MODEL_C64C_NTSC)
                 request_model_set = C64MODEL_C64C_PAL;
+#elif defined(__XVIC__)
+            request_model_set = VIC20MODEL_VIC20_PAL;
+#endif
         }
     }
     else
@@ -1384,12 +1412,14 @@ void retro_set_environment(retro_environment_t cb)
          "Model",
          "",
          {
+            { "VIC20 PAL auto", "VIC-20 PAL Automatic" },
+            { "VIC20 NTSC auto", "VIC-20 NTSC Automatic" },
             { "VIC20 PAL", "VIC-20 PAL" },
             { "VIC20 NTSC", "VIC-20 NTSC" },
             { "VIC21", "Super VIC (+16K) NTSC" },
             { NULL, NULL },
          },
-         "VIC20 PAL"
+         "VIC20 PAL auto"
       },
       {
          "vice_vic20_memory_expansions",
@@ -3203,13 +3233,19 @@ static void update_variables(void)
    {
       int model = 0;
 
-      if (!strcmp(var.value, "VIC20 PAL")) model = VIC20MODEL_VIC20_PAL;
+      if (strstr(var.value, "auto")) opt_model_auto = 1;
+      else opt_model_auto = 0;
+
+      if (!strcmp(var.value, "VIC20 PAL auto")) model = VIC20MODEL_VIC20_PAL;
+      else if (!strcmp(var.value, "VIC20 NTSC auto")) model = VIC20MODEL_VIC20_NTSC;
+      else if (!strcmp(var.value, "VIC20 PAL")) model = VIC20MODEL_VIC20_PAL;
       else if (!strcmp(var.value, "VIC20 NTSC")) model = VIC20MODEL_VIC20_NTSC;
       else if (!strcmp(var.value, "VIC21")) model = VIC20MODEL_VIC21;
 
       if (retro_ui_finalized && core_opt.Model != model)
       {
          vic20model_set(model);
+         request_model_prev = -1;
          // Memory expansion needs to be reseted to get updated
          core_opt.VIC20Memory = 0xff;
       }
@@ -4518,8 +4554,28 @@ static void update_variables(void)
 #if defined(__XVIC__)
    option_display.key = "vice_vic20_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vic_color_gamma",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vic_color_tint",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vic_color_saturation",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vic_color_contrast",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vic_color_brightness",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #elif defined(__XPLUS4__)
    option_display.key = "vice_plus4_external_palette";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_ted_color_gamma",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_ted_color_tint",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_ted_color_saturation",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_ted_color_contrast",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_ted_color_brightness",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #elif defined(__XPET__)
    option_display.key = "vice_pet_external_palette";
@@ -4531,6 +4587,8 @@ static void update_variables(void)
    option_display.key = "vice_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_vicii_color_gamma",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vicii_color_tint",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_vicii_color_saturation",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -5336,18 +5394,27 @@ void retro_run(void)
 
    if (retro_ui_finalized)
    {
-#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
       /* Set model when requested */
       if (opt_model_auto == 1 && request_model_set > -1)
       {
          if (request_model_prev != request_model_set)
          {
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
              if (request_model_set == C64MODEL_C64_NTSC || request_model_set == C64MODEL_C64C_NTSC)
-                fprintf(stdout, "[libretro-vice]: Forcing NTSC mode\n");
+                log_cb(RETRO_LOG_INFO, "Forcing NTSC mode\n");
              else if (request_model_set == C64MODEL_C64_PAL || request_model_set == C64MODEL_C64C_PAL)
-                fprintf(stdout, "[libretro-vice]: Forcing PAL mode\n");
+                log_cb(RETRO_LOG_INFO, "Forcing PAL mode\n");
 
              c64model_set(request_model_set);
+#elif defined(__XVIC__)
+             if (request_model_set == VIC20MODEL_VIC20_NTSC)
+                log_cb(RETRO_LOG_INFO, "Forcing NTSC mode\n");
+             else if (request_model_set == VIC20MODEL_VIC20_PAL)
+                log_cb(RETRO_LOG_INFO, "Forcing PAL mode\n");
+
+             vic20model_set(request_model_set);
+#endif
              request_model_prev = request_model_set;
          }
          opt_model_auto = 2;

@@ -103,8 +103,8 @@ static char* joystick_value_human(char val, int vice_device)
 
 static void display_joyport(void)
 {
-    int len;
-    char tmpstr[25];
+    int len = 0;
+    char tmpstr[25] = {0};
 
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
     char joy1[2];
@@ -135,6 +135,20 @@ static void display_joyport(void)
     // Joystick
     else
         sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2], 0));
+#elif defined(__XVIC__)
+    char joy1[2];
+    sprintf(joy1, "%s", "1");
+
+    // Mouse
+    if (opt_joyport_type > 2)
+       sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+    // Paddles
+    else if (opt_joyport_type == 2)
+       sprintf(tmpstr, "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+    // Joystick
+    else
+       sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
+#endif
 
     if (core_opt.UserportJoy != -1)
     {
@@ -146,12 +160,6 @@ static void display_joyport(void)
         sprintf(tmpstr + strlen(tmpstr), "%5s", "");
         sprintf(tmpstr + strlen(tmpstr), "%5s", "");
     }
-#else
-    char joy1[2];
-    sprintf(joy1, "%s", "1");
-
-    sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
-#endif
 
     if (opt_statusbar & STATUSBAR_BASIC)
         snprintf(tmpstr, sizeof(tmpstr), "%24s", "");

@@ -741,26 +741,26 @@ static int process_cmdline(const char* argv)
             }
         }
 
-        char vic20buf1[6]   = {0};
-        char vic20buf2[6]   = {0};
-        int vic20mem        = 0;
-        int vic20mems[5]    = {0, 3, 8, 16, 24};
+        char vic20buf1[6] = {0};
+        char vic20buf2[6] = {0};
+        int vic20mem      = 0;
+        int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
 
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < sizeof(vic20mems)/sizeof(vic20mems[0]); i++)
         {
             vic20mem = vic20mems[i];
-            snprintf(vic20buf1, 6, "%c%d%c%c", '(', vic20mem, 'k', ')');
-            snprintf(vic20buf2, 6, "%c%d%c%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k', FSDEV_DIR_SEP_CHR);
+            snprintf(vic20buf1, sizeof(vic20buf1), "%c%d%c", '(', vic20mem, 'k');
+            snprintf(vic20buf2, sizeof(vic20buf2), "%c%d%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k');
             if (strcasestr(argv, vic20buf1))
             {
                 vic20mem_forced = i;
-                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dKB\n", argv, vic20mem);
+                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
                 break;
             }
             else if (strcasestr(argv, vic20buf2))
             {
                 vic20mem_forced = i;
-                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dKB\n", argv, vic20mem);
+                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dkB\n", argv, vic20mem);
                 break;
             }
         }
@@ -1427,11 +1427,11 @@ void retro_set_environment(retro_environment_t cb)
          "Expansion change resets the system!",
          {
             { "none", "disabled" },
-            { "3kB", "3KB" },
-            { "8kB", "8KB" },
-            { "16kB", "16KB" },
-            { "24kB", "24KB" },
-            { "all", "All" },
+            { "3kB", "3kB" },
+            { "8kB", "8kB" },
+            { "16kB", "16kB" },
+            { "24kB", "24kB" },
+            { "35kB", "35kB" },
             { NULL, NULL },
          },
          "none"
@@ -2454,7 +2454,7 @@ void retro_set_environment(retro_environment_t cb)
          "1500"
       },
 #endif
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__)
       {
          "vice_analogmouse_deadzone",
          "Analog Stick Mouse Deadzone",
@@ -2574,7 +2574,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#if !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XPET__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__)
       {
          "vice_keyboard_keymap",
          "Keyboard Keymap",
@@ -2647,7 +2647,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_F12"
       },
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
          "vice_mapper_joyport_switch",
          "Hotkey > Switch Joyports",
@@ -2899,7 +2899,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "4"
       },
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
          "vice_joyport",
          "RetroPad Port",
@@ -2911,6 +2911,8 @@ void retro_set_environment(retro_environment_t cb)
          },
          "Port 2"
       },
+#endif
+#if !defined(__XPET__) && !defined(__XCBM2__)
       {
          "vice_joyport_type",
          "RetroPad Port Type",
@@ -3264,7 +3266,7 @@ static void update_variables(void)
       else if (!strcmp(var.value, "8kB")) vic20mem = 2;
       else if (!strcmp(var.value, "16kB")) vic20mem = 3;
       else if (!strcmp(var.value, "24kB")) vic20mem = 4;
-      else if (!strcmp(var.value, "all")) vic20mem = 5;
+      else if (!strcmp(var.value, "35kB")) vic20mem = 5;
 
       // Super VIC uses memory blocks 1+2 by default
       if (!vic20mem && core_opt.Model == VIC20MODEL_VIC21)
@@ -3977,7 +3979,7 @@ static void update_variables(void)
    }
 #endif
 
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
    var.key = "vice_joyport";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3985,7 +3987,9 @@ static void update_variables(void)
       if (!strcmp(var.value, "Port 2") && !cur_port_locked) cur_port = 2;
       else if (!strcmp(var.value, "Port 1") && !cur_port_locked) cur_port = 1;
    }
+#endif
 
+#if !defined(__XPET__) && !defined(__XCBM2__)
    var.key = "vice_joyport_type";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -4475,7 +4479,7 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
    option_display.key = "vice_mapper_joyport_switch";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -5567,7 +5571,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
    update_variables();
 
-#if defined(__XVIC__) || defined(__XPET__) || defined(__XCBM2__)
+#if defined(__XPET__) || defined(__XCBM2__) || defined(__XVIC__)
    /* Joyport limit has to apply always */
    cur_port = 1;
    cur_port_locked = 1;

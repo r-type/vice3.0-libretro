@@ -128,6 +128,9 @@ void emu_function(int function)
             resources_set_int("SDLStatusbar", statusbar);
             break;
         case EMU_JOYPORT:
+#if defined(__XPET__) || defined(__XCBM2__) || defined(__XVIC__)
+            break;
+#endif
             cur_port_locked = 1;
             cur_port++;
             if (cur_port>2) cur_port = 1;

@@ -3120,11 +3120,15 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) core_opt.AttachDevice8Readonly = 0;
-      else core_opt.AttachDevice8Readonly = 1;
+      int readonly = 0;
 
-      if (retro_ui_finalized)
-         log_resources_set_int("AttachDevice8Readonly", core_opt.AttachDevice8Readonly);
+      if (!strcmp(var.value, "disabled")) readonly = 0;
+      else readonly = 1;
+
+      if (retro_ui_finalized && core_opt.AttachDevice8Readonly != readonly)
+         log_resources_set_int("AttachDevice8Readonly", readonly);
+
+      core_opt.AttachDevice8Readonly = readonly;
    }
 
    var.key = "vice_work_disk";

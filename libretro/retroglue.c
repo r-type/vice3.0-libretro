@@ -40,7 +40,7 @@ void remove_recurse(const char *path)
          continue;
 
       sprintf(filename, "%s%s%s", path, FSDEV_DIR_SEP_STR, dirp->d_name);
-      fprintf(stdout, "Temp clean: %s\n", filename);
+      fprintf(stdout, "Clean: %s\n", filename);
 
       if (path_is_directory(filename))
          remove_recurse(filename);
@@ -102,7 +102,7 @@ void zip_uncompress(char *in, char *out, char *lastfile)
 
         if ((*filename_withoutpath) == '\0')
         {
-            fprintf(stdout, "Unzip mkdir:   %s\n", filename_withpath);
+            fprintf(stdout, "Mkdir: %s\n", filename_withpath);
             path_mkdir(filename_withpath);
         }
         else
@@ -129,7 +129,7 @@ void zip_uncompress(char *in, char *out, char *lastfile)
 
             if (fout != NULL)
             {
-                fprintf(stdout, "Unzip extract: %s\n", write_filename);
+                fprintf(stdout, "Unzip: %s\n", write_filename);
 
                 do
                 {

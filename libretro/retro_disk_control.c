@@ -88,7 +88,6 @@ static char* dirname_int(const char* filename)
 static const char const* rude_words[] = {
     "semprini",
     "ass presents",
-    "ass presents:"
 };
 
 // Filter out this annoying "ASS PRESENTS"
@@ -97,7 +96,7 @@ static bool is_ugly(const char* label)
     size_t i;
     for (i = 0; i < sizeof(rude_words) / sizeof(rude_words[0]); ++i)
     {
-        if (strcasecmp(label, rude_words[i]) == 0)
+        if (strcasestr(label, rude_words[i]))
             return true;
     }
     return false;
@@ -244,7 +243,7 @@ static char* get_label(const char* filename)
 
     if (is_ugly((char*)label))
     {
-        return strdup((char*)label);
+        return strdup((char*)"");
     }
 
     return strdup((char*)label);

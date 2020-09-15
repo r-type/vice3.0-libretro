@@ -255,11 +255,10 @@ int PARAMCOUNT=0;
 // Display message on next retro_run
 static char queued_msg[1024];
 static int show_queued_msg = 0;
-
-extern int skel_main(int argc, char *argv[]);
-
 static void log_disk_in_tray(bool display);
 extern void display_current_image(const char *image, bool inserted);
+
+extern int skel_main(int argc, char *argv[]);
 
 static void Add_Option(const char* option)
 {
@@ -386,12 +385,10 @@ static void log_disk_in_tray(bool display)
         pos += strlen(queued_msg + pos);
         label = dc->labels[dc->index];
         if (label && label[0])
-        {
             snprintf(queued_msg + pos, sizeof(queued_msg) - pos, " (%s)", label);
-        }
         log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
         if (display)
-            show_queued_msg = 150;
+            show_queued_msg = 250;
     }
 }
 
@@ -741,26 +738,26 @@ static int process_cmdline(const char* argv)
             }
         }
 
-        char vic20buf1[6]   = {0};
-        char vic20buf2[6]   = {0};
-        int vic20mem        = 0;
-        int vic20mems[5]    = {0, 3, 8, 16, 24};
+        char vic20buf1[6] = {0};
+        char vic20buf2[6] = {0};
+        int vic20mem      = 0;
+        int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
 
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < sizeof(vic20mems)/sizeof(vic20mems[0]); i++)
         {
             vic20mem = vic20mems[i];
-            snprintf(vic20buf1, 6, "%c%d%c%c", '(', vic20mem, 'k', ')');
-            snprintf(vic20buf2, 6, "%c%d%c%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k', FSDEV_DIR_SEP_CHR);
+            snprintf(vic20buf1, sizeof(vic20buf1), "%c%d%c", '(', vic20mem, 'k');
+            snprintf(vic20buf2, sizeof(vic20buf2), "%c%d%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k');
             if (strcasestr(argv, vic20buf1))
             {
                 vic20mem_forced = i;
-                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dKB\n", argv, vic20mem);
+                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
                 break;
             }
             else if (strcasestr(argv, vic20buf2))
             {
                 vic20mem_forced = i;
-                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dKB\n", argv, vic20mem);
+                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dkB\n", argv, vic20mem);
                 break;
             }
         }
@@ -1427,11 +1424,11 @@ void retro_set_environment(retro_environment_t cb)
          "Expansion change resets the system!",
          {
             { "none", "disabled" },
-            { "3kB", "3KB" },
-            { "8kB", "8KB" },
-            { "16kB", "16KB" },
-            { "24kB", "24KB" },
-            { "all", "All" },
+            { "3kB", "3kB" },
+            { "8kB", "8kB" },
+            { "16kB", "16kB" },
+            { "24kB", "24kB" },
+            { "35kB", "35kB" },
             { NULL, NULL },
          },
          "none"
@@ -1480,7 +1477,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c128_go64",
          "GO64",
-         "Start in C64 compatibility mode.\nFull restart required.",
+         "Starts in C64 compatibility mode.\nFull restart required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1520,8 +1517,8 @@ void retro_set_environment(retro_environment_t cb)
             { "610 NTSC", "CBM 610 NTSC" },
             { "620 PAL", "CBM 620 PAL" },
             { "620 NTSC", "CBM 620 NTSC" },
-            //{ "620PLUS PAL", "CBM 620+ PAL" },
-            //{ "620PLUS NTSC", "CBM 620+ NTSC" },
+            { "620PLUS PAL", "CBM 620+ PAL" },
+            { "620PLUS NTSC", "CBM 620+ NTSC" },
             { "710 NTSC", "CBM 710 NTSC" },
             { "720 NTSC", "CBM 720 NTSC" },
             { "720PLUS NTSC", "CBM 720+ NTSC" },
@@ -1586,11 +1583,11 @@ void retro_set_environment(retro_environment_t cb)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
       {
          "vice_jiffydos",
-         "Use JiffyDOS",
+         "JiffyDOS",
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         "For D64, D71 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64/D71/D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #elif defined(__X128__)
-         "For D64, D71 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64/D71/D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #endif
          {
             { "disabled", NULL },
@@ -1614,7 +1611,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_reset",
          "Reset Type",
-         "'Autostart' does hard reset and reruns content. 'Soft' keeps some code in memory, 'Hard' erases all memory. 'Freeze' is for cartridges.",
+         "- 'Autostart' hard resets and reruns content.\n- 'Soft' keeps some code in memory.\n- 'Hard' erases all memory.\n- 'Freeze' is for cartridges.",
          {
             { "Autostart", NULL },
             { "Soft", NULL },
@@ -1639,7 +1636,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading. Mutes Drive Sound Emulation.",
+         "Toggles warp mode always during disk and tape loading. Mutes 'Drive Sound Emulation'.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1688,7 +1685,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_video_options_display",
          "Show Video Options",
-         "Core options page refresh required.",
+         "Shows/hides video related options.\nCore options page refresh required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2050,7 +2047,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "900"
+         "1000"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2104,7 +2101,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1200"
+         "1000"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2218,7 +2215,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_audio_options_display",
          "Show Audio Options",
-         "Core options page refresh required.",
+         "Shows/hides audio related options.\nCore options page refresh required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2229,7 +2226,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_emulation",
          "Audio > Drive Sound Emulation",
-         "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 or D71 disk image required.",
+         "Emulates the iconic floppy drive sounds.\n- 'True Drive Emulation' & D64/D71 disk image required.",
          {
             { "disabled", NULL },
             { "10\%", "10\% volume" },
@@ -2300,7 +2297,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sid_engine",
          "Audio > SID Engine",
-         "ReSID is accurate but slower.",
+         "'ReSID' is accurate but slower.",
          {
             { "FastSID", NULL },
             { "ReSID", NULL },
@@ -2313,7 +2310,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sid_model",
          "Audio > SID Model",
-         "The original C64 uses 6581, C64C uses 8580.",
+         "The original C64 uses '6581', C64C uses '8580'.",
          {
             { "Default", NULL },
             { "6581", NULL },
@@ -2357,7 +2354,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_passband",
          "Audio > ReSID Filter Passband",
-         "Parameters for SID Filter.",
+         "",
          {
             { "0", NULL },
             { "10", NULL },
@@ -2376,7 +2373,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_gain",
          "Audio > ReSID Filter Gain",
-         "Parameters for SID Filter.",
+         "",
          {
             { "90", NULL },
             { "91", NULL },
@@ -2396,7 +2393,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_filterbias",
          "Audio > ReSID Filter Bias",
-         "Parameters for SID Filter.",
+         "",
          {
             { "-5000", NULL },
             { "-4500", NULL },
@@ -2426,7 +2423,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_8580filterbias",
          "Audio > ReSID Filter 8580 Bias",
-         "Parameters for SID Filter.",
+         "",
          {
             { "-5000", NULL },
             { "-4500", NULL },
@@ -2454,7 +2451,7 @@ void retro_set_environment(retro_environment_t cb)
          "1500"
       },
 #endif
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__)
       {
          "vice_analogmouse_deadzone",
          "Analog Stick Mouse Deadzone",
@@ -2574,20 +2571,20 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#if !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XPET__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__)
       {
          "vice_keyboard_keymap",
          "Keyboard Keymap",
 #if defined(__XPLUS4__)
-         "User-defined keymap location is 'system/vice/PLUS4'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/PLUS4'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #elif defined(__XVIC__)
-         "User-defined keymap location is 'system/vice/VIC20'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/VIC20'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #elif defined(__X128__)
-         "User-defined keymap location is 'system/vice/C128'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/C128'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #elif defined(__XSCPU64__)
-         "User-defined keymap location is 'system/vice/SCPU64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/SCPU64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #else
-         "User-defined keymap location is 'system/vice/C64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/C64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #endif
          {
             { "positional", "Positional" },
@@ -2624,7 +2621,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapping_options_display",
          "Show Mapping Options",
-         "Show options for hotkeys & RetroPad mappings.\nCore options page refresh required.",
+         "Shows/hides hotkey & RetroPad mapping options.\nCore options page refresh required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2647,7 +2644,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "RETROK_F12"
       },
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
          "vice_mapper_joyport_switch",
          "Hotkey > Switch Joyports",
@@ -2659,7 +2656,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_reset",
          "Hotkey > Reset",
-         "Press the mapped key to trigger reset.",
+         "Press the mapped key to trigger the selected 'Reset Type'.",
          {{ NULL, NULL }},
          "RETROK_END"
       },
@@ -2740,7 +2737,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_b",
          "RetroPad B",
-         "Unmapped defaults to fire button.\nVKBD: Press key.",
+         "Unmapped defaults to fire button.\nVKBD: Press selected key.",
          {{ NULL, NULL }},
          "---"
       },
@@ -2869,7 +2866,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_turbo_fire_button",
          "RetroPad Turbo Fire",
-         "Replaces the mapped button with a turbo fire button.",
+         "Replaces the mapped button with turbo fire button.",
          {
             { "disabled", NULL },
             { "B", "RetroPad B" },
@@ -2899,7 +2896,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "4"
       },
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
          "vice_joyport",
          "RetroPad Port",
@@ -2911,6 +2908,8 @@ void retro_set_environment(retro_environment_t cb)
          },
          "Port 2"
       },
+#endif
+#if !defined(__XPET__) && !defined(__XCBM2__)
       {
          "vice_joyport_type",
          "RetroPad Port Type",
@@ -2944,7 +2943,6 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-
       { NULL, NULL, NULL, {{0}}, NULL },
    };
 
@@ -3118,11 +3116,15 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) core_opt.AttachDevice8Readonly = 0;
-      else core_opt.AttachDevice8Readonly = 1;
+      int readonly = 0;
 
-      if (retro_ui_finalized)
-         log_resources_set_int("AttachDevice8Readonly", core_opt.AttachDevice8Readonly);
+      if (!strcmp(var.value, "disabled")) readonly = 0;
+      else readonly = 1;
+
+      if (retro_ui_finalized && core_opt.AttachDevice8Readonly != readonly)
+         log_resources_set_int("AttachDevice8Readonly", readonly);
+
+      core_opt.AttachDevice8Readonly = readonly;
    }
 
    var.key = "vice_work_disk";
@@ -3264,7 +3266,7 @@ static void update_variables(void)
       else if (!strcmp(var.value, "8kB")) vic20mem = 2;
       else if (!strcmp(var.value, "16kB")) vic20mem = 3;
       else if (!strcmp(var.value, "24kB")) vic20mem = 4;
-      else if (!strcmp(var.value, "all")) vic20mem = 5;
+      else if (!strcmp(var.value, "35kB")) vic20mem = 5;
 
       // Super VIC uses memory blocks 1+2 by default
       if (!vic20mem && core_opt.Model == VIC20MODEL_VIC21)
@@ -3428,8 +3430,8 @@ static void update_variables(void)
       else if (!strcmp(var.value, "610 NTSC")) model = CBM2MODEL_610_NTSC;
       else if (!strcmp(var.value, "620 PAL")) model = CBM2MODEL_620_PAL;
       else if (!strcmp(var.value, "620 NTSC")) model = CBM2MODEL_620_NTSC;
-      //else if (!strcmp(var.value, "620PLUS PAL")) model = CBM2MODEL_620PLUS_PAL;
-      //else if (!strcmp(var.value, "620PLUS NTSC")) model = CBM2MODEL_620PLUS_NTSC;
+      else if (!strcmp(var.value, "620PLUS PAL")) model = CBM2MODEL_620PLUS_PAL;
+      else if (!strcmp(var.value, "620PLUS NTSC")) model = CBM2MODEL_620PLUS_NTSC;
       else if (!strcmp(var.value, "710 NTSC")) model = CBM2MODEL_710_NTSC;
       else if (!strcmp(var.value, "720 NTSC")) model = CBM2MODEL_720_NTSC;
       else if (!strcmp(var.value, "720PLUS NTSC")) model = CBM2MODEL_720PLUS_NTSC;
@@ -3977,7 +3979,7 @@ static void update_variables(void)
    }
 #endif
 
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
    var.key = "vice_joyport";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3985,7 +3987,9 @@ static void update_variables(void)
       if (!strcmp(var.value, "Port 2") && !cur_port_locked) cur_port = 2;
       else if (!strcmp(var.value, "Port 1") && !cur_port_locked) cur_port = 1;
    }
+#endif
 
+#if !defined(__XPET__) && !defined(__XCBM2__)
    var.key = "vice_joyport_type";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -4475,7 +4479,7 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XVIC__)
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
    option_display.key = "vice_mapper_joyport_switch";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -5567,7 +5571,7 @@ bool retro_load_game(const struct retro_game_info *info)
 
    update_variables();
 
-#if defined(__XVIC__) || defined(__XPET__) || defined(__XCBM2__)
+#if defined(__XPET__) || defined(__XCBM2__) || defined(__XVIC__)
    /* Joyport limit has to apply always */
    cur_port = 1;
    cur_port_locked = 1;

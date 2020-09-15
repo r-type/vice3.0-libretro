@@ -2050,7 +2050,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "900"
+         "1000"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2104,7 +2104,7 @@ void retro_set_environment(retro_environment_t cb)
             { "2000", "100\%" },
             { NULL, NULL },
          },
-         "1200"
+         "1000"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)

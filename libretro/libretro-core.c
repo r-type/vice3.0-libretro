@@ -1520,8 +1520,8 @@ void retro_set_environment(retro_environment_t cb)
             { "610 NTSC", "CBM 610 NTSC" },
             { "620 PAL", "CBM 620 PAL" },
             { "620 NTSC", "CBM 620 NTSC" },
-            //{ "620PLUS PAL", "CBM 620+ PAL" },
-            //{ "620PLUS NTSC", "CBM 620+ NTSC" },
+            { "620PLUS PAL", "CBM 620+ PAL" },
+            { "620PLUS NTSC", "CBM 620+ NTSC" },
             { "710 NTSC", "CBM 710 NTSC" },
             { "720 NTSC", "CBM 720 NTSC" },
             { "720PLUS NTSC", "CBM 720+ NTSC" },
@@ -3433,8 +3433,8 @@ static void update_variables(void)
       else if (!strcmp(var.value, "610 NTSC")) model = CBM2MODEL_610_NTSC;
       else if (!strcmp(var.value, "620 PAL")) model = CBM2MODEL_620_PAL;
       else if (!strcmp(var.value, "620 NTSC")) model = CBM2MODEL_620_NTSC;
-      //else if (!strcmp(var.value, "620PLUS PAL")) model = CBM2MODEL_620PLUS_PAL;
-      //else if (!strcmp(var.value, "620PLUS NTSC")) model = CBM2MODEL_620PLUS_NTSC;
+      else if (!strcmp(var.value, "620PLUS PAL")) model = CBM2MODEL_620PLUS_PAL;
+      else if (!strcmp(var.value, "620PLUS NTSC")) model = CBM2MODEL_620PLUS_NTSC;
       else if (!strcmp(var.value, "710 NTSC")) model = CBM2MODEL_710_NTSC;
       else if (!strcmp(var.value, "720 NTSC")) model = CBM2MODEL_720_NTSC;
       else if (!strcmp(var.value, "720PLUS NTSC")) model = CBM2MODEL_720PLUS_NTSC;

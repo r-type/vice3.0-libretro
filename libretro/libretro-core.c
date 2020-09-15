@@ -1480,7 +1480,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c128_go64",
          "GO64",
-         "Start in C64 compatibility mode.\nFull restart required.",
+         "Starts in C64 compatibility mode.\nFull restart required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1586,11 +1586,11 @@ void retro_set_environment(retro_environment_t cb)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
       {
          "vice_jiffydos",
-         "Use JiffyDOS",
+         "JiffyDOS",
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         "For D64, D71 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64/D71/D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #elif defined(__X128__)
-         "For D64, D71 & D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64/D71/D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #endif
          {
             { "disabled", NULL },
@@ -1614,7 +1614,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_reset",
          "Reset Type",
-         "'Autostart' does hard reset and reruns content. 'Soft' keeps some code in memory, 'Hard' erases all memory. 'Freeze' is for cartridges.",
+         "- 'Autostart' hard resets and reruns content.\n- 'Soft' keeps some code in memory.\n- 'Hard' erases all memory.\n- 'Freeze' is for cartridges.",
          {
             { "Autostart", NULL },
             { "Soft", NULL },
@@ -1639,7 +1639,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading. Mutes Drive Sound Emulation.",
+         "Toggles warp mode always during disk and tape loading. Mutes 'Drive Sound Emulation'.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1688,7 +1688,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_video_options_display",
          "Show Video Options",
-         "Core options page refresh required.",
+         "Shows/hides video related options.\nCore options page refresh required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2218,7 +2218,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_audio_options_display",
          "Show Audio Options",
-         "Core options page refresh required.",
+         "Shows/hides audio related options.\nCore options page refresh required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2229,7 +2229,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_emulation",
          "Audio > Drive Sound Emulation",
-         "Emulates the iconic floppy drive sounds.\n- True Drive Emulation & D64 or D71 disk image required.",
+         "Emulates the iconic floppy drive sounds.\n- 'True Drive Emulation' & D64/D71 disk image required.",
          {
             { "disabled", NULL },
             { "10\%", "10\% volume" },
@@ -2300,7 +2300,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sid_engine",
          "Audio > SID Engine",
-         "ReSID is accurate but slower.",
+         "'ReSID' is accurate but slower.",
          {
             { "FastSID", NULL },
             { "ReSID", NULL },
@@ -2313,7 +2313,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sid_model",
          "Audio > SID Model",
-         "The original C64 uses 6581, C64C uses 8580.",
+         "The original C64 uses '6581', C64C uses '8580'.",
          {
             { "Default", NULL },
             { "6581", NULL },
@@ -2357,7 +2357,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_passband",
          "Audio > ReSID Filter Passband",
-         "Parameters for SID Filter.",
+         "",
          {
             { "0", NULL },
             { "10", NULL },
@@ -2376,7 +2376,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_gain",
          "Audio > ReSID Filter Gain",
-         "Parameters for SID Filter.",
+         "",
          {
             { "90", NULL },
             { "91", NULL },
@@ -2396,7 +2396,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_filterbias",
          "Audio > ReSID Filter Bias",
-         "Parameters for SID Filter.",
+         "",
          {
             { "-5000", NULL },
             { "-4500", NULL },
@@ -2426,7 +2426,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_resid_8580filterbias",
          "Audio > ReSID Filter 8580 Bias",
-         "Parameters for SID Filter.",
+         "",
          {
             { "-5000", NULL },
             { "-4500", NULL },
@@ -2579,15 +2579,15 @@ void retro_set_environment(retro_environment_t cb)
          "vice_keyboard_keymap",
          "Keyboard Keymap",
 #if defined(__XPLUS4__)
-         "User-defined keymap location is 'system/vice/PLUS4'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/PLUS4'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #elif defined(__XVIC__)
-         "User-defined keymap location is 'system/vice/VIC20'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/VIC20'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #elif defined(__X128__)
-         "User-defined keymap location is 'system/vice/C128'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/C128'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #elif defined(__XSCPU64__)
-         "User-defined keymap location is 'system/vice/SCPU64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/SCPU64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #else
-         "User-defined keymap location is 'system/vice/C64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+         "User-defined keymaps go in 'system/vice/C64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
 #endif
          {
             { "positional", "Positional" },
@@ -2624,7 +2624,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapping_options_display",
          "Show Mapping Options",
-         "Show options for hotkeys & RetroPad mappings.\nCore options page refresh required.",
+         "Shows/hides hotkey & RetroPad mapping options.\nCore options page refresh required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2659,7 +2659,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_reset",
          "Hotkey > Reset",
-         "Press the mapped key to trigger reset.",
+         "Press the mapped key to trigger the selected 'Reset Type'.",
          {{ NULL, NULL }},
          "RETROK_END"
       },
@@ -2740,7 +2740,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_b",
          "RetroPad B",
-         "Unmapped defaults to fire button.\nVKBD: Press key.",
+         "Unmapped defaults to fire button.\nVKBD: Press selected key.",
          {{ NULL, NULL }},
          "---"
       },
@@ -2869,7 +2869,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_turbo_fire_button",
          "RetroPad Turbo Fire",
-         "Replaces the mapped button with a turbo fire button.",
+         "Replaces the mapped button with turbo fire button.",
          {
             { "disabled", NULL },
             { "B", "RetroPad B" },
@@ -2946,7 +2946,6 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-
       { NULL, NULL, NULL, {{0}}, NULL },
    };
 

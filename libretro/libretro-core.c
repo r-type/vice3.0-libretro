@@ -255,11 +255,10 @@ int PARAMCOUNT=0;
 // Display message on next retro_run
 static char queued_msg[1024];
 static int show_queued_msg = 0;
-
-extern int skel_main(int argc, char *argv[]);
-
 static void log_disk_in_tray(bool display);
 extern void display_current_image(const char *image, bool inserted);
+
+extern int skel_main(int argc, char *argv[]);
 
 static void Add_Option(const char* option)
 {
@@ -386,12 +385,10 @@ static void log_disk_in_tray(bool display)
         pos += strlen(queued_msg + pos);
         label = dc->labels[dc->index];
         if (label && label[0])
-        {
             snprintf(queued_msg + pos, sizeof(queued_msg) - pos, " (%s)", label);
-        }
         log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
         if (display)
-            show_queued_msg = 150;
+            show_queued_msg = 250;
     }
 }
 

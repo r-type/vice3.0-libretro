@@ -1,10 +1,10 @@
 const char* keyDesc[] = {
 "---",//0,
-"MOUSE_SLOWER",//-5,
-"MOUSE_FASTER",//-6,
 "TOGGLE_VKBD",//-11,
 "TOGGLE_STATUSBAR",//-12,
 "SWITCH_JOYPORT",//-13,
+"MOUSE_SLOWER",//-5,
+"MOUSE_FASTER",//-6,
 "RETROK_BACKSPACE",//8,
 "RETROK_TAB",//9,
 "RETROK_CLEAR",//12,
@@ -145,11 +145,11 @@ NULL
 
 int keyVal[] = {
 0,
--5,
--6,
 -11,
 -12,
 -13,
+-5,
+-6,
 8,
 9,
 12,
@@ -290,11 +290,11 @@ int keyVal[] = {
 
 const char* keyDescHotkeys[] = {
 "---",//0,
-//"MOUSE_SLOWER",//-5,
-//"MOUSE_FASTER",//-6,
 //"TOGGLE_VKBD",//-11,
 //"TOGGLE_STATUSBAR",//-12,
 //"SWITCH_JOYPORT",//-13,
+//"MOUSE_SLOWER",//-5,
+//"MOUSE_FASTER",//-6,
 "RETROK_BACKSPACE",//8,
 "RETROK_TAB",//9,
 "RETROK_CLEAR",//12,
@@ -435,11 +435,11 @@ NULL
 
 int keyValHotkeys[] = {
 0,
-//-5,
-//-6,
 //-11,
 //-12,
 //-13,
+//-5,
+//-6,
 8,
 9,
 12,

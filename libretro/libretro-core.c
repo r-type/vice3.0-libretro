@@ -1,5 +1,6 @@
 #include "libretro.h"
 #include "libretro-core.h"
+#include "libretro-mapper.h"
 #include "encodings/utf.h"
 
 #include "archdep.h"
@@ -131,7 +132,7 @@ unsigned int opt_statusbar = 0;
 unsigned int opt_reset_type = 0;
 unsigned int opt_keyrah_keypad = 0;
 unsigned int opt_keyboard_keymap = KBD_INDEX_POS;
-unsigned int opt_keyboard_passthrough = 0;
+unsigned int opt_keyboard_pass_through = 0;
 unsigned int opt_retropad_options = 0;
 unsigned int opt_joyport_type = 0;
 unsigned int opt_dpadmouse_speed = 6;
@@ -834,12 +835,12 @@ static int process_cmdline(const char* argv)
                 // and we won't have to take care of cleaning it up
                 is_fliplist = true;
             }
-            else if (strcmp(arg, "-j1") == 0)
+            else if (!strcmp(arg, "-j1"))
             {
                 cur_port = 1;
                 cur_port_locked = 1;
             }
-            else if (strcmp(arg, "-j2") == 0)
+            else if (!strcmp(arg, "-j2"))
             {
                 cur_port = 2;
                 cur_port_locked = 1;
@@ -850,12 +851,12 @@ static int process_cmdline(const char* argv)
                 dc_parse_m3u(dc, arg);
                 is_fliplist = true;
             }
-            else if (strcmp(arg, "-flipname") == 0)
+            else if (!strcmp(arg, "-flipname"))
             {
                 // Set flag for next arg
                 is_flipname_param = true;
             }
-            else if (strcmp(arg, "-noautostart") == 0)
+            else if (!strcmp(arg, "-noautostart"))
             {
                 // User ask to not automatically start image in drive
                 noautostart = true;
@@ -1314,7 +1315,6 @@ int pre_main()
 }
 
 static void update_variables(void);
-
 extern int ui_init_finalize(void);
 
 void reload_restart()
@@ -2902,8 +2902,8 @@ void retro_set_environment(retro_environment_t cb)
          "RetroPad Port",
          "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling disables this option until core restart.",
          {
-            { "Port 2", NULL },
             { "Port 1", NULL },
+            { "Port 2", NULL },
             { NULL, NULL },
          },
          "Port 2"
@@ -2913,7 +2913,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport_type",
          "RetroPad Port Type",
-         "Non-joysticks are plugged into current port only and are controlled with the left analog stick or a real mouse. Paddles are split to 1st and 2nd RetroPort.",
+         "Non-joysticks are plugged in current port only and are controlled with left analog stick or mouse. Paddles are split to 1st and 2nd RetroPort.",
          {
             { "1", "Joystick" },
             { "2", "Paddles" },
@@ -3094,10 +3094,10 @@ static void update_variables(void)
       }
 
       if (!strcmp(var.value, "warp")) core_opt.AutostartWarp = 1;
-      else core_opt.AutostartWarp = 0;
+      else                            core_opt.AutostartWarp = 0;
 
       if (!strcmp(var.value, "disabled")) noautostart = true;
-      else noautostart = false;
+      else                                noautostart = false;
    }
 
    var.key = "vice_autoloadwarp";
@@ -3105,7 +3105,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
-      else opt_autoloadwarp = 1;
+      else                                opt_autoloadwarp = 1;
 
       // Silently restore sounds when autoloadwarp is disabled and DSE is enabled
       if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation && !opt_autoloadwarp)
@@ -3119,7 +3119,7 @@ static void update_variables(void)
       int readonly = 0;
 
       if (!strcmp(var.value, "disabled")) readonly = 0;
-      else readonly = 1;
+      else                                readonly = 1;
 
       if (retro_ui_finalized && core_opt.AttachDevice8Readonly != readonly)
          log_resources_set_int("AttachDevice8Readonly", readonly);
@@ -3134,15 +3134,15 @@ static void update_variables(void)
       int work_disk_type = opt_work_disk_type;
       int work_disk_unit = opt_work_disk_unit;
 
-      if (!strcmp(var.value, "disabled")) opt_work_disk_type = 0;
+      if (!strcmp(var.value, "disabled"))    opt_work_disk_type = 0;
       else
       {
-         if (strstr(var.value, "_d64")) opt_work_disk_type = DISK_IMAGE_TYPE_D64;
+         if (strstr(var.value, "_d64"))      opt_work_disk_type = DISK_IMAGE_TYPE_D64;
          else if (strstr(var.value, "_d71")) opt_work_disk_type = DISK_IMAGE_TYPE_D71;
          else if (strstr(var.value, "_d81")) opt_work_disk_type = DISK_IMAGE_TYPE_D81;
 
-         if (strstr(var.value, "8_")) opt_work_disk_unit = 8;
-         else if (strstr(var.value, "9_")) opt_work_disk_unit = 9;
+         if (strstr(var.value, "8_"))        opt_work_disk_unit = 8;
+         else if (strstr(var.value, "9_"))   opt_work_disk_unit = 9;
       }
 
       if (work_disk_type != opt_work_disk_type || work_disk_unit != opt_work_disk_unit)
@@ -3162,7 +3162,7 @@ static void update_variables(void)
       }
 
       if (!strcmp(var.value, "disabled")) core_opt.DriveTrueEmulation = 0;
-      else core_opt.DriveTrueEmulation = 1;
+      else                                core_opt.DriveTrueEmulation = 1;
 
       // Silently restore sounds when TDE and DSE is enabled
       if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation)
@@ -3204,10 +3204,10 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int audioleak = 0;
-      opt_audio_leak_volume=atoi(var.value);
+      opt_audio_leak_volume = atoi(var.value);
 
       if (!strcmp(var.value, "disabled")) audioleak = 0;
-      else audioleak = 1;
+      else                                audioleak = 1;
 
       if (retro_ui_finalized && core_opt.AudioLeak != audioleak)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -3236,13 +3236,13 @@ static void update_variables(void)
       int model = 0;
 
       if (strstr(var.value, "auto")) opt_model_auto = 1;
-      else opt_model_auto = 0;
+      else                           opt_model_auto = 0;
 
-      if (!strcmp(var.value, "VIC20 PAL auto")) model = VIC20MODEL_VIC20_PAL;
+      if (!strcmp(var.value, "VIC20 PAL auto"))       model = VIC20MODEL_VIC20_PAL;
       else if (!strcmp(var.value, "VIC20 NTSC auto")) model = VIC20MODEL_VIC20_NTSC;
-      else if (!strcmp(var.value, "VIC20 PAL")) model = VIC20MODEL_VIC20_PAL;
-      else if (!strcmp(var.value, "VIC20 NTSC")) model = VIC20MODEL_VIC20_NTSC;
-      else if (!strcmp(var.value, "VIC21")) model = VIC20MODEL_VIC21;
+      else if (!strcmp(var.value, "VIC20 PAL"))       model = VIC20MODEL_VIC20_PAL;
+      else if (!strcmp(var.value, "VIC20 NTSC"))      model = VIC20MODEL_VIC20_NTSC;
+      else if (!strcmp(var.value, "VIC21"))           model = VIC20MODEL_VIC21;
 
       if (retro_ui_finalized && core_opt.Model != model)
       {
@@ -3261,9 +3261,9 @@ static void update_variables(void)
    {
       int vic20mem = 0;
 
-      if (!strcmp(var.value, "none")) vic20mem = 0;
-      else if (!strcmp(var.value, "3kB")) vic20mem = 1;
-      else if (!strcmp(var.value, "8kB")) vic20mem = 2;
+      if (!strcmp(var.value, "none"))      vic20mem = 0;
+      else if (!strcmp(var.value, "3kB"))  vic20mem = 1;
+      else if (!strcmp(var.value, "8kB"))  vic20mem = 2;
       else if (!strcmp(var.value, "16kB")) vic20mem = 3;
       else if (!strcmp(var.value, "24kB")) vic20mem = 4;
       else if (!strcmp(var.value, "35kB")) vic20mem = 5;
@@ -3318,12 +3318,12 @@ static void update_variables(void)
    {
       int model = 0;
 
-      if (!strcmp(var.value, "C16 PAL")) model = PLUS4MODEL_C16_PAL;
-      else if (!strcmp(var.value, "C16 NTSC")) model = PLUS4MODEL_C16_NTSC;
-      else if (!strcmp(var.value, "PLUS4 PAL")) model = PLUS4MODEL_PLUS4_PAL;
+      if (!strcmp(var.value, "C16 PAL"))         model = PLUS4MODEL_C16_PAL;
+      else if (!strcmp(var.value, "C16 NTSC"))   model = PLUS4MODEL_C16_NTSC;
+      else if (!strcmp(var.value, "PLUS4 PAL"))  model = PLUS4MODEL_PLUS4_PAL;
       else if (!strcmp(var.value, "PLUS4 NTSC")) model = PLUS4MODEL_PLUS4_NTSC;
-      else if (!strcmp(var.value, "V364 NTSC")) model = PLUS4MODEL_V364_NTSC;
-      else if (!strcmp(var.value, "232 NTSC")) model = PLUS4MODEL_232_NTSC;
+      else if (!strcmp(var.value, "V364 NTSC"))  model = PLUS4MODEL_V364_NTSC;
+      else if (!strcmp(var.value, "232 NTSC"))   model = PLUS4MODEL_232_NTSC;
 
       if (retro_ui_finalized && core_opt.Model != model)
          plus4model_set(model);
@@ -3337,9 +3337,9 @@ static void update_variables(void)
    {
       int model = 0;
 
-      if (!strcmp(var.value, "C128 PAL")) model = C128MODEL_C128_PAL;
-      else if (!strcmp(var.value, "C128 NTSC")) model = C128MODEL_C128_NTSC;
-      else if (!strcmp(var.value, "C128 DCR PAL")) model = C128MODEL_C128DCR_PAL;
+      if (!strcmp(var.value, "C128 PAL"))           model = C128MODEL_C128_PAL;
+      else if (!strcmp(var.value, "C128 NTSC"))     model = C128MODEL_C128_NTSC;
+      else if (!strcmp(var.value, "C128 DCR PAL"))  model = C128MODEL_C128DCR_PAL;
       else if (!strcmp(var.value, "C128 DCR NTSC")) model = C128MODEL_C128DCR_NTSC;
 
       if (retro_ui_finalized && core_opt.Model != model)
@@ -3354,7 +3354,7 @@ static void update_variables(void)
    {
       int c128columnkey = 1;
 
-      if (!strcmp(var.value, "VICII")) c128columnkey = 1;
+      if (!strcmp(var.value, "VICII"))    c128columnkey = 1;
       else if (!strcmp(var.value, "VDC")) c128columnkey = 0;
 
       if (retro_ui_finalized && core_opt.C128ColumnKey != c128columnkey)
@@ -3372,7 +3372,7 @@ static void update_variables(void)
    {
       int c128go64 = 0;
 
-      if (!strcmp(var.value, "disabled")) c128go64 = 0;
+      if (!strcmp(var.value, "disabled"))     c128go64 = 0;
       else if (!strcmp(var.value, "enabled")) c128go64 = 1;
 
       // Force VIC-II with GO64
@@ -3398,17 +3398,17 @@ static void update_variables(void)
    {
       int model = 0;
 
-      if (!strcmp(var.value, "2001")) model = PETMODEL_2001;
-      else if (!strcmp(var.value, "3008")) model = PETMODEL_3008;
-      else if (!strcmp(var.value, "3016")) model = PETMODEL_3016;
-      else if (!strcmp(var.value, "3032")) model = PETMODEL_3032;
-      else if (!strcmp(var.value, "3032B")) model = PETMODEL_3032B;
-      else if (!strcmp(var.value, "4016")) model = PETMODEL_4016;
-      else if (!strcmp(var.value, "4032")) model = PETMODEL_4032;
-      else if (!strcmp(var.value, "4032B")) model = PETMODEL_4032B;
-      else if (!strcmp(var.value, "8032")) model = PETMODEL_8032;
-      else if (!strcmp(var.value, "8096")) model = PETMODEL_8096;
-      else if (!strcmp(var.value, "8296")) model = PETMODEL_8296;
+      if (!strcmp(var.value, "2001"))          model = PETMODEL_2001;
+      else if (!strcmp(var.value, "3008"))     model = PETMODEL_3008;
+      else if (!strcmp(var.value, "3016"))     model = PETMODEL_3016;
+      else if (!strcmp(var.value, "3032"))     model = PETMODEL_3032;
+      else if (!strcmp(var.value, "3032B"))    model = PETMODEL_3032B;
+      else if (!strcmp(var.value, "4016"))     model = PETMODEL_4016;
+      else if (!strcmp(var.value, "4032"))     model = PETMODEL_4032;
+      else if (!strcmp(var.value, "4032B"))    model = PETMODEL_4032B;
+      else if (!strcmp(var.value, "8032"))     model = PETMODEL_8032;
+      else if (!strcmp(var.value, "8096"))     model = PETMODEL_8096;
+      else if (!strcmp(var.value, "8296"))     model = PETMODEL_8296;
       else if (!strcmp(var.value, "SUPERPET")) model = PETMODEL_SUPERPET;
       
       if (retro_ui_finalized && core_opt.Model != model)
@@ -3426,14 +3426,14 @@ static void update_variables(void)
    {
       int model = 0;
 
-      if (!strcmp(var.value, "610 PAL")) model = CBM2MODEL_610_PAL;
-      else if (!strcmp(var.value, "610 NTSC")) model = CBM2MODEL_610_NTSC;
-      else if (!strcmp(var.value, "620 PAL")) model = CBM2MODEL_620_PAL;
-      else if (!strcmp(var.value, "620 NTSC")) model = CBM2MODEL_620_NTSC;
-      else if (!strcmp(var.value, "620PLUS PAL")) model = CBM2MODEL_620PLUS_PAL;
+      if (!strcmp(var.value, "610 PAL"))           model = CBM2MODEL_610_PAL;
+      else if (!strcmp(var.value, "610 NTSC"))     model = CBM2MODEL_610_NTSC;
+      else if (!strcmp(var.value, "620 PAL"))      model = CBM2MODEL_620_PAL;
+      else if (!strcmp(var.value, "620 NTSC"))     model = CBM2MODEL_620_NTSC;
+      else if (!strcmp(var.value, "620PLUS PAL"))  model = CBM2MODEL_620PLUS_PAL;
       else if (!strcmp(var.value, "620PLUS NTSC")) model = CBM2MODEL_620PLUS_NTSC;
-      else if (!strcmp(var.value, "710 NTSC")) model = CBM2MODEL_710_NTSC;
-      else if (!strcmp(var.value, "720 NTSC")) model = CBM2MODEL_720_NTSC;
+      else if (!strcmp(var.value, "710 NTSC"))     model = CBM2MODEL_710_NTSC;
+      else if (!strcmp(var.value, "720 NTSC"))     model = CBM2MODEL_720_NTSC;
       else if (!strcmp(var.value, "720PLUS NTSC")) model = CBM2MODEL_720PLUS_NTSC;
 
       if (retro_ui_finalized && core_opt.Model != model)
@@ -3448,7 +3448,7 @@ static void update_variables(void)
    {
       int model = 0;
 
-      if (!strcmp(var.value, "510 PAL")) model = CBM2MODEL_510_PAL;
+      if (!strcmp(var.value, "510 PAL"))       model = CBM2MODEL_510_PAL;
       else if (!strcmp(var.value, "510 NTSC")) model = CBM2MODEL_510_NTSC;
 
       if (retro_ui_finalized && core_opt.Model != model)
@@ -3464,25 +3464,25 @@ static void update_variables(void)
       int model = 0;
 
       if (strstr(var.value, "auto")) opt_model_auto = 1;
-      else opt_model_auto = 0;
+      else                           opt_model_auto = 0;
 
-      if (!strcmp(var.value, "C64 PAL auto")) model = C64MODEL_C64_PAL;
-      else if (!strcmp(var.value, "C64 NTSC auto")) model = C64MODEL_C64_NTSC;
-      else if (!strcmp(var.value, "C64C PAL auto")) model = C64MODEL_C64C_PAL;
+      if (!strcmp(var.value, "C64 PAL auto"))        model = C64MODEL_C64_PAL;
+      else if (!strcmp(var.value, "C64 NTSC auto"))  model = C64MODEL_C64_NTSC;
+      else if (!strcmp(var.value, "C64C PAL auto"))  model = C64MODEL_C64C_PAL;
       else if (!strcmp(var.value, "C64C NTSC auto")) model = C64MODEL_C64C_NTSC;
-      else if (!strcmp(var.value, "C64 PAL")) model = C64MODEL_C64_PAL;
-      else if (!strcmp(var.value, "C64 NTSC")) model = C64MODEL_C64_NTSC;
-      else if (!strcmp(var.value, "C64C PAL")) model = C64MODEL_C64C_PAL;
-      else if (!strcmp(var.value, "C64C NTSC")) model = C64MODEL_C64C_NTSC;
-      else if (!strcmp(var.value, "C64SX PAL")) model = C64MODEL_C64SX_PAL;
-      else if (!strcmp(var.value, "C64SX NTSC")) model = C64MODEL_C64SX_NTSC;
-      else if (!strcmp(var.value, "PET64 PAL")) model = C64MODEL_PET64_PAL;
-      else if (!strcmp(var.value, "PET64 NTSC")) model = C64MODEL_PET64_NTSC;
-      else if (!strcmp(var.value, "C64 GS PAL")) model = C64MODEL_C64_GS;
-      else if (!strcmp(var.value, "C64 JAP NTSC")) model = C64MODEL_C64_JAP;
-      //else if (!strcmp(var.value, "C64 PAL N")) model = C64MODEL_C64_PAL_N;
-      //else if (!strcmp(var.value, "C64 OLD PAL")) model = C64MODEL_C64_OLD_PAL;
-      //else if (!strcmp(var.value, "C64 OLD NTSC")) model = C64MODEL_C64_OLD_NTSC;
+      else if (!strcmp(var.value, "C64 PAL"))        model = C64MODEL_C64_PAL;
+      else if (!strcmp(var.value, "C64 NTSC"))       model = C64MODEL_C64_NTSC;
+      else if (!strcmp(var.value, "C64C PAL"))       model = C64MODEL_C64C_PAL;
+      else if (!strcmp(var.value, "C64C NTSC"))      model = C64MODEL_C64C_NTSC;
+      else if (!strcmp(var.value, "C64SX PAL"))      model = C64MODEL_C64SX_PAL;
+      else if (!strcmp(var.value, "C64SX NTSC"))     model = C64MODEL_C64SX_NTSC;
+      else if (!strcmp(var.value, "PET64 PAL"))      model = C64MODEL_PET64_PAL;
+      else if (!strcmp(var.value, "PET64 NTSC"))     model = C64MODEL_PET64_NTSC;
+      else if (!strcmp(var.value, "C64 GS PAL"))     model = C64MODEL_C64_GS;
+      else if (!strcmp(var.value, "C64 JAP NTSC"))   model = C64MODEL_C64_JAP;
+      //else if (!strcmp(var.value, "C64 PAL N"))      model = C64MODEL_C64_PAL_N;
+      //else if (!strcmp(var.value, "C64 OLD PAL"))    model = C64MODEL_C64_OLD_PAL;
+      //else if (!strcmp(var.value, "C64 OLD NTSC"))   model = C64MODEL_C64_OLD_NTSC;
 
       if (retro_ui_finalized && core_opt.Model != model)
       {
@@ -3501,9 +3501,9 @@ static void update_variables(void)
    {
       int sid_engine = 0;
 
-      if (!strcmp(var.value, "ReSID")) sid_engine = 1;
+      if (!strcmp(var.value, "ReSID"))          sid_engine = 1;
       else if (!strcmp(var.value, "ReSID-3.3")) sid_engine = 6;
-      else if (!strcmp(var.value, "ReSID-FP")) sid_engine = 7;
+      else if (!strcmp(var.value, "ReSID-FP"))  sid_engine = 7;
 
       if (retro_ui_finalized && core_opt.SidEngine != sid_engine)
       {
@@ -3522,8 +3522,8 @@ static void update_variables(void)
    {
       int sid_model = 0xff;
 
-      if (!strcmp(var.value, "6581")) sid_model = 0;
-      else if (!strcmp(var.value, "8580")) sid_model = 1;
+      if (!strcmp(var.value, "6581"))        sid_model = 0;
+      else if (!strcmp(var.value, "8580"))   sid_model = 1;
       /* There is no digiboost for FastSID (and it's not needed either) */
       else if (!strcmp(var.value, "8580RD")) sid_model = (!core_opt.SidEngine ? 1 : 2);
 
@@ -3562,9 +3562,9 @@ static void update_variables(void)
    {
       int val = 0;
 
-      if (!strcmp(var.value, "Fast")) val = 0;
-      else if (!strcmp(var.value, "Interpolation")) val = 1;
-      else if (!strcmp(var.value, "Resampling")) val = 2;
+      if (!strcmp(var.value, "Fast"))                 val = 0;
+      else if (!strcmp(var.value, "Interpolation"))   val = 1;
+      else if (!strcmp(var.value, "Resampling"))      val = 2;
       else if (!strcmp(var.value, "Fast resampling")) val = 3;
 
       if (retro_ui_finalized && core_opt.SidResidSampling != val)
@@ -3634,11 +3634,11 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "none")) zoom_mode_id = 0;
-      else if (!strcmp(var.value, "small")) zoom_mode_id = 1;
-      else if (!strcmp(var.value, "medium")) zoom_mode_id = 2;
+      if (!strcmp(var.value, "none"))         zoom_mode_id = 0;
+      else if (!strcmp(var.value, "small"))   zoom_mode_id = 1;
+      else if (!strcmp(var.value, "medium"))  zoom_mode_id = 2;
       else if (!strcmp(var.value, "maximum")) zoom_mode_id = 3;
-      else if (!strcmp(var.value, "manual")) zoom_mode_id = 4;
+      else if (!strcmp(var.value, "manual"))  zoom_mode_id = 4;
 
 #if defined(__X128__)
       if (core_opt.C128ColumnKey == 0)
@@ -3654,13 +3654,13 @@ static void update_variables(void)
    {
       int zoom_mode_crop_id_prev = zoom_mode_crop_id;
 
-      if (!strcmp(var.value, "both")) zoom_mode_crop_id = 0;
-      else if (!strcmp(var.value, "vertical")) zoom_mode_crop_id = 1;
+      if (!strcmp(var.value, "both"))            zoom_mode_crop_id = 0;
+      else if (!strcmp(var.value, "vertical"))   zoom_mode_crop_id = 1;
       else if (!strcmp(var.value, "horizontal")) zoom_mode_crop_id = 2;
-      else if (!strcmp(var.value, "16:9")) zoom_mode_crop_id = 3;
-      else if (!strcmp(var.value, "16:10")) zoom_mode_crop_id = 4;
-      else if (!strcmp(var.value, "4:3")) zoom_mode_crop_id = 5;
-      else if (!strcmp(var.value, "5:4")) zoom_mode_crop_id = 6;
+      else if (!strcmp(var.value, "16:9"))       zoom_mode_crop_id = 3;
+      else if (!strcmp(var.value, "16:10"))      zoom_mode_crop_id = 4;
+      else if (!strcmp(var.value, "4:3"))        zoom_mode_crop_id = 5;
+      else if (!strcmp(var.value, "5:4"))        zoom_mode_crop_id = 6;
 
       // Zoom reset
       if (zoom_mode_crop_id != zoom_mode_crop_id_prev)
@@ -3673,10 +3673,10 @@ static void update_variables(void)
    {
       int opt_aspect_ratio_prev = opt_aspect_ratio;
 
-      if (!strcmp(var.value, "auto")) opt_aspect_ratio = 0;
-      else if (!strcmp(var.value, "pal")) opt_aspect_ratio = 1;
+      if (!strcmp(var.value, "auto"))      opt_aspect_ratio = 0;
+      else if (!strcmp(var.value, "pal"))  opt_aspect_ratio = 1;
       else if (!strcmp(var.value, "ntsc")) opt_aspect_ratio = 2;
-      else if (!strcmp(var.value, "raw")) opt_aspect_ratio = 3;
+      else if (!strcmp(var.value, "raw"))  opt_aspect_ratio = 3;
 
       // Zoom reset
       if (opt_aspect_ratio != opt_aspect_ratio_prev)
@@ -3728,9 +3728,8 @@ static void update_variables(void)
       // Only allow screenmode change after restart
       if (!pix_bytes_initialized)
       {
-         if (!strcmp(var.value, "16bit")) pix_bytes = 2;
+         if (!strcmp(var.value, "16bit"))      pix_bytes = 2;
          else if (!strcmp(var.value, "24bit")) pix_bytes = 4;
-         pix_bytes_initialized = true;
       }
    }
 
@@ -3955,14 +3954,14 @@ static void update_variables(void)
    {
       int joyadaptertype = -1;
 
-      if (!strcmp(var.value, "None")) joyadaptertype = -1;
+      if (!strcmp(var.value, "None"))                 joyadaptertype = -1;
       else if (!strcmp(var.value, "Protovision CGA")) joyadaptertype = USERPORT_JOYSTICK_CGA;
-      else if (!strcmp(var.value, "PET")) joyadaptertype = USERPORT_JOYSTICK_PET;
-      else if (!strcmp(var.value, "Hummer")) joyadaptertype = USERPORT_JOYSTICK_HUMMER;
-      else if (!strcmp(var.value, "OEM")) joyadaptertype = USERPORT_JOYSTICK_OEM;
-      else if (!strcmp(var.value, "Hit")) joyadaptertype = USERPORT_JOYSTICK_HIT;
-      else if (!strcmp(var.value, "Kingsoft")) joyadaptertype = USERPORT_JOYSTICK_KINGSOFT;
-      else if (!strcmp(var.value, "Starbyte")) joyadaptertype = USERPORT_JOYSTICK_STARBYTE;
+      else if (!strcmp(var.value, "PET"))             joyadaptertype = USERPORT_JOYSTICK_PET;
+      else if (!strcmp(var.value, "Hummer"))          joyadaptertype = USERPORT_JOYSTICK_HUMMER;
+      else if (!strcmp(var.value, "OEM"))             joyadaptertype = USERPORT_JOYSTICK_OEM;
+      else if (!strcmp(var.value, "Hit"))             joyadaptertype = USERPORT_JOYSTICK_HIT;
+      else if (!strcmp(var.value, "Kingsoft"))        joyadaptertype = USERPORT_JOYSTICK_KINGSOFT;
+      else if (!strcmp(var.value, "Starbyte"))        joyadaptertype = USERPORT_JOYSTICK_STARBYTE;
 
       if (retro_ui_finalized && core_opt.UserportJoy != joyadaptertype)
       {
@@ -3984,8 +3983,8 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "Port 2") && !cur_port_locked) cur_port = 2;
-      else if (!strcmp(var.value, "Port 1") && !cur_port_locked) cur_port = 1;
+      if (!strcmp(var.value, "Port 1") && !cur_port_locked)      cur_port = 1;
+      else if (!strcmp(var.value, "Port 2") && !cur_port_locked) cur_port = 2;
    }
 #endif
 
@@ -4030,7 +4029,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_keyrah_keypad = 0;
+      if (!strcmp(var.value, "disabled"))     opt_keyrah_keypad = 0;
       else if (!strcmp(var.value, "enabled")) opt_keyrah_keypad = 1;
    }
 
@@ -4040,9 +4039,9 @@ static void update_variables(void)
    {
       int val = opt_keyboard_keymap;
 
-      if (!strcmp(var.value, "symbolic")) opt_keyboard_keymap = KBD_INDEX_SYM;
-      else if (!strcmp(var.value, "positional")) opt_keyboard_keymap = KBD_INDEX_POS;
-      else if (!strcmp(var.value, "symbolic-user")) opt_keyboard_keymap = KBD_INDEX_USERSYM;
+      if (!strcmp(var.value, "symbolic"))             opt_keyboard_keymap = KBD_INDEX_SYM;
+      else if (!strcmp(var.value, "positional"))      opt_keyboard_keymap = KBD_INDEX_POS;
+      else if (!strcmp(var.value, "symbolic-user"))   opt_keyboard_keymap = KBD_INDEX_USERSYM;
       else if (!strcmp(var.value, "positional-user")) opt_keyboard_keymap = KBD_INDEX_USERPOS;
 
       if (retro_ui_finalized && opt_keyboard_keymap != val)
@@ -4053,17 +4052,17 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_keyboard_passthrough = 0;
-      else if (!strcmp(var.value, "enabled")) opt_keyboard_passthrough = 1;
+      if (!strcmp(var.value, "disabled"))     opt_keyboard_pass_through = 0;
+      else if (!strcmp(var.value, "enabled")) opt_keyboard_pass_through = 1;
    }
 
    var.key = "vice_retropad_options";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_retropad_options = 0;
-      else if (!strcmp(var.value, "rotate")) opt_retropad_options = 1;
-      else if (!strcmp(var.value, "jump")) opt_retropad_options = 2;
+      if (!strcmp(var.value, "disabled"))         opt_retropad_options = 0;
+      else if (!strcmp(var.value, "rotate"))      opt_retropad_options = 1;
+      else if (!strcmp(var.value, "jump"))        opt_retropad_options = 2;
       else if (!strcmp(var.value, "rotate_jump")) opt_retropad_options = 3;
    }
 
@@ -4072,14 +4071,14 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (!strcmp(var.value, "disabled")) turbo_fire_button = -1;
-      else if (!strcmp(var.value, "B")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_B;
-      else if (!strcmp(var.value, "A")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_A;
-      else if (!strcmp(var.value, "Y")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
-      else if (!strcmp(var.value, "X")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_X;
-      else if (!strcmp(var.value, "L")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L;
-      else if (!strcmp(var.value, "R")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R;
-      else if (!strcmp(var.value, "L2")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L2;
-      else if (!strcmp(var.value, "R2")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R2;
+      else if (!strcmp(var.value, "B"))   turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_B;
+      else if (!strcmp(var.value, "A"))   turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_A;
+      else if (!strcmp(var.value, "Y"))   turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
+      else if (!strcmp(var.value, "X"))   turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_X;
+      else if (!strcmp(var.value, "L"))   turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L;
+      else if (!strcmp(var.value, "R"))   turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R;
+      else if (!strcmp(var.value, "L2"))  turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L2;
+      else if (!strcmp(var.value, "R2"))  turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R2;
    }
 
    var.key = "vice_turbo_pulse";
@@ -4093,9 +4092,9 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "Autostart")) opt_reset_type = 0;
-      else if (!strcmp(var.value, "Soft")) opt_reset_type = 1;
-      else if (!strcmp(var.value, "Hard")) opt_reset_type = 2;
+      if (!strcmp(var.value, "Autostart"))   opt_reset_type = 0;
+      else if (!strcmp(var.value, "Soft"))   opt_reset_type = 1;
+      else if (!strcmp(var.value, "Hard"))   opt_reset_type = 2;
       else if (!strcmp(var.value, "Freeze")) opt_reset_type = 3;
    }
 
@@ -4120,10 +4119,10 @@ static void update_variables(void)
    {
       opt_statusbar = 0;
 
-      if (strstr(var.value, "top")) opt_statusbar |= STATUSBAR_TOP;
-      else opt_statusbar |= STATUSBAR_BOTTOM;
+      if (strstr(var.value, "top"))     opt_statusbar |= STATUSBAR_TOP;
+      else                              opt_statusbar |= STATUSBAR_BOTTOM;
 
-      if (strstr(var.value, "basic")) opt_statusbar |= STATUSBAR_BASIC;
+      if (strstr(var.value, "basic"))   opt_statusbar |= STATUSBAR_BASIC;
       if (strstr(var.value, "minimal")) opt_statusbar |= STATUSBAR_MINIMAL;
    }
 
@@ -4131,7 +4130,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_mapping_options_display = 0;
+      if (!strcmp(var.value, "disabled"))     opt_mapping_options_display = 0;
       else if (!strcmp(var.value, "enabled")) opt_mapping_options_display = 1;
    }
 
@@ -4139,7 +4138,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_audio_options_display = 0;
+      if (!strcmp(var.value, "disabled"))     opt_audio_options_display = 0;
       else if (!strcmp(var.value, "enabled")) opt_audio_options_display = 1;
    }
 
@@ -4147,7 +4146,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_video_options_display = 0;
+      if (!strcmp(var.value, "disabled"))     opt_video_options_display = 0;
       else if (!strcmp(var.value, "enabled")) opt_video_options_display = 1;
    }
 
@@ -4156,7 +4155,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int opt_read_vicerc_prev = opt_read_vicerc;
-      if (!strcmp(var.value, "disabled")) opt_read_vicerc = 0;
+      if (!strcmp(var.value, "disabled"))     opt_read_vicerc = 0;
       else if (!strcmp(var.value, "enabled")) opt_read_vicerc = 1;
 
       if (retro_ui_finalized)
@@ -4182,7 +4181,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int opt_jiffydos_prev = opt_jiffydos;
-      if (!strcmp(var.value, "disabled")) opt_jiffydos = 0;
+      if (!strcmp(var.value, "disabled"))     opt_jiffydos = 0;
       else if (!strcmp(var.value, "enabled")) opt_jiffydos = 1;
 
       if (!opt_jiffydos_allow)
@@ -4194,6 +4193,7 @@ static void update_variables(void)
 #endif
 
    /* Mapper */
+   /* RetroPad */
    var.key = "vice_mapper_select";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -4278,8 +4278,6 @@ static void update_variables(void)
       mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3] = keyId(var.value);
    }
 
-
-
    var.key = "vice_mapper_lr";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -4336,7 +4334,7 @@ static void update_variables(void)
       mapper_keys[23] = keyId(var.value);
    }
 
-
+   /* Hotkeys */
    var.key = "vice_mapper_vkbd";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -4383,8 +4381,8 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (strcmp(var.value, "enabled") == 0) datasette_hotkeys=1;
-      else if (strcmp(var.value, "disabled") == 0) datasette_hotkeys=0;
+      if (!strcmp(var.value, "disabled"))     datasette_hotkeys = 0;
+      else if (!strcmp(var.value, "enabled")) datasette_hotkeys = 1;
    }
 
    var.key = "vice_mapper_datasette_toggle_hotkeys";
@@ -4891,10 +4889,6 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 void retro_init(void)
 {
    struct retro_log_callback log;
-
-   // Init disk control context
-   dc = dc_create();
-
    log_cb = fallback_log;
    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
       log_cb = log.log;
@@ -4952,7 +4946,7 @@ void retro_init(void)
    else
       sprintf(RETRO_DIR, "%s", retro_system_directory);
 
-   /* Use system directory for data files such as C64/.vpl etc. */
+   // Use system directory for data files such as C64/.vpl etc.
    snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%svice", RETRO_DIR, FSDEV_DIR_SEP_STR);
    int dir_mode = 0;
 #if defined(IOS)
@@ -4970,55 +4964,52 @@ void retro_init(void)
 #endif
    archdep_mkdir(retro_system_data_directory, dir_mode);
 
+   // Inputs
+   #define RETRO_DESCRIPTOR_BLOCK(_user)                                                                        \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Up" },                                          \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Down" },                                      \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left" },                                      \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },                                    \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "B / Fire" },                                     \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "A" },                                            \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Y" },                                            \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "X" },                                            \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },                                  \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },                                    \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "L" },                                            \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "R" },                                            \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "L2" },                                          \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "R2" },                                          \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "L3" },                                          \
+   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "R3" },                                          \
+   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Left Analog X" },   \
+   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Left Analog Y" },   \
+   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Right Analog X" }, \
+   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Right Analog Y" }
+
+   static struct retro_input_descriptor inputDescriptors[] =
+   {
+      RETRO_DESCRIPTOR_BLOCK(0),
+      RETRO_DESCRIPTOR_BLOCK(1),
+      RETRO_DESCRIPTOR_BLOCK(2),
+      RETRO_DESCRIPTOR_BLOCK(3),
+      RETRO_DESCRIPTOR_BLOCK(4),
+      {0},
+   };
+   #undef RETRO_DESCRIPTOR_BLOCK
+   environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
+
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
-      log_cb(RETRO_LOG_ERROR, "PIXEL FORMAT RGB565 is not supported.\n");
+      log_cb(RETRO_LOG_ERROR, "RGB565 is not supported.\n");
       environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
       return;
    }
-
-   memset(retro_bmp, 0, sizeof(retro_bmp));
-   memset(core_key_state, 0, 512);
-   memset(core_old_key_state, 0, sizeof(core_old_key_state));
-
-#define RETRO_DESCRIPTOR_BLOCK( _user )                                            \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "A" },               \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "B / Fire" },        \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "X" },               \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Y" },               \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },     \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },       \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },       \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left" },         \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Up" },             \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Down" },         \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "R" },               \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "L" },               \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "R2" },             \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "L2" },             \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "R3" },             \
-   { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "L3" },			   \
-   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X, "Left Analog X" },			   \
-   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y, "Left Analog Y" },			   \
-   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X, "Right Analog X" },			   \
-   { _user, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y, "Right Analog Y" }
    
-   static struct retro_input_descriptor inputDescriptors[] =
-   {
-      RETRO_DESCRIPTOR_BLOCK( 0 ),
-      RETRO_DESCRIPTOR_BLOCK( 1 ),
-      RETRO_DESCRIPTOR_BLOCK( 2 ),
-      RETRO_DESCRIPTOR_BLOCK( 3 ),
-      RETRO_DESCRIPTOR_BLOCK( 4 ),
+   // Init disk control context
+   dc = dc_create();
 
-      { 0 },
-   };
-
-#undef RETRO_DESCRIPTOR_BLOCK
-
-   environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors);
-   
    unsigned dci_version = 0;
    if (environ_cb(RETRO_ENVIRONMENT_GET_DISK_CONTROL_INTERFACE_VERSION, &dci_version) && (dci_version >= 1))
       environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_EXT_INTERFACE, &diskControlExt);
@@ -5031,6 +5022,10 @@ void retro_init(void)
 
    bool achievements = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
+
+   memset(retro_bmp, 0, sizeof(retro_bmp));
+   memset(core_key_state, 0, sizeof(core_key_state));
+   memset(core_old_key_state, 0, sizeof(core_old_key_state));
 }
 
 void retro_deinit(void)
@@ -5046,6 +5041,9 @@ void retro_deinit(void)
    // Clean ZIP temp
    if (retro_temp_directory != NULL && path_is_directory(retro_temp_directory))
       remove_recurse(retro_temp_directory);
+
+   // 'Reset' troublesome static variable
+   pix_bytes_initialized = false;
 }
 
 unsigned retro_api_version(void)
@@ -5306,18 +5304,22 @@ void update_geometry(int mode)
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    /* need to do this here because core option values are not available in retro_init */
-   if (pix_bytes == 4)
+   if (!pix_bytes_initialized)
    {
-      enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
-      if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
+      pix_bytes_initialized = true;
+      if (pix_bytes == 4)
       {
-         log_cb(RETRO_LOG_INFO, "XRGB8888 is not supported. Trying RGB565.\n");
-         fmt = RETRO_PIXEL_FORMAT_RGB565;
-         pix_bytes = 2;
+         enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
          if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
          {
-            log_cb(RETRO_LOG_INFO, "RGB565 is not supported.\n");
-            exit(0);//return false;
+            pix_bytes = 2;
+            log_cb(RETRO_LOG_INFO, "XRGB8888 is not supported. Trying RGB565.\n");
+            fmt = RETRO_PIXEL_FORMAT_RGB565;
+            if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
+            {
+               log_cb(RETRO_LOG_INFO, "RGB565 is not supported.\n");
+               exit(0);//return false;
+            }
          }
       }
    }
@@ -5392,6 +5394,7 @@ void retro_audio_render(signed short int *sound_buffer, int sndbufsize)
 
 void retro_run(void)
 {
+   /* Core options */
    bool updated = false;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();

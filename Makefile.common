@@ -21,6 +21,7 @@ CXXFLAGS += $(CPPFLAGS)
 SOURCES_CXX :=
 SOURCES_C  := \
 	$(CORE_DIR)/libretro/libretro-core.c \
+	$(CORE_DIR)/libretro/libretro-mapper.c \
 	$(CORE_DIR)/libretro/retro_strings.c \
 	$(CORE_DIR)/libretro/retro_files.c \
 	$(CORE_DIR)/libretro/retro_disk_control.c \
@@ -70,7 +71,6 @@ SOURCES_C += \
 	$(EMU)/arch/libretro/vsyncarch.c \
 	$(EMU)/arch/libretro/mousedrv.c \
 	$(EMU)/arch/libretro/signals.c \
-	$(EMU)/arch/libretro/retrostubs.c \
 	$(EMU)/arch/libretro/uistatusbar.c
 
 ifneq ($(STATIC_LINKING),1)

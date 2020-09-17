@@ -1,5 +1,6 @@
 #include "libretro.h"
 #include "libretro-core.h"
+#include "libretro-mapper.h"
 #include "encodings/utf.h"
 
 #include "archdep.h"
@@ -131,7 +132,7 @@ unsigned int opt_statusbar = 0;
 unsigned int opt_reset_type = 0;
 unsigned int opt_keyrah_keypad = 0;
 unsigned int opt_keyboard_keymap = KBD_INDEX_POS;
-unsigned int opt_keyboard_passthrough = 0;
+unsigned int opt_keyboard_pass_through = 0;
 unsigned int opt_retropad_options = 0;
 unsigned int opt_joyport_type = 0;
 unsigned int opt_dpadmouse_speed = 6;
@@ -4051,8 +4052,8 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled"))     opt_keyboard_passthrough = 0;
-      else if (!strcmp(var.value, "enabled")) opt_keyboard_passthrough = 1;
+      if (!strcmp(var.value, "disabled"))     opt_keyboard_pass_through = 0;
+      else if (!strcmp(var.value, "enabled")) opt_keyboard_pass_through = 1;
    }
 
    var.key = "vice_retropad_options";

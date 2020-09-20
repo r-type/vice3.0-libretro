@@ -642,12 +642,12 @@ void update_input(int disable_physical_cursor_keys)
       if (!vkflag[7] && mapper_keys[i] >= 0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
       {
          vkflag[7] = 1;
-         Keymap_KeyDown(RETROK_RETURN);
+         kbd_handle_keydown(RETROK_RETURN);
       }
       else if (vkflag[7] && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
       {
          vkflag[7] = 0;
-         Keymap_KeyUp(RETROK_RETURN);
+         kbd_handle_keyup(RETROK_RETURN);
       }
 
       /* ShiftLock, RetroPad Y */
@@ -658,7 +658,7 @@ void update_input(int disable_physical_cursor_keys)
          Keymap_KeyDown(RETROK_CAPSLOCK);
          Keymap_KeyUp(RETROK_CAPSLOCK);
       }
-      else if (vkflag[6]==1 && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
+      else if (vkflag[6] && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
       {
          vkflag[6] = 0;
       }

@@ -25,7 +25,6 @@
 struct video_canvas_s *RCANVAS;
 
 int machine_ui_done = 0;
-//static int drive_led_on = 0, tape_led_on = 0;
 
 static const cmdline_option_t cmdline_options[] = {
      { NULL }
@@ -79,7 +78,6 @@ static void video_frame_buffer_clear(video_canvas_t *canvas,
 
 void video_arch_canvas_init(struct video_canvas_s *canvas)
 {
-
 }
 
 static int video_frame_buffer_alloc(video_canvas_t *canvas, 
@@ -109,6 +107,7 @@ char video_canvas_can_resize(video_canvas_t *canvas)
 {
    return 1;
 }
+
 int video_canvas_set_palette(struct video_canvas_s *canvas,
       struct palette_s *palette)
 {
@@ -172,4 +171,3 @@ void video_arch_resources_shutdown()
 void fullscreen_capability(struct cap_fullscreen_s *cap_fullscreen)
 {
 }
-

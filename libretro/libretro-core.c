@@ -44,8 +44,8 @@ unsigned int opt_vkbd_alpha = 204;
 unsigned int vkbd_alpha = 204;
 
 // Core vars
-extern char core_key_state[512];
-extern char core_old_key_state[512];
+extern char core_key_state[RETROK_LAST];
+extern char core_old_key_state[RETROK_LAST];
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char full_path[RETRO_PATH_MAX] = {0};

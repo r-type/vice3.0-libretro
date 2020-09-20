@@ -44,8 +44,8 @@ unsigned int opt_vkbd_alpha = 204;
 unsigned int vkbd_alpha = 204;
 
 // Core vars
-extern char core_key_state[512];
-extern char core_old_key_state[512];
+extern char core_key_state[RETROK_LAST];
+extern char core_old_key_state[RETROK_LAST];
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char full_path[RETRO_PATH_MAX] = {0};
@@ -188,13 +188,14 @@ char retro_system_directory[RETRO_PATH_MAX] = {0};
 char retro_content_directory[RETRO_PATH_MAX] = {0};
 char retro_system_data_directory[RETRO_PATH_MAX] = {0};
 
-retro_input_state_t input_state_cb;
-retro_input_poll_t input_poll_cb;
-retro_log_printf_t log_cb;
-static retro_video_refresh_t video_cb;
-static retro_audio_sample_t audio_cb;
-static retro_audio_sample_batch_t audio_batch_cb;
-static retro_environment_t environ_cb;
+retro_input_state_t input_state_cb = NULL;
+retro_input_poll_t input_poll_cb = NULL;
+retro_log_printf_t log_cb = NULL;
+static retro_set_led_state_t led_state_cb = NULL;
+static retro_video_refresh_t video_cb = NULL;
+static retro_audio_sample_t audio_cb = NULL;
+static retro_audio_sample_batch_t audio_batch_cb = NULL;
+static retro_environment_t environ_cb = NULL;
 
 static dc_storage* dc;
 
@@ -1362,6 +1363,26 @@ int keyId(const char *val)
       i++;
    }
    return 0;
+}
+
+/* LED spam shenanigans needed for autoloadwarp */
+static unsigned led_on    = 0;
+static unsigned led_count = 0;
+static unsigned led_max   = 20;
+void retro_set_led(unsigned led)
+{
+   if (led == led_on)
+   {
+      if (led_count < led_max + 1)
+         led_count++;
+      if (led_count > led_max)
+         return;
+   }
+   else
+      led_count = 0;
+   led_on = led;
+
+   led_state_cb(0, led);
 }
 
 void retro_set_environment(retro_environment_t cb)
@@ -3053,13 +3074,18 @@ void retro_set_environment(retro_environment_t cb)
             buf+=l, buf_len-=l;
          }
       }
-      cb( RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+      cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
 #undef NUM_CORE_OPTIONS
    }
 
    static bool allowNoGameMode;
    allowNoGameMode = true;
-   environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
+   cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
+
+   static struct retro_led_interface led_interface;
+   cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_interface);
+   if (led_interface.set_led_state)
+      led_state_cb = led_interface.set_led_state;
 }
 
 int log_resources_set_int(const char *name, int value)

@@ -19,7 +19,7 @@ INCFLAGS += \
 CXXFLAGS += $(CPPFLAGS)
 
 SOURCES_CXX :=
-SOURCES_C  := \
+SOURCES_C := \
 	$(CORE_DIR)/libretro/libretro-core.c \
 	$(CORE_DIR)/libretro/libretro-mapper.c \
 	$(CORE_DIR)/libretro/retro_strings.c \

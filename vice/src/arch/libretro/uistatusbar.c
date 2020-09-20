@@ -195,6 +195,7 @@ static void display_speed(void)
 int imagename_timer = 0;
 static int drive_enabled = 0;
 static int drive_empty = 0;
+static int drive_pwm = 0;
 
 void display_current_image(const char *image, bool inserted)
 {
@@ -335,8 +336,6 @@ void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, 
         uistatusbar_state |= UISTATUSBAR_REPAINT;
     }
 }
-
-static int drive_pwm = 0;
 
 /* The pwm value will vary between 0 and 1000.  */
 void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_pwm2)

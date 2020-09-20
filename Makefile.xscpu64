@@ -6,9 +6,7 @@ INCFLAGS += \
         -I$(EMU)/arch/libretro \
         -I$(EMU)/c64 \
         -I$(EMU)/c64/cart \
-        -I$(EMU)/c64dtv \
         -I$(EMU)/core \
-        -I$(EMU)/crtc \
         -I$(EMU)/diag \
         -I$(EMU)/drive \
         -I$(EMU)/drive/iec \
@@ -19,7 +17,6 @@ INCFLAGS += \
         -I$(EMU)/joyport \
         -I$(EMU)/lib/p64 \
         -I$(EMU)/monitor \
-        -I$(EMU)/platform \
         -I$(EMU)/raster \
         -I$(EMU)/resid \
         -I$(EMU)/residfp \
@@ -31,7 +28,6 @@ INCFLAGS += \
         -I$(EMU)/tape \
         -I$(EMU)/tapeport \
         -I$(EMU)/userport \
-        -I$(EMU)/vdc \
         -I$(EMU)/vdrive \
         -I$(EMU)/viciisc \
         -I$(EMU)/video
@@ -227,10 +223,6 @@ SOURCES_C += \
         $(EMU)/drive/drivemem.c \
         $(EMU)/drive/driverom.c \
         $(EMU)/drive/drivesync.c \
-        $(EMU)/drive/iec128dcr/iec128dcr-cmdline-options.c \
-        $(EMU)/drive/iec128dcr/iec128dcr-resources.c \
-        $(EMU)/drive/iec128dcr/iec128dcr.c \
-        $(EMU)/drive/iec128dcr/iec128dcrrom.c \
         $(EMU)/drive/iec/c64exp/c64exp-cmdline-options.c \
         $(EMU)/drive/iec/c64exp/c64exp-resources.c \
         $(EMU)/drive/iec/c64exp/dolphindos3.c \
@@ -248,9 +240,6 @@ SOURCES_C += \
         $(EMU)/drive/iec/iecrom.c \
         $(EMU)/drive/iec/memiec.c \
         $(EMU)/drive/iec/pc8477.c \
-        $(EMU)/drive/iec/plus4exp/iec-plus4exp.c \
-        $(EMU)/drive/iec/plus4exp/plus4exp-cmdline-options.c \
-        $(EMU)/drive/iec/plus4exp/plus4exp-resources.c \
         $(EMU)/drive/iec/via1d1541.c \
         $(EMU)/drive/iec/via4000.c \
         $(EMU)/drive/iec/wd1770.c \
@@ -289,16 +278,6 @@ SOURCES_C += \
         $(EMU)/fsdevice/fsdevice-write.c \
         $(EMU)/fsdevice/fsdevice.c \
         $(EMU)/gcr.c \
-        $(EMU)/gfxoutputdrv/bmpdrv.c \
-        $(EMU)/gfxoutputdrv/doodledrv.c \
-        $(EMU)/gfxoutputdrv/gfxoutput.c \
-        $(EMU)/gfxoutputdrv/godotdrv.c \
-        $(EMU)/gfxoutputdrv/iffdrv.c \
-        $(EMU)/gfxoutputdrv/koaladrv.c \
-        $(EMU)/gfxoutputdrv/nativedrv.c \
-        $(EMU)/gfxoutputdrv/pcxdrv.c \
-        $(EMU)/gfxoutputdrv/pngdrv.c \
-        $(EMU)/gfxoutputdrv/ppmdrv.c \
         $(EMU)/iecbus/iecbus.c \
         $(EMU)/imagecontents/diskcontents-block.c \
         $(EMU)/imagecontents/diskcontents-iec.c \
@@ -337,37 +316,6 @@ SOURCES_C += \
         $(EMU)/machine.c \
         $(EMU)/main.c \
         $(EMU)/midi.c \
-        $(EMU)/monitor/asm6502.c \
-        $(EMU)/monitor/asm6502dtv.c \
-        $(EMU)/monitor/asm6809.c \
-        $(EMU)/monitor/asm65816.c \
-        $(EMU)/monitor/asmR65C02.c \
-        $(EMU)/monitor/asmz80.c \
-        $(EMU)/monitor/monitor.c \
-        $(EMU)/monitor/monitor_network.c \
-        $(EMU)/monitor/mon_assemble6502.c \
-        $(EMU)/monitor/mon_assemble6809.c \
-        $(EMU)/monitor/mon_assemble65816.c \
-        $(EMU)/monitor/mon_assembleR65C02.c \
-        $(EMU)/monitor/mon_assemblez80.c \
-        $(EMU)/monitor/mon_breakpoint.c \
-        $(EMU)/monitor/mon_command.c \
-        $(EMU)/monitor/mon_disassemble.c \
-        $(EMU)/monitor/mon_drive.c \
-        $(EMU)/monitor/mon_file.c \
-        $(EMU)/monitor/mon_lex.c \
-        $(EMU)/monitor/mon_memmap.c \
-        $(EMU)/monitor/mon_memory.c \
-        $(EMU)/monitor/mon_parse.c \
-        $(EMU)/monitor/mon_register.c \
-        $(EMU)/monitor/mon_register6502.c \
-        $(EMU)/monitor/mon_register6502dtv.c \
-        $(EMU)/monitor/mon_register6809.c \
-        $(EMU)/monitor/mon_register65816.c \
-        $(EMU)/monitor/mon_registerR65C02.c \
-        $(EMU)/monitor/mon_registerz80.c \
-        $(EMU)/monitor/mon_ui.c \
-        $(EMU)/monitor/mon_util.c \
         $(EMU)/network.c \
         $(EMU)/opencbmlib.c \
         $(EMU)/palette.c \
@@ -420,7 +368,6 @@ SOURCES_C += \
         $(EMU)/rtc/rtc-72421.c \
         $(EMU)/rtc/rtc.c \
         $(EMU)/samplerdrv/file_drv.c \
-        $(EMU)/samplerdrv/portaudio_drv.c \
         $(EMU)/samplerdrv/sampler.c \
         $(EMU)/scpu64/scpu64.c \
         $(EMU)/scpu64/scpu64-cmdline-options.c \
@@ -526,3 +473,14 @@ SOURCES_C += \
         $(EMU)/vsync.c \
         $(EMU)/zfile.c \
         $(EMU)/zipcode.c
+
+# stubs
+SOURCES_C += \
+	$(EMU)/arch/libretro/gfxoutputdrv/gfxoutput.c \
+	$(EMU)/arch/libretro/monitor/asm6502.c \
+	$(EMU)/arch/libretro/monitor/asm65816.c \
+	$(EMU)/arch/libretro/monitor/asmR65C02.c \
+	$(EMU)/arch/libretro/monitor/asmz80.c \
+	$(EMU)/arch/libretro/monitor/monitor.c \
+	$(EMU)/arch/libretro/monitor/monitor_network.c \
+	$(EMU)/arch/libretro/monitor/mon_util.c

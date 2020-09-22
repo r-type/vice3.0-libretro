@@ -1,4 +1,4 @@
-COMMONFLAGS += -D__XVIC__
+COMMONFLAGS += -D__X64DTV__
 
 INCFLAGS += \
     -I$(EMU)/sid \
@@ -6,10 +6,12 @@ INCFLAGS += \
     -I$(EMU)/arch/libretro \
     -I$(EMU)/c64 \
     -I$(EMU)/c64/cart \
+    -I$(EMU)/c64dtv \
     -I$(EMU)/core \
     -I$(EMU)/diag \
     -I$(EMU)/drive \
     -I$(EMU)/drive/iec \
+    -I$(EMU)/drive/iec/c64exp \
     -I$(EMU)/drive/ieee \
     -I$(EMU)/drive/tcbm \
     -I$(EMU)/imagecontents \
@@ -27,10 +29,9 @@ INCFLAGS += \
     -I$(EMU)/tapeport \
     -I$(EMU)/userport \
     -I$(EMU)/vdrive \
-    -I$(EMU)/vic20 \
-    -I$(EMU)/vic20/cart \
+    -I$(EMU)/vicii \
     -I$(EMU)/video
-		
+
 SOURCES_CXX += \
     $(EMU)/resid/dac.cc \
     $(EMU)/resid/envelope.cc \
@@ -41,6 +42,7 @@ SOURCES_CXX += \
     $(EMU)/resid/version.cc \
     $(EMU)/resid/voice.cc \
     $(EMU)/resid/wave.cc \
+    $(EMU)/sid/resid-dtv.cc \
     $(EMU)/sid/resid-33.cc \
     $(EMU)/sid/resid.cc \
     $(EMU)/sid/resid-fp.cc \
@@ -67,12 +69,42 @@ SOURCES_C += \
     $(EMU)/attach.c \
     $(EMU)/autostart-prg.c \
     $(EMU)/autostart.c \
-    $(EMU)/c64/cart/c64acia1.c  \
-    $(EMU)/c64/cart/digimax.c  \
-    $(EMU)/c64/cart/ds12c887rtc.c  \
-    $(EMU)/c64/cart/georam.c  \
-    $(EMU)/c64/cart/sfx_soundexpander.c  \
-    $(EMU)/c64/cart/sfx_soundsampler.c  \
+    $(EMU)/c64/c64bus.c \
+    $(EMU)/c64/c64drive.c \
+    $(EMU)/c64/c64fastiec.c \
+    $(EMU)/c64/c64io.c \
+    $(EMU)/c64/c64keyboard.c \
+    $(EMU)/c64/c64parallel.c \
+    $(EMU)/c64/c64rom.c \
+    $(EMU)/c64/c64romset.c \
+    $(EMU)/c64/c64rsuser.c \
+    $(EMU)/c64/c64video.c \
+    $(EMU)/c64/patchrom.c \
+    $(EMU)/c64/reloc65.c \
+    $(EMU)/c64dtv/c64dtv-cmdline-options.c \
+    $(EMU)/c64dtv/c64dtv-resources.c \
+    $(EMU)/c64dtv/c64dtv-snapshot.c \
+    $(EMU)/c64dtv/c64dtv.c \
+    $(EMU)/c64dtv/c64dtvblitter.c \
+    $(EMU)/c64dtv/c64dtvcart.c \
+    $(EMU)/c64dtv/c64dtvcia1.c \
+    $(EMU)/c64dtv/c64dtvcia2.c \
+    $(EMU)/c64dtv/c64dtvcpu.c \
+    $(EMU)/c64dtv/c64dtvdma.c \
+    $(EMU)/c64dtv/c64dtvembedded.c \
+    $(EMU)/c64dtv/c64dtvflash.c \
+    $(EMU)/c64dtv/c64dtviec.c \
+    $(EMU)/c64dtv/c64dtvmem.c \
+    $(EMU)/c64dtv/c64dtvmeminit.c \
+    $(EMU)/c64dtv/c64dtvmemrom.c \
+    $(EMU)/c64dtv/c64dtvmemsnapshot.c \
+    $(EMU)/c64dtv/c64dtvmodel.c \
+    $(EMU)/c64dtv/c64dtvpla.c \
+    $(EMU)/c64dtv/c64dtvprinter.c \
+    $(EMU)/c64dtv/c64dtvsound.c \
+    $(EMU)/c64dtv/debugcart.c \
+    $(EMU)/c64dtv/flash-trap.c \
+    $(EMU)/c64dtv/hummeradc.c \
     $(EMU)/cbmdos.c \
     $(EMU)/cbmimage.c \
     $(EMU)/charset.c \
@@ -97,7 +129,6 @@ SOURCES_C += \
     $(EMU)/crc32.c \
     $(EMU)/datasette.c \
     $(EMU)/debug.c \
-    $(EMU)/diag/c64_diag_586220_harness.c \
     $(EMU)/diskimage/diskimage.c \
     $(EMU)/diskimage/fsimage-check.c \
     $(EMU)/diskimage/fsimage-create.c \
@@ -123,6 +154,13 @@ SOURCES_C += \
     $(EMU)/drive/drivemem.c \
     $(EMU)/drive/driverom.c \
     $(EMU)/drive/drivesync.c \
+    $(EMU)/drive/iec/c64exp/c64exp-cmdline-options.c \
+    $(EMU)/drive/iec/c64exp/c64exp-resources.c \
+    $(EMU)/drive/iec/c64exp/dolphindos3.c \
+    $(EMU)/drive/iec/c64exp/iec-c64exp.c \
+    $(EMU)/drive/iec/c64exp/profdos.c \
+    $(EMU)/drive/iec/c64exp/supercard.c \
+    $(EMU)/drive/iec/c64exp/stardos-exp.c \
     $(EMU)/drive/iec/cia1571d.c \
     $(EMU)/drive/iec/cia1581d.c \
     $(EMU)/drive/iec/fdd.c \
@@ -189,12 +227,14 @@ SOURCES_C += \
     $(EMU)/joyport/joyport.c \
     $(EMU)/joyport/joystick.c \
     $(EMU)/joyport/lightpen.c \
-    $(EMU)/joyport/mouse.c \
     $(EMU)/joyport/paperclip64.c \
     $(EMU)/joyport/rushware_keypad.c \
     $(EMU)/joyport/sampler2bit.c \
     $(EMU)/joyport/sampler4bit.c \
     $(EMU)/joyport/script64_dongle.c \
+    $(EMU)/joyport/snespad.c \
+    $(EMU)/joyport/vizawrite64_dongle.c \
+    $(EMU)/joyport/waasoft_dongle.c \
     $(EMU)/kbdbuf.c \
     $(EMU)/keyboard.c \
     $(EMU)/lib.c \
@@ -224,6 +264,7 @@ SOURCES_C += \
     $(EMU)/printerdrv/printer-serial.c \
     $(EMU)/printerdrv/printer-userport.c \
     $(EMU)/printerdrv/printer.c \
+    $(EMU)/ps2mouse.c \
     $(EMU)/ram.c \
     $(EMU)/raster/raster-cache.c \
     $(EMU)/raster/raster-canvas.c \
@@ -247,9 +288,9 @@ SOURCES_C += \
     $(EMU)/rs232drv/rs232net.c \
     $(EMU)/rs232drv/rsuser.c \
     $(EMU)/rtc/bq4830y.c \
+    $(EMU)/rtc/ds12c887.c \
     $(EMU)/rtc/ds1202_1302.c \
     $(EMU)/rtc/ds1216e.c \
-    $(EMU)/rtc/ds12c887.c \
     $(EMU)/rtc/ds1307.c \
     $(EMU)/rtc/ds1602.c \
     $(EMU)/rtc/pcf8583.c \
@@ -290,23 +331,15 @@ SOURCES_C += \
     $(EMU)/tape/tape-snapshot.c \
     $(EMU)/tape/tape.c \
     $(EMU)/tape/tapeimage.c \
-    $(EMU)/tapeport/cp-clockf83.c \
-    $(EMU)/tapeport/dtl-basic-dongle.c \
-    $(EMU)/tapeport/sense-dongle.c \
-    $(EMU)/tapeport/tape_diag_586220_harness.c \
-    $(EMU)/tapeport/tapecart.c \
-    $(EMU)/tapeport/tapelog.c \
-    $(EMU)/tapeport/tapeport.c \
     $(EMU)/traps.c \
+    $(EMU)/userport/userport.c \
     $(EMU)/userport/userport_4bit_sampler.c \
     $(EMU)/userport/userport_8bss.c \
     $(EMU)/userport/userport_dac.c \
-    $(EMU)/userport/userport_diag_586220_harness.c \
     $(EMU)/userport/userport_digimax.c \
     $(EMU)/userport/userport_joystick.c \
     $(EMU)/userport/userport_rtc_58321a.c \
     $(EMU)/userport/userport_rtc_ds1307.c \
-    $(EMU)/userport/userport.c \
     $(EMU)/util.c \
     $(EMU)/vdrive/vdrive-bam.c \
     $(EMU)/vdrive/vdrive-command.c \
@@ -316,56 +349,20 @@ SOURCES_C += \
     $(EMU)/vdrive/vdrive-rel.c \
     $(EMU)/vdrive/vdrive-snapshot.c \
     $(EMU)/vdrive/vdrive.c \
-    $(EMU)/vic20/cart/behrbonz.c \
-    $(EMU)/vic20/cart/debugcart.c \
-    $(EMU)/vic20/cart/finalexpansion.c \
-    $(EMU)/vic20/cart/ioramcart.c \
-    $(EMU)/vic20/cart/mascuerade-stubs.c \
-    $(EMU)/vic20/cart/megacart.c \
-    $(EMU)/vic20/cart/ultimem.c \
-    $(EMU)/vic20/cart/vic-fp.c \
-    $(EMU)/vic20/cart/vic20-generic.c \
-    $(EMU)/vic20/cart/vic20-ieee488.c \
-    $(EMU)/vic20/cart/vic20-midi.c \
-    $(EMU)/vic20/cart/vic20-sidcart.c \
-    $(EMU)/vic20/cart/vic20cart.c \
-    $(EMU)/vic20/cart/vic20cartmem.c \
-    $(EMU)/vic20/vic-cmdline-options.c \
-    $(EMU)/vic20/vic-color.c \
-    $(EMU)/vic20/vic-cycle.c \
-    $(EMU)/vic20/vic-draw.c \
-    $(EMU)/vic20/vic-mem.c \
-    $(EMU)/vic20/vic-resources.c \
-    $(EMU)/vic20/vic-snapshot.c \
-    $(EMU)/vic20/vic-timing.c \
-    $(EMU)/vic20/vic.c \
-    $(EMU)/vic20/vic20-cmdline-options.c \
-    $(EMU)/vic20/vic20-resources.c \
-    $(EMU)/vic20/vic20-snapshot.c \
-    $(EMU)/vic20/vic20.c \
-    $(EMU)/vic20/vic20bus.c \
-    $(EMU)/vic20/vic20cpu.c \
-    $(EMU)/vic20/vic20datasette.c \
-    $(EMU)/vic20/vic20drive.c \
-    $(EMU)/vic20/vic20embedded.c \
-    $(EMU)/vic20/vic20export.c \
-    $(EMU)/vic20/vic20iec.c \
-    $(EMU)/vic20/vic20ieeevia1.c \
-    $(EMU)/vic20/vic20ieeevia2.c \
-    $(EMU)/vic20/vic20io.c \
-    $(EMU)/vic20/vic20mem.c \
-    $(EMU)/vic20/vic20memrom.c \
-    $(EMU)/vic20/vic20memsnapshot.c \
-    $(EMU)/vic20/vic20model.c \
-    $(EMU)/vic20/vic20printer.c \
-    $(EMU)/vic20/vic20rom.c \
-    $(EMU)/vic20/vic20romset.c \
-    $(EMU)/vic20/vic20rsuser.c \
-    $(EMU)/vic20/vic20sound.c \
-    $(EMU)/vic20/vic20via1.c \
-    $(EMU)/vic20/vic20via2.c \
-    $(EMU)/vic20/vic20video.c \
     $(EMU)/vicefeatures.c \
+    $(EMU)/vicii/vicii-badline.c \
+    $(EMU)/vicii/vicii-cmdline-options.c \
+    $(EMU)/vicii/vicii-fetch.c \
+    $(EMU)/vicii/vicii-irq.c \
+    $(EMU)/vicii/vicii-mem.c \
+    $(EMU)/vicii/vicii-phi1.c \
+    $(EMU)/vicii/vicii-resources.c \
+    $(EMU)/vicii/vicii-sprites.c \
+    $(EMU)/vicii/vicii-timing.c \
+    $(EMU)/vicii/vicii.c \
+    $(EMU)/vicii/viciidtv-color.c \
+    $(EMU)/vicii/viciidtv-draw.c \
+    $(EMU)/vicii/viciidtv-snapshot.c \
     $(EMU)/video/render1x1.c \
     $(EMU)/video/render1x1crt.c \
     $(EMU)/video/render1x1ntsc.c \
@@ -400,7 +397,9 @@ SOURCES_C += \
     $(EMU)/arch/libretro/info.c \
     $(EMU)/arch/libretro/gfxoutputdrv/gfxoutput.c \
     $(EMU)/arch/libretro/monitor/asm6502.c \
+    $(EMU)/arch/libretro/monitor/asm6502dtv.c \
     $(EMU)/arch/libretro/monitor/asmR65C02.c \
+    $(EMU)/arch/libretro/monitor/asmz80.c \
     $(EMU)/arch/libretro/monitor/monitor.c \
     $(EMU)/arch/libretro/monitor/monitor_network.c \
     $(EMU)/arch/libretro/monitor/mon_util.c

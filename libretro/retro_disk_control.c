@@ -356,7 +356,7 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* name)
 bool dc_add_file(dc_storage* dc, const char* filename)
 {
     // Verify
-    if (dc == NULL || filename == NULL)
+    if (dc == NULL || string_is_empty(filename))
         return false;
 
     // Determine if tape or disk fliplist from first entry

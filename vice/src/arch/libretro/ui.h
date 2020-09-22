@@ -14,6 +14,7 @@
 extern int ui_vblank_sync_enabled();
 
 extern void ui_exit(void);
+extern void ui_message(const char *format, ...);
 extern void ui_display_speed(float percent, float framerate, int warp_flag);
 extern void ui_display_paused(int flag);
 extern void ui_dispatch_next_event(void);

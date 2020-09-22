@@ -38,115 +38,106 @@
 
 #include <stdarg.h>
 
-extern int retro_ui_finalized;
+#include "libretro-core.h"
+extern retro_log_printf_t log_cb;
 
 int display_setting(int hwscale, int old_width)
 {
-return 0;
+   return 0;
 }
 
 ui_jam_action_t ui_jam_dialog(const char *format, ...)
 {
-  static char message[512];
+   char message[512];
 
-  va_list ap;
-  va_start (ap, format);
-  vsnprintf(message, sizeof(message) - 1, format, ap);
-  va_end (ap);
+   va_list ap;
+   va_start (ap, format);
+   vsnprintf(message, sizeof(message) - 1, format, ap);
+   va_end (ap);
 
-  printf("%s",message);
-  machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+   log_cb(RETRO_LOG_ERROR, "%s", message);
+   machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 
-  return UI_JAM_NONE;
+   return UI_JAM_NONE;
 }
 
 int c64ui_init(void)
 {
-    return 0;
+   return 0;
 }
 
 void c64ui_shutdown(void)
 {
 }
 
-
 int c128ui_init(void)
 {
-    return 0;
+   return 0;
 }
 void c128ui_shutdown(void)
 {
 }
 
-
 int c64dtvui_init(void)
 {
-    return 0;
+   return 0;
 }
 void c64dtvui_shutdown(void)
 {
 }
 
-
 int c64scui_init(void)
 {
-    return 0;
+   return 0;
 }
 void c64scui_shutdown(void)
 {
 }
 
-
 int scpu64ui_init(void)
 {
-    return 0;
+   return 0;
 }
 void scpu64ui_shutdown(void)
 {
 }
 
-
 int plus4ui_init(void)
 {
-    return 0;
+   return 0;
 }
 void plus4ui_shutdown(void)
 {
 }
 
-
 int vic20ui_init(void)
 {
-    return 0;
+   return 0;
 }
 void vic20ui_shutdown(void)
 {
 }
 
-
 int cbm5x0ui_init(void)
 {
-    return 0;
+   return 0;
 }
 void cbm5x0ui_shutdown(void)
 {
 }
 
-
 int cbm2ui_init(void)
 {
-    return 0;
+   return 0;
 }
 void cbm2ui_shutdown(void)
 {
 }
 
-
 int petui_init(void)
 {
-    return 0;
+   return 0;
 }
 void petui_shutdown(void)
 {
 }
-

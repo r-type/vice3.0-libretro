@@ -321,7 +321,7 @@ char *archdep_default_save_resource_file_name(void)
 #elif defined(VITA)
         sceIoMkdir(viceuserdir, 0777);
 #else
-        mkdir(viceuserdir, 0700);
+        mkdir(viceuserdir, 0755);
 #endif
     }
 
@@ -588,10 +588,19 @@ int archdep_file_set_gzip(const char *name)
 
 int archdep_mkdir(const char *pathname, int mode)
 {
+    if (!mode)
+#if defined(VITA) || defined(PSP) || defined(PS2)
+        mode = 0777;
+#elif defined(__QNX__)
+        mode = 0777;
+#else
+        mode = 0755;
+#endif
+
 #if defined(__WIN32__)
     return mkdir(pathname);
 #elif defined(VITA)
-    return sceIoMkdir(pathname, 0777);
+    return sceIoMkdir(pathname, mode);
 #else
     return mkdir(pathname, (mode_t)mode);
 #endif

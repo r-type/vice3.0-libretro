@@ -44,8 +44,8 @@ unsigned int opt_vkbd_alpha = 204;
 unsigned int vkbd_alpha = 204;
 
 // Core vars
-extern char core_key_state[RETROK_LAST];
-extern char core_old_key_state[RETROK_LAST];
+extern char retro_key_state[RETROK_LAST];
+extern char retro_key_state_old[RETROK_LAST];
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char full_path[RETRO_PATH_MAX] = {0};
@@ -66,7 +66,9 @@ static unsigned int prev_sound_sample_rate = 0;
 
 extern void retro_poll_event();
 extern int retro_ui_finalized;
+#ifdef RETRO_DEBUG
 static int prev_ui_finalized = 0;
+#endif
 
 extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
@@ -515,7 +517,7 @@ static int process_cmdline(const char* argv)
 
     bool single_image = strcmp(ARGUV[0], CORE_NAME) != 0;
 
-    // If first command line argument is "x64", it's and extended command line
+    // If first command line argument is CORE_NAME, it's an extended command line
     // otherwise it's just image filename
     if (single_image)
     {
@@ -1288,7 +1290,7 @@ int pre_main()
     /* start core with full params */
     build_params();
 
-    *archdep_startup_error=0;
+    *archdep_startup_error = 0;
     if (skel_main(argc, (char**)xargv_cmd) < 0)
     {
         log_cb(RETRO_LOG_WARN, "Core startup failed with error:\n");
@@ -1306,7 +1308,7 @@ int pre_main()
         xargv_cmd[1] = NULL;
         argc = 1;
 
-        *archdep_startup_error=0;
+        *archdep_startup_error = 0;
         if (skel_main(argc, (char**)xargv_cmd) < 0)
         {
             log_cb(RETRO_LOG_ERROR, "Core startup without parameters failed with error:\n");
@@ -3123,7 +3125,9 @@ static void update_variables(void)
    struct retro_variable var;
    struct retro_core_option_display option_display;
 
+#ifdef RETRO_DEBUG
    log_cb(RETRO_LOG_INFO, "Updating variables, UI finalized = %d\n", retro_ui_finalized);
+#endif
 
    var.key = "vice_autostart";
    var.value = NULL;
@@ -5071,8 +5075,11 @@ void retro_init(void)
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
 
    memset(retro_bmp, 0, sizeof(retro_bmp));
-   memset(core_key_state, 0, sizeof(core_key_state));
-   memset(core_old_key_state, 0, sizeof(core_old_key_state));
+   memset(retro_key_state, 0, sizeof(retro_key_state));
+   memset(retro_key_state_old, 0, sizeof(retro_key_state_old));
+
+   retro_ui_finalized = 0;
+   update_variables();
 }
 
 void retro_deinit(void)
@@ -5501,11 +5508,13 @@ void retro_run(void)
          update_geometry(0);
    }
 
+#ifdef RETRO_DEBUG
    if (retro_ui_finalized && !prev_ui_finalized)
    {
       log_cb(RETRO_LOG_INFO, "UI finalized now\n");
       prev_ui_finalized = 1;
    }
+#endif
 
    if (show_queued_msg != 0)
    {
@@ -5519,23 +5528,22 @@ void retro_run(void)
    if (runstate == RUNSTATE_FIRST_START)
    {
       /* this is only done once after just loading the core from scratch and starting it */
+      runstate = RUNSTATE_RUNNING;
+      reload_restart();
 #ifdef RETRO_DEBUG
       log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
 #endif
-      runstate = RUNSTATE_RUNNING;
-      pre_main();
-      reload_restart();
       return;
    } 
    else if (runstate == RUNSTATE_LOADED_CONTENT)
    {
       /* Load content was called while core was already running, just do a reset with autostart */
+      runstate = RUNSTATE_RUNNING;
       reload_restart();
       /* After retro_load_game, get_system_av_info is always called by the frontend */
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
       /* current aspect ratio and screen size again here */
       update_geometry(0);
-      runstate = RUNSTATE_RUNNING;
    } 
 
    /* Input poll */
@@ -5619,7 +5627,7 @@ bool retro_load_game(const struct retro_game_info *info)
          return false;
    }
 
-   update_variables();
+   pre_main();
 
 #if defined(__XPET__) || defined(__XCBM2__) || defined(__XVIC__)
    /* Joyport limit has to apply always */

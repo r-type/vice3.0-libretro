@@ -3043,17 +3043,12 @@ void retro_set_environment(retro_environment_t cb)
 
    unsigned version = 0;
    if (!cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version))
-   {
-      /* Only log the error if we were not called after retro_deinit */
-      if (log_cb)
-         log_cb(RETRO_LOG_WARN,"retro_set_environment: GET_CORE_OPTIONS_VERSION failed, not setting core-options now.\n");
-   }
+      log_cb(RETRO_LOG_INFO, "retro_set_environment: GET_CORE_OPTIONS_VERSION failed, not setting CORE_OPTIONS now.\n");
    else if (version == 1)
       cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, core_options);
    else
    {
       /* Fallback for older API */
-
       /* Use define because C doesn't care about const. */
 #define NUM_CORE_OPTIONS ( sizeof(core_options)/sizeof(core_options[0])-1 )
       static struct retro_variable variables[NUM_CORE_OPTIONS+1];
@@ -3065,33 +3060,35 @@ void retro_set_environment(retro_environment_t cb)
          unsigned buf_len;
          char *buf;
          {
-            unsigned alloc_len=0;
-            struct retro_core_option_definition *o=core_options+NUM_CORE_OPTIONS-1;
-            struct retro_variable *rv=variables+NUM_CORE_OPTIONS-1;
-            for (; o>=core_options; --o, --rv)
+            unsigned alloc_len = 0;
+            struct retro_core_option_definition *o = core_options + NUM_CORE_OPTIONS - 1;
+            struct retro_variable *rv = variables + NUM_CORE_OPTIONS - 1;
+            for (; o >= core_options; --o, --rv)
             {
-               int l=snprintf(0,0,"%s; %s",o->desc,o->default_value);
-               for (struct retro_core_option_value *v=o->values;v->value;++v)
-                  l+=snprintf(0,0,"|%s",v->value);
-               alloc_len+=l+1;
+               int l = snprintf(0, 0, "%s; %s", o->desc, o->default_value);
+               for (struct retro_core_option_value *v = o->values; v->value; ++v)
+                  l += snprintf(0, 0, "|%s", v->value);
+               alloc_len += l + 1;
             }
-            buf=core_options_legacy_strings=(char *)malloc(alloc_len);
-            buf_len=alloc_len;
+            buf = core_options_legacy_strings = (char *)malloc(alloc_len);
+            buf_len = alloc_len;
          }
          /* Second pass: Fill string-buffer */
-         struct retro_core_option_definition *o=core_options+NUM_CORE_OPTIONS-1;
-         struct retro_variable *rv=variables+NUM_CORE_OPTIONS;
+         struct retro_core_option_definition *o = core_options + NUM_CORE_OPTIONS - 1;
+         struct retro_variable *rv = variables + NUM_CORE_OPTIONS;
          rv->key = rv->value = 0;
          --rv;
-         for (; o>=core_options; --o, --rv)
+         for (; o >= core_options; --o, --rv)
          {
-            int l=snprintf(buf,buf_len,"%s; %s",o->desc,o->default_value);
-            for (struct retro_core_option_value *v=o->values;v->value;++v)
-               l+=snprintf(buf+l,buf_len,"|%s",v->value);
+            int l = snprintf(buf, buf_len, "%s; %s", o->desc, o->default_value);
+            for (struct retro_core_option_value *v = o->values; v->value; ++v)
+               if (v->value != o->default_value)
+                  l += snprintf(buf+l, buf_len, "|%s", v->value);
             rv->key = o->key;
             rv->value = buf;
             ++l;
-            buf+=l, buf_len-=l;
+            buf += l;
+            buf_len -= l;
          }
       }
       cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
@@ -5093,7 +5090,7 @@ void retro_deinit(void)
       free(core_options_legacy_strings);
 
    // Clean ZIP temp
-   if (retro_temp_directory != NULL && path_is_directory(retro_temp_directory))
+   if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
       remove_recurse(retro_temp_directory);
 
    // 'Reset' troublesome static variable

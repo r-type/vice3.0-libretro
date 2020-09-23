@@ -3043,9 +3043,14 @@ void retro_set_environment(retro_environment_t cb)
 
    unsigned version = 0;
    if (!cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version))
-      log_cb(RETRO_LOG_INFO, "retro_set_environment: GET_CORE_OPTIONS_VERSION failed, not setting CORE_OPTIONS now.\n");
+   {
+      if (log_cb)
+         log_cb(RETRO_LOG_INFO, "retro_set_environment: GET_CORE_OPTIONS_VERSION failed, not setting CORE_OPTIONS now.\n");
+   }
    else if (version == 1)
+   {
       cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, core_options);
+   }
    else
    {
       /* Fallback for older API */

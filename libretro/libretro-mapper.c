@@ -49,8 +49,8 @@ int NPAGE = -1;
 int SHOWKEY = -1;
 int SHOWKEYTRANS = 1;
 int SHIFTON = -1;
-char core_key_state[RETROK_LAST];
-char core_old_key_state[RETROK_LAST];
+char retro_key_state[RETROK_LAST];
+char retro_key_state_old[RETROK_LAST];
 bool num_locked = false;
 unsigned int statusbar;
 unsigned int warpmode;
@@ -173,7 +173,7 @@ void emu_function(int function)
    } 
 }
 
-void Keymap_KeyUp(int symkey)
+void retro_key_up(int symkey)
 {
    /* Num lock ..? */
    if (symkey == RETROK_NUMLOCK)
@@ -188,7 +188,7 @@ void Keymap_KeyUp(int symkey)
       kbd_handle_keyup(symkey);
 }
 
-void Keymap_KeyDown(int symkey)
+void retro_key_down(int symkey)
 {
    /* Num lock ..? */
    if (symkey == RETROK_NUMLOCK)
@@ -211,28 +211,29 @@ void process_key(int disable_physical_cursor_keys)
    int i;
 
    for (i = RETROK_BACKSPACE; i < RETROK_LAST; i++)
-      core_key_state[i] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, i) ? 0x80: 0;
-
-   if (memcmp(core_key_state, core_old_key_state, sizeof(core_key_state)))
    {
-      for (i = RETROK_BACKSPACE; i < RETROK_LAST; i++)
-      {
-         if (disable_physical_cursor_keys && (i == RETROK_UP || i == RETROK_DOWN || i == RETROK_LEFT || i == RETROK_RIGHT))
-            continue;
+      retro_key_state[i] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, i);
 
-         if (core_key_state[i] && core_key_state[i] != core_old_key_state[i])
-            Keymap_KeyDown(i);
-         else if (!core_key_state[i] && core_key_state[i] != core_old_key_state[i])
-            Keymap_KeyUp(i);
+      if (disable_physical_cursor_keys && (i == RETROK_UP || i == RETROK_DOWN || i == RETROK_LEFT || i == RETROK_RIGHT))
+         continue;
+
+      if (retro_key_state[i] && !retro_key_state_old[i])
+      {
+         retro_key_down(i);
+         retro_key_state_old[i] = 1;
+      }
+      else if (!retro_key_state[i] && retro_key_state_old[i])
+      {
+         retro_key_up(i);
+         retro_key_state_old[i] = 0;
       }
    }
-   memcpy(core_old_key_state, core_key_state, sizeof(core_key_state));
 }
 
 void update_input(int disable_physical_cursor_keys)
 {
-   //   RETRO        B    Y    SLT  STA  UP   DWN  LEFT RGT  A    X    L    R    L2   R2   L3   R3  LR  LL  LD  LU  RR  RL  RD  RU
-   //   INDEX        0    1    2    3    4    5    6    7    8    9    10   11   12   13   14   15  16  17  18  19  20  21  22  23
+   // RETRO  B  Y  SL ST UP DN LT RT A  X  L   R   L2  R2  L3  R3  LR  LL  LD  LU  RR  RL  RD  RU
+   // INDEX  0  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21  22  23
 
    static long now = 0;
    static long last_vkey_pressed_time = 0;
@@ -486,7 +487,7 @@ void update_input(int disable_physical_cursor_keys)
                else if (mapper_keys[i] == -13) /* Switch joyport */
                   emu_function(EMU_JOYPORT);
                else
-                  Keymap_KeyDown(mapper_keys[i]);
+                  retro_key_down(mapper_keys[i]);
             }
             else if (just_released)
             {
@@ -529,7 +530,7 @@ void update_input(int disable_physical_cursor_keys)
                else if (mapper_keys[i] == -13) /* Switch joyport */
                   ; /* nop */
                else
-                  Keymap_KeyUp(mapper_keys[i]);
+                  retro_key_up(mapper_keys[i]);
             }
          } /* for i */
       } /* if vice_devices[0]==joypad */
@@ -655,8 +656,8 @@ void update_input(int disable_physical_cursor_keys)
       if (!vkflag[6] && mapper_keys[i] >= 0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
       {
          vkflag[6] = 1;
-         Keymap_KeyDown(RETROK_CAPSLOCK);
-         Keymap_KeyUp(RETROK_CAPSLOCK);
+         retro_key_down(RETROK_CAPSLOCK);
+         retro_key_up(RETROK_CAPSLOCK);
       }
       else if (vkflag[6] && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
       {
@@ -696,8 +697,8 @@ void update_input(int disable_physical_cursor_keys)
                   emu_function(EMU_JOYPORT);
                   break;
                case -5: /* sticky shift */
-                  Keymap_KeyDown(RETROK_CAPSLOCK);
-                  Keymap_KeyUp(RETROK_CAPSLOCK);
+                  retro_key_down(RETROK_CAPSLOCK);
+                  retro_key_up(RETROK_CAPSLOCK);
                   break;
                case -20:
                   if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)

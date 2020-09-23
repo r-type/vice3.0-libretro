@@ -20,13 +20,16 @@
 #include "userport_joystick.h"
 #endif
 
-#if defined(__XVIC__)
-#include "c64model.h"
+#if defined(__XPET__)
+#include "petmodel.h"
+#include "keyboard.h"
+#elif defined(__XCBM2__) || defined(__XCBM5x0__)
+#include "cbm2model.h"
+#elif defined(__XPLUS4__)
+#include "plus4model.h"
+#elif defined(__XVIC__)
 #include "vic20model.h"
 #include "vic20mem.h"
-#elif defined(__XPLUS4__)
-#include "c64model.h"
-#include "plus4model.h"
 #elif defined(__X128__)
 #include "c64model.h"
 #include "c128model.h"
@@ -36,11 +39,14 @@
 #include "c128kernal64.h"
 BYTE c128memrom_kernal128_rom_original[C128_KERNAL_ROM_IMAGE_SIZE] = {0};
 BYTE c128memrom_kernal64_rom_original[C128_KERNAL64_ROM_SIZE] = {0};
-#elif defined(__XPET__)
-#include "petmodel.h"
-#include "keyboard.h"
-#elif defined(__XCBM2__) || defined(__XCBM5x0__)
-#include "cbm2model.h"
+#elif defined(__XSCPU64__)
+#include "c64model.h"
+#include "scpu64.h"
+#include "scpu64mem.h"
+#include "scpu64rom.h"
+BYTE scpu64rom_scpu64_rom_original[SCPU64_SCPU64_ROM_MAXSIZE] = {0};
+#elif defined(__X64DTV__)
+#include "c64dtvmodel.h"
 #else
 #include "c64model.h"
 #include "c64rom.h"
@@ -53,13 +59,8 @@ BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 #include "libretro-core.h"
 #if defined(__XVIC__)
 extern int vic20mem_forced;
-#endif
-#if defined(__XSCPU64__)
-#include "scpu64.h"
-#include "scpu64mem.h"
-#include "scpu64rom.h"
+#elif defined(__XSCPU64__)
 extern unsigned int opt_supercpu_kernal;
-BYTE scpu64rom_scpu64_rom_original[SCPU64_SCPU64_ROM_MAXSIZE] = {0};
 #endif
 
 int retro_ui_finalized = 0;
@@ -67,6 +68,7 @@ int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
 extern unsigned int opt_jiffydos;
 extern unsigned int opt_autoloadwarp;
 extern char retro_system_data_directory[RETRO_PATH_MAX];
+extern retro_log_printf_t log_cb;
 
 static const cmdline_option_t cmdline_options[] = {
    { NULL }
@@ -97,6 +99,25 @@ void ui_check_mouse_cursor(void)
 {
 }
 
+char* ui_get_file(const char *format, ...)
+{
+   return NULL;
+}
+
+void ui_message(const char* format, ...)
+{
+   char text[512];
+   va_list ap;
+
+   if (format == NULL)
+      return;
+
+   va_start(ap, format);
+   vsprintf(text, format, ap);
+   va_end(ap);
+   log_cb(RETRO_LOG_INFO, "%s\n", text);
+}
+
 void ui_error(const char *format, ...)
 {
    char text[512];
@@ -108,7 +129,7 @@ void ui_error(const char *format, ...)
    va_start(ap, format);
    vsprintf(text, format, ap);
    va_end(ap);
-   fprintf(stderr, "ui_error: %s\n", text);
+   log_cb(RETRO_LOG_ERROR, "%s\n", text);
 }
 
 int ui_emulation_is_paused(void)
@@ -211,7 +232,7 @@ int ui_init_finalize(void)
    }
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    log_resources_set_int("VICIIColorGamma", core_opt.ColorGamma);
    log_resources_set_int("VICIIColorTint", core_opt.ColorTint);
    log_resources_set_int("VICIIColorSaturation", core_opt.ColorSaturation);
@@ -256,7 +277,7 @@ int ui_init_finalize(void)
    if (opt_autoloadwarp)
       log_resources_set_int("DriveSoundEmulationVolume", 0);
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)
    log_resources_set_int("VICIIAudioLeak", core_opt.AudioLeak);
 #elif defined(__XVIC__)
    log_resources_set_int("VICAudioLeak", core_opt.AudioLeak);
@@ -333,6 +354,8 @@ int ui_init_finalize(void)
    plus4model_set(core_opt.Model);
 #elif defined(__X128__)
    c128model_set(core_opt.Model);
+#elif defined(__X64DTV__)
+   dtvmodel_set(core_opt.Model);
 #else
    c64model_set(core_opt.Model);
 #endif
@@ -409,11 +432,6 @@ int ui_init_finalize(void)
    return 0;
 }
 
-char* ui_get_file(const char *format, ...)
-{
-   return NULL;
-}
-
 
 #if defined(__X64__)
 int c64ui_init_early(void)
@@ -425,6 +443,11 @@ int c64ui_init_early(void)
 int c64scui_init_early(void)
 {
    memcpy(c64memrom_kernal64_rom_original, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
+   return 0;
+}
+#elif defined(__X64DTV__)
+int c64dtvui_init_early(void)
+{
    return 0;
 }
 #elif defined(__XSCPU64__)

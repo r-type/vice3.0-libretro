@@ -1,8 +1,10 @@
 /*
- * mousedrv.h - Mouse handling for Unix-Systems.
+ * info.c - Info about the VICE project, including the GPL.
  *
  * Written by
- *  Oliver Schaertel <orschaer@forwiss.uni-erlangen.de>
+ *  Ettore Perazzoli <ettore@comm2000.it>
+ *  Andreas Boose <viceteam@t-online.de>
+ *  Marco van den Heuvel <blackystardust68@yahoo.com>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -19,30 +21,19 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+ *  02111-1307  USA.
  *
  */
 
-#ifndef VICE_MOUSEDRV_H
-#define VICE_MOUSEDRV_H
+#include "vice.h"
 
-#include "types.h"
-#include "mouse.h"
+#include <stdlib.h>
 
-extern int mousedrv_resources_init(mouse_func_t *funcs);
-extern int mousedrv_cmdline_options_init(void);
-extern void mousedrv_init(void);
+#include "info.h"
+#include "infocontrib.h"
 
-extern void mousedrv_mouse_changed(void);
-
-extern int mousedrv_get_x(void);
-extern int mousedrv_get_y(void);
-extern unsigned long mousedrv_get_timestamp(void);
-
-extern void mouse_button(int bnumber, int state);
-extern void mouse_move(int x, int y);
-
-extern int mouse_x, mouse_y;
-extern int mouse_accelx, mouse_accely;
-
-#endif
+const char info_license_text[] = {};
+const char info_license_text40[] = {};
+const char info_warranty_text[] = {};
+const char info_warranty_text40[] = {};

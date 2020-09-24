@@ -131,7 +131,7 @@ extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
 // Core options
 struct libretro_core_options {
     int Model;
-    int UserportJoy;
+    int UserportJoyType;
     int AutostartWarp;
     int AttachDevice8Readonly;
     int DriveTrueEmulation;

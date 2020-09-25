@@ -28,6 +28,7 @@ Source base: [https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.
 
 |RetroPad button|Action|
 |---|---|
+|D-Pad|Joystick|
 |B|Fire button|
 |X|Space|
 |L2|Escape (RUN/STOP)|

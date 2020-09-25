@@ -63,7 +63,7 @@ static const char flip_file_header[] = "# Vice fliplist file";
 
 extern char retro_save_directory[RETRO_PATH_MAX];
 extern char retro_temp_directory[RETRO_PATH_MAX];
-extern bool retro_set_image_index(unsigned index);
+extern bool retro_disk_set_image_index(unsigned index);
 extern int runstate;
 
 extern retro_log_printf_t log_cb;
@@ -304,8 +304,9 @@ void dc_reset(dc_storage* dc)
 
     dc->unit = 0;
     dc->count = 0;
-    dc->index = 0; // index should never be -1
+    dc->index = 0;
     dc->eject_state = true;
+    dc->replace = false;
 }
 
 dc_storage* dc_create(void)
@@ -319,6 +320,7 @@ dc_storage* dc_create(void)
         dc->count = 0;
         dc->index = 0; // index should never be -1
         dc->eject_state = true;
+        dc->replace = false;
         dc->command = NULL;
         for(int i = 0; i < DC_MAX_SIZE; i++)
         {
@@ -399,6 +401,7 @@ bool dc_remove_file(dc_storage* dc, int index)
     dc->labels[index] = NULL;
     free(dc->names[index]);
     dc->names[index] = NULL;
+    dc->types[index] = DC_IMAGE_TYPE_NONE;
 
     // Shift all entries after index one slot up
     if (index != dc->count - 1)
@@ -434,7 +437,6 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
     dc->labels[index] = NULL;
     free(dc->names[index]);
     dc->names[index] = NULL;
-
     dc->types[index] = DC_IMAGE_TYPE_NONE;
 
     if (filename == NULL)
@@ -443,10 +445,9 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
     }
     else
     {
-        char image_label[RETRO_PATH_MAX];
-        image_label[0] = '\0';
+        dc->replace = false;
 
-        static char full_path_replace[RETRO_PATH_MAX] = {0};
+        char full_path_replace[RETRO_PATH_MAX] = {0};
         strcpy(full_path_replace, (char*)filename);
 
         // ZIP + NIB vars, use the same temp directory for single NIBs
@@ -481,7 +482,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             snprintf(full_path_replace, sizeof(full_path_replace), "%s", zip_path);
 
             FILE *zip_m3u;
-            char zip_m3u_list[20][RETRO_PATH_MAX] = {0};
+            char zip_m3u_list[DC_MAX_SIZE][RETRO_PATH_MAX] = {0};
             char zip_m3u_path[RETRO_PATH_MAX] = {0};
             snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
             int zip_m3u_num = 0;
@@ -505,7 +506,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             zip_dir = opendir(zip_path);
             while ((zip_dirp = readdir(zip_dir)) != NULL)
             {
-                if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1)
+                if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, "m3u") || zip_mode > 1)
                     continue;
 
                 // Multi file mode, generate playlist
@@ -545,7 +546,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             }
         }
 
-        // M3U
+        // M3U replace
         if (strendswith(full_path_replace, ".m3u"))
         {
             // Parse the M3U file
@@ -555,17 +556,23 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
 
             // Insert first disk
-            retro_set_image_index(0);
-            dc->eject_state = false;
-            return true;
+            retro_disk_set_image_index(0);
+
+            // Trick frontend to return to index 0 after successful "append" does +1
+            dc->replace = true;
         }
+        // Single append
+        else
+        {
+            char image_label[RETRO_PATH_MAX];
+            image_label[0] = '\0';
+            fill_short_pathname_representation(image_label, full_path_replace, sizeof(image_label));
 
-        dc->files[index] = strdup(full_path_replace);
-        dc->labels[index] = get_label(full_path_replace);
-        dc->types[index] = dc_get_image_type(full_path_replace);
-
-        fill_short_pathname_representation(image_label, full_path_replace, sizeof(image_label));
-        dc->names[index] = strdup(image_label);
+            dc->files[index]  = strdup(full_path_replace);
+            dc->labels[index] = get_label(full_path_replace);
+            dc->types[index]  = dc_get_image_type(full_path_replace);
+            dc->names[index]  = strdup(image_label);
+        }
     }
 
     return true;

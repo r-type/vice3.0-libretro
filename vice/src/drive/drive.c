@@ -751,7 +751,7 @@ static void drive_led_update(drive_t *drive, drive_t *drive0)
 #include <stdbool.h>
 extern unsigned int opt_autoloadwarp;
 extern int retro_warp_mode_enabled();
-extern bool retro_get_eject_state();
+extern bool retro_disk_get_eject_state();
 static int warpmode_counter = 0;
 static int drive_half_track = 0;
 static int drive_half_track_prev = 0;
@@ -789,7 +789,7 @@ void drive_update_ui_status(void)
                                        drive->current_half_track + (drive->side * DRIVE_HALFTRACKS_1571));
             }
 #ifdef __LIBRETRO__
-            if (opt_autoloadwarp && !retro_get_eject_state())
+            if (opt_autoloadwarp && !retro_disk_get_eject_state())
             {
                 drive_half_track = drive->current_half_track;
                 //printf("track:%2d prev:%2d led:%d timer:%2d\n", drive_half_track, drive_half_track_prev, drive->led_status, warpmode_counter);

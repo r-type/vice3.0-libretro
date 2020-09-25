@@ -253,12 +253,12 @@ int ui_init_finalize(void)
 #endif
 
 #if !defined(__XCBM5x0__)
-   if (core_opt.UserportJoy == -1)
+   if (core_opt.UserportJoyType == -1)
       log_resources_set_int("UserportJoy", 0);
    else
    {
       log_resources_set_int("UserportJoy", 1);
-      log_resources_set_int("UserportJoyType", core_opt.UserportJoy);
+      log_resources_set_int("UserportJoyType", core_opt.UserportJoyType);
    }
 #endif
 

@@ -187,12 +187,6 @@ void cartridge_detach_image(int type) {}
 void cartridge_trigger_freeze(void) {}
 #endif
 
-char retro_save_directory[RETRO_PATH_MAX] = {0};
-char retro_temp_directory[RETRO_PATH_MAX] = {0};
-char retro_system_directory[RETRO_PATH_MAX] = {0};
-char retro_content_directory[RETRO_PATH_MAX] = {0};
-char retro_system_data_directory[RETRO_PATH_MAX] = {0};
-
 retro_input_state_t input_state_cb = NULL;
 retro_input_poll_t input_poll_cb = NULL;
 retro_log_printf_t log_cb = NULL;
@@ -202,7 +196,14 @@ static retro_audio_sample_t audio_cb = NULL;
 static retro_audio_sample_batch_t audio_batch_cb = NULL;
 static retro_environment_t environ_cb = NULL;
 
-static dc_storage* dc;
+char retro_save_directory[RETRO_PATH_MAX] = {0};
+char retro_temp_directory[RETRO_PATH_MAX] = {0};
+char retro_system_directory[RETRO_PATH_MAX] = {0};
+char retro_system_data_directory[RETRO_PATH_MAX] = {0};
+static char retro_content_directory[RETRO_PATH_MAX] = {0};
+
+// Disk Control context
+dc_storage* dc = NULL;
 
 int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are just starting the core from scratch */
 /* runstate = RUNSTATE_FIRST_START: first time retro_run() is called after loading and starting core */
@@ -252,12 +253,12 @@ int loadcmdfile(const char *argv)
 
 // Args for experimental_cmdline
 static char ARGUV[64][1024];
-static unsigned char ARGUC=0;
+static unsigned char ARGUC = 0;
 
 // Args for Core
 static char XARGV[64][1024];
 static const char* xargv_cmd[64];
-int PARAMCOUNT=0;
+int PARAMCOUNT = 0;
 
 // Display message on next retro_run
 static char queued_msg[1024];
@@ -349,7 +350,7 @@ static int check_joystick_control(const char* filename)
     return port;
 }
 
-static int get_image_unit()
+static int retro_disk_get_image_unit()
 {
     int unit = dc->unit;
     if (dc->index < dc->count)
@@ -377,7 +378,7 @@ static void log_disk_in_tray(bool display)
 {
     if (dc->index < dc->count)
     {
-        int unit = get_image_unit();
+        int unit = retro_disk_get_image_unit();
         size_t pos = 0;
         const char* label;
         // Build message do display
@@ -4723,231 +4724,207 @@ void retro_reset(void)
    request_restart = true;
 }
 
-struct DiskImage {
-    char* fname;
-};
-
-static bool retro_set_eject_state(bool ejected)
+/*****************************************************************************/
+/* Disk Control */
+static bool retro_disk_set_eject_state(bool ejected)
 {
-    if (dc)
-    {
-        int unit = get_image_unit();
+   if (dc)
+   {
+      int unit = retro_disk_get_image_unit();
 
-        if (dc->eject_state == ejected)
-            return true;
+      if (dc->eject_state == ejected)
+         return true;
+      else
+         dc->eject_state = ejected;
 
-        if (ejected && dc->index <= dc->count && dc->files[dc->index] != NULL)
-        {
-            if (unit == 1)
-                tape_image_detach(unit);
-            else if (unit >= 8 && unit <= 11)
-                file_system_detach_disk(unit);
-            else if (unit == 0)
-                cartridge_detach_image(-1);
-            display_current_image("", false);
-        }
-        else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
-        {
-            if (unit == 1)
-                tape_image_attach(unit, dc->files[dc->index]);
-            else if (unit >= 8 && unit <= 11)
-            {
-                file_system_attach_disk(unit, dc->files[dc->index]);
-                autodetect_drivetype(unit);
-            }
-            else if (unit == 0)
-            {
+      if (ejected && dc->index <= dc->count && dc->files[dc->index] != NULL)
+      {
+         if (unit == 1)
+            tape_image_detach(unit);
+         else if (unit >= 8 && unit <= 11)
+            file_system_detach_disk(unit);
+         else if (unit == 0)
+            cartridge_detach_image(-1);
+         display_current_image("", false);
+      }
+      else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
+      {
+         if (unit == 1)
+         {
+            tape_image_attach(unit, dc->files[dc->index]);
+         }
+         else if (unit >= 8 && unit <= 11)
+         {
+            file_system_attach_disk(unit, dc->files[dc->index]);
+            autodetect_drivetype(unit);
+         }
+         else if (unit == 0)
+         {
 #if defined(__XVIC__)
-                cartridge_attach_image(CARTRIDGE_VIC20_DETECT, dc->files[dc->index]);
+            cartridge_attach_image(CARTRIDGE_VIC20_DETECT, dc->files[dc->index]);
 #elif defined(__XPLUS4__)
-                cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, dc->files[dc->index]);
-                // Soft reset required, otherwise gfx gets corrupted (?!)
-                emu_reset(1);
+            cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, dc->files[dc->index]);
+            // Soft reset required, otherwise gfx gets corrupted (?!)
+            emu_reset(1);
 #else
-                cartridge_attach_image(0, dc->files[dc->index]);
+            cartridge_attach_image(0, dc->files[dc->index]);
 #endif
-                // PRGs must autostart on attach, cartridges reset anyway
-                if (strendswith(dc->files[dc->index], "prg"))
-                    emu_reset(0);
-            }
-            display_current_image(dc->files[dc->index], true);
-        }
+            // PRGs must autostart on attach, cartridges reset anyway
+            if (strendswith(dc->files[dc->index], "prg"))
+               emu_reset(0);
+         }
+         display_current_image(dc->files[dc->index], true);
+      }
+   }
 
-        dc->eject_state = ejected;
-        return true;
-    }
-
-    return false;
+   return true;
 }
 
-/* Gets current eject state. The initial state is 'not ejected'. */
-bool retro_get_eject_state(void)
+bool retro_disk_get_eject_state(void)
 {
-    if (dc)
-        return dc->eject_state;
+   if (dc)
+      return dc->eject_state;
 
-    return true;
+   return true;
 }
 
-/* Gets current disk index. First disk is index 0.
- * If return value is >= get_num_images(), no disk is currently inserted.
- */
-static unsigned retro_get_image_index(void)
+static unsigned retro_disk_get_image_index(void)
 {
-    if (dc)
-        return dc->index;
+   if (dc)
+      return dc->index;
 
-    return 0;
+   return 0;
 }
 
-/* Sets image index. Can only be called when disk is ejected.
- * The implementation supports setting "no disk" by using an
- * index >= get_num_images().
- */
-bool retro_set_image_index(unsigned index)
+bool retro_disk_set_image_index(unsigned index)
 {
-    // Switch disk in drive
-    if (dc)
-    {
-        if (index <= dc->count)
-        {
-            dc->index = index;
+   if (dc)
+   {
+      if (index == dc->index)
+         return true;
 
-            if ((index < dc->count) && (dc->files[index]))
-            {
-                log_disk_in_tray(display_disk_name);
-                display_current_image(dc->files[dc->index], false);
-            }
-            return true;
-        }
-    }
+      if (dc->replace)
+      {
+         dc->replace = false;
+         index = 0;
+      }
 
-    return false;
-}
-
-/* Gets total number of images which are available to use. */
-static unsigned retro_get_num_images(void)
-{
-    if (dc)
-        return dc->count;
-
-    return 0;
-}
-
-
-/* Replaces the disk image associated with index.
- * Arguments to pass in info have same requirements as retro_load_game().
- * Virtual disk tray must be ejected when calling this.
- *
- * Replacing a disk image with info = NULL will remove the disk image
- * from the internal list.
- * As a result, calls to get_image_index() can change.
- *
- * E.g. replace_image_index(1, NULL), and previous get_image_index()
- * returned 4 before.
- * Index 1 will be removed, and the new index is 3.
- */
-static bool retro_replace_image_index(unsigned index, const struct retro_game_info *info)
-{
-    if (dc)
-    {
-        if (info != NULL)
-        {
-            dc_replace_file(dc, index, info->path);
-        }
-        else
-        {
-            dc_remove_file(dc, index);
-        }
-        return true;
-    }
-
-    return false;	
-}
-
-/* Adds a new valid index (get_num_images()) to the internal disk list.
- * This will increment subsequent return values from get_num_images() by 1.
- * This image index cannot be used until a disk image has been set
- * with replace_image_index. */
-static bool retro_add_image_index(void)
-{
-    if (dc)
-    {
-        if (dc->count <= DC_MAX_SIZE)
-        {
-            dc->files[dc->count] = NULL;
-            dc->labels[dc->count] = NULL;
-            dc->names[dc->count] = NULL;
-            dc->count++;
-            return true;
-        }
-    }
-
-    return false;
-}
-
-static bool retro_get_image_path(unsigned index, char *path, size_t len)
-{
-    if (len < 1)
-        return false;
-
-    if (dc)
-    {
-        if (index < dc->count)
-        {
-            if (!string_is_empty(dc->files[index]))
-            {
-                strlcpy(path, dc->files[index], len);
-                return true;
-            }
-        }
-    }
+      if (index < dc->count && dc->files[index])
+      {
+         dc->index = index;
+         log_disk_in_tray(display_disk_name);
+         display_current_image(dc->files[dc->index], false);
+         return true;
+      }
+   }
 
    return false;
 }
 
-static bool retro_get_image_label(unsigned index, char *label, size_t len)
+static unsigned retro_disk_get_num_images(void)
 {
-    if (len < 1)
-        return false;
+   if (dc)
+      return dc->count;
 
-    if (dc)
-    {
-        if (index < dc->count)
-        {
-            if (!string_is_empty(dc->names[index]))
-            {
-                strlcpy(label, dc->names[index], len);
-                return true;
-            }
-        }
-    }
+   return 0;
+}
 
-    return false;
+static bool retro_disk_replace_image_index(unsigned index, const struct retro_game_info *info)
+{
+   if (dc)
+   {
+      if (info != NULL)
+         dc_replace_file(dc, index, info->path);
+      else
+         dc_remove_file(dc, index);
+      return true;
+   }
+
+   return false;
+}
+
+static bool retro_disk_add_image_index(void)
+{
+   if (dc)
+   {
+      if (dc->count <= DC_MAX_SIZE)
+      {
+         dc->files[dc->count]  = NULL;
+         dc->labels[dc->count] = NULL;
+         dc->names[dc->count]  = NULL;
+         dc->types[dc->count]  = DC_IMAGE_TYPE_NONE;
+         dc->count++;
+         return true;
+      }
+   }
+
+   return false;
+}
+
+static bool retro_disk_get_image_path(unsigned index, char *path, size_t len)
+{
+   if (len < 1)
+      return false;
+
+   if (dc)
+   {
+      if (index < dc->count)
+      {
+         if (!string_is_empty(dc->files[index]))
+         {
+            strlcpy(path, dc->files[index], len);
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
+static bool retro_disk_get_image_label(unsigned index, char *label, size_t len)
+{
+   if (len < 1)
+      return false;
+
+   if (dc)
+   {
+      if (index < dc->count)
+      {
+         if (!string_is_empty(dc->names[index]))
+         {
+            strlcpy(label, dc->names[index], len);
+            return true;
+         }
+      }
+   }
+
+   return false;
 }
 
 static struct retro_disk_control_callback diskControl = {
-    retro_set_eject_state,
-    retro_get_eject_state,
-    retro_get_image_index,
-    retro_set_image_index,
-    retro_get_num_images,
-    retro_replace_image_index,
-    retro_add_image_index,
+   retro_disk_set_eject_state,
+   retro_disk_get_eject_state,
+   retro_disk_get_image_index,
+   retro_disk_set_image_index,
+   retro_disk_get_num_images,
+   retro_disk_replace_image_index,
+   retro_disk_add_image_index,
 };
 
 static struct retro_disk_control_ext_callback diskControlExt = {
-   retro_set_eject_state,
-   retro_get_eject_state,
-   retro_get_image_index,
-   retro_set_image_index,
-   retro_get_num_images,
-   retro_replace_image_index,
-   retro_add_image_index,
+   retro_disk_set_eject_state,
+   retro_disk_get_eject_state,
+   retro_disk_get_image_index,
+   retro_disk_set_image_index,
+   retro_disk_get_num_images,
+   retro_disk_replace_image_index,
+   retro_disk_add_image_index,
    NULL, // set_initial_image
-   retro_get_image_path,
-   retro_get_image_label,
+   retro_disk_get_image_path,
+   retro_disk_get_image_label,
 };
+
+/*****************************************************************************/
 
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 {

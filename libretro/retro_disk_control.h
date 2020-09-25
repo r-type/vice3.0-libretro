@@ -55,6 +55,7 @@ struct dc_storage
 	unsigned count;
 	int index;
 	bool eject_state;
+	bool replace;
 };
 
 typedef struct dc_storage dc_storage;

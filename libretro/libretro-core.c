@@ -211,7 +211,7 @@ int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are just start
 /* runstate = RUNSTATE_RUNNING: core is running normally */
 
 /* Display disk name and label instead of "Changing disk in tray"- maybe make it configurable */
-bool display_disk_name = true;
+bool display_disk_name = false;
 /* See which looks best in most cases and tweak (or make configurable) */
 int disk_label_mode = DISK_LABEL_MODE_ASCII_OR_CAMELCASE;
 

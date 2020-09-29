@@ -45,16 +45,15 @@ int vkflag[8] = {0};
 #define MOUSE_SPEED_FAST 2
 
 /* Core flags */
-int NPAGE = -1;
-int SHOWKEY = -1;
-int SHOWKEYTRANS = 1;
-int SHIFTON = -1;
+extern bool retro_vkbd;
+extern bool retro_vkbd_transparent;
 char retro_key_state[RETROK_LAST];
 char retro_key_state_old[RETROK_LAST];
+int retro_capslock = false;
 bool num_locked = false;
-unsigned int statusbar;
-unsigned int warpmode;
-unsigned int datasette_hotkeys;
+unsigned int statusbar = 0;
+unsigned int warpmode = 0;
+unsigned int datasette_hotkeys = 0;
 unsigned int cur_port = 2;
 static int cur_port_prev = -1;
 extern int cur_port_locked;
@@ -122,7 +121,7 @@ void emu_function(int function)
    switch (function)
    {
       case EMU_VKBD:
-         SHOWKEY=-SHOWKEY;
+         retro_vkbd = !retro_vkbd;
          break;
       case EMU_STATUSBAR:
          statusbar = (statusbar) ? 0 : 1;
@@ -181,7 +180,7 @@ void retro_key_up(int symkey)
    /* Prevent LShift keyup if ShiftLock is on */
    else if (symkey == RETROK_LSHIFT)
    {
-      if (SHIFTON == -1)
+      if (!retro_capslock)
          kbd_handle_keyup(symkey);
    }
    else 
@@ -196,13 +195,13 @@ void retro_key_down(int symkey)
    /* CapsLock / ShiftLock */
    else if (symkey == RETROK_CAPSLOCK)
    {
-      if (SHIFTON == 1)
+      if (retro_capslock)
          kbd_handle_keyup(RETROK_LSHIFT);
       else
          kbd_handle_keydown(RETROK_LSHIFT);
-      SHIFTON = -SHIFTON;
+      retro_capslock = !retro_capslock;
    }
-   else if (SHOWKEY == -1)
+   else if (!retro_vkbd)
       kbd_handle_keydown(symkey);
 }
 
@@ -287,7 +286,7 @@ void update_input(int disable_physical_cursor_keys)
    input_poll_cb();
 
    /* Iterate hotkeys, skip Datasette hotkeys if Datasette hotkeys are disabled or if VKBD is on */
-   int i_last = (datasette_hotkeys && SHOWKEY==-1) ? EMU_DATASETTE_RESET : EMU_DATASETTE_HOTKEYS;
+   int i_last = (datasette_hotkeys && !retro_vkbd) ? EMU_DATASETTE_RESET : EMU_DATASETTE_HOTKEYS;
 
    for (i = 0; i <= i_last; i++)
    {
@@ -352,7 +351,7 @@ void update_input(int disable_physical_cursor_keys)
    }
 
    /* The check for kbt[i] here prevents the hotkey from generating C64 key events */
-   /* SHOWKEY check is now in process_key() to allow certain keys while SHOWKEY */
+   /* retro_vkbd check is now in process_key() to allow certain keys while retro_vkbd */
    int processkey = 1;
    for (i = 0; i < (sizeof(kbt)/sizeof(kbt[0])); i++)
    {
@@ -387,7 +386,7 @@ void update_input(int disable_physical_cursor_keys)
             if ((i < 4 || i > 7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad */
             {
                /* Skip the VKBD buttons if VKBD is visible and buttons are mapped to keyboard keys */
-               if (SHOWKEY == 1)
+               if (retro_vkbd)
                {
                   switch (i)
                   {
@@ -538,7 +537,7 @@ void update_input(int disable_physical_cursor_keys)
    } /* for j */
 
    /* Virtual keyboard for ports 1 & 2 */
-   if (SHOWKEY == 1)
+   if (retro_vkbd)
    {
       if (!vkflag[4]) /* Allow directions when key is not pressed */
       {
@@ -598,12 +597,12 @@ void update_input(int disable_physical_cursor_keys)
          let_go_of_direction = true;
 
       if (vkey_pos_x < 0)
-         vkey_pos_x = NPLGN-1;
-      else if (vkey_pos_x > NPLGN-1)
+         vkey_pos_x = VKBDX - 1;
+      else if (vkey_pos_x > VKBDX - 1)
          vkey_pos_x = 0;
       if (vkey_pos_y < 0)
-         vkey_pos_y = NLIGN-1;
-      else if (vkey_pos_y > NLIGN-1)
+         vkey_pos_y = VKBDY - 1;
+      else if (vkey_pos_y > VKBDY - 1)
          vkey_pos_y = 0;
 
       /* Absolute pointer */
@@ -622,16 +621,16 @@ void update_input(int disable_physical_cursor_keys)
 #endif
          if (px >= vkbd_x_min && px <= vkbd_x_max && py >= vkbd_y_min && py <= vkbd_y_max)
          {
-            float vkey_width = (float)(vkbd_x_max - vkbd_x_min) / NPLGN;
+            float vkey_width = (float)(vkbd_x_max - vkbd_x_min) / VKBDX;
             vkey_pos_x = ((px - vkbd_x_min) / vkey_width);
 
-            float vkey_height = (float)(vkbd_y_max - vkbd_y_min) / NLIGN;
+            float vkey_height = (float)(vkbd_y_max - vkbd_y_min) / VKBDY;
             vkey_pos_y = ((py - vkbd_y_min) / vkey_height);
 
             vkey_pos_x = (vkey_pos_x < 0) ? 0 : vkey_pos_x;
-            vkey_pos_x = (vkey_pos_x > NPLGN-1) ? NPLGN-1 : vkey_pos_x;
+            vkey_pos_x = (vkey_pos_x > VKBDX - 1) ? VKBDX - 1 : vkey_pos_x;
             vkey_pos_y = (vkey_pos_y < 0) ? 0 : vkey_pos_y;
-            vkey_pos_y = (vkey_pos_y > NLIGN-1) ? NLIGN-1 : vkey_pos_y;
+            vkey_pos_y = (vkey_pos_y > VKBDY - 1) ? VKBDY - 1 : vkey_pos_y;
 
 #ifdef POINTER_DEBUG
             printf("px:%d py:%d (%d,%d) vkey:%dx%d\n", p_x, p_y, px, py, vkey_pos_x, vkey_pos_y);
@@ -670,7 +669,7 @@ void update_input(int disable_physical_cursor_keys)
       if (!vkflag[5] && mapper_keys[i] >= 0 && (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) || input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
       {
          vkflag[5] = 1;
-         SHOWKEYTRANS = -SHOWKEYTRANS;
+         retro_vkbd_transparent = !retro_vkbd_transparent;
       }
       else if (vkflag[5] && (!input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, i) && !input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, i)))
       {
@@ -867,7 +866,7 @@ void retro_poll_event()
                )
             )
          )
-            j |= (SHOWKEY == -1) ? 0x01 : j;
+            j |= (!retro_vkbd) ? 0x01 : j;
          else if (!input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP))
             j &= ~0x01;
 
@@ -888,7 +887,7 @@ void retro_poll_event()
                )
             )
          )
-            j |= (SHOWKEY == -1) ? 0x02 : j;
+            j |= (!retro_vkbd) ? 0x02 : j;
          else if (!input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN))
             j &= ~0x02;
 
@@ -909,7 +908,7 @@ void retro_poll_event()
                )
             )
          )
-            j |= (SHOWKEY == -1) ? 0x04 : j;
+            j |= (!retro_vkbd) ? 0x04 : j;
          else if (!input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT))
             j &= ~0x04;
 
@@ -930,7 +929,7 @@ void retro_poll_event()
                )
             )
          )
-            j |= (SHOWKEY == -1) ? 0x08 : j;
+            j |= (!retro_vkbd) ? 0x08 : j;
          else if (!input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT))
             j &= ~0x08;
 
@@ -959,7 +958,7 @@ void retro_poll_event()
                )
             )
          )
-            j |= (SHOWKEY == -1) ? 0x10 : j;
+            j |= (!retro_vkbd) ? 0x10 : j;
          else
             j &= ~0x10;
 
@@ -979,7 +978,7 @@ void retro_poll_event()
 
          if (jump_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, jump_button))
          {
-            j |= (SHOWKEY == -1) ? 0x01 : j;
+            j |= (!retro_vkbd) ? 0x01 : j;
             j &= ~0x02;
          }
          else if (!input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)
@@ -1012,12 +1011,12 @@ void retro_poll_event()
                   if (turbo_toggle[vice_port] > (turbo_pulse / 2))
                      j &= ~0x10;
                   else
-                     j |= (SHOWKEY == -1) ? 0x10 : j;
+                     j |= (!retro_vkbd) ? 0x10 : j;
                }
                else
                {
                   turbo_state[vice_port] = 1;
-                  j |= (SHOWKEY == -1) ? 0x10 : j;
+                  j |= (!retro_vkbd) ? 0x10 : j;
                }
             }
             else
@@ -1047,7 +1046,7 @@ void retro_poll_event()
       }
    }
    /* Other than a joystick, set only cur_port */
-   else if (opt_joyport_type > 1 && SHOWKEY == -1)
+   else if (opt_joyport_type > 1 && !retro_vkbd)
    {
       if (opt_joyport_type_prev != opt_joyport_type || cur_port_prev != cur_port)
       {
@@ -1090,7 +1089,7 @@ void retro_poll_event()
          Therefore treat retroport0 vertical axis as retroport1 horizontal axis, and second fire as retroport1 fire. */
 
       /* Joypad buttons */
-      if (SHOWKEY == -1)
+      if (!retro_vkbd)
       {
          if (vice_devices[0] == RETRO_DEVICE_JOYPAD && (opt_retropad_options == 1 || opt_retropad_options == 3))
          {
@@ -1121,7 +1120,7 @@ void retro_poll_event()
       }
 
       /* Joypad movement */
-      if (SHOWKEY == -1)
+      if (!retro_vkbd)
       {
          for (retro_j = 0; retro_j < 2; retro_j++)
          {

@@ -4,12 +4,12 @@
 #include "libretro.h"
 
 typedef struct {
-	char norml[NLETT];
-	char shift[NLETT];
-	int val;	
-} Mvk;
+   char normal[5];
+   char shift[5];
+   int value;
+} retro_vkeys;
 
-Mvk MVk[NPLGN*NLIGN*2] = {
+retro_vkeys vkeys[VKBDX * VKBDY * 2] = {
 
 	/* 0 */
 	{ "1"  ,"!"   ,RETROK_1},

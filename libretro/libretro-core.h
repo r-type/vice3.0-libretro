@@ -37,22 +37,22 @@ typedef uint8_t uint8;
 
 /* Screen */
 #if defined(__X128__)
-#define WINDOW_WIDTH    856
-#define WINDOW_HEIGHT   312
+#define WINDOW_WIDTH  856
+#define WINDOW_HEIGHT 312
 #elif defined(__XPET__)
-#define WINDOW_WIDTH    704
-#define WINDOW_HEIGHT   288
+#define WINDOW_WIDTH  704
+#define WINDOW_HEIGHT 288
 #elif defined(__XCBM2__)
-#define WINDOW_WIDTH    704
-#define WINDOW_HEIGHT   366
+#define WINDOW_WIDTH  704
+#define WINDOW_HEIGHT 366
 #elif defined(__XVIC__)
-#define WINDOW_WIDTH    448
-#define WINDOW_HEIGHT   288
+#define WINDOW_WIDTH  448
+#define WINDOW_HEIGHT 288
 #else
-#define WINDOW_WIDTH    384
-#define WINDOW_HEIGHT   288
+#define WINDOW_WIDTH  384
+#define WINDOW_HEIGHT 288
 #endif
-#define RETRO_BMP_SIZE  (WINDOW_WIDTH * WINDOW_HEIGHT * 2)
+#define RETRO_BMP_SIZE (WINDOW_WIDTH * WINDOW_HEIGHT * 2)
 extern unsigned short int retro_bmp[RETRO_BMP_SIZE];
 extern unsigned int pix_bytes;
 
@@ -69,9 +69,8 @@ extern unsigned int pix_bytes;
    }
 
 /* VKBD */
-#define NPLGN 11
-#define NLIGN 7
-#define NLETT 5
+#define VKBDX 11
+#define VKBDY 7
 
 #if 0
 #define POINTER_DEBUG
@@ -94,10 +93,10 @@ extern int vkbd_y_min;
 extern int vkbd_y_max;
 
 /* Statusbar */
-#define STATUSBAR_BOTTOM    0x01
-#define STATUSBAR_TOP       0x02
-#define STATUSBAR_BASIC     0x04
-#define STATUSBAR_MINIMAL   0x08
+#define STATUSBAR_BOTTOM  0x01
+#define STATUSBAR_TOP     0x02
+#define STATUSBAR_BASIC   0x04
+#define STATUSBAR_MINIMAL 0x08
 
 /* Variables */
 extern int cpuloop;

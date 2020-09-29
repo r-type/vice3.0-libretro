@@ -38,14 +38,15 @@ long retro_now = 0;
 int cpuloop = 1;
 
 /* VKBD */
-extern int SHOWKEY;
+extern bool retro_vkbd;
+extern void print_vkbd(unsigned short int *pixels);
 unsigned int opt_vkbd_theme = 0;
 unsigned int opt_vkbd_alpha = 204;
 unsigned int vkbd_alpha = 204;
 
 /* Core vars */
-extern char retro_key_state[RETROK_LAST];
-extern char retro_key_state_old[RETROK_LAST];
+char retro_key_state[RETROK_LAST] = {0};
+char retro_key_state_old[RETROK_LAST] = {0};
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char full_path[RETRO_PATH_MAX] = {0};
@@ -88,7 +89,7 @@ int lastH = 0;
 
 unsigned int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
-unsigned short int retro_bmp[RETRO_BMP_SIZE];
+unsigned short int retro_bmp[RETRO_BMP_SIZE] = {0};
 
 /* Core options */
 struct libretro_core_options core_opt;
@@ -1360,13 +1361,13 @@ long GetTicks(void) {
 }
 
 #include "libretro-keyboard.i"
-int keyId(const char *val)
+static int retro_key_id(const char *val)
 {
-   int i=0;
-   while (keyDesc[i]!=NULL)
+   int i = 0;
+   while (retro_key_name[i] != NULL)
    {
-      if (!strcmp(keyDesc[i],val))
-         return keyVal[i];
+      if (!strcmp(retro_key_name[i], val))
+         return retro_key_value[i];
       i++;
    }
    return 0;
@@ -3001,6 +3002,14 @@ void retro_set_environment(retro_environment_t cb)
    int i = 0;
    int j = 0;
    int hotkey = 0;
+   int hotkeys_skipped = 0;
+   /* Count special hotkeys */
+   while (retro_key_name[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+   {
+      if (retro_key_value[j] < 0)
+         hotkeys_skipped++;
+      ++j;
+   }
    while (core_options[i].key) 
    {
       if (strstr(core_options[i].key, "vice_mapper_"))
@@ -3026,18 +3035,21 @@ void retro_set_environment(retro_environment_t cb)
          j = 0;
          if (hotkey)
          {
-             while (keyDescHotkeys[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+             while (retro_key_name[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
              {
-                core_options[i].values[j].value = keyDescHotkeys[j];
+                if (j == 0)
+                   core_options[i].values[j].value = retro_key_name[j];
+                else
+                   core_options[i].values[j].value = retro_key_name[j + hotkeys_skipped + 1];
                 core_options[i].values[j].label = NULL;
                 ++j;
              };
          }
          else
          {
-             while (keyDesc[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+             while (retro_key_name[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
              {
-                core_options[i].values[j].value = keyDesc[j];
+                core_options[i].values[j].value = retro_key_name[j];
                 core_options[i].values[j].label = NULL;
                 ++j;
              };
@@ -4276,140 +4288,140 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_SELECT] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_SELECT] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_START] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_START] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_b";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_B] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_B] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_a";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_A] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_A] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_y";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_Y] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_Y] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_x";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_X] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_X] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_l";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_r";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_l2";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L2] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L2] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_r2";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R2] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R2] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_l3";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L3] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L3] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_r3";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3] = keyId(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_lr";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[16] = keyId(var.value);
+      mapper_keys[16] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_ll";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[17] = keyId(var.value);
+      mapper_keys[17] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_ld";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[18] = keyId(var.value);
+      mapper_keys[18] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_lu";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[19] = keyId(var.value);
+      mapper_keys[19] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_rr";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[20] = keyId(var.value);
+      mapper_keys[20] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_rl";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[21] = keyId(var.value);
+      mapper_keys[21] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_rd";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[22] = keyId(var.value);
+      mapper_keys[22] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_ru";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[23] = keyId(var.value);
+      mapper_keys[23] = retro_key_id(var.value);
    }
 
    /* Hotkeys */
@@ -4417,42 +4429,42 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[24] = keyId(var.value);
+      mapper_keys[24] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_statusbar";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[25] = keyId(var.value);
+      mapper_keys[25] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_joyport_switch";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[26] = keyId(var.value);
+      mapper_keys[26] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[27] = keyId(var.value);
+      mapper_keys[27] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_zoom_mode_toggle";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[28] = keyId(var.value);
+      mapper_keys[28] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_warp_mode";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[29] = keyId(var.value);
+      mapper_keys[29] = retro_key_id(var.value);
    }
 
    var.key = "vice_datasette_hotkeys";
@@ -4467,42 +4479,42 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[30] = keyId(var.value);
+      mapper_keys[30] = retro_key_id(var.value);
    }
    
    var.key = "vice_mapper_datasette_stop";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[31] = keyId(var.value);
+      mapper_keys[31] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[32] = keyId(var.value);
+      mapper_keys[32] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_forward";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[33] = keyId(var.value);
+      mapper_keys[33] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_rewind";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[34] = keyId(var.value);
+      mapper_keys[34] = retro_key_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[35] = keyId(var.value);
+      mapper_keys[35] = retro_key_id(var.value);
    }
 
 
@@ -5560,8 +5572,8 @@ void retro_run(void)
    }
 
    /* Show VKBD */
-   if (SHOWKEY == 1)
-      print_virtual_kbd(retro_bmp);
+   if (retro_vkbd)
+      print_vkbd(retro_bmp);
 
    /* Finalize zoom offsets */
    if (zoomed_XS_offset != retroXS_offset || zoomed_YS_offset != retroYS_offset)

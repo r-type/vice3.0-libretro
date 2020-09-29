@@ -31,9 +31,12 @@
 #include <stdlib.h>
 
 #include "info.h"
+#if 0
 #include "infocontrib.h"
+#endif
 
 const char info_license_text[] = {};
 const char info_license_text40[] = {};
 const char info_warranty_text[] = {};
 const char info_warranty_text40[] = {};
+vice_team_t core_team[] = {};

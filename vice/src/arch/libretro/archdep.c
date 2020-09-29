@@ -374,9 +374,9 @@ int archdep_path_is_relative(const char *path)
         return 0;
     if (*path == '/')
         return 0;
-    // Vita might also use "ux0:" or "uma0:" for absolute paths
-    // Switch might also use "sdmc:" for absolute paths
-    // WIIU and 3DS might also use "sd:" for absolute paths
+    /* Vita might also use "ux0:" or "uma0:" for absolute paths
+     * Switch might also use "sdmc:" for absolute paths
+     * WIIU and 3DS might also use "sd:" for absolute paths */
     for (int i = 0; i <= 4; i++)
     {
         if (path[i] == '\0')

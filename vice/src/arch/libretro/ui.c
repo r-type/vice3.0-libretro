@@ -286,7 +286,7 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__XSCPU64__)
-   // Replace kernal always from backup, because kernal loading replaces the embedded variable
+   /* Replace kernal always from backup, because kernal loading replaces the embedded variable */
    memcpy(scpu64rom_scpu64_rom, scpu64rom_scpu64_rom_original, SCPU64_SCPU64_ROM_MAXSIZE);
    switch (opt_supercpu_kernal)
    {
@@ -303,7 +303,7 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
-   // Replace kernal always from backup, because kernal loading replaces the embedded variable
+   /* Replace kernal always from backup, because kernal loading replaces the embedded variable */
 #if defined(__X64__) || defined(__X64SC__)
    memcpy(c64memrom_kernal64_rom, c64memrom_kernal64_rom_original, C64_KERNAL_ROM_SIZE);
 #elif defined(__X128__)
@@ -391,7 +391,7 @@ int ui_init_finalize(void)
    unsigned int vic20mem = 0;
    vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : core_opt.VIC20Memory;
 
-   // Super VIC uses memory blocks 1+2 by default
+   /* Super VIC uses memory blocks 1+2 by default */
    if (!vic20mem && core_opt.Model == VIC20MODEL_VIC21)
       vic20mem = 3;
 

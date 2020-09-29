@@ -7,11 +7,11 @@ int sensible_strcmp(char *a, char *b)
    for (i = 0; a[i] == b[i]; i++)
       if (a[i] == '\0')
          return 0;
-   // Replace " " (32) with "/" (47) when comparing for more natural sorting, such as:
-   // 1. Spy vs Spy                                   1. Last Ninja, The
-   // 2. Spy vs Spy II - The Island Caper     and     2. Last Ninja 2
-   // 3. Spy vs Spy III - Arctic Antics               3. Last Ninja 3
-   // Because "/" (47) is bigger than "," (44) and "." (46), and it is not used in filenames
+   /* Replace " " (32) with "/" (47) when comparing for more natural sorting, such as:
+    * 1. Spy vs Spy                                   1. Last Ninja, The
+    * 2. Spy vs Spy II - The Island Caper     and     2. Last Ninja 2
+    * 3. Spy vs Spy III - Arctic Antics               3. Last Ninja 3
+    * Because "/" (47) is bigger than "," (44) and "." (46), and it is not used in filenames */
    if (a[i] == 32)
       return (47 < (unsigned char)b[i]) ? -1 : 1;
    if (b[i] == 32)
@@ -357,15 +357,15 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 	BYTE header[12];
 	DWORD gcr_track_p[MAX_HALFTRACKS_1541] = {0};
 	DWORD gcr_speed_p[MAX_HALFTRACKS_1541] = {0};
-	//BYTE gcr_track[G64_TRACK_MAXLEN + 2];
+	/*BYTE gcr_track[G64_TRACK_MAXLEN + 2]; */
 	BYTE gcr_track[NIB_TRACK_LENGTH + 2];
 	size_t track_len, badgcr;
-	//size_t skewbytes=0;
+	/*size_t skewbytes=0; */
 	int index=0, track, added_sync;
 	FILE * fpout;
 	BYTE buffer[NIB_TRACK_LENGTH], tempfillbyte;
 	size_t raw_track_size[4] = { 6250, 6666, 7142, 7692 };
-	//char errorstring[0x1000];
+	/*char errorstring[0x1000]; */
 
 	printf("Writing G64 file...\n");
 
@@ -377,18 +377,20 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 	}
 
 	/* determine max track size (VICE still can't handle) */
-	//for (index= 0; index < MAX_HALFTRACKS_1541; index += track_inc)
-	//{
-	//	if(track_length[index+2] > G64_TRACK_MAXLEN)
-	//		G64_TRACK_MAXLEN = track_length[index+2];
-	//}
+#if 0
+	for (index= 0; index < MAX_HALFTRACKS_1541; index += track_inc)
+	{
+		if(track_length[index+2] > G64_TRACK_MAXLEN)
+			G64_TRACK_MAXLEN = track_length[index+2];
+	}
+#endif
 	printf("G64 Track Length = %d", G64_TRACK_MAXLEN);
 
 	/* Create G64 header */
 	strcpy((char *) header, "GCR-1541");
 	header[8] = 0;	/* G64 version */
 	header[9] = MAX_HALFTRACKS_1541; /* Number of Halftracks  (VICE <2.2 can't handle non-84 track images) */
-	//header[9] = (unsigned char)end_track;
+	/*header[9] = (unsigned char)end_track; */
 	header[10] = (BYTE) (G64_TRACK_MAXLEN % 256);	/* Size of each stored track */
 	header[11] = (BYTE) (G64_TRACK_MAXLEN / 256);
 
@@ -456,7 +458,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 
 		if(rpm_real)
 		{
-			//capacity[speed_map[track/2]] = raw_track_size[speed_map[track/2]];
+			/*capacity[speed_map[track/2]] = raw_track_size[speed_map[track/2]]; */
 			switch (track_density[track])
 			{
 				case 0:
@@ -502,16 +504,17 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 		gcr_track[1] = (BYTE) (track_len / 256);
 
 		/* apply skew, if specified */
-		//if(skew)
-		//{
-		//	skewbytes = skew * (capacity[track_density[track]&3] / 200);
-		//	if(skewbytes > track_len)
-		//		skewbytes = skewbytes - track_len;
-		//printf(" {skew=%d} ", skewbytes);
-		//}
-		//memcpy(gcr_track+2, buffer+skewbytes, track_len-skewbytes);
-		//memcpy(gcr_track+2+track_len-skewbytes, buffer, skewbytes);
-
+#if 0
+		if(skew)
+		{
+			skewbytes = skew * (capacity[track_density[track]&3] / 200);
+			if(skewbytes > track_len)
+				skewbytes = skewbytes - track_len;
+			printf(" {skew=%d} ", skewbytes);
+		}
+		memcpy(gcr_track+2, buffer+skewbytes, track_len-skewbytes);
+		memcpy(gcr_track+2+track_len-skewbytes, buffer, skewbytes);
+#endif
 		memcpy(gcr_track+2, buffer, track_len);
 
 		if (fwrite(gcr_track, (G64_TRACK_MAXLEN + 2), 1, fpout) != 1)
@@ -641,13 +644,13 @@ int nib_convert(char *in, char *out)
 	rpm_real = 296;
 
 	/* default is to reduce sync */
-	//memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541 + 2); 
+	/* memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541 + 2); */
 	/* libretro: Lowered + 2 to + 1, because: "warning: 'memset' writing 44 bytes into a region of size 43 overflows the destination" */
 	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541 + 1);
 
-	//memset(track_length, 0, MAX_TRACKS_1541 + 2);
+	/* memset(track_length, 0, MAX_TRACKS_1541 + 2); */
 	for(t=0; t<MAX_TRACKS_1541 + 2; t++)
-		track_length[t] = NIB_TRACK_LENGTH; // I do not recall why this was done, but left at MAX
+		track_length[t] = NIB_TRACK_LENGTH; /* I do not recall why this was done, but left at MAX */
 
 	/* clear heap buffers */
 	memset(compressed_buffer, 0x00, sizeof(compressed_buffer));

@@ -23,19 +23,19 @@
 #define RGB888(r, g, b) (((r * 255 / 31) << 16) | ((g * 255 / 31) << 8) | (b * 255 / 31))
 #define ARGB888(a, r, g, b) ((a << 24) | (r << 16) | (g << 8) | b)
 
-// Log
+/* Log */
 #if defined(__ANDROID__) || defined(ANDROID)
 #include <android/log.h>
 #define LOG_TAG "RetroArch.vice"
 #endif
 
-// Types
+/* Types */
 #define UINT16 uint16_t
 #define UINT32 uint32_t
 typedef uint32_t uint32;
 typedef uint8_t uint8;
 
-// Screen
+/* Screen */
 #if defined(__X128__)
 #define WINDOW_WIDTH    856
 #define WINDOW_HEIGHT   312
@@ -68,12 +68,14 @@ extern unsigned int pix_bytes;
       { NULL, NULL }, \
    }
 
-// VKBD
+/* VKBD */
 #define NPLGN 11
 #define NLIGN 7
 #define NLETT 5
 
-//#define POINTER_DEBUG
+#if 0
+#define POINTER_DEBUG
+#endif
 #ifdef POINTER_DEBUG
 extern int pointer_x;
 extern int pointer_y;
@@ -91,13 +93,13 @@ extern int vkbd_x_max;
 extern int vkbd_y_min;
 extern int vkbd_y_max;
 
-// Statusbar
+/* Statusbar */
 #define STATUSBAR_BOTTOM    0x01
 #define STATUSBAR_TOP       0x02
 #define STATUSBAR_BASIC     0x04
 #define STATUSBAR_MINIMAL   0x08
 
-// Variables
+/* Variables */
 extern int cpuloop;
 extern int retroXS;
 extern int retroYS;
@@ -115,45 +117,45 @@ extern unsigned int cur_port;
 extern unsigned int retro_region;
 
 enum {
-    RUNSTATE_FIRST_START = 0,
-    RUNSTATE_LOADED_CONTENT,
-    RUNSTATE_RUNNING,
+   RUNSTATE_FIRST_START = 0,
+   RUNSTATE_LOADED_CONTENT,
+   RUNSTATE_RUNNING,
 };
 
-// Functions
+/* Functions */
 extern void maincpu_mainloop_retro(void);
 extern long GetTicks(void);
 extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
 
-// Core options
+/* Core options */
 struct libretro_core_options {
-    int Model;
-    int UserportJoyType;
-    int AutostartWarp;
-    int AttachDevice8Readonly;
-    int DriveTrueEmulation;
-    int DriveSoundEmulation;
-    int AudioLeak;
-    int SoundSampleRate;
-    int SidEngine;
-    int SidModel;
-    int SidExtra;
-    int SidResidSampling;
-    int SidResidPassband;
-    int SidResidGain;
-    int SidResidFilterBias;
-    int SidResid8580FilterBias;
-    char ExternalPalette[RETRO_PATH_MAX];
-    int ColorGamma;
-    int ColorTint;
-    int ColorSaturation;
-    int ColorContrast;
-    int ColorBrightness;
+   int Model;
+   int UserportJoyType;
+   int AutostartWarp;
+   int AttachDevice8Readonly;
+   int DriveTrueEmulation;
+   int DriveSoundEmulation;
+   int AudioLeak;
+   int SoundSampleRate;
+   int SidEngine;
+   int SidModel;
+   int SidExtra;
+   int SidResidSampling;
+   int SidResidPassband;
+   int SidResidGain;
+   int SidResidFilterBias;
+   int SidResid8580FilterBias;
+   char ExternalPalette[RETRO_PATH_MAX];
+   int ColorGamma;
+   int ColorTint;
+   int ColorSaturation;
+   int ColorContrast;
+   int ColorBrightness;
 #if defined(__X128__)
-    int C128ColumnKey;
-    int Go64Mode;
+   int C128ColumnKey;
+   int Go64Mode;
 #elif defined(__XVIC__)
-    int VIC20Memory;
+   int VIC20Memory;
 #endif
 };
 

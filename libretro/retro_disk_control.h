@@ -21,41 +21,40 @@
 
 #include <stdbool.h>
 
-// See which looks best in most cases and tweak (or make configurable)
-#define DISK_LABEL_MODE_ASCII              1 // Convert to ascii - unshifted chars are lowercase
-#define DISK_LABEL_MODE_UPPERCASE          2 // All characters are always uppercase
-#define DISK_LABEL_MODE_LOWERCASE          3 // All characters are always lowercase
-#define DISK_LABEL_MODE_ASCII_OR_UPPERCASE 4 // If all chars are unshifted - convert to uppercase
-#define DISK_LABEL_MODE_ASCII_OR_CAMELCASE 5 // If all chars are unshifted - convert to camelcase
-#define DISK_LABEL_MODE_PETSCII            6 // Unmodified petscii codes - case is inverted
+/* See which looks best in most cases and tweak (or make configurable) */
+#define DISK_LABEL_MODE_ASCII              1 /* Convert to ascii - unshifted chars are lowercase */
+#define DISK_LABEL_MODE_UPPERCASE          2 /* All characters are always uppercase */
+#define DISK_LABEL_MODE_LOWERCASE          3 /* All characters are always lowercase */
+#define DISK_LABEL_MODE_ASCII_OR_UPPERCASE 4 /* If all chars are unshifted - convert to uppercase */
+#define DISK_LABEL_MODE_ASCII_OR_CAMELCASE 5 /* If all chars are unshifted - convert to camelcase */
+#define DISK_LABEL_MODE_PETSCII            6 /* Unmodified petscii codes - case is inverted */
 
 extern int disk_label_mode;
 
-//*****************************************************************************
-// Disk control structure and functions
+/* Disk control structure and functions */
 #define DC_MAX_SIZE 20
 
 enum dc_image_type {
-	DC_IMAGE_TYPE_NONE = 0,
-	DC_IMAGE_TYPE_FLOPPY,
-	DC_IMAGE_TYPE_TAPE,
-	DC_IMAGE_TYPE_MEM,
-	DC_IMAGE_TYPE_NIBBLER,
-	DC_IMAGE_TYPE_UNKNOWN
+   DC_IMAGE_TYPE_NONE = 0,
+   DC_IMAGE_TYPE_FLOPPY,
+   DC_IMAGE_TYPE_TAPE,
+   DC_IMAGE_TYPE_MEM,
+   DC_IMAGE_TYPE_NIBBLER,
+   DC_IMAGE_TYPE_UNKNOWN
 };
 
 struct dc_storage
 {
-	char* command;
-	char* files[DC_MAX_SIZE];
-	char* labels[DC_MAX_SIZE];
-	char* names[DC_MAX_SIZE];
-	enum dc_image_type types[DC_MAX_SIZE];
-	unsigned unit;
-	unsigned count;
-	int index;
-	bool eject_state;
-	bool replace;
+   char* command;
+   char* files[DC_MAX_SIZE];
+   char* labels[DC_MAX_SIZE];
+   char* names[DC_MAX_SIZE];
+   enum dc_image_type types[DC_MAX_SIZE];
+   unsigned unit;
+   unsigned count;
+   int index;
+   bool eject_state;
+   bool replace;
 };
 
 typedef struct dc_storage dc_storage;

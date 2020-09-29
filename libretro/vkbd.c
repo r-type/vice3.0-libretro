@@ -71,7 +71,7 @@ void print_virtual_kbd(unsigned short int *pixels)
    switch (opt_vkbd_theme)
    {
       default:
-      case 0: // C64
+      case 0: /* C64 */
          BKG_COLOR_NORMAL  = RGB( 68,  59,  58);
          BKG_COLOR_ALT     = RGB(123, 127, 130);
          BKG_COLOR_EXTRA   = RGB(143, 140, 129);
@@ -82,7 +82,7 @@ void print_virtual_kbd(unsigned short int *pixels)
          FONT_COLOR_SEL    = RGB( 10,  10,  10);
          break;
       
-      case 1: // C64C
+      case 1: /* C64C */
          BKG_COLOR_NORMAL  = RGB(216, 209, 201);
          BKG_COLOR_ALT     = RGB(159, 154, 150);
          BKG_COLOR_EXTRA   = RGB(143, 140, 129);
@@ -93,7 +93,7 @@ void print_virtual_kbd(unsigned short int *pixels)
          FONT_COLOR_SEL    = RGB(250, 250, 250);
          break;
       
-      case 2: // Dark
+      case 2: /* Dark */
          BKG_COLOR_NORMAL  = RGB( 32,  32,  32);
          BKG_COLOR_ALT     = RGB( 70,  70,  70);
          BKG_COLOR_EXTRA   = RGB( 14,  14,  14);
@@ -104,7 +104,7 @@ void print_virtual_kbd(unsigned short int *pixels)
          FONT_COLOR_SEL    = RGB( 10,  10,  10);
          break;
       
-      case 3: // Light
+      case 3: /* Light */
          BKG_COLOR_NORMAL  = RGB(220, 220, 220);
          BKG_COLOR_ALT     = RGB(180, 180, 180);
          BKG_COLOR_EXTRA   = RGB(160, 160, 160);
@@ -343,7 +343,7 @@ void print_virtual_kbd(unsigned short int *pixels)
 
    /* Pressed key color */
    if (vkflag[4] == 1 && (MVk[(vkey_pos_y * NPLGN) + vkey_pos_x + page].val == vkey_sticky1 || MVk[(vkey_pos_y * NPLGN) + vkey_pos_x + page].val == vkey_sticky2))
-      ; // no-op
+      ; /* no-op */
    else if (vkflag[4] == 1)
       BKG_COLOR_SEL = BKG_COLOR_ACTIVE;
    else

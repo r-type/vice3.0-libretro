@@ -11,7 +11,7 @@ typedef struct {
 
 Mvk MVk[NPLGN*NLIGN*2] = {
 
-	// 0
+	/* 0 */
 	{ "1"  ,"!"   ,RETROK_1},
 	{ "2"  ,"\""  ,RETROK_2},
 	{ "3"  ,"#"   ,RETROK_3},
@@ -24,7 +24,7 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ "0"  ,"0"   ,RETROK_0},
 	{ "f1" ,"f2"  ,RETROK_F1},
 
-	// 11
+	/* 11 */
 	{ "Q"  ,"Q"   ,RETROK_q},
 	{ "W"  ,"W"   ,RETROK_w},
 	{ "E"  ,"E"   ,RETROK_e},
@@ -37,7 +37,7 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ "P"  ,"P"   ,RETROK_p},
 	{ "f3" ,"f4"  ,RETROK_F3},
 
-	// 22
+	/* 22 */
 	{ "A"  ,"A"   ,RETROK_a},
 	{ "S"  ,"S"   ,RETROK_s},
 	{ "D"  ,"D"   ,RETROK_d},
@@ -47,10 +47,10 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ "J"  ,"J"   ,RETROK_j},
 	{ "K"  ,"K"   ,RETROK_k},
 	{ "L"  ,"L"   ,RETROK_l},
-	{ {31} ,{31}  ,RETROK_INSERT}, // £
+	{ {31} ,{31}  ,RETROK_INSERT}, /* £ */
 	{ "f5" ,"f6"  ,RETROK_F5},
 
-	// 33
+	/* 33 */
 	{ "Z"  ,"Z"   ,RETROK_z},
 	{ "X"  ,"X"   ,RETROK_x},
 	{ "C"  ,"C"   ,RETROK_c},
@@ -63,23 +63,23 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ "/"  ,"?"   ,RETROK_SLASH},
 	{ "f7" ,"f8"  ,RETROK_F7},
 
-	// 44
-	{ {25} ,{25}  ,RETROK_BACKQUOTE}, // Left arrow
+	/* 44 */
+	{ {25} ,{25}  ,RETROK_BACKQUOTE}, /* Left arrow */
 	{ "CTR","CTR" ,RETROK_TAB},
 	{ "+"  ,"+"   ,RETROK_MINUS},
 	{ "-"  ,"-"   ,RETROK_EQUALS},
 	{ "@"  ,"@"   ,RETROK_LEFTBRACKET},
 	{ "*"  ,"*"   ,RETROK_RIGHTBRACKET},
-	{ {26} ,{7}   ,RETROK_DELETE}, // Up arrow / Pi
+	{ {26} ,{7}   ,RETROK_DELETE}, /* Up arrow / Pi */
 	{ ":"  ,"["   ,RETROK_SEMICOLON},
 	{ ";"  ,"]"   ,RETROK_QUOTE},
 	{ "="  ,"="   ,RETROK_BACKSLASH},
-	{ "STB","STB" ,-3},  // Statusbar
+	{ "STB","STB" ,-3}, /* Statusbar */
 
-	// 55
+	/* 55 */
 	{ {24} ,{24}  ,RETROK_LCTRL},
 	{ "R/S","R/S" ,RETROK_ESCAPE},	
-	{ "S/L","S/L" ,-5},  // ShiftLock
+	{ "S/L","S/L" ,-5}, /* ShiftLock */
 	{ "LSH","LSH" ,RETROK_LSHIFT},
 	{ "RSH","RSH" ,RETROK_RSHIFT},
 	{ "RST","RST" ,RETROK_PAGEUP},
@@ -87,20 +87,20 @@ Mvk MVk[NPLGN*NLIGN*2] = {
 	{ "DEL","DEL" ,RETROK_BACKSPACE},
 	{ {30} ,{30}  ,RETROK_UP},
 	{ "RET","RET" ,RETROK_RETURN},
-	{ "JOY","JOY" ,-4},  // Switch joyport
+	{ "JOY","JOY" ,-4}, /* Switch joyport */
 
-	// 66
-	{ {17} ,{17}  ,-2},  // Reset
-	{ {19} ,{19}  ,-15}, // Datasette RESET
-	{ {20} ,{20}  ,-12}, // Datasette PLAY
-	{ {21} ,{21}  ,-14}, // Datasette RWD
-	{ {22} ,{22}  ,-13}, // Datasette FWD
-	{ {23} ,{23}  ,-11}, // Datasette STOP
+	/* 66 */
+	{ {17} ,{17}  ,-2},  /* Reset */
+	{ {19} ,{19}  ,-15}, /* Datasette RESET */
+	{ {20} ,{20}  ,-12}, /* Datasette PLAY */
+	{ {21} ,{21}  ,-14}, /* Datasette RWD */
+	{ {22} ,{22}  ,-13}, /* Datasette FWD */
+	{ {23} ,{23}  ,-11}, /* Datasette STOP */
 	{ {18} ,{18}  ,RETROK_SPACE},
 	{ {27} ,{27}  ,RETROK_LEFT},
 	{ {28} ,{28}  ,RETROK_DOWN},
 	{ {29} ,{29}  ,RETROK_RIGHT},
-	{ "TTF","TTF" ,-20}, // Toggle turbo fire
+	{ "TTF","TTF" ,-20}, /* Toggle turbo fire */
 };
 
 #endif

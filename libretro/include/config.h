@@ -22,7 +22,7 @@
 
 #endif
 
-#ifdef __linux__ //android falls under this too
+#ifdef __linux__ /* android falls under this too */
 #define HAVE_HTONS 1
 #define HAVE_HTONL 1
 #define HAVE_NETDB_H 1

@@ -14,11 +14,21 @@
 #include "kbd.h"
 #include "mousedrv.h"
 
-extern retro_input_poll_t input_poll_cb;
-extern retro_input_state_t input_state_cb;
+extern char retro_key_state[RETROK_LAST];
+extern char retro_key_state_old[RETROK_LAST];
 
-extern void emu_reset(int type);
-extern unsigned int vice_devices[5];
+static retro_input_state_t input_state_cb;
+static retro_input_poll_t input_poll_cb;
+
+void retro_set_input_state(retro_input_state_t cb)
+{
+   input_state_cb = cb;
+}
+
+void retro_set_input_poll(retro_input_poll_t cb)
+{
+   input_poll_cb = cb;
+}
 
 #ifdef POINTER_DEBUG
 int pointer_x = 0;
@@ -35,8 +45,6 @@ int vkbd_x_max = 0;
 int vkbd_y_min = 0;
 int vkbd_y_max = 0;
 
-int vkflag[8] = {0};
-
 /* Mouse speed flags */
 #define MOUSE_SPEED_SLOWER 1
 #define MOUSE_SPEED_FASTER 2
@@ -47,8 +55,7 @@ int vkflag[8] = {0};
 /* Core flags */
 extern bool retro_vkbd;
 extern bool retro_vkbd_transparent;
-char retro_key_state[RETROK_LAST];
-char retro_key_state_old[RETROK_LAST];
+int vkflag[8] = {0};
 int retro_capslock = false;
 bool num_locked = false;
 unsigned int statusbar = 0;
@@ -75,6 +82,8 @@ extern unsigned int opt_zoom_mode_id;
 extern unsigned int opt_keyrah_keypad;
 extern unsigned int opt_keyboard_pass_through;
 extern bool retro_load_ok;
+extern void emu_reset(int type);
+extern unsigned int vice_devices[5];
 
 int turbo_fire_button_disabled = -1;
 int turbo_fire_button = -1;

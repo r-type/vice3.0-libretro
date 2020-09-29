@@ -222,21 +222,11 @@ static char* x_strdup(const char* str)
    return str ? strdup(str) : NULL;
 }
 
-void retro_set_input_state(retro_input_state_t cb)
-{
-   input_state_cb = cb;
-}
-
-void retro_set_input_poll(retro_input_poll_t cb)
-{
-   input_poll_cb = cb;
-}
-
 static char CMDFILE[512];
 
 int loadcmdfile(const char *argv)
 {
-   int res=0;
+   int res = 0;
 
    FILE *fp = fopen(argv,"r");
 
@@ -244,7 +234,7 @@ int loadcmdfile(const char *argv)
    if (fp != NULL)
    {
       if (fgets(CMDFILE , 512 , fp) != NULL)
-         res=1;
+         res = 1;
       fclose (fp);
    }
 

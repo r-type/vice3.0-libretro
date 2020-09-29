@@ -77,16 +77,16 @@ static char* joystick_value_human(char val, int vice_device)
     static char str[6] = {0};
     sprintf(str, "%3s", "   ");
 
-    if (val & 0x01) // UP
+    if (val & 0x01) /* UP */
         str[1] = 30;
 
-    else if (val & 0x02) // DOWN
+    else if (val & 0x02) /* DOWN */
         str[1] = 28;
 
-    if (val & 0x04) // LEFT
+    if (val & 0x04) /* LEFT */
         str[0] = 27;
 
-    else if (val & 0x08) // RIGHT
+    else if (val & 0x08) /* RIGHT */
         str[2] = 29;
 
     str[1] = (val & 0x10) ? (str[1] | 0x80) : str[1];
@@ -116,36 +116,36 @@ static void display_joyport(void)
     else if(cur_port == 2)
         joy2[0] = (joy2[0] | 0x80);
 
-    // Mouse
+    /* Mouse */
     if (opt_joyport_type > 2 && cur_port == 1)
         sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
-    // Paddles
+    /* Paddles */
     else if (opt_joyport_type == 2 && cur_port == 1)
         sprintf(tmpstr, "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
-    // Joystick
+    /* Joystick */
     else
         sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 
-    // Mouse
+    /* Mouse */
     if (opt_joyport_type > 2 && cur_port == 2)
         sprintf(tmpstr + strlen(tmpstr), "M%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
-    // Paddles
+    /* Paddles */
     else if (opt_joyport_type == 2 && cur_port == 2)
         sprintf(tmpstr + strlen(tmpstr), "P%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
-    // Joystick
+    /* Joystick */
     else
         sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2], 0));
 #elif defined(__XVIC__)
     char joy1[2];
     sprintf(joy1, "%s", "1");
 
-    // Mouse
+    /* Mouse */
     if (opt_joyport_type > 2)
        sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
-    // Paddles
+    /* Paddles */
     else if (opt_joyport_type == 2)
        sprintf(tmpstr, "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
-    // Joystick
+    /* Joystick */
     else
        sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 #endif
@@ -165,7 +165,7 @@ static void display_joyport(void)
         snprintf(tmpstr, sizeof(tmpstr), "%24s", "");
 
     len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-38s", tmpstr);
-    //statusbar_text[STATUSBAR_JOY_POS + len] = ' ';
+    /*statusbar_text[STATUSBAR_JOY_POS + len] = ' ';*/
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -180,12 +180,12 @@ static int paused = 0;
 static void display_speed(void)
 {
     int len;
-    //char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';
+    /*char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';*/
     char fps_str[3];
     sprintf(fps_str, "%2d", fps);
 
     len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2s", fps_str);
-    //statusbar_text[STATUSBAR_SPEED_POS + len] = ' '; /* No end separator for last element */
+    /*statusbar_text[STATUSBAR_SPEED_POS + len] = ' ';*/ /* No end separator for last element */
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -391,7 +391,7 @@ static void display_tape(void)
     } else {
         len = sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "     ");
     }
-    //statusbar_text[STATUSBAR_TAPE_POS + len] = ' ';
+    /*statusbar_text[STATUSBAR_TAPE_POS + len] = ' ';*/
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -542,10 +542,10 @@ void uistatusbar_draw(void)
     unsigned int color_black_32, color_white_32, color_red_32, color_green_32, color_greenb_32, color_greend_32, color_brown_32;
     color_white_32  = ARGB888(255, 255, 255, 255);
     color_black_32  = 0;
-    color_red_32    = ARGB888(255, 187,   0,   0);//0xffbb0000;
-    color_greenb_32 = ARGB888(255,   0, 187,   0);//0xff00bb00;
-    color_green_32  = ARGB888(255,   0,  85,   0);//0xff005500;
-    color_greend_32 = ARGB888(255,   0,  34,   0);//0xff002200;
+    color_red_32    = ARGB888(255, 187,   0,   0); /* 0xffbb0000 */
+    color_greenb_32 = ARGB888(255,   0, 187,   0); /* 0xff00bb00 */
+    color_green_32  = ARGB888(255,   0,  85,   0); /* 0xff005500 */
+    color_greend_32 = ARGB888(255,   0,  34,   0); /* 0xff002200 */
     color_brown_32  = ARGB888(255,  89,  79,  78);
     color_f_32      = color_white_32;
     color_b_32      = color_black_32;
@@ -556,26 +556,26 @@ void uistatusbar_draw(void)
     char tmpstr[512];
     int x = 0, y = 0;
 
-    // Statusbar position
+    /* Statusbar position */
     x = 1;
     if (opt_statusbar & STATUSBAR_TOP)
         y = zoomed_YS_offset + 1;
     else
         y = zoomed_height + zoomed_YS_offset - char_width - 1;
 
-    // Statusbar background
+    /* Statusbar background */
     int bkg_x = retroXS_offset + x - 1;
     int bkg_y = y - 1;
     int max_width = zoomed_width;
     int bkg_width = max_width;
     int bkg_height = char_width + 2;
 
-    // Right alignment offset
+    /* Right alignment offset */
     int x_align_offset = 4;
     if (retroW != zoomed_width && retroXS_offset != 0)
         x_align_offset += 1;
 
-    // Basic mode statusbar background
+    /* Basic mode statusbar background */
     if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)
     {
         if (drive_enabled)
@@ -602,11 +602,11 @@ void uistatusbar_draw(void)
         if (c == 0)
             continue;
         
-        // Default background
+        /* Default background */
         color_b_16 = color_black_16;
         color_b_32 = color_black_32;
 
-        // Drive/tape LED color
+        /* Drive/tape LED color */
         if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 1)
         {
             color_f_16 = color_black_16;
@@ -619,7 +619,7 @@ void uistatusbar_draw(void)
             }
         }
 
-        // Drive loading
+        /* Drive loading */
         if ((i == STATUSBAR_DRIVE8_TRACK_POS || i == STATUSBAR_DRIVE8_TRACK_POS + 1) && drive_enabled)
         {
             color_b_16 = color_green_16;
@@ -639,7 +639,7 @@ void uistatusbar_draw(void)
             if (opt_statusbar & STATUSBAR_MINIMAL)
                 c = ' ';
         }
-        // Power LED color
+        /* Power LED color */
         else if (i == STATUSBAR_SPEED_POS || i == STATUSBAR_SPEED_POS + 1)
         {
             color_f_16 = color_black_16;
@@ -651,7 +651,7 @@ void uistatusbar_draw(void)
                 c = ' ';
         }
 
-        // Right alignment for tape/drive/power
+        /* Right alignment for tape/drive/power */
         int x_align = retroXS_offset;
         if (i >= STATUSBAR_TAPE_POS)
             x_align = retroXS_offset + x_align_offset + zoomed_width - (MAX_STATUSBAR_LEN * char_width);
@@ -669,7 +669,7 @@ void uistatusbar_draw(void)
 
         int x_char = x + char_offset + x_align + (i * char_width);
 
-        // Output
+        /* Output */
         sprintf(tmpstr, "%c", c);
         if (pix_bytes == 2)
             Draw_text(retro_bmp, x_char, y, color_f_16, color_b_16, 255, 1, 1, 10, tmpstr);

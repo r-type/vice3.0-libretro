@@ -10,7 +10,7 @@ static void libretro_keyboard()
     kbd_lshiftcol = 4;
     kbd_rshiftrow = 8;
     kbd_rshiftcol = 4;
-    vshift=KEY_LSHIFT;
+    vshift = KEY_LSHIFT;
 
     keyboard_parse_set_pos_row(27, 8, 1, 8);         /*          Esc -> ESC          */
     keyboard_parse_set_pos_row(49, 9, 1, 8);         /*            1 -> 1            */
@@ -119,12 +119,12 @@ static void libretro_keyboard()
 #elif defined(__XPET__)
     switch (machine_keyboard_type)
     {
-        case 0: // Business (US)
+        case 0: /* Business (US) */
             kbd_lshiftrow = 6;
             kbd_lshiftcol = 0;
             kbd_rshiftrow = 6;
             kbd_rshiftcol = 6;
-            vshift=KEY_RSHIFT;
+            vshift = KEY_RSHIFT;
 
             keyboard_parse_set_pos_row(96, 9, 0, 8);         /*            ` -> Left Arrow   */
             keyboard_parse_set_pos_row(49, 1, 0, 8);         /*            1 -> 1            */
@@ -209,12 +209,12 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(266, 6, 4, 8);        /*     Numpad . -> Numpad .     */
             break;
 
-        case 4: // Graphics (US)
+        case 4: /* Graphics (US) */
             kbd_lshiftrow = 8;
             kbd_lshiftcol = 0;
             kbd_rshiftrow = 8;
             kbd_rshiftcol = 5;
-            vshift=KEY_RSHIFT;
+            vshift = KEY_RSHIFT;
 
             keyboard_parse_set_pos_row(49, 0, 0, 8);         /*            1 -> !            */
             keyboard_parse_set_pos_row(50, 1, 0, 8);         /*            2 -> "            */
@@ -306,11 +306,11 @@ static void libretro_keyboard()
     kbd_lshiftcol = 3;
     kbd_rshiftrow = 6;
     kbd_rshiftcol = 4;
-    vshift=KEY_RSHIFT;
-    shiftl=KEY_LSHIFT;
+    vshift = KEY_RSHIFT;
+    shiftl = KEY_LSHIFT;
     switch (opt_keyboard_keymap)
     {
-        case 0: // Symbolic
+        case 0: /* Symbolic */
             keyboard_parse_set_pos_row(96, 0, 1, 8);                /*            ` -> Left Arrow   */
             keyboard_parse_set_pos_row(49, 0, 0, 8);                /*            1 -> 1            */
             keyboard_parse_set_pos_row(50, 0, 7, 32);               /*            2 -> 2            */
@@ -402,7 +402,7 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(289, 7, 7, 1);               /*           F8 -> F8           */
             break;
 
-        case 1: // Positional
+        case 1: /* Positional */
             keyboard_parse_set_pos_row(96, 0, 1, 8);                /*            ` -> Left Arrow   */
             keyboard_parse_set_pos_row(49, 0, 0, 8);                /*            1 -> 1            */
             keyboard_parse_set_pos_row(50, 0, 7, 8);                /*            2 -> 2            */
@@ -490,11 +490,11 @@ static void libretro_keyboard()
     kbd_lshiftcol = 7;
     kbd_rshiftrow = 6;
     kbd_rshiftcol = 4;
-    vshift=KEY_RSHIFT;
-    shiftl=KEY_LSHIFT;
+    vshift = KEY_RSHIFT;
+    shiftl = KEY_LSHIFT;
     switch (opt_keyboard_keymap)
     {
-        case 0: // Symbolic
+        case 0: /* Symbolic */
             keyboard_parse_set_pos_row(96, 6, 4, 32);               /*            ` -> Esc          */
             keyboard_parse_set_pos_row(49, 7, 0, 8);                /*            1 -> 1            */
             keyboard_parse_set_pos_row(50, 7, 3, 32);               /*            2 -> 2            */
@@ -587,7 +587,7 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(289, 0, 3, 0);               /*           F8 -> HELP         */
             break;
 
-        case 1: // Positional
+        case 1: /* Positional */
             keyboard_parse_set_pos_row(96, 6, 4, 8);                /*            ` -> Esc          */
             keyboard_parse_set_pos_row(49, 7, 0, 8);                /*            1 -> 1            */
             keyboard_parse_set_pos_row(50, 7, 3, 8);                /*            2 -> 2            */
@@ -672,11 +672,11 @@ static void libretro_keyboard()
     kbd_lshiftcol = 7;
     kbd_rshiftrow = 6;
     kbd_rshiftcol = 4;
-    vshift=KEY_RSHIFT;
-    shiftl=KEY_LSHIFT;
+    vshift = KEY_RSHIFT;
+    shiftl = KEY_LSHIFT;
     switch (opt_keyboard_keymap)
     {
-        case 0: // Symbolic
+        case 0: /* Symbolic */
             keyboard_parse_set_pos_row(27, 9, 0, 8);                /*          Esc -> ESC          */
             keyboard_parse_set_pos_row(9, 8, 3, 8);                 /*          Tab -> TAB          */
             keyboard_parse_set_pos_row(308, 10, 0, 8);              /*     Left Alt -> ALT          */
@@ -793,7 +793,7 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(271, 9, 4, 8);               /* Numpad Enter -> Numpad Enter */
             break;
 
-        case 1: // Positional
+        case 1: /* Positional */
             keyboard_parse_set_pos_row(282, 9, 0, 8);               /*           F1 -> ESC          */
             keyboard_parse_set_pos_row(283, 8, 3, 8);               /*           F2 -> TAB          */
             keyboard_parse_set_pos_row(284, 10, 0, 8);              /*           F3 -> ALT          */
@@ -894,16 +894,16 @@ static void libretro_keyboard()
             break;
     }
 
-#else // X64
+#else /* X64 */
     kbd_lshiftrow = 1;
     kbd_lshiftcol = 7;
     kbd_rshiftrow = 6;
     kbd_rshiftcol = 4;
-    vshift=KEY_RSHIFT;
-    shiftl=KEY_LSHIFT;
+    vshift = KEY_RSHIFT;
+    shiftl = KEY_LSHIFT;
     switch (opt_keyboard_keymap)
     {
-        case 0: // Symbolic
+        case 0: /* Symbolic */
             keyboard_parse_set_pos_row(96, 7, 1, 32);               /*            ` -> Left Arrow   */
             keyboard_parse_set_pos_row(49, 7, 0, 8);                /*            1 -> 1            */
             keyboard_parse_set_pos_row(50, 7, 3, 32);               /*            2 -> 2            */
@@ -996,7 +996,7 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(289, 0, 3, 1);               /*           F8 -> F8           */
             break;
 
-        case 1: // Positional
+        case 1: /* Positional */
             keyboard_parse_set_pos_row(96, 7, 1, 8);                /*            ` -> Left Arrow   */
             keyboard_parse_set_pos_row(49, 7, 0, 8);                /*            1 -> 1            */
             keyboard_parse_set_pos_row(50, 7, 3, 8);                /*            2 -> 2            */

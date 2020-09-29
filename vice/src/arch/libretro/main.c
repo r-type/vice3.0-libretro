@@ -14,4 +14,3 @@ void vice_main_exit()
 {
    machine_shutdown();
 }
-

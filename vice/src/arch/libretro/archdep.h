@@ -36,7 +36,9 @@ extern char retro_save_directory[512];
 #define SAVEDIR retro_save_directory
 
 #define ARCHDEP_PRINTER_DEFAULT "vice_printer.txt"
-//#define RETRO_DEBUG 1
+#if 0
+#define RETRO_DEBUG 1
+#endif
 
 #define VICE_ARCHAPI_PRIVATE_API
 #include "archapi.h"
@@ -195,7 +197,7 @@ extern const char *archdep_home_path(void);
 #else
 #define LIBDIR          PREFIX "./vice"
 #endif
-#endif //__LIBRETRO__
+#endif /*__LIBRETRO__ */
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 #define DOCDIR          PREFIX "/share/doc/vice"
@@ -205,4 +207,4 @@ extern const char *archdep_home_path(void);
 
 #define VICEUSERDIR     ".vice"
 
-#endif // _ARCHDEP_H
+#endif /*_ARCHDEP_H */

@@ -90,4 +90,3 @@ void uimon_set_interface(monitor_interface_t **monitor_interface_init,
                          int count )
 {
 }
-

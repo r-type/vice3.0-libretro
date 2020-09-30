@@ -1,34 +1,17 @@
 # VICE LIBRETRO
 
-Port of VICE, the Versatile Commodore Emulator 3.3 with virtual keyboard
-
-Supported platforms: Linux Windows Apple Android emscripten Switch Vita
+Port of VICE, the Versatile Commodore Emulator 3.3
 
 Source base: [https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz](https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz)
 
-## Recent improvements
-
-- Automatic NIB->G64 conversion
-- Savestates
-- Virtual keyboard revamped: more responsive, cleaner design, much easier to control
-- GUI removed
-- Autostart PRG mode to inject
-- System-subdir renamed to `vice` and created automatically
-- Keyboard keys disabled while using RetroPad
-- New settings:
-  - Drive Sound Emulation (1541 & 1571 only)
-  - Reset Type (Autostart, Soft, Hard, Freeze)
-  - Customizable hotkeys for essential functions (virtual keyboard, statusbar, joyport switch, reset, Datasette controls)
-  - Keyrah joystick maps
-  - Zoom mode
-  - Paddles & mouse
-  - JiffyDOS support
+Supported platforms: Linux, Windows, Apple, Android, emscripten, Switch, Vita
 
 ## Default controls
 
 |RetroPad button|Action|
 |---|---|
 |D-Pad|Joystick|
+|Left Analog|Mouse/paddles|
 |B|Fire button|
 |X|Space|
 |L2|Escape (RUN/STOP)|
@@ -53,8 +36,7 @@ Source base: [https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.
 Long press for sticky keys. Stickying the third key will replace the second.
 
 ## Joyport control
-
-C64 games sometimes use joystick port 1 and sometimes joystick port 2 for player 1. There are several ways to switch ports in this core:
+Older C64 games tend to use joystick port 1 and newer ones tend to use port 2 for player 1. There are several ways to switch ports in this core:
 - Use the core option: `Quick Menu -> Options -> RetroPad Port`.
 - Bring up the virtual keyboard with `Select` button, and press the key labeled `JOY`.
 - Press the default keyboard shortcut `Right Control`.
@@ -89,7 +71,6 @@ ZIP support is provided by the core, which allows:
 - The use of zipped images in M3Us
 
 ## JiffyDOS support
-
 External ROM files required in `system/vice`:
 
 |Filename|Size|MD5|
@@ -101,26 +82,42 @@ External ROM files required in `system/vice`:
 |**JiffyDOS_1581.bin**|32 768|20b6885c6dc2d42c38754a365b043d71|
 
 ## Command file operation
-
 VICE command line options are supported by placing the desired command line in a text file with `.cmd` file extension. The command line format is as documented in the [VICE manual](http://vice-emu.sourceforge.net/vice_6.html).
 
-Using this you can overcome limitations of the GUI and set advanced configurations required for running problematic files. Here are a couple of examples for the xvic core:
+Using this you can overcome limitations of the GUI and set advanced configurations required for running problematic files.
 
-VIC-20 megacart support:
-```
-xvic -cartmega /path/to/rom/mega-cart-name.rom
-```
-VIC-20 games which require specific memory configs such as 8k expansion (`-memory (3k/8k/16k/24k/all) / (0/1/2/3/5) / (04/20/40/60/a0)`):
-```
-xvic -memory 1 /path/to/rom/some-8k-game.d64
-xvic -memory 8k /path/to/rom/some-8k-game.d64
-xvic -memory 20 /path/to/rom/some-8k-game.d64
-```
 
-VIC-20 memory expansion will also be set with filename tags or directory matching: `some game (8k).prg` or `/8k/some game.prg`.
+VIC-20 Mega-Cart can be launched via `.cmd`:
+```
+xvic -cartmega "/path/to/rom/mega-cart-name.rom"
+```
+**VIC-20 Mega-Cart is supported automatically with NvRAM file directed to `saves`.**
+
+
+VIC-20 memory expansion can be set via `.cmd`: `-memory (3k/8k/16k/24k/all) / (0/1/2/3/5) / (04/20/40/60/a0)`:
+```
+xvic -memory 1 "/path/to/rom/some-8k-game.d64"
+xvic -memory 8k "/path/to/rom/some-8k-game.d64"
+xvic -memory 20 "/path/to/rom/some-8k-game.d64"
+```
+**VIC-20 memory expansion can be set with filename tags or directory matching:**
+- `some game (8k).prg` or `/8k/some game.prg`
+- `vicdoom (35k).d64`
+
+## Latest features
+- Automatic VIC-20 Mega-Cart support (with NvRAM)
+- Automatic NIB->G64 conversion
+- Region (PAL/NTSC) filepath tags for C64 & VIC-20
+- Memory expansion filepath tags for VIC-20
+- JiffyDOS support
+- Paddles & mouse
+- Zoom mode
+- Savestates
+- Keyrah joystick maps
+- Drive Sound Emulation (1541 & 1571 only)
+- Reset Type (Autostart, Soft, Hard, Freeze)
 
 ## Build instructions
-
 Remember to run `make clean EMUTYPE=x` when building different EMUTYPEs.
 
 Currently working EMUTYPEs:

@@ -222,22 +222,22 @@ static char* x_strdup(const char* str)
    return str ? strdup(str) : NULL;
 }
 
-static char CMDFILE[512];
-
+static char CMDFILE[512] = {0};
 int loadcmdfile(const char *argv)
 {
    int res = 0;
-
-   FILE *fp = fopen(argv,"r");
+   FILE *fp = fopen(argv, "r");
 
    CMDFILE[0] = '\0';
    if (fp != NULL)
    {
-      if (fgets(CMDFILE , 512 , fp) != NULL)
+      if (fgets(CMDFILE, 512, fp) != NULL)
+      {
          res = 1;
+         snprintf(CMDFILE, sizeof(CMDFILE), "%s", trimwhitespace(CMDFILE));
+      }
       fclose (fp);
    }
-
    return res;
 }
 
@@ -267,15 +267,15 @@ static void Add_Option(const char* option)
 
 static void parse_cmdline(const char *argv)
 {
-   char *p,*p2,*start_of_word;
-   int c,c2;
+   char *p, *p2, *start_of_word;
+   int c, c2;
    static char buffer[512*4];
    enum states { DULL, IN_WORD, IN_STRING } state = DULL;
 
    ARGUC = 0;
 
-   strcpy(buffer,argv);
-   strcat(buffer," \0");
+   strcpy(buffer, argv);
+   strcat(buffer, " \0");
 
    for (p = buffer; *p != '\0'; p++)
    {
@@ -495,17 +495,17 @@ static int process_cmdline(const char* argv)
     {
         if (loadcmdfile(argv))
         {
-            argv = trimwhitespace(CMDFILE);
-            log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", argv);
+            log_cb(RETRO_LOG_INFO, "Starting game from command line '%s'\n", argv);
             core_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
         }
         else
         {
-            log_cb(RETRO_LOG_ERROR, "Failed to load command line from %s\n", argv);
-            argv = CMDFILE;
+            log_cb(RETRO_LOG_ERROR, "Failed to load command line from '%s'\n", argv);
         }
+        parse_cmdline(CMDFILE);
     }
-    parse_cmdline(argv);
+    else
+        parse_cmdline(argv);
 
     /* Core command line is now parsed to ARGUV, ARGUC. */
     /* Build command file for VICE in XARGV, PARAMCOUNT. */
@@ -877,7 +877,19 @@ static int process_cmdline(const char* argv)
             }
             else
             {
-                Add_Option(arg);
+                /* Fill cmd arg path from argv if there is none */
+                if (strstr(arg, ".") && !strstr(arg, FSDEV_DIR_SEP_STR))
+                {
+                    char arg_path[RETRO_PATH_MAX] = {0};
+                    char arg_full[RETRO_PATH_MAX] = {0};
+                    strcpy(arg_path, argv);
+                    path_basedir(arg_path);
+                    strcpy(arg_full, arg_path);
+                    strcat(arg_full, arg);
+                    Add_Option(arg_full);
+                }
+                else
+                    Add_Option(arg);
             }
         }
 

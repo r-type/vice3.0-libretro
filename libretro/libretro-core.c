@@ -222,22 +222,22 @@ static char* x_strdup(const char* str)
    return str ? strdup(str) : NULL;
 }
 
-static char CMDFILE[512];
-
+static char CMDFILE[512] = {0};
 int loadcmdfile(const char *argv)
 {
    int res = 0;
-
-   FILE *fp = fopen(argv,"r");
+   FILE *fp = fopen(argv, "r");
 
    CMDFILE[0] = '\0';
    if (fp != NULL)
    {
-      if (fgets(CMDFILE , 512 , fp) != NULL)
+      if (fgets(CMDFILE, 512, fp) != NULL)
+      {
          res = 1;
+         snprintf(CMDFILE, sizeof(CMDFILE), "%s", trimwhitespace(CMDFILE));
+      }
       fclose (fp);
    }
-
    return res;
 }
 
@@ -267,15 +267,15 @@ static void Add_Option(const char* option)
 
 static void parse_cmdline(const char *argv)
 {
-   char *p,*p2,*start_of_word;
-   int c,c2;
+   char *p, *p2, *start_of_word;
+   int c, c2;
    static char buffer[512*4];
    enum states { DULL, IN_WORD, IN_STRING } state = DULL;
 
    ARGUC = 0;
 
-   strcpy(buffer,argv);
-   strcat(buffer," \0");
+   strcpy(buffer, argv);
+   strcat(buffer, " \0");
 
    for (p = buffer; *p != '\0'; p++)
    {
@@ -437,6 +437,8 @@ static int autodetect_vic20_cartridge_type(const char* argv)
             type = CARTRIDGE_VIC20_8KB_A000;
         else if (len <= 0x4000)
             type = CARTRIDGE_VIC20_16KB_6000;
+        else if (len == 0x200000 && addr == 0)
+            type = CARTRIDGE_VIC20_MEGACART;
     }
 
     /* Separate ROM combinations (type = -1) */
@@ -493,17 +495,17 @@ static int process_cmdline(const char* argv)
     {
         if (loadcmdfile(argv))
         {
-            argv = trimwhitespace(CMDFILE);
-            log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", argv);
+            log_cb(RETRO_LOG_INFO, "Starting game from command line '%s'\n", argv);
             core_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
         }
         else
         {
-            log_cb(RETRO_LOG_ERROR, "Failed to load command line from %s\n", argv);
-            argv = CMDFILE;
+            log_cb(RETRO_LOG_ERROR, "Failed to load command line from '%s'\n", argv);
         }
+        parse_cmdline(CMDFILE);
     }
-    parse_cmdline(argv);
+    else
+        parse_cmdline(argv);
 
     /* Core command line is now parsed to ARGUV, ARGUC. */
     /* Build command file for VICE in XARGV, PARAMCOUNT. */
@@ -658,6 +660,7 @@ static int process_cmdline(const char* argv)
             Add_Option("-cartB");
         else if (strendswith(argv, ".prg")
               || strendswith(argv, ".crt")
+              || strendswith(argv, ".rom")
               || strendswith(argv, ".bin")
               || strendswith(argv, ".m3u"))
         {
@@ -670,6 +673,8 @@ static int process_cmdline(const char* argv)
                 char cart_2000[RETRO_PATH_MAX] = {0};
                 char cart_6000[RETRO_PATH_MAX] = {0};
                 char cart_A000[RETRO_PATH_MAX] = {0};
+                char cartmega_nvram[RETRO_PATH_MAX] = {0};
+                char cartmega_temp[RETRO_PATH_MAX] = {0};
 
                 int type = autodetect_vic20_cartridge_type(argv);
                 switch (type)
@@ -691,6 +696,16 @@ static int process_cmdline(const char* argv)
                         break;
                     case CARTRIDGE_VIC20_GENERIC:
                         Add_Option("-cartgeneric");
+                        break;
+                    case CARTRIDGE_VIC20_MEGACART:
+                        snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", argv);
+                        snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", path_basename(cartmega_temp));
+                        snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", path_remove_extension(cartmega_temp));
+                        snprintf(cartmega_nvram, sizeof(cartmega_nvram), "%s%s%s%s",
+                                 retro_save_directory, FSDEV_DIR_SEP_STR, cartmega_temp, ".nvr");
+                        Add_Option("-mcnvramfile");
+                        Add_Option(cartmega_nvram);
+                        Add_Option("-cartmega");
                         break;
                     case -1: /* Separate ROM combination shenanigans */
                         snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
@@ -862,7 +877,19 @@ static int process_cmdline(const char* argv)
             }
             else
             {
-                Add_Option(arg);
+                /* Fill cmd arg path from argv if there is none */
+                if (strstr(arg, ".") && !strstr(arg, FSDEV_DIR_SEP_STR))
+                {
+                    char arg_path[RETRO_PATH_MAX] = {0};
+                    char arg_full[RETRO_PATH_MAX] = {0};
+                    strcpy(arg_path, argv);
+                    path_basedir(arg_path);
+                    strcpy(arg_full, arg_path);
+                    strcat(arg_full, arg);
+                    Add_Option(arg_full);
+                }
+                else
+                    Add_Option(arg);
             }
         }
 
@@ -5103,7 +5130,7 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.3" GIT_VERSION;
 #if defined(__XVIC__)
-   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|20|40|60|a0|b0|rom";
 #else
    info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
 #endif
@@ -5132,26 +5159,41 @@ double retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixe
    }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-      if (region == RETRO_REGION_NTSC)
-         par = (double)0.75000000;
-      else
-         par = (double)0.93650794;
+      switch (region)
+      {
+         case RETRO_REGION_NTSC:
+            par = (double)0.75000000;
+            break;
+         case RETRO_REGION_PAL:
+            par = (double)0.93650794;
+            break;
+      }
       ar = ((double)width / (double)height) * par;
 #if defined(__X128__)
       if (core_opt.C128ColumnKey == 0)
          ar = ((double)width / (double)height) / (double)2.0;
 #endif
 #elif defined(__XVIC__)
-      if (region == RETRO_REGION_NTSC)
-         par = ((double)1.50411479 / (double)2.0);
-      else
-         par = ((double)1.66574035 / (double)2.0);
+      switch (region)
+      {
+         case RETRO_REGION_NTSC:
+            par = ((double)1.50411479 / (double)2.0);
+            break;
+         case RETRO_REGION_PAL:
+            par = ((double)1.66574035 / (double)2.0);
+            break;
+      }
       ar = ((double)width / (double)height) * par;
 #elif defined(__XPLUS4__)
-      if (region == RETRO_REGION_NTSC)
-         par = (double)0.85760931;
-      else
-         par = (double)1.03743478;
+      switch (region)
+      {
+         case RETRO_REGION_NTSC:
+            par = (double)0.85760931;
+            break;
+         case RETRO_REGION_PAL:
+            par = (double)1.03743478;
+            break;
+      }
       ar = ((double)width / (double)height) * par;
 #else
       ar = (double)4 / (double)3;
@@ -5260,26 +5302,24 @@ void update_geometry(int mode)
                         break;
                      case 3: /* 16:9 */
                         zoom_dar = (double)16/9;
-                        zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
                         break;
                      case 4: /* 16:10 */
                         zoom_dar = (double)16/10;
-                        zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
                         break;
                      case 5: /* 4:3 */
                         zoom_dar = (double)4/3;
-                        zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
-                        zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
-                        if (retroW - zoom_crop_width <= zoom_width_max)
-                           zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                         break;
                      case 6: /* 5:4 */
                         zoom_dar = (double)5/4;
-                        zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
-                        zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
-                        if (retroW - zoom_crop_width <= zoom_width_max)
-                           zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                         break;
+                  }
+
+                  if (zoom_dar > 0)
+                  {
+                     zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
+                     zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
+                     if (retroW - zoom_crop_width <= zoom_width_max)
+                        zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                   }
 
                   if (retroW - zoom_crop_width < zoom_width_max)

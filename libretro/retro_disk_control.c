@@ -870,6 +870,7 @@ enum dc_image_type dc_get_image_type(const char* filename)
 	    strendswith(filename, "a0")  ||
 	    strendswith(filename, "b0")  ||
 	    strendswith(filename, "crt") ||
+	    strendswith(filename, "rom") ||
 	    strendswith(filename, "bin"))
 	   return DC_IMAGE_TYPE_MEM;
 

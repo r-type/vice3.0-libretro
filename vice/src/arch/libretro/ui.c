@@ -388,6 +388,8 @@ int ui_init_finalize(void)
 #endif
 
 #if defined(__XVIC__)
+   log_resources_set_int("MegaCartNvRAMWriteBack", 1);
+
    unsigned int vic20mem = 0;
    vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : core_opt.VIC20Memory;
 

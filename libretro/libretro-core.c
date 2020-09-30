@@ -437,6 +437,8 @@ static int autodetect_vic20_cartridge_type(const char* argv)
             type = CARTRIDGE_VIC20_8KB_A000;
         else if (len <= 0x4000)
             type = CARTRIDGE_VIC20_16KB_6000;
+        else if (len == 0x200000 && addr == 0)
+            type = CARTRIDGE_VIC20_MEGACART;
     }
 
     /* Separate ROM combinations (type = -1) */
@@ -658,6 +660,7 @@ static int process_cmdline(const char* argv)
             Add_Option("-cartB");
         else if (strendswith(argv, ".prg")
               || strendswith(argv, ".crt")
+              || strendswith(argv, ".rom")
               || strendswith(argv, ".bin")
               || strendswith(argv, ".m3u"))
         {
@@ -670,6 +673,8 @@ static int process_cmdline(const char* argv)
                 char cart_2000[RETRO_PATH_MAX] = {0};
                 char cart_6000[RETRO_PATH_MAX] = {0};
                 char cart_A000[RETRO_PATH_MAX] = {0};
+                char cartmega_nvram[RETRO_PATH_MAX] = {0};
+                char cartmega_temp[RETRO_PATH_MAX] = {0};
 
                 int type = autodetect_vic20_cartridge_type(argv);
                 switch (type)
@@ -691,6 +696,16 @@ static int process_cmdline(const char* argv)
                         break;
                     case CARTRIDGE_VIC20_GENERIC:
                         Add_Option("-cartgeneric");
+                        break;
+                    case CARTRIDGE_VIC20_MEGACART:
+                        snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", argv);
+                        snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", path_basename(cartmega_temp));
+                        snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", path_remove_extension(cartmega_temp));
+                        snprintf(cartmega_nvram, sizeof(cartmega_nvram), "%s%s%s%s",
+                                 retro_save_directory, FSDEV_DIR_SEP_STR, cartmega_temp, ".nvr");
+                        Add_Option("-mcnvramfile");
+                        Add_Option(cartmega_nvram);
+                        Add_Option("-cartmega");
                         break;
                     case -1: /* Separate ROM combination shenanigans */
                         snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
@@ -5103,7 +5118,7 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.3" GIT_VERSION;
 #if defined(__XVIC__)
-   info->valid_extensions = "20|40|60|a0|b0|d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|20|40|60|a0|b0|rom";
 #else
    info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
 #endif

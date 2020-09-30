@@ -5132,26 +5132,41 @@ double retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixe
    }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-      if (region == RETRO_REGION_NTSC)
-         par = (double)0.75000000;
-      else
-         par = (double)0.93650794;
+      switch (region)
+      {
+         case RETRO_REGION_NTSC:
+            par = (double)0.75000000;
+            break;
+         case RETRO_REGION_PAL:
+            par = (double)0.93650794;
+            break;
+      }
       ar = ((double)width / (double)height) * par;
 #if defined(__X128__)
       if (core_opt.C128ColumnKey == 0)
          ar = ((double)width / (double)height) / (double)2.0;
 #endif
 #elif defined(__XVIC__)
-      if (region == RETRO_REGION_NTSC)
-         par = ((double)1.50411479 / (double)2.0);
-      else
-         par = ((double)1.66574035 / (double)2.0);
+      switch (region)
+      {
+         case RETRO_REGION_NTSC:
+            par = ((double)1.50411479 / (double)2.0);
+            break;
+         case RETRO_REGION_PAL:
+            par = ((double)1.66574035 / (double)2.0);
+            break;
+      }
       ar = ((double)width / (double)height) * par;
 #elif defined(__XPLUS4__)
-      if (region == RETRO_REGION_NTSC)
-         par = (double)0.85760931;
-      else
-         par = (double)1.03743478;
+      switch (region)
+      {
+         case RETRO_REGION_NTSC:
+            par = (double)0.85760931;
+            break;
+         case RETRO_REGION_PAL:
+            par = (double)1.03743478;
+            break;
+      }
       ar = ((double)width / (double)height) * par;
 #else
       ar = (double)4 / (double)3;
@@ -5260,26 +5275,24 @@ void update_geometry(int mode)
                         break;
                      case 3: /* 16:9 */
                         zoom_dar = (double)16/9;
-                        zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
                         break;
                      case 4: /* 16:10 */
                         zoom_dar = (double)16/10;
-                        zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
                         break;
                      case 5: /* 4:3 */
                         zoom_dar = (double)4/3;
-                        zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
-                        zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
-                        if (retroW - zoom_crop_width <= zoom_width_max)
-                           zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                         break;
                      case 6: /* 5:4 */
                         zoom_dar = (double)5/4;
-                        zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
-                        zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
-                        if (retroW - zoom_crop_width <= zoom_width_max)
-                           zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                         break;
+                  }
+
+                  if (zoom_dar > 0)
+                  {
+                     zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
+                     zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
+                     if (retroW - zoom_crop_width <= zoom_width_max)
+                        zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                   }
 
                   if (retroW - zoom_crop_width < zoom_width_max)

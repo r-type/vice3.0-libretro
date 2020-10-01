@@ -192,7 +192,7 @@ static void display_speed(void)
     }
 }
 
-int imagename_timer = 0;
+unsigned int imagename_timer = 0;
 static int drive_enabled = 0;
 static int drive_empty = 0;
 static int drive_pwm = 0;
@@ -553,7 +553,7 @@ void uistatusbar_draw(void)
     unsigned int char_width = 7;
     unsigned int char_offset = 1;
 
-    char tmpstr[512];
+    char tmpstr[512] = {0};
     int x = 0, y = 0;
 
     /* Statusbar position */
@@ -572,7 +572,7 @@ void uistatusbar_draw(void)
 
     /* Right alignment offset */
     int x_align_offset = 4;
-    if (retroW != zoomed_width && retroXS_offset != 0)
+    if (retrow != zoomed_width && retroXS_offset != 0)
         x_align_offset += 1;
 
     /* Basic mode statusbar background */

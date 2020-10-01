@@ -197,8 +197,8 @@ void print_vkbd(unsigned short int *pixels)
       YOFFSET = 5;
 #endif
 
-   int XSIDE = (retroW - XPADDING) / VKBDX;
-   int YSIDE = (retroH - YPADDING) / VKBDY;
+   int XSIDE = (retrow - XPADDING) / VKBDX;
+   int YSIDE = (retroh - YPADDING) / VKBDY;
 
    int XBASEKEY = (XPADDING > 0) ? (XPADDING / 2) : 0;
    int YBASEKEY = (YPADDING > 0) ? (YPADDING / 2) : 0;
@@ -208,7 +208,7 @@ void print_vkbd(unsigned short int *pixels)
 
    /* Coordinates */
    vkbd_x_min = XBASEKEY + XKEYSPACING;
-   vkbd_x_max = -XBASEKEY + retroW - XKEYSPACING;
+   vkbd_x_max = -XBASEKEY + retrow - XKEYSPACING;
    vkbd_y_min = YOFFSET + YBASEKEY + YKEYSPACING;
    vkbd_y_max = YOFFSET + YBASEKEY + (YSIDE * VKBDY);
 

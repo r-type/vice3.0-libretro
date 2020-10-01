@@ -57,7 +57,7 @@ static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
 int mapper_keys[36] = {0};
-unsigned int vice_devices[5];
+unsigned int vice_devices[5] = {0};
 
 unsigned int opt_video_options_display = 0;
 unsigned int opt_audio_options_display = 0;
@@ -80,12 +80,12 @@ int retroXS = 0;
 int retroYS = 0;
 int retroXS_offset = 0;
 int retroYS_offset = 0;
-int defaultW = WINDOW_WIDTH;
-int defaultH = WINDOW_HEIGHT;
-int retroW = WINDOW_WIDTH;
-int retroH = WINDOW_HEIGHT;
-int lastW = 0;
-int lastH = 0;
+int defaultw = WINDOW_WIDTH;
+int defaulth = WINDOW_HEIGHT;
+int retrow = WINDOW_WIDTH;
+int retroh = WINDOW_HEIGHT;
+int lastw = 0;
+int lasth = 0;
 
 unsigned int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
@@ -5219,26 +5219,26 @@ void update_geometry(int mode)
    struct retro_system_av_info system_av_info;
 
 #ifdef RETRO_DEBUG
-   log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n", lastW, lastH, retroW, retroH);
+   log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n", lastw, lasth, retrow, retroh);
 #endif
-   lastW = retroW;
-   lastH = retroH;
+   lastw = retrow;
+   lasth = retroh;
 
    switch (mode)
    {
       case 0:
          /* Zoom mode init */
          zoom_mode_id_prev  = 0;
-         zoomed_width       = retroW;
-         zoomed_height      = retroH;
+         zoomed_width       = retrow;
+         zoomed_height      = retroh;
          zoomed_XS_offset   = 0;
          zoomed_YS_offset   = 0;
          retroXS_offset     = 0;
          retroYS_offset     = 0;
 
-         system_av_info.geometry.base_width = retroW;
-         system_av_info.geometry.base_height = retroH;
-         system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retroW, retroH, false);
+         system_av_info.geometry.base_width = retrow;
+         system_av_info.geometry.base_height = retroh;
+         system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
 
          /* Update av_info only when PAL/NTSC change occurs */
          if (retro_region != retro_get_region())
@@ -5295,8 +5295,8 @@ void update_geometry(int mode)
                         break;
                   }
 
-                  zoom_crop_width = retroW - zoom_width_max - zoom_border_width;
-                  zoom_crop_height = retroH - zoom_height_max - zoom_border_height;
+                  zoom_crop_width = retrow - zoom_width_max - zoom_border_width;
+                  zoom_crop_height = retroh - zoom_height_max - zoom_border_height;
 
                   switch (zoom_mode_crop_id)
                   {
@@ -5324,24 +5324,25 @@ void update_geometry(int mode)
 
                   if (zoom_dar > 0)
                   {
-                     zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
-                     zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
-                     if (retroW - zoom_crop_width <= zoom_width_max)
-                        zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
+                     if (zoom_mode_crop_id > 4)
+                        zoom_crop_height = retroh - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
+                     zoom_crop_width = retrow - ((double)(retroh - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
+                     if (retrow - zoom_crop_width <= zoom_width_max)
+                        zoom_crop_height = retroh - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                   }
 
-                  if (retroW - zoom_crop_width < zoom_width_max)
-                     zoom_crop_width = retroW - zoom_width_max;
-                  if (retroH - zoom_crop_height < zoom_height_max)
-                     zoom_crop_height = retroH - zoom_height_max;
+                  if (retrow - zoom_crop_width < zoom_width_max)
+                     zoom_crop_width = retrow - zoom_width_max;
+                  if (retroh - zoom_crop_height < zoom_height_max)
+                     zoom_crop_height = retroh - zoom_height_max;
 
                   if (zoom_crop_width < 0)
                      zoom_crop_width = 0;
                   if (zoom_crop_height < 0)
                      zoom_crop_height = 0;
 
-                  zoomed_width        = retroW - zoom_crop_width;
-                  zoomed_height       = retroH - zoom_crop_height;
+                  zoomed_width        = retrow - zoom_crop_width;
+                  zoomed_height       = retroh - zoom_crop_height;
 #if 0
                   printf("zoom: dar:%f par:%f - x-%3d y-%3d = %3dx%3d = %f * %f = %f\n", zoom_dar, zoom_par, zoom_crop_width, zoom_crop_height, zoomed_width, zoomed_height, ((double)zoomed_width / (double)zoomed_height), zoom_par, ((double)zoomed_width / (double)zoomed_height * zoom_par));
 #endif
@@ -5361,15 +5362,15 @@ void update_geometry(int mode)
                   zoom_crop_width    = manual_crop_left + manual_crop_right;
                   zoom_crop_height   = manual_crop_top + manual_crop_bottom;
 
-                  zoomed_width       = retroW - zoom_crop_width;
-                  zoomed_height      = retroH - zoom_crop_height;
+                  zoomed_width       = retrow - zoom_crop_width;
+                  zoomed_height      = retroh - zoom_crop_height;
                   zoomed_XS_offset   = manual_crop_left;
                   zoomed_YS_offset   = manual_crop_top;
                   break;
 
                default:
-                  zoomed_width        = retroW;
-                  zoomed_height       = retroH;
+                  zoomed_width        = retrow;
+                  zoomed_height       = retroh;
                   zoomed_XS_offset    = 0;
                   zoomed_YS_offset    = 0;
                   retroXS_offset      = 0;
@@ -5410,11 +5411,11 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
       }
    }
 
-   info->geometry.max_width    = defaultW;
-   info->geometry.max_height   = defaultH;
-   info->geometry.base_width   = retroW;
-   info->geometry.base_height  = retroH;
-   info->geometry.aspect_ratio = retro_get_aspect_ratio(retroW, retroH, false);
+   info->geometry.max_width    = defaultw;
+   info->geometry.max_height   = defaulth;
+   info->geometry.base_width   = retrow;
+   info->geometry.base_height  = retroh;
+   info->geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
    info->timing.sample_rate    = core_opt.SoundSampleRate;
    prev_sound_sample_rate      = core_opt.SoundSampleRate;
 
@@ -5534,9 +5535,9 @@ void retro_run(void)
       }
 
       /* Update geometry if model or zoom mode changes */
-      if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev)
+      if ((lastw == retrow && lasth == retroh) && zoom_mode_id != zoom_mode_id_prev)
          update_geometry(1);
-      else if (lastW != retroW || lastH != retroH)
+      else if (lastw != retrow || lasth != retroh)
          update_geometry(0);
    }
 
@@ -5632,7 +5633,7 @@ void retro_run(void)
    if (imagename_timer > 0)
       imagename_timer--;
 
-   video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retroW<<(pix_bytes/4))), zoomed_width, zoomed_height, retroW<<(pix_bytes/2));
+   video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retrow<<(pix_bytes/4))), zoomed_width, zoomed_height, retrow<<(pix_bytes/2));
 
    /* retro_reset() needs to postponed here for proper JiffyDOS+vicerc core option refresh operation */
    if (request_restart)

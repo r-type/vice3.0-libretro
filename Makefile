@@ -320,6 +320,19 @@ else ifeq ($(platform), psl1ght)
    COMMONFLAGS += -DHAVE_STRTOUL -D__PSL1GHT__
    STATIC_LINKING = 1
 
+# GCW0
+else ifeq ($(platform), gcw0)
+   TARGET := $(TARGET_NAME)_libretro.so
+   CC = /opt/gcw0-toolchain/usr/bin/mipsel-linux-gcc
+   CXX = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
+   AR = /opt/gcw0-toolchain/usr/bin/mipsel-linux-ar
+   LDFLAGS += -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+   fpic := -fPIC
+   OLD_GCC := 1
+   COMMONFLAGS += -DDINGUX -fomit-frame-pointer -ffast-math -march=mips32 -mtune=mips32r2 -mhard-float
+   COMMONFLAGS += -DHAVE_SYS_TYPES_H -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L
+   CFLAGS += -std=c99
+
 # ARM
 else ifneq (,$(findstring armv,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so

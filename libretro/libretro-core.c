@@ -2412,7 +2412,7 @@ void retro_set_environment(retro_environment_t cb)
             { "resampling", "Resampling" },
             { NULL, NULL },
          },
-#if defined(PSP) || defined(VITA) || defined(__SWITCH__)
+#if defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX)
          "fast"
 #else
          "resampling"
@@ -3752,6 +3752,14 @@ static void update_variables(void)
          zoom_mode_id = 0;
 #endif
 
+#if defined(DINGUX)
+      /* Changing the zoom mode on OpenDingux devices
+       * causes an instant crash. It is very difficult
+       * to debug this, so disable the option until the
+       * issue is resolved */
+      zoom_mode_id = 0;
+#endif
+
       opt_zoom_mode_id = zoom_mode_id;
    }
 
@@ -5035,7 +5043,7 @@ void retro_init(void)
       environ_cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &disk_interface);
 
    /* Keep as incomplete until rewind can be enabled at startup (snapshot size is 0 at that time) */
-   static uint32_t quirks = RETRO_SERIALIZATION_QUIRK_INCOMPLETE | RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE | RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE;
+   static uint64_t quirks = RETRO_SERIALIZATION_QUIRK_INCOMPLETE | RETRO_SERIALIZATION_QUIRK_MUST_INITIALIZE | RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE;
    environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &quirks);
 
    /* Inputs */

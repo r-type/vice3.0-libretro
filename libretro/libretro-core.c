@@ -57,7 +57,7 @@ static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
 int mapper_keys[36] = {0};
-unsigned int vice_devices[5];
+unsigned int vice_devices[5] = {0};
 
 unsigned int opt_video_options_display = 0;
 unsigned int opt_audio_options_display = 0;
@@ -80,12 +80,12 @@ int retroXS = 0;
 int retroYS = 0;
 int retroXS_offset = 0;
 int retroYS_offset = 0;
-int defaultW = WINDOW_WIDTH;
-int defaultH = WINDOW_HEIGHT;
-int retroW = WINDOW_WIDTH;
-int retroH = WINDOW_HEIGHT;
-int lastW = 0;
-int lastH = 0;
+int defaultw = WINDOW_WIDTH;
+int defaulth = WINDOW_HEIGHT;
+int retrow = WINDOW_WIDTH;
+int retroh = WINDOW_HEIGHT;
+int lastw = 0;
+int lasth = 0;
 
 unsigned int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
@@ -1377,14 +1377,13 @@ long GetTicks(void) {
    return retro_now;
 }
 
-#include "libretro-keyboard.i"
-static int retro_key_id(const char *val)
+static int retro_keymap_id(const char *val)
 {
    int i = 0;
-   while (retro_key_name[i] != NULL)
+   while (retro_keys[i].value != NULL)
    {
-      if (!strcmp(retro_key_name[i], val))
-         return retro_key_value[i];
+      if (!strcmp(retro_keys[i].value, val))
+         return retro_keys[i].id;
       i++;
    }
    return 0;
@@ -2714,7 +2713,7 @@ void retro_set_environment(retro_environment_t cb)
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
          "vice_mapper_joyport_switch",
-         "Hotkey > Switch Joyports",
+         "Hotkey > Switch Joyport",
          "Press the mapped key to switch joyports 1 & 2.\nSwitching disables 'RetroPad Port' option until core restart.",
          {{ NULL, NULL }},
          "RETROK_RCTRL"
@@ -3015,15 +3014,15 @@ void retro_set_environment(retro_environment_t cb)
       { NULL, NULL, NULL, {{0}}, NULL },
    };
 
-   /* fill in the values for all the mappers */
+   /* Fill in the values for all the mappers */
    int i = 0;
    int j = 0;
    int hotkey = 0;
    int hotkeys_skipped = 0;
    /* Count special hotkeys */
-   while (retro_key_name[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+   while (retro_keys[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
    {
-      if (retro_key_value[j] < 0)
+      if (retro_keys[j].id < 0)
          hotkeys_skipped++;
       ++j;
    }
@@ -3052,24 +3051,48 @@ void retro_set_environment(retro_environment_t cb)
          j = 0;
          if (hotkey)
          {
-             while (retro_key_name[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
-             {
-                if (j == 0)
-                   core_options[i].values[j].value = retro_key_name[j];
-                else
-                   core_options[i].values[j].value = retro_key_name[j + hotkeys_skipped + 1];
-                core_options[i].values[j].label = NULL;
-                ++j;
-             };
+            while (retro_keys[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+            {
+               if (j == 0) /* "---" unmapped */
+               {
+                  core_options[i].values[j].value = retro_keys[j].value;
+                  core_options[i].values[j].label = retro_keys[j].label;
+               }
+               else
+               {
+                  core_options[i].values[j].value = retro_keys[j + hotkeys_skipped + 1].value;
+
+                  /* Append "Keyboard " for keyboard keys */
+                  if (retro_keys[j + hotkeys_skipped + 1].id > 0)
+                  {
+                     char key_label[25] = {0};
+                     sprintf(key_label, "Keyboard %s", retro_keys[j + hotkeys_skipped + 1].label);
+                     core_options[i].values[j].label = strdup(key_label);
+                  }
+                  else
+                     core_options[i].values[j].label = retro_keys[j + hotkeys_skipped + 1].label;
+               }
+               ++j;
+            };
          }
          else
          {
-             while (retro_key_name[j] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
-             {
-                core_options[i].values[j].value = retro_key_name[j];
-                core_options[i].values[j].label = NULL;
-                ++j;
-             };
+            while (retro_keys[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+            {
+               core_options[i].values[j].value = retro_keys[j].value;
+
+               /* Append "Keyboard " for keyboard keys */
+               if (retro_keys[j].id > 0)
+               {
+                  char key_label[25] = {0};
+                  sprintf(key_label, "Keyboard %s", retro_keys[j].label);
+                  core_options[i].values[j].label = strdup(key_label);
+               }
+               else
+                  core_options[i].values[j].label = retro_keys[j].label;
+
+               ++j;
+            };
          }
          core_options[i].values[j].value = NULL;
          core_options[i].values[j].label = NULL;
@@ -4313,140 +4336,140 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_SELECT] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_SELECT] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_START] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_START] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_b";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_B] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_B] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_a";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_A] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_A] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_y";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_Y] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_Y] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_x";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_X] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_X] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_l";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_r";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_l2";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L2] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L2] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_r2";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R2] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R2] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_l3";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L3] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_L3] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_r3";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3] = retro_key_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_lr";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[16] = retro_key_id(var.value);
+      mapper_keys[16] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_ll";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[17] = retro_key_id(var.value);
+      mapper_keys[17] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_ld";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[18] = retro_key_id(var.value);
+      mapper_keys[18] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_lu";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[19] = retro_key_id(var.value);
+      mapper_keys[19] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_rr";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[20] = retro_key_id(var.value);
+      mapper_keys[20] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_rl";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[21] = retro_key_id(var.value);
+      mapper_keys[21] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_rd";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[22] = retro_key_id(var.value);
+      mapper_keys[22] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_ru";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[23] = retro_key_id(var.value);
+      mapper_keys[23] = retro_keymap_id(var.value);
    }
 
    /* Hotkeys */
@@ -4454,42 +4477,42 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[24] = retro_key_id(var.value);
+      mapper_keys[24] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_statusbar";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[25] = retro_key_id(var.value);
+      mapper_keys[25] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_joyport_switch";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[26] = retro_key_id(var.value);
+      mapper_keys[26] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[27] = retro_key_id(var.value);
+      mapper_keys[27] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_zoom_mode_toggle";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[28] = retro_key_id(var.value);
+      mapper_keys[28] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_warp_mode";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[29] = retro_key_id(var.value);
+      mapper_keys[29] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_datasette_hotkeys";
@@ -4504,42 +4527,42 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[30] = retro_key_id(var.value);
+      mapper_keys[30] = retro_keymap_id(var.value);
    }
    
    var.key = "vice_mapper_datasette_stop";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[31] = retro_key_id(var.value);
+      mapper_keys[31] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[32] = retro_key_id(var.value);
+      mapper_keys[32] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_forward";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[33] = retro_key_id(var.value);
+      mapper_keys[33] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_rewind";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[34] = retro_key_id(var.value);
+      mapper_keys[34] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[35] = retro_key_id(var.value);
+      mapper_keys[35] = retro_keymap_id(var.value);
    }
 
 
@@ -5219,26 +5242,26 @@ void update_geometry(int mode)
    struct retro_system_av_info system_av_info;
 
 #ifdef RETRO_DEBUG
-   log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n", lastW, lastH, retroW, retroH);
+   log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n", lastw, lasth, retrow, retroh);
 #endif
-   lastW = retroW;
-   lastH = retroH;
+   lastw = retrow;
+   lasth = retroh;
 
    switch (mode)
    {
       case 0:
          /* Zoom mode init */
          zoom_mode_id_prev  = 0;
-         zoomed_width       = retroW;
-         zoomed_height      = retroH;
+         zoomed_width       = retrow;
+         zoomed_height      = retroh;
          zoomed_XS_offset   = 0;
          zoomed_YS_offset   = 0;
          retroXS_offset     = 0;
          retroYS_offset     = 0;
 
-         system_av_info.geometry.base_width = retroW;
-         system_av_info.geometry.base_height = retroH;
-         system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retroW, retroH, false);
+         system_av_info.geometry.base_width = retrow;
+         system_av_info.geometry.base_height = retroh;
+         system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
 
          /* Update av_info only when PAL/NTSC change occurs */
          if (retro_region != retro_get_region())
@@ -5295,8 +5318,8 @@ void update_geometry(int mode)
                         break;
                   }
 
-                  zoom_crop_width = retroW - zoom_width_max - zoom_border_width;
-                  zoom_crop_height = retroH - zoom_height_max - zoom_border_height;
+                  zoom_crop_width = retrow - zoom_width_max - zoom_border_width;
+                  zoom_crop_height = retroh - zoom_height_max - zoom_border_height;
 
                   switch (zoom_mode_crop_id)
                   {
@@ -5324,24 +5347,25 @@ void update_geometry(int mode)
 
                   if (zoom_dar > 0)
                   {
-                     zoom_crop_height = retroH - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
-                     zoom_crop_width = retroW - ((double)(retroH - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
-                     if (retroW - zoom_crop_width <= zoom_width_max)
-                        zoom_crop_height = retroH - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
+                     if (zoom_mode_crop_id > 4)
+                        zoom_crop_height = retroh - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
+                     zoom_crop_width = retrow - ((double)(retroh - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
+                     if (retrow - zoom_crop_width <= zoom_width_max)
+                        zoom_crop_height = retroh - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
                   }
 
-                  if (retroW - zoom_crop_width < zoom_width_max)
-                     zoom_crop_width = retroW - zoom_width_max;
-                  if (retroH - zoom_crop_height < zoom_height_max)
-                     zoom_crop_height = retroH - zoom_height_max;
+                  if (retrow - zoom_crop_width < zoom_width_max)
+                     zoom_crop_width = retrow - zoom_width_max;
+                  if (retroh - zoom_crop_height < zoom_height_max)
+                     zoom_crop_height = retroh - zoom_height_max;
 
                   if (zoom_crop_width < 0)
                      zoom_crop_width = 0;
                   if (zoom_crop_height < 0)
                      zoom_crop_height = 0;
 
-                  zoomed_width        = retroW - zoom_crop_width;
-                  zoomed_height       = retroH - zoom_crop_height;
+                  zoomed_width        = retrow - zoom_crop_width;
+                  zoomed_height       = retroh - zoom_crop_height;
 #if 0
                   printf("zoom: dar:%f par:%f - x-%3d y-%3d = %3dx%3d = %f * %f = %f\n", zoom_dar, zoom_par, zoom_crop_width, zoom_crop_height, zoomed_width, zoomed_height, ((double)zoomed_width / (double)zoomed_height), zoom_par, ((double)zoomed_width / (double)zoomed_height * zoom_par));
 #endif
@@ -5361,15 +5385,15 @@ void update_geometry(int mode)
                   zoom_crop_width    = manual_crop_left + manual_crop_right;
                   zoom_crop_height   = manual_crop_top + manual_crop_bottom;
 
-                  zoomed_width       = retroW - zoom_crop_width;
-                  zoomed_height      = retroH - zoom_crop_height;
+                  zoomed_width       = retrow - zoom_crop_width;
+                  zoomed_height      = retroh - zoom_crop_height;
                   zoomed_XS_offset   = manual_crop_left;
                   zoomed_YS_offset   = manual_crop_top;
                   break;
 
                default:
-                  zoomed_width        = retroW;
-                  zoomed_height       = retroH;
+                  zoomed_width        = retrow;
+                  zoomed_height       = retroh;
                   zoomed_XS_offset    = 0;
                   zoomed_YS_offset    = 0;
                   retroXS_offset      = 0;
@@ -5410,11 +5434,11 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
       }
    }
 
-   info->geometry.max_width    = defaultW;
-   info->geometry.max_height   = defaultH;
-   info->geometry.base_width   = retroW;
-   info->geometry.base_height  = retroH;
-   info->geometry.aspect_ratio = retro_get_aspect_ratio(retroW, retroH, false);
+   info->geometry.max_width    = defaultw;
+   info->geometry.max_height   = defaulth;
+   info->geometry.base_width   = retrow;
+   info->geometry.base_height  = retroh;
+   info->geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
    info->timing.sample_rate    = core_opt.SoundSampleRate;
    prev_sound_sample_rate      = core_opt.SoundSampleRate;
 
@@ -5534,9 +5558,9 @@ void retro_run(void)
       }
 
       /* Update geometry if model or zoom mode changes */
-      if ((lastW == retroW && lastH == retroH) && zoom_mode_id != zoom_mode_id_prev)
+      if ((lastw == retrow && lasth == retroh) && zoom_mode_id != zoom_mode_id_prev)
          update_geometry(1);
-      else if (lastW != retroW || lastH != retroH)
+      else if (lastw != retrow || lasth != retroh)
          update_geometry(0);
    }
 
@@ -5632,7 +5656,7 @@ void retro_run(void)
    if (imagename_timer > 0)
       imagename_timer--;
 
-   video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retroW<<(pix_bytes/4))), zoomed_width, zoomed_height, retroW<<(pix_bytes/2));
+   video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retrow<<(pix_bytes/4))), zoomed_width, zoomed_height, retrow<<(pix_bytes/2));
 
    /* retro_reset() needs to postponed here for proper JiffyDOS+vicerc core option refresh operation */
    if (request_restart)

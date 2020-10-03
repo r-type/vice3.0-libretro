@@ -99,10 +99,10 @@ void vsyncarch_presync(void)
 
     video_canvas_render(
         RCANVAS, (BYTE *)&retro_bmp,
-        retroW, retroH,
+        retrow, retroh,
         retroXS, retroYS,
         0, 0, /*xi, yi,*/
-        retroW*pix_bytes, 8*pix_bytes
+        retrow*pix_bytes, 8*pix_bytes
     );
                         
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {

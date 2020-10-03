@@ -9,7 +9,7 @@ typedef struct {
    int value;
 } retro_vkeys;
 
-retro_vkeys vkeys[VKBDX * VKBDY * 2] = {
+retro_vkeys vkeys[VKBDX * VKBDY] = {
 
 	/* 0 */
 	{ "1"  ,"!"   ,RETROK_1},

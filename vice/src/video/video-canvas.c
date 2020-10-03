@@ -50,7 +50,7 @@
 #include "viewport.h"
 
 #ifdef __LIBRETRO__
-extern int retroXS,retroYS,retroH,retroW;
+extern int retroXS, retroYS, retrow, retroh;
 #endif
 
 /* Temporary! */
@@ -140,10 +140,10 @@ void video_canvas_refresh_all(video_canvas_t *canvas)
                          MIN(canvas->draw_buffer->canvas_height,
                              viewport->last_line - viewport->first_line + 1));
 #endif
-	retroXS=viewport->first_x + geometry->extra_offscreen_border_left;
-	retroYS=viewport->first_line;
-	retroW=MIN(canvas->draw_buffer->canvas_width, geometry->screen_size.width - viewport->first_x);
-	retroH=MIN(canvas->draw_buffer->canvas_height, viewport->last_line - viewport->first_line + 1);
+	retroXS = viewport->first_x + geometry->extra_offscreen_border_left;
+	retroYS = viewport->first_line;
+	retrow = MIN(canvas->draw_buffer->canvas_width, geometry->screen_size.width - viewport->first_x);
+	retroh = MIN(canvas->draw_buffer->canvas_height, viewport->last_line - viewport->first_line + 1);
 #endif
     video_canvas_refresh(canvas,
                          viewport->first_x

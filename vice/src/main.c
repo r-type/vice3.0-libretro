@@ -72,6 +72,7 @@
 
 #ifdef __LIBRETRO__
 #include "libretro-core.h"
+#define LOG_HR "--------------------------------------------------------------------------------"
 #endif
 
 #ifdef __OS2__
@@ -200,6 +201,17 @@ int main_program(int argc, char **argv)
     program_name = archdep_program_name();
 
     /* VICE boot sequence.  */
+#ifdef __LIBRETRO__
+    log_message(LOG_DEFAULT, LOG_HR);
+    log_message(LOG_DEFAULT, "VICE %s", VERSION);
+    log_message(LOG_DEFAULT, "Git commit:%s", GIT_VERSION);
+    log_message(LOG_DEFAULT, "Build date: " __DATE__ " " __TIME__);
+    log_message(LOG_DEFAULT, "");
+    log_message(LOG_DEFAULT, "Welcome to %s, the free portable %s Emulator.", program_name, machine_name);
+    log_message(LOG_DEFAULT, "");
+    log_message(LOG_DEFAULT, "This is free software with ABSOLUTELY NO WARRANTY.");
+    log_message(LOG_DEFAULT, LOG_HR);
+#else
     log_message(LOG_DEFAULT, " ");
 #ifdef USE_SVN_REVISION
     log_message(LOG_DEFAULT, "*** VICE Version %s, rev %s ***", VERSION, VICE_SVN_REV_STRING);
@@ -248,6 +260,7 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, "This is free software with ABSOLUTELY NO WARRANTY.");
     log_message(LOG_DEFAULT, "See the \"About VICE\" command for more info.");
     log_message(LOG_DEFAULT, " ");
+#endif
 
     /* lib_free(program_name); */
 
@@ -275,14 +288,13 @@ int main_program(int argc, char **argv)
 
     /* Let's go...  */
     log_message(LOG_DEFAULT, "Main CPU: starting at ($FFFC).");
-
 #ifdef __LIBRETRO__
     maincpu_mainloop_retro();
 #else
     maincpu_mainloop();
-#endif
 
-    //log_error(LOG_DEFAULT, "perkele!");
+    log_error(LOG_DEFAULT, "perkele!");
+#endif
 
     return 0;
 }

@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <dirent.h>
 
-#include "vkbd.h"
 #include "retroglue.h"
 #include "retro_files.h"
 #include "retro_strings.h"

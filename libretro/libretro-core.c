@@ -546,9 +546,7 @@ static int process_cmdline(const char* argv)
         char zip_basename[RETRO_PATH_MAX] = {0};
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-        snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "ZIP");
-        char zip_path[RETRO_PATH_MAX] = {0};
-        snprintf(zip_path, sizeof(zip_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+        snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
 
         char nib_input[RETRO_PATH_MAX] = {0};
         char nib_output[RETRO_PATH_MAX] = {0};
@@ -557,8 +555,8 @@ static int process_cmdline(const char* argv)
         if (dc_get_image_type(argv) == DC_IMAGE_TYPE_NIBBLER)
         {
             snprintf(nib_input, sizeof(nib_input), "%s", argv);
-            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
-            path_mkdir(zip_path);
+            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+            path_mkdir(retro_temp_directory);
             nib_convert(nib_input, nib_output);
             argv = nib_output;
         }
@@ -566,36 +564,36 @@ static int process_cmdline(const char* argv)
         /* ZIP */
         if (strendswith(argv, ".zip"))
         {
-            path_mkdir(zip_path);
-            zip_uncompress(full_path, zip_path, NULL);
+            path_mkdir(retro_temp_directory);
+            zip_uncompress(full_path, retro_temp_directory, NULL);
 
             /* Default to directory mode */
             int zip_mode = 0;
-            snprintf(full_path, sizeof(full_path), "%s", zip_path);
+            snprintf(full_path, sizeof(full_path), "%s", retro_temp_directory);
 
             FILE *zip_m3u;
             char zip_m3u_list[20][RETRO_PATH_MAX] = {0};
             char zip_m3u_path[RETRO_PATH_MAX] = {0};
-            snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", zip_path, FSDEV_DIR_SEP_STR, zip_basename);
+            snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
             int zip_m3u_num = 0;
 
             DIR *zip_dir;
             struct dirent *zip_dirp;
 
             /* Convert all NIBs to G64 */
-            zip_dir = opendir(zip_path);
+            zip_dir = opendir(retro_temp_directory);
             while ((zip_dirp = readdir(zip_dir)) != NULL)
             {
                 if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
                 {
-                    snprintf(nib_input, sizeof(nib_input), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
-                    snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
+                    snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+                    snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
                     nib_convert(nib_input, nib_output);
                 }
             }
             closedir(zip_dir);
 
-            zip_dir = opendir(zip_path);
+            zip_dir = opendir(retro_temp_directory);
             while ((zip_dirp = readdir(zip_dir)) != NULL)
             {
                 if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1 || browsed_file[0] != '\0')
@@ -620,9 +618,9 @@ static int process_cmdline(const char* argv)
                     if (browsed_file[0] != '\0')
                     {
                         if (dc_get_image_type(browsed_file) == DC_IMAGE_TYPE_NIBBLER)
-                            snprintf(full_path, sizeof(full_path), "%s%s%s.g64", zip_path, FSDEV_DIR_SEP_STR, path_remove_extension(browsed_file));
+                            snprintf(full_path, sizeof(full_path), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(browsed_file));
                         else
-                            snprintf(full_path, sizeof(full_path), "%s%s%s", zip_path, FSDEV_DIR_SEP_STR, browsed_file);
+                            snprintf(full_path, sizeof(full_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, browsed_file);
                     }
                     break;
                 case 1: /* Generated playlist */

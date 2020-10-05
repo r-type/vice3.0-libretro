@@ -1,6 +1,6 @@
 #include "libretro-core.h"
-#include "vkbd_def.h"
 #include "graph.h"
+#include "vkbd.h"
 
 bool retro_vkbd = false;
 bool retro_vkbd_transparent = true;

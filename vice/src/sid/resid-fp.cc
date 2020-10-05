@@ -115,6 +115,11 @@ static int residfp_init(sound_t *psid, int speed, int cycles_per_sec, int factor
     switch (model) {
       default:
       case 0:
+#ifdef __LIBRETRO__
+        /* Match filter bias more with other engines */
+        filter_bias_mV += 1000;
+        filter_bias_mV = (filter_bias_mV > 5000) ? 5000 : filter_bias_mV;
+#endif
         psid->sid->setFilter6581Curve(1.0-((filter_bias_mV+5000.0)/10000.0));
         break;
       case 1:

@@ -1,3 +1,5 @@
+[![Build Status](https://api.travis-ci.org/libretro/vice-libretro.svg?branch=master)](https://travis-ci.org/github/libretro/vice-libretro)
+
 # VICE LIBRETRO
 
 Port of VICE, the Versatile Commodore Emulator 3.3

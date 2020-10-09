@@ -1450,7 +1450,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vic20_model",
          "Model",
-         "",
+         "'Automatic' switches region per file path tags.",
          {
             { "VIC20 PAL auto", "VIC-20 PAL Automatic" },
             { "VIC20 NTSC auto", "VIC-20 NTSC Automatic" },
@@ -1464,7 +1464,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vic20_memory_expansions",
          "System > Memory Expansion",
-         "Expansion change resets the system!",
+         "Can be forced with filename tags '(8k)' & '(8kb)' or directory tags '8k' & '8kb'.\nChanging while running resets the system!",
          {
             { "none", "disabled" },
             { "3kB", "3kB" },
@@ -1600,7 +1600,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c64_model",
          "Model",
-         "'Automatic' switches region per filename and directory tags.",
+         "'Automatic' switches region per file path tags.",
          {
             { "C64 PAL auto", "C64 PAL Automatic" },
             { "C64 NTSC auto", "C64 NTSC Automatic" },
@@ -2288,9 +2288,10 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_sound_emulation",
          "Audio > Drive Sound Emulation",
-         "Emulates the iconic floppy drive sounds.\n- 'True Drive Emulation' & D64/D71 disk image required.",
+         "'True Drive Emulation' & D64/D71 disk image required.",
          {
             { "disabled", NULL },
+            { "5\%", "5\% volume" },
             { "10\%", "10\% volume" },
             { "15\%", "15\% volume" },
             { "20\%", "20\% volume" },
@@ -5144,7 +5145,7 @@ unsigned retro_api_version(void)
    return RETRO_API_VERSION;
 }
 
-void retro_set_controller_port_device( unsigned port, unsigned device )
+void retro_set_controller_port_device(unsigned port, unsigned device)
 {
    if (port < 5)
       vice_devices[port] = device;

@@ -44,6 +44,7 @@ Older C64 games tend to use joystick port 1 and newer ones tend to use port 2 fo
 - Press the default keyboard shortcut `Right Control`.
 - Assign `SWITCH_JOYPORT` to any RetroPad button under `Quick Menu -> Options`.
 - Rename the game, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2.
+- Add `-j1` or `-j2` parameters in custom command line `.cmd`
 
 ## M3U support and disk control
 When you have a multi disk game, you can use a M3U playlist file to be able to change disks via RetroArch Disc Control interface.

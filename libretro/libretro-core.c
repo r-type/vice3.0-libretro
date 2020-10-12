@@ -3774,14 +3774,6 @@ static void update_variables(void)
          zoom_mode_id = 0;
 #endif
 
-#if defined(DINGUX)
-      /* Changing the zoom mode on OpenDingux devices
-       * causes an instant crash. It is very difficult
-       * to debug this, so disable the option until the
-       * issue is resolved */
-      zoom_mode_id = 0;
-#endif
-
       opt_zoom_mode_id = zoom_mode_id;
    }
 

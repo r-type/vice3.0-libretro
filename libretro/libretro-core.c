@@ -1853,7 +1853,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_statusbar",
          "Video > Statusbar Mode",
-         "- Full: Joyports + Current image + LEDs\n- Basic: Current image + LEDs\n- Minimal: Track number + FPS hidden",
+         "- 'Full': Joyports + Current image + LEDs\n- 'Basic': Current image + LEDs\n- 'Minimal': Track number + FPS hidden",
          {
             { "bottom", "Bottom Full" },
             { "bottom_minimal", "Bottom Full Minimal" },

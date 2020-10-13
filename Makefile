@@ -56,7 +56,6 @@ else ifeq ($(platform), crosspi)
 
 # Classic Platforms ####################
 # Platform affix = classic_<ISA>_<µARCH>
-# Help at https://modmyclassic.com/comp
 
 # (armv7 a7, hard point, neon based) ###
 # NESC, SNESC, C64 mini
@@ -104,8 +103,8 @@ else ifeq ($(platform), classic_armv8_a35)
    ASFLAGS += $(CFLAGS)
    CFLAGS += -march=armv8-a
    LDFLAGS += -static-libgcc -static-libstdc++
-
 #######################################
+
 # CTR (3DS)
 else ifeq ($(platform), ctr)
    TARGET := $(TARGET_NAME)_libretro_$(platform).a

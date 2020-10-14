@@ -1,22 +1,56 @@
 #ifndef LIBRETRO_MAPPER_H
 #define LIBRETRO_MAPPER_H
 
-#define RETRO_DEVICE_VICE_JOYSTICK  RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
-#define RETRO_DEVICE_VICE_KEYBOARD  RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_KEYBOARD, 0)
+#define RETRO_DEVICE_VICE_JOYSTICK      RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
+#define RETRO_DEVICE_VICE_KEYBOARD      RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_KEYBOARD, 0)
 
-typedef struct {
+#define RETRO_DEVICE_ID_JOYPAD_LR       16
+#define RETRO_DEVICE_ID_JOYPAD_LL       17
+#define RETRO_DEVICE_ID_JOYPAD_LD       18
+#define RETRO_DEVICE_ID_JOYPAD_LU       19
+#define RETRO_DEVICE_ID_JOYPAD_RR       20
+#define RETRO_DEVICE_ID_JOYPAD_RL       21
+#define RETRO_DEVICE_ID_JOYPAD_RD       22
+#define RETRO_DEVICE_ID_JOYPAD_RU       23
+
+#define RETRO_MAPPER_VKBD               24
+#define RETRO_MAPPER_STATUSBAR          25
+#define RETRO_MAPPER_JOYPORT            26
+#define RETRO_MAPPER_RESET              27
+#define RETRO_MAPPER_ASPECT_RATIO       28
+#define RETRO_MAPPER_ZOOM_MODE          29
+#define RETRO_MAPPER_WARP_MODE          30
+
+#define RETRO_MAPPER_DATASETTE_HOTKEYS  31
+#define RETRO_MAPPER_DATASETTE_STOP     32
+#define RETRO_MAPPER_DATASETTE_START    33
+#define RETRO_MAPPER_DATASETTE_FORWARD  34
+#define RETRO_MAPPER_DATASETTE_REWIND   35
+#define RETRO_MAPPER_DATASETTE_RESET    36
+
+#define RETRO_MAPPER_LAST               37
+
+#define TOGGLE_VKBD                     -11
+#define TOGGLE_STATUSBAR                -12
+#define SWITCH_JOYPORT                  -13
+#define MOUSE_SLOWER                    -5
+#define MOUSE_FASTER                    -6
+
+typedef struct
+{
    int id;
    char value[20];
    char label[25];
 } retro_keymap;
 
-static retro_keymap retro_keys[RETROK_LAST] = {
+static retro_keymap retro_keys[RETROK_LAST] =
+{
    {0,                  "---",                 "---"},
-   {-11,                "TOGGLE_VKBD",         "Toggle Virtual Keyboard"},
-   {-12,                "TOGGLE_STATUSBAR",    "Toggle Statusbar"},
-   {-13,                "SWITCH_JOYPORT",      "Switch Joyport"},
-   {-5,                 "MOUSE_SLOWER",        "Mouse Slower"},
-   {-6,                 "MOUSE_FASTER",        "Mouse Faster"},
+   {TOGGLE_VKBD,        "TOGGLE_VKBD",         "Toggle Virtual Keyboard"},
+   {TOGGLE_STATUSBAR,   "TOGGLE_STATUSBAR",    "Toggle Statusbar"},
+   {SWITCH_JOYPORT,     "SWITCH_JOYPORT",      "Switch Joyport"},
+   {MOUSE_SLOWER,       "MOUSE_SLOWER",        "Mouse Slower"},
+   {MOUSE_FASTER,       "MOUSE_FASTER",        "Mouse Faster"},
    {RETROK_BACKSPACE,   "RETROK_BACKSPACE",    "Backspace"},
    {RETROK_TAB,         "RETROK_TAB",          "Tab"},
 /* {RETROK_CLEAR,       "RETROK_CLEAR",        "Clear"}, */
@@ -138,10 +172,10 @@ static retro_keymap retro_keys[RETROK_LAST] = {
    {RETROK_LCTRL,       "RETROK_LCTRL",        "Left Control"},
    {RETROK_RALT,        "RETROK_RALT",         "Right Alt"},
    {RETROK_LALT,        "RETROK_LALT",         "Left Alt"},
-   {RETROK_RMETA,       "RETROK_RMETA",        "Right Meta"},
-   {RETROK_LMETA,       "RETROK_LMETA",        "Left Meta"},
-/* {RETROK_LSUPER,      "RETROK_LSUPER",       "Right Super"}, */
-/* {RETROK_RSUPER,      "RETROK_RSUPER",       "Left Super"},*/
+/* {RETROK_RMETA,       "RETROK_RMETA",        "Right Meta"}, */
+/* {RETROK_LMETA,       "RETROK_LMETA",        "Left Meta"}, */
+   {RETROK_RSUPER,      "RETROK_RSUPER",       "Reft Super"},
+   {RETROK_LSUPER,      "RETROK_LSUPER",       "Light Super"},
 /* {RETROK_MODE,        "RETROK_MODE",         "Mode"}, */
 /* {RETROK_COMPOSE,     "RETROK_COMPOSE",      "Compose"}, */
 /* {RETROK_HELP,        "RETROK_HELP",         "Help"}, */

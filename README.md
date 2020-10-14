@@ -10,43 +10,47 @@ Supported platforms: Linux, Windows, Apple, Android, emscripten, Switch, Vita
 
 ## Default controls
 
-|RetroPad button|Action|
-|---|---|
-|D-Pad|Joystick|
-|Left Analog|Mouse/paddles|
-|B|Fire button|
-|X|Space|
-|L2|Escape (RUN/STOP)|
-|R2|Enter (RETURN)|
-|Select|Toggle virtual keyboard|
+| RetroPad button | Action                  |
+|-----------------|-------------------------|
+| D-Pad           | Joystick                |
+| Left Analog     | Mouse/paddles           |
+| B               | Fire button             |
+| X               | Space                   |
+| L2              | Escape (RUN/STOP)       |
+| R2              | Enter (RETURN)          |
+| Select          | Toggle virtual keyboard |
 
-|Keyboard key|Action|
-|---|---|
-|F11|Toggle virtual keyboard|
-|F12|Toggle statusbar|
-|RControl|Switch between joyports|
-|End|Reset|
+| Keyboard key    | Action                  |
+|-----------------|-------------------------|
+| F11             | Toggle virtual keyboard |
+| F12             | Toggle statusbar        |
+| RControl        | Switch between joyports |
+| End             | Reset                   |
 
 ### Virtual keyboard controls
-|Button|Action|
-|---|---|
-|B / Enter|Keypress|
-|A|Toggle transparency|
-|Y|Toggle ShiftLock|
-|Start|Press Return|
+
+| Button          | Action                  |
+|-----------------|-------------------------|
+| B / Enter       | Keypress                |
+| A               | Toggle transparency     |
+| Y               | Toggle ShiftLock        |
+| Start           | Press Return            |
 
 Long press for sticky keys. Stickying the third key will replace the second.
 
 ## Joyport control
+
 Older C64 games tend to use joystick port 1 and newer ones tend to use port 2 for player 1. There are several ways to switch ports in this core:
-- Use the core option: `Quick Menu -> Options -> RetroPad Port`.
-- Bring up the virtual keyboard with `Select` button, and press the key labeled `JOY`.
-- Press the default keyboard shortcut `Right Control`.
-- Assign `Switch Joyport` to any RetroPad button under `Quick Menu -> Options`.
-- Rename the game, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2.
+
+- Use the core option: `Quick Menu -> Options -> RetroPad Port`
+- Bring up the virtual keyboard with `Select` button, and press the key labeled `JOY`
+- Press the default keyboard shortcut `Right Control`
+- Assign `Switch Joyport` to any RetroPad button under `Quick Menu -> Options`
+- Rename the game, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2
 - Add `-j1` or `-j2` parameters in custom command line `.cmd`
 
 ## M3U support and disk control
+
 When you have a multi disk game, you can use a M3U playlist file to be able to change disks via RetroArch Disc Control interface.
 
 A M3U file is a simple text file with one disk per line ([Wikipedia](https://en.wikipedia.org/wiki/M3U)).
@@ -62,32 +66,38 @@ Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 2 of 3 Side B)(Populac
 Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 3 of 3 Side A)(Populace A).d64
 Ultima VI - The False Prophet (1990)(Origin Systems)(Disk 3 of 3 Side B)(Populace A).d64
 ```
+
 Path can be absolute or relative to the location of the M3U file.
 
 When the game asks for it, you can change the current disk in the RetroArch "Disc Control" menu:
+
 - Eject the current disk with "Eject Disc"
 - Select the right disk index with "Current Disc Index"
 - Insert the new disk with "Insert Disc"
 
 ## ZIP support
+
 ZIPs will be extracted to a temporary directory in `saves`, bypassing the default frontend extraction. The temporary directory will be removed on exit.
 
 This allows:
+
 - Automatic M3U playlist generation of all files
 - The use of zipped images in M3Us
 
 ## JiffyDOS support
+
 External ROM files required in `system/vice`:
 
-|Filename|Size|MD5|
-|---|---|---|
-|**JiffyDOS_C64.bin**|8 192|be09394f0576cf81fa8bacf634daf9a2|
-|**JiffyDOS_C128.bin**|16 384|cbbd1bbcb5e4fd8046b6030ab71fc021|
-|**JiffyDOS_1541-II.bin**|16 384|1b1e985ea5325a1f46eb7fd9681707bf|
-|**JiffyDOS_1571_repl310654.bin**|32 768|41c6cc528e9515ffd0ed9b180f8467c0|
-|**JiffyDOS_1581.bin**|32 768|20b6885c6dc2d42c38754a365b043d71|
+| Filename                         | Size   | MD5                              |
+|----------------------------------|--------|----------------------------------|
+| **JiffyDOS_C64.bin**             |  8 192 | be09394f0576cf81fa8bacf634daf9a2 |
+| **JiffyDOS_C128.bin**            | 16 384 | cbbd1bbcb5e4fd8046b6030ab71fc021 |
+| **JiffyDOS_1541-II.bin**         | 16 384 | 1b1e985ea5325a1f46eb7fd9681707bf |
+| **JiffyDOS_1571_repl310654.bin** | 32 768 | 41c6cc528e9515ffd0ed9b180f8467c0 |
+| **JiffyDOS_1581.bin**            | 32 768 | 20b6885c6dc2d42c38754a365b043d71 |
 
 ## Command file operation
+
 VICE command line options are supported by placing the desired command line in a text file with `.cmd` file extension. The command line format is as documented in the [VICE manual](http://vice-emu.sourceforge.net/vice_6.html).
 
 Using this you can overcome limitations of the GUI and set advanced configurations required for running problematic files.
@@ -97,7 +107,7 @@ VIC-20 Mega-Cart can be launched via `.cmd`:
 ```
 xvic -cartmega "/path/to/rom/mega-cart-name.rom"
 ```
-**VIC-20 Mega-Cart is supported automatically with NvRAM file directed to `saves`.**
+**VIC-20 Mega-Cart is supported automatically with NVRAM file directed to `saves`.**
 
 
 VIC-20 memory expansion can be set via `.cmd`: `-memory (3k/8k/16k/24k/all) / (0/1/2/3/5) / (04/20/40/60/a0)`:
@@ -106,12 +116,15 @@ xvic -memory 1 "/path/to/rom/some-8k-game.d64"
 xvic -memory 8k "/path/to/rom/some-8k-game.d64"
 xvic -memory 20 "/path/to/rom/some-8k-game.d64"
 ```
+
 **VIC-20 memory expansion can be set with filename tags or directory matching:**
+
 - `some game (8k).prg` or `/8k/some game.prg`
 - `vicdoom (35k).d64`
 
 ## Latest features
-- Automatic VIC-20 Mega-Cart support (with NvRAM)
+
+- Automatic VIC-20 Mega-Cart support (with NVRAM)
 - Automatic NIB->G64 conversion
 - Region (PAL/NTSC) filepath tags for C64 & VIC-20
 - Memory expansion filepath tags for VIC-20
@@ -124,9 +137,11 @@ xvic -memory 20 "/path/to/rom/some-8k-game.d64"
 - Reset Type (Autostart, Soft, Hard, Freeze)
 
 ## Build instructions
+
 Remember to run `make clean EMUTYPE=x` when building different EMUTYPEs.
 
 Currently working EMUTYPEs:
+
 - `x64`
 - `x64sc`
 - `x128`
@@ -138,18 +153,25 @@ Currently working EMUTYPEs:
 - `xvic`
 
 ### Linux
+
 ```
 CC=gcc make -j4
 ```
+
 ### Windows
+
 ```
 make -j4
 ```
+
 ### Win64 (crossbuild)
+
 ```
 make platform=wincross64 -j4
 ```
+
 ### Android standalone toolchain Build
+
 ```
 export path to your standalone toolchain like
 
@@ -157,11 +179,14 @@ export PATH=$PATH:/opt/standtc/bin
 
 make platform=androidstc -j4
 ```
+
 ### Android ndk Build
+
 ```
 cd jni
 ndk-build
 ```
+
 ## Original readme
 
  ----------------------------------------------------------------------------

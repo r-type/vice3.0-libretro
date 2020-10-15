@@ -56,9 +56,7 @@ static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
-int mapper_keys[36] = {0};
 unsigned int vice_devices[5] = {0};
-
 unsigned int opt_video_options_display = 0;
 unsigned int opt_audio_options_display = 0;
 unsigned int opt_mapping_options_display = 1;
@@ -67,9 +65,11 @@ static double retro_refresh = 0;
 static unsigned int prev_sound_sample_rate = 0;
 
 extern void retro_poll_event();
-extern int retro_ui_finalized;
+extern int mapper_keys[RETRO_MAPPER_LAST];
+
+bool retro_ui_finalized = false;
 #ifdef RETRO_DEBUG
-static int prev_ui_finalized = 0;
+bool prev_ui_finalized = false;
 #endif
 
 extern uint8_t mem_ram[];
@@ -106,7 +106,8 @@ unsigned int zoomed_width = 0;
 unsigned int zoomed_height = 0;
 unsigned int zoomed_XS_offset = 0;
 unsigned int zoomed_YS_offset = 0;
-static unsigned int opt_aspect_ratio = 0;
+unsigned int opt_aspect_ratio = 0;
+bool opt_aspect_ratio_locked = false;
 static unsigned int manual_crop_top = 0;
 static unsigned int manual_crop_bottom = 0;
 static unsigned int manual_crop_left = 0;
@@ -133,9 +134,9 @@ static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
 unsigned int opt_statusbar = 0;
 unsigned int opt_reset_type = 0;
-unsigned int opt_keyrah_keypad = 0;
+bool opt_keyrah_keypad = false;
+bool opt_keyboard_pass_through = false;
 unsigned int opt_keyboard_keymap = KBD_INDEX_POS;
-unsigned int opt_keyboard_pass_through = 0;
 unsigned int opt_retropad_options = 0;
 unsigned int opt_joyport_type = 0;
 unsigned int opt_dpadmouse_speed = 6;
@@ -144,9 +145,9 @@ unsigned int opt_analogmouse = 0;
 unsigned int opt_analogmouse_deadzone = 20;
 float opt_analogmouse_speed = 1.0;
 
-extern unsigned int datasette_hotkeys;
+extern bool datasette_hotkeys;
 extern unsigned int cur_port;
-extern int cur_port_locked;
+extern bool cur_port_locked;
 
 extern int turbo_fire_button;
 extern unsigned int turbo_pulse;
@@ -486,7 +487,7 @@ static int process_cmdline(const char* argv)
     PARAMCOUNT = 0;
     dc_reset(dc);
 
-    cur_port_locked = 0;
+    cur_port_locked = false;
     free(autostartString);
     autostartString = NULL;
 
@@ -526,7 +527,7 @@ static int process_cmdline(const char* argv)
         if (joystick_control)
         {
             cur_port = joystick_control;
-            cur_port_locked = 1;
+            cur_port_locked = true;
         }
 
         /* "Browsed" file in ZIP */
@@ -850,12 +851,12 @@ static int process_cmdline(const char* argv)
             else if (!strcmp(arg, "-j1"))
             {
                 cur_port = 1;
-                cur_port_locked = 1;
+                cur_port_locked = true;
             }
             else if (!strcmp(arg, "-j2"))
             {
                 cur_port = 2;
-                cur_port_locked = 1;
+                cur_port_locked = true;
             }
             else if (strendswith(arg, ".m3u"))
             {
@@ -1354,7 +1355,7 @@ void reload_restart()
 
     /* Update resources from environment just like on fresh start of core */
     sound_volume_counter = 3;
-    retro_ui_finalized = 0;
+    retro_ui_finalized = false;
     update_variables();
     /* Some resources are not set until we call this */
     ui_init_finalize();
@@ -1757,7 +1758,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_aspect_ratio",
          "Video > Pixel Aspect Ratio",
-         "",
+         "Hotkey toggling disables this option until core restart.",
          {
             { "auto", "Automatic" },
             { "pal", "PAL" },
@@ -1870,7 +1871,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vkbd_theme",
          "Video > Virtual KBD Theme",
-         "By default, the keyboard comes up with RetroPad Select or F11.",
+         "By default, the keyboard comes up with RetroPad Select.",
          {
             { "0", "C64" },
             { "1", "C64C" },
@@ -2700,7 +2701,7 @@ void retro_set_environment(retro_environment_t cb)
          "Hotkey > Toggle Virtual Keyboard",
          "Press the mapped key to toggle the virtual keyboard.",
          {{ NULL, NULL }},
-         "RETROK_F11"
+         "---"
       },
       {
          "vice_mapper_statusbar",
@@ -2733,6 +2734,13 @@ void retro_set_environment(retro_environment_t cb)
          ""
       },
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+      {
+         "vice_mapper_aspect_ratio_toggle",
+         "Hotkey > Toggle Aspect Ratio",
+         "Press the mapped key to toggle aspect ratio.\nToggling disables 'Pixel Aspect Ratio' option until core restart.",
+         {{ NULL, NULL }},
+         "---"
+      },
       {
          "vice_mapper_zoom_mode_toggle",
          "Hotkey > Toggle Zoom Mode",
@@ -3034,6 +3042,7 @@ void retro_set_environment(retro_environment_t cb)
             || strstr(core_options[i].key, "vice_mapper_statusbar")
             || strstr(core_options[i].key, "vice_mapper_joyport_switch")
             || strstr(core_options[i].key, "vice_mapper_reset")
+            || strstr(core_options[i].key, "vice_mapper_aspect_ratio_toggle")
             || strstr(core_options[i].key, "vice_mapper_zoom_mode_toggle")
             || strstr(core_options[i].key, "vice_mapper_warp_mode")
             || strstr(core_options[i].key, "vice_mapper_datasette_toggle_hotkeys")
@@ -3807,6 +3816,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "ntsc")) opt_aspect_ratio = 2;
       else if (!strcmp(var.value, "raw"))  opt_aspect_ratio = 3;
 
+      /* Revert if aspect ratio is locked */
+      if (opt_aspect_ratio_locked)
+         opt_aspect_ratio = opt_aspect_ratio_prev;
+
       /* Zoom reset */
       if (opt_aspect_ratio != opt_aspect_ratio_prev)
          zoom_mode_id_prev = -1;
@@ -4158,8 +4171,8 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_keyrah_keypad = 0;
-      else                                opt_keyrah_keypad = 1;
+      if (!strcmp(var.value, "disabled")) opt_keyrah_keypad = false;
+      else                                opt_keyrah_keypad = true;
    }
 
    var.key = "vice_keyboard_keymap";
@@ -4181,8 +4194,8 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_keyboard_pass_through = 0;
-      else                                opt_keyboard_pass_through = 1;
+      if (!strcmp(var.value, "disabled")) opt_keyboard_pass_through = false;
+      else                                opt_keyboard_pass_through = true;
    }
 
    var.key = "vice_retropad_options";
@@ -4411,56 +4424,56 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[16] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_LR] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_ll";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[17] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_LL] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_ld";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[18] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_LD] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_lu";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[19] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_LU] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_rr";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[20] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_RR] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_rl";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[21] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_RL] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_rd";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[22] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_RD] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_ru";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[23] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_RU] = retro_keymap_id(var.value);
    }
 
    /* Hotkeys */
@@ -4468,92 +4481,99 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[24] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_VKBD] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_statusbar";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[25] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_STATUSBAR] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_joyport_switch";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[26] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_JOYPORT] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[27] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_RESET] = retro_keymap_id(var.value);
+   }
+
+   var.key = "vice_mapper_aspect_ratio_toggle";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_MAPPER_ASPECT_RATIO] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_zoom_mode_toggle";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[28] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_ZOOM_MODE] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_warp_mode";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[29] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_WARP_MODE] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) datasette_hotkeys = 0;
-      else                                datasette_hotkeys = 1;
+      if (!strcmp(var.value, "disabled")) datasette_hotkeys = false;
+      else                                datasette_hotkeys = true;
    }
 
    var.key = "vice_mapper_datasette_toggle_hotkeys";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[30] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_DATASETTE_HOTKEYS] = retro_keymap_id(var.value);
    }
    
    var.key = "vice_mapper_datasette_stop";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[31] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_DATASETTE_STOP] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_start";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[32] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_DATASETTE_START] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_forward";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[33] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_DATASETTE_FORWARD] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_rewind";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[34] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_DATASETTE_REWIND] = retro_keymap_id(var.value);
    }
 
    var.key = "vice_mapper_datasette_reset";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      mapper_keys[35] = retro_keymap_id(var.value);
+      mapper_keys[RETRO_MAPPER_DATASETTE_RESET] = retro_keymap_id(var.value);
    }
 
 
@@ -5110,7 +5130,7 @@ void retro_init(void)
    memset(retro_key_state, 0, sizeof(retro_key_state));
    memset(retro_key_state_old, 0, sizeof(retro_key_state_old));
 
-   retro_ui_finalized = 0;
+   retro_ui_finalized = false;
    update_variables();
 }
 
@@ -5128,8 +5148,10 @@ void retro_deinit(void)
    if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
       remove_recurse(retro_temp_directory);
 
-   /* 'Reset' troublesome static variable */
+   /* 'Reset' troublesome static variables */
    pix_bytes_initialized = false;
+   cur_port_locked = false;
+   opt_aspect_ratio_locked = false;
 }
 
 unsigned retro_api_version(void)
@@ -5559,7 +5581,7 @@ void retro_run(void)
    if (retro_ui_finalized && !prev_ui_finalized)
    {
       log_cb(RETRO_LOG_INFO, "UI finalized now\n");
-      prev_ui_finalized = 1;
+      prev_ui_finalized = true;
    }
 #endif
 
@@ -5679,7 +5701,7 @@ bool retro_load_game(const struct retro_game_info *info)
 #if defined(__XPET__) || defined(__XCBM2__) || defined(__XVIC__)
    /* Joyport limit has to apply always */
    cur_port = 1;
-   cur_port_locked = 1;
+   cur_port_locked = true;
 #endif
 
    if (runstate == RUNSTATE_RUNNING)

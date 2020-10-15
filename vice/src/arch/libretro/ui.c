@@ -63,8 +63,8 @@ extern int vic20mem_forced;
 extern unsigned int opt_supercpu_kernal;
 #endif
 
-int retro_ui_finalized = 0;
-int cur_port_locked = 0; /* 0: not forced by filename 1: forced by filename */
+extern bool retro_ui_finalized;
+extern bool cur_port_locked;
 extern unsigned int opt_jiffydos;
 extern unsigned int opt_autoloadwarp;
 extern char retro_system_data_directory[RETRO_PATH_MAX];
@@ -430,7 +430,7 @@ int ui_init_finalize(void)
    log_resources_set_int("RAMBlock3", (vic_blocks & VIC_BLK3) ? 1 : 0);
    log_resources_set_int("RAMBlock5", (vic_blocks & VIC_BLK5) ? 1 : 0);
 #endif
-   retro_ui_finalized = 1;
+   retro_ui_finalized = true;
    return 0;
 }
 

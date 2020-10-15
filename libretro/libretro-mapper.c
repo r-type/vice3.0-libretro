@@ -53,18 +53,20 @@ int vkbd_y_max = 0;
 #define MOUSE_SPEED_FAST 2
 
 /* Core flags */
-extern bool retro_vkbd;
-extern bool retro_vkbd_transparent;
+int mapper_keys[RETRO_MAPPER_LAST] = {0};
 int vkflag[8] = {0};
 int retro_capslock = false;
-bool num_locked = false;
-unsigned int statusbar = 0;
-unsigned int warpmode = 0;
-unsigned int datasette_hotkeys = 0;
 unsigned int cur_port = 2;
 static int cur_port_prev = -1;
-extern int cur_port_locked;
-extern int mapper_keys[36];
+bool cur_port_locked = false;
+unsigned int mouse_value[2] = {0};
+unsigned int mouse_speed[2] = {0};
+
+unsigned int statusbar = 0;
+unsigned int warpmode = 0;
+extern bool retro_vkbd;
+extern bool retro_vkbd_transparent;
+extern unsigned int vice_devices[5];
 
 /* Core options */
 extern unsigned int opt_retropad_options;
@@ -74,16 +76,16 @@ extern unsigned int opt_dpadmouse_speed;
 extern unsigned int opt_analogmouse;
 extern unsigned int opt_analogmouse_deadzone;
 extern float opt_analogmouse_speed;
-unsigned int mouse_value[2] = {0};
-unsigned int mouse_speed[2] = {0};
+bool datasette_hotkeys = false;
 
-extern unsigned int zoom_mode_id;
-extern unsigned int opt_zoom_mode_id;
-extern unsigned int opt_keyrah_keypad;
-extern unsigned int opt_keyboard_pass_through;
-extern bool retro_load_ok;
 extern void emu_reset(int type);
-extern unsigned int vice_devices[5];
+extern unsigned int zoom_mode_id;
+extern int zoom_mode_id_prev;
+extern unsigned int opt_zoom_mode_id;
+extern bool opt_keyrah_keypad;
+extern bool opt_keyboard_pass_through;
+extern unsigned int opt_aspect_ratio;
+extern bool opt_aspect_ratio_locked;
 
 int turbo_fire_button_disabled = -1;
 int turbo_fire_button = -1;
@@ -97,8 +99,10 @@ enum EMU_FUNCTIONS
    EMU_STATUSBAR,
    EMU_JOYPORT,
    EMU_RESET,
+   EMU_ASPECT_RATIO,
    EMU_ZOOM_MODE,
-   EMU_WARP,
+   EMU_TURBO_FIRE,
+   EMU_WARP_MODE,
    EMU_DATASETTE_HOTKEYS,
    EMU_DATASETTE_STOP,
    EMU_DATASETTE_START,
@@ -140,12 +144,23 @@ void emu_function(int function)
 #if defined(__XPET__) || defined(__XCBM2__) || defined(__XVIC__)
          break;
 #endif
-         cur_port_locked = 1;
          cur_port++;
-         if (cur_port>2) cur_port = 1;
+         if (cur_port > 2) cur_port = 1;
+         /* Lock current port */
+         cur_port_locked = true;
          break;
       case EMU_RESET:
          emu_reset(-1);
+         break;
+      case EMU_ASPECT_RATIO:
+         if (opt_aspect_ratio == 0)
+            opt_aspect_ratio = (retro_region == RETRO_REGION_NTSC) ? 1 : 2;
+         opt_aspect_ratio++;
+         if (opt_aspect_ratio > 3) opt_aspect_ratio = 1;
+         /* Reset zoom */
+         zoom_mode_id_prev = -1;
+         /* Lock aspect ratio */
+         opt_aspect_ratio_locked = true;
          break;
       case EMU_ZOOM_MODE:
          if (zoom_mode_id == 0 && opt_zoom_mode_id == 0)
@@ -155,12 +170,29 @@ void emu_function(int function)
          else if (zoom_mode_id == 0)
             zoom_mode_id = opt_zoom_mode_id;
          break;
-      case EMU_WARP:
+      case EMU_TURBO_FIRE:
+         if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
+            break;
+         else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
+            turbo_fire_button_disabled = -1;
+
+         if (turbo_fire_button_disabled != -1)
+         {
+            turbo_fire_button = turbo_fire_button_disabled;
+            turbo_fire_button_disabled = -1;
+         }
+         else
+         {
+            turbo_fire_button_disabled = turbo_fire_button;
+            turbo_fire_button = -1;
+         }
+         break;
+      case EMU_WARP_MODE:
          warpmode = (warpmode) ? 0 : 1;
          resources_set_int("WarpMode", warpmode);
          break;
       case EMU_DATASETTE_HOTKEYS:
-         datasette_hotkeys = (datasette_hotkeys) ? 0 : 1;
+         datasette_hotkeys = !datasette_hotkeys;
          break;
 
       case EMU_DATASETTE_STOP:
@@ -183,11 +215,8 @@ void emu_function(int function)
 
 void retro_key_up(int symkey)
 {
-   /* Num lock ..? */
-   if (symkey == RETROK_NUMLOCK)
-      num_locked = false;
    /* Prevent LShift keyup if ShiftLock is on */
-   else if (symkey == RETROK_LSHIFT)
+   if (symkey == RETROK_LSHIFT)
    {
       if (!retro_capslock)
          kbd_handle_keyup(symkey);
@@ -198,11 +227,8 @@ void retro_key_up(int symkey)
 
 void retro_key_down(int symkey)
 {
-   /* Num lock ..? */
-   if (symkey == RETROK_NUMLOCK)
-      num_locked = true;
    /* CapsLock / ShiftLock */
-   else if (symkey == RETROK_CAPSLOCK)
+   if (symkey == RETROK_CAPSLOCK)
    {
       if (retro_capslock)
          kbd_handle_keyup(RETROK_LSHIFT);
@@ -252,7 +278,8 @@ void update_input(int disable_physical_cursor_keys)
 
    static int i = 0, j = 0, mk = 0;
    static int LX = 0, LY = 0, RX = 0, RY = 0;
-   static int threshold = 20000;
+   const int threshold = 20000;
+
    static int jbt[2][24] = {0};
    static int kbt[EMU_FUNCTION_COUNT] = {0};
     
@@ -271,7 +298,7 @@ void update_input(int disable_physical_cursor_keys)
    }
 
    /* Keyup only after button is up */
-   if (last_vkey_pressed != -1 && vkflag[4] != 1)
+   if (last_vkey_pressed != -1 && !vkflag[4])
    {
       if (vkey_pressed == -1 && last_vkey_pressed >= 0 && last_vkey_pressed != vkey_sticky1 && last_vkey_pressed != vkey_sticky2)
          kbd_handle_keyup(last_vkey_pressed);
@@ -295,7 +322,8 @@ void update_input(int disable_physical_cursor_keys)
    input_poll_cb();
 
    /* Iterate hotkeys, skip Datasette hotkeys if Datasette hotkeys are disabled or if VKBD is on */
-   int i_last = (datasette_hotkeys && !retro_vkbd) ? EMU_DATASETTE_RESET : EMU_DATASETTE_HOTKEYS;
+   int i_last = (datasette_hotkeys && !retro_vkbd) ? RETRO_MAPPER_DATASETTE_RESET : RETRO_MAPPER_DATASETTE_HOTKEYS;
+   i_last -= 24;
 
    for (i = 0; i <= i_last; i++)
    {
@@ -305,43 +333,46 @@ void update_input(int disable_physical_cursor_keys)
       if (input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[mk]) && !kbt[i] && mapper_keys[mk])
       {
          kbt[i] = 1;
-         switch(mk)
+         switch (mk)
          {
-            case 24:
+            case RETRO_MAPPER_VKBD:
                emu_function(EMU_VKBD);
                break;
-            case 25:
+            case RETRO_MAPPER_STATUSBAR:
                emu_function(EMU_STATUSBAR);
                break;
-            case 26:
+            case RETRO_MAPPER_JOYPORT:
                emu_function(EMU_JOYPORT);
                break;
-            case 27:
+            case RETRO_MAPPER_RESET:
                emu_function(EMU_RESET);
                break;
-            case 28:
+            case RETRO_MAPPER_ASPECT_RATIO:
+               emu_function(EMU_ASPECT_RATIO);
+               break;
+            case RETRO_MAPPER_ZOOM_MODE:
                emu_function(EMU_ZOOM_MODE);
                break;
-            case 29:
-               emu_function(EMU_WARP);
+            case RETRO_MAPPER_WARP_MODE:
+               emu_function(EMU_WARP_MODE);
                break;
-            case 30:
+            case RETRO_MAPPER_DATASETTE_HOTKEYS:
                emu_function(EMU_DATASETTE_HOTKEYS);
                break;
 
-            case 31:
+            case RETRO_MAPPER_DATASETTE_STOP:
                emu_function(EMU_DATASETTE_STOP);
                break;
-            case 32:
+            case RETRO_MAPPER_DATASETTE_START:
                emu_function(EMU_DATASETTE_START);
                break;
-            case 33:
+            case RETRO_MAPPER_DATASETTE_FORWARD:
                emu_function(EMU_DATASETTE_FORWARD);
                break;
-            case 34:
+            case RETRO_MAPPER_DATASETTE_REWIND:
                emu_function(EMU_DATASETTE_REWIND);
                break;
-            case 35:
+            case RETRO_MAPPER_DATASETTE_RESET:
                emu_function(EMU_DATASETTE_RESET);
                break;
          }
@@ -350,10 +381,10 @@ void update_input(int disable_physical_cursor_keys)
       else if (!input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, mapper_keys[mk]) && kbt[i] && mapper_keys[mk])
       {
          kbt[i] = 0;
-         switch(mk)
+         switch (mk)
          {
-            case 29:
-               emu_function(EMU_WARP);
+            case RETRO_MAPPER_WARP_MODE:
+               emu_function(EMU_WARP_MODE);
                break;
          }
       }
@@ -418,35 +449,35 @@ void update_input(int disable_physical_cursor_keys)
             {
                switch (i)
                {
-                  case 16: /* LR */
+                  case RETRO_DEVICE_ID_JOYPAD_LR:
                      if (LX > threshold && !jbt[j][i]) just_pressed = 1;
                      else if (LX < threshold && jbt[j][i]) just_released = 1;
                      break;
-                  case 17: /* LL */
+                  case RETRO_DEVICE_ID_JOYPAD_LL:
                      if (LX < -threshold && !jbt[j][i]) just_pressed = 1;
                      else if (LX > -threshold && jbt[j][i]) just_released = 1;
                      break;
-                  case 18: /* LD */
+                  case RETRO_DEVICE_ID_JOYPAD_LD:
                      if (LY > threshold && !jbt[j][i]) just_pressed = 1;
                      else if (LY < threshold && jbt[j][i]) just_released = 1;
                      break;
-                  case 19: /* LU */
+                  case RETRO_DEVICE_ID_JOYPAD_LU:
                      if (LY < -threshold && !jbt[j][i]) just_pressed = 1;
                      else if (LY > -threshold && jbt[j][i]) just_released = 1;
                      break;
-                  case 20: /* RR */
+                  case RETRO_DEVICE_ID_JOYPAD_RR:
                      if (RX > threshold && !jbt[j][i]) just_pressed = 1;
                      else if (RX < threshold && jbt[j][i]) just_released = 1;
                      break;
-                  case 21: /* RL */
+                  case RETRO_DEVICE_ID_JOYPAD_RL:
                      if (RX < -threshold && !jbt[j][i]) just_pressed = 1;
                      else if (RX > -threshold && jbt[j][i]) just_released = 1;
                      break;
-                  case 22: /* RD */
+                  case RETRO_DEVICE_ID_JOYPAD_RD:
                      if (RY > threshold && !jbt[j][i]) just_pressed = 1;
                      else if (RY < threshold && jbt[j][i]) just_released = 1;
                      break;
-                  case 23: /* RU */
+                  case RETRO_DEVICE_ID_JOYPAD_RU:
                      if (RY < -threshold && !jbt[j][i]) just_pressed = 1;
                      else if (RY > -threshold && jbt[j][i]) just_released = 1;
                      break;
@@ -461,39 +492,41 @@ void update_input(int disable_physical_cursor_keys)
                if (!mapper_keys[i]) /* Unmapped, e.g. set to "---" in core options */
                   continue;
 
-               if (mapper_keys[i] == mapper_keys[24]) /* Virtual keyboard */
+               if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_VKBD])
                   emu_function(EMU_VKBD);
-               else if (mapper_keys[i] == mapper_keys[25]) /* Statusbar */
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_STATUSBAR])
                   emu_function(EMU_STATUSBAR);
-               else if (mapper_keys[i] == mapper_keys[26]) /* Switch joyport */
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_JOYPORT])
                   emu_function(EMU_JOYPORT);
-               else if (mapper_keys[i] == mapper_keys[27]) /* Reset */
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_RESET])
                   emu_function(EMU_RESET);
-               else if (mapper_keys[i] == mapper_keys[28]) /* Toggle zoom mode */
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_ASPECT_RATIO])
+                  emu_function(EMU_ASPECT_RATIO);
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_ZOOM_MODE])
                   emu_function(EMU_ZOOM_MODE);
-               else if (mapper_keys[i] == mapper_keys[29]) /* Hold warp mode */
-                  emu_function(EMU_WARP);
-               else if (mapper_keys[i] == mapper_keys[30]) /* Datasette hotkeys toggle */
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_WARP_MODE])
+                  emu_function(EMU_WARP_MODE);
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_HOTKEYS])
                   emu_function(EMU_DATASETTE_HOTKEYS);
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[31]) /* Datasette stop */
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_STOP])
                   emu_function(EMU_DATASETTE_STOP);
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[32]) /* Datasette start */
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_START])
                   emu_function(EMU_DATASETTE_START);
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[33]) /* Datasette forward */
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_FORWARD])
                   emu_function(EMU_DATASETTE_FORWARD);
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[34]) /* Datasette rewind */
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_REWIND])
                   emu_function(EMU_DATASETTE_REWIND);
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[35]) /* Datasette reset */
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_RESET])
                   emu_function(EMU_DATASETTE_RESET);
-               else if (mapper_keys[i] == -5) /* Mouse speed slower */
+               else if (mapper_keys[i] == MOUSE_SLOWER)
                   mouse_speed[j] |= MOUSE_SPEED_SLOWER;
-               else if (mapper_keys[i] == -6) /* Mouse speed faster */
+               else if (mapper_keys[i] == MOUSE_FASTER)
                   mouse_speed[j] |= MOUSE_SPEED_FASTER;
-               else if (mapper_keys[i] == -11) /* Virtual keyboard */
+               else if (mapper_keys[i] == TOGGLE_VKBD)
                   emu_function(EMU_VKBD);
-               else if (mapper_keys[i] == -12) /* Statusbar */
+               else if (mapper_keys[i] == TOGGLE_STATUSBAR)
                   emu_function(EMU_STATUSBAR);
-               else if (mapper_keys[i] == -13) /* Switch joyport */
+               else if (mapper_keys[i] == SWITCH_JOYPORT)
                   emu_function(EMU_JOYPORT);
                else
                   retro_key_down(mapper_keys[i]);
@@ -504,39 +537,41 @@ void update_input(int disable_physical_cursor_keys)
                if (!mapper_keys[i]) /* Unmapped, e.g. set to "---" in core options */
                   continue;
 
-               if (mapper_keys[i] == mapper_keys[24])
+               if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_VKBD])
                   ; /* nop */
-               else if (mapper_keys[i] == mapper_keys[25])
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_STATUSBAR])
                   ; /* nop */
-               else if (mapper_keys[i] == mapper_keys[26])
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_JOYPORT])
                   ; /* nop */
-               else if (mapper_keys[i] == mapper_keys[27])
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_RESET])
                   ; /* nop */
-               else if (mapper_keys[i] == mapper_keys[28])
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_ASPECT_RATIO])
                   ; /* nop */
-               else if (mapper_keys[i] == mapper_keys[29])
-                  emu_function(EMU_WARP);
-               else if (mapper_keys[i] == mapper_keys[30])
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_ZOOM_MODE])
                   ; /* nop */
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[31])
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_WARP_MODE])
+                  emu_function(EMU_WARP_MODE);
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_HOTKEYS])
                   ; /* nop */
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[32])
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_STOP])
                   ; /* nop */
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[33])
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_START])
                   ; /* nop */
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[34])
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_FORWARD])
                   ; /* nop */
-               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[35])
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_REWIND])
                   ; /* nop */
-               else if (mapper_keys[i] == -5) /* Mouse speed slower */
+               else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_RESET])
+                  ; /* nop */
+               else if (mapper_keys[i] == MOUSE_SLOWER)
                   mouse_speed[j] &= ~MOUSE_SPEED_SLOWER;
-               else if (mapper_keys[i] == -6) /* Mouse speed faster */
+               else if (mapper_keys[i] == MOUSE_FASTER)
                   mouse_speed[j] &= ~MOUSE_SPEED_FASTER;
-               else if (mapper_keys[i] == -11) /* Virtual keyboard */
+               else if (mapper_keys[i] == TOGGLE_VKBD)
                   ; /* nop */
-               else if (mapper_keys[i] == -12) /* Statusbar */
+               else if (mapper_keys[i] == TOGGLE_STATUSBAR)
                   ; /* nop */
-               else if (mapper_keys[i] == -13) /* Switch joyport */
+               else if (mapper_keys[i] == SWITCH_JOYPORT)
                   ; /* nop */
                else
                   retro_key_up(mapper_keys[i]);
@@ -710,21 +745,7 @@ void update_input(int disable_physical_cursor_keys)
                   retro_key_up(RETROK_CAPSLOCK);
                   break;
                case -20:
-                  if (turbo_fire_button_disabled == -1 && turbo_fire_button == -1)
-                     break;
-                  else if (turbo_fire_button_disabled != -1 && turbo_fire_button != -1)
-                     turbo_fire_button_disabled = -1;
-
-                  if (turbo_fire_button_disabled != -1)
-                  {
-                     turbo_fire_button = turbo_fire_button_disabled;
-                     turbo_fire_button_disabled = -1;
-                  }
-                  else
-                  {
-                     turbo_fire_button_disabled = turbo_fire_button;
-                     turbo_fire_button = -1;
-                  }
+                  emu_function(EMU_TURBO_FIRE);
                   break;
 
                case -11:

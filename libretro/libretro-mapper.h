@@ -160,9 +160,9 @@ static retro_keymap retro_keys[RETROK_LAST] =
    {RETROK_F10,         "RETROK_F10",          "F10"},
    {RETROK_F11,         "RETROK_F11",          "F11"},
    {RETROK_F12,         "RETROK_F12",          "F12"},
-/* {RETROK_F13,         "RETROK_F13",          "F13"}, */
-/* {RETROK_F14,         "RETROK_F14",          "F14"}, */
-/* {RETROK_F15,         "RETROK_F15",          "F15"}, */
+   {RETROK_F13,         "RETROK_F13",          "F13"},
+   {RETROK_F14,         "RETROK_F14",          "F14"},
+   {RETROK_F15,         "RETROK_F15",          "F15"},
 /* {RETROK_NUMLOCK,     "RETROK_NUMLOCK",      "Num Lock"}, */
 /* {RETROK_CAPSLOCK,    "RETROK_CAPSLOCK",     "Caps Lock"}, */
 /* {RETROK_SCROLLOCK,   "RETROK_SCROLLOCK",    "Scroll Lock"}, */
@@ -174,8 +174,8 @@ static retro_keymap retro_keys[RETROK_LAST] =
    {RETROK_LALT,        "RETROK_LALT",         "Left Alt"},
 /* {RETROK_RMETA,       "RETROK_RMETA",        "Right Meta"}, */
 /* {RETROK_LMETA,       "RETROK_LMETA",        "Left Meta"}, */
-   {RETROK_RSUPER,      "RETROK_RSUPER",       "Reft Super"},
-   {RETROK_LSUPER,      "RETROK_LSUPER",       "Light Super"},
+   {RETROK_RSUPER,      "RETROK_RSUPER",       "Right Super"},
+   {RETROK_LSUPER,      "RETROK_LSUPER",       "Left Super"},
 /* {RETROK_MODE,        "RETROK_MODE",         "Mode"}, */
 /* {RETROK_COMPOSE,     "RETROK_COMPOSE",      "Compose"}, */
 /* {RETROK_HELP,        "RETROK_HELP",         "Help"}, */

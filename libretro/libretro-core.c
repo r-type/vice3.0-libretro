@@ -1871,7 +1871,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vkbd_theme",
          "Video > Virtual KBD Theme",
-         "By default, the keyboard comes up with RetroPad Select or F11.",
+         "By default, the keyboard comes up with RetroPad Select.",
          {
             { "0", "C64" },
             { "1", "C64C" },
@@ -2701,7 +2701,7 @@ void retro_set_environment(retro_environment_t cb)
          "Hotkey > Toggle Virtual Keyboard",
          "Press the mapped key to toggle the virtual keyboard.",
          {{ NULL, NULL }},
-         "RETROK_F11"
+         "---"
       },
       {
          "vice_mapper_statusbar",

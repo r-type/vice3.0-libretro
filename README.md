@@ -22,7 +22,6 @@ Supported platforms: Linux, Windows, Apple, Android, emscripten, Switch, Vita
 
 | Keyboard key    | Action                  |
 |-----------------|-------------------------|
-| F11             | Toggle virtual keyboard |
 | F12             | Toggle statusbar        |
 | RControl        | Switch between joyports |
 | End             | Reset                   |

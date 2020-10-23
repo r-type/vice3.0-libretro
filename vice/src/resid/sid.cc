@@ -26,6 +26,9 @@
 
 #include "sid.h"
 #include <math.h>
+#ifdef __CELLOS_LV2__
+#include "PS3_include.h"
+#endif
 
 #ifndef round
 #define round(x) (x>=0.0?floor(x+0.5):ceil(x-0.5))

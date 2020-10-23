@@ -46,7 +46,7 @@
 #include <strings.h>
 #endif
 
-#if defined(PSP) || defined(VITA) || defined(__PSL1GHT__)
+#if defined(PSP) || defined(VITA) || defined(__PSL1GHT__) || defined(__CELLOS_LV2__)
 #include <sys/time.h>
 #endif
 
@@ -112,12 +112,26 @@ int kbd_arch_get_host_mapping(void)
 }
 
 #include <time.h>
+#ifdef __CELLOS_LV2__
+#include <pthread_types.h>
+int gettimeofday(struct timeval* x, int unused)
+{
+    sys_time_sec_t s;
+    sys_time_nsec_t ns;
+    int ret = sys_time_get_current_time(&s, &ns);
+
+    x->tv_sec = s;
+    x->tv_usec = ns / 1000;
+
+    return ret;
+}
+#endif
 
 int archdep_rtc_get_centisecond(void)
 {
     struct timespec dtm;
     int status;
-#if defined(PSP) || defined(VITA) || defined(_3DS) || defined(__PSL1GHT__)
+#if defined(PSP) || defined(VITA) || defined(_3DS) || defined(__PSL1GHT__) || defined(__CELLOS_LV2__)
     struct timeval tm;
     status = gettimeofday(&tm, NULL);
     if(status==0)

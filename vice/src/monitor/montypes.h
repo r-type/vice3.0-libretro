@@ -32,6 +32,10 @@
 #include "monitor.h"
 #include "types.h"
 
+#ifdef __CELLOS_LV2__
+#undef bool
+#endif
+
 #if 0
 /* set this to enable experimental 24-bit address space support */
 #define HAVE_MEMSPACE24

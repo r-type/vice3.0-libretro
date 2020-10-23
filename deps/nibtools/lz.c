@@ -97,7 +97,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef __CELLOS_LV2__
 #include <signal.h>
+#endif
 #include <time.h>
 #include <ctype.h>
 

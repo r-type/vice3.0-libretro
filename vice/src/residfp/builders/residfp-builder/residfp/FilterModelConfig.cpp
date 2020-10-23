@@ -23,6 +23,9 @@
 #include "FilterModelConfig.h"
 
 #ifdef __LIBRETRO__
+#ifdef __CELLOS_LV2__
+#include "PS3_include.h"
+#endif
 #else
 #include <cmath>
 #include <cassert>

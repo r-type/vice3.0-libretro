@@ -400,7 +400,9 @@
 #define HAVE_MIDI /**/
 
 /* Define to 1 if you have the `mkstemp' function. */
+#ifndef __CELLOS_LV2__
 #define HAVE_MKSTEMP 1
+#endif
 
 /* Define to 1 if you have the `mmap_device_io' function. */
 /* #undef HAVE_MMAP_DEVICE_IO */

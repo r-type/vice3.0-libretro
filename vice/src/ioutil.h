@@ -46,6 +46,10 @@
 #define IOUTIL_ERRNO_ENOENT 3
 #define IOUTIL_ERRNO_ERANGE 4
 
+#ifdef __CELLOS_LV2__
+#include "PS3_include.h"
+#endif
+
 extern int ioutil_access(const char *pathname, int mode);
 extern int ioutil_chdir(const char *path);
 extern int ioutil_errno(unsigned int check);

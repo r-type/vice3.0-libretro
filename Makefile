@@ -260,6 +260,15 @@ else ifeq ($(platform), psp1)
    CXXFLAGS += -std=c99
    STATIC_LINKING = 1
 
+# PS3
+else ifeq ($(platform), ps3)
+   TARGET := $(TARGET_NAME)_libretro_$(platform).a
+   CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
+   CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
+   AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
+   COMMONFLAGS += -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DWORDS_BIGENDIAN=1 -D__unix__ -DHAVE_STRTOUL -D_NO_CPP_INLINES
+   STATIC_LINKING=1
+
 # Vita
 else ifeq ($(platform), vita)
    TARGET := $(TARGET_NAME)_libretro_vita.a

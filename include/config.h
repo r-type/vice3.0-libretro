@@ -79,7 +79,9 @@
 #define HAVE_MEMMOVE 1
 
 /* Define to 1 if you have the `mkstemp' function. */
+#ifndef __CELLOS_LV2__
 #define HAVE_MKSTEMP 1
+#endif
 
 /* Enable 1351 mouse support */
 #define HAVE_MOUSE 1

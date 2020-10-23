@@ -76,7 +76,7 @@
 
 int ioutil_access(const char *pathname, int mode)
 {
-#ifdef __PSL1GHT__
+#if defined( __PSL1GHT__) || defined (__CELLOS_LV2__)
     struct stat buf;
     /* This can be improved but since ps3 os doesn't really have ACLs, who
        cares? */

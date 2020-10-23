@@ -22,6 +22,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef __CELLOS_LV2__
+#include <unistd.h>
+#endif
 
 /* Verify if file exists */
 bool file_exists(const char *filename)

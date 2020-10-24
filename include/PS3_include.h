@@ -2,7 +2,6 @@
 #include <sys/timer.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <time.h>
 #include <cmath>
 
 #ifndef PS3_HEADER
@@ -44,15 +43,15 @@
 #define getwd(buffer) (strcpy(buffer, currentpath)) ? (buffer) : (NULL)
 #define tmpnam(...) (tmppath)
 #define getenv(...) (NULL)
-#define exp(xval) std::exp(xval)
-#define fabs(xval) std::fabs(xval)
-#define sqrt(xval) std::sqrt(xval)
+#define exp(xval) ::std::exp(xval)
+#define fabs(xval) ::std::fabs(xval)
+#define sqrt(xval) ::std::sqrt(xval)
 #undef log10
-#define log10(xval) std::log10(xval)
+#define log10(xval) ::std::log10(xval)
 #undef log
-#define log(xval) std::log(xval)
-#define ceil(xval) std::ceil(xval)
+#define log(xval) ::std::log(xval)
+#define ceil(xval) ::std::ceil(xval)
 #undef sin
-#define sin(xval) std::sin(xval)
-#define pow(xval, yval) std::pow(xval, yval)
+#define sin(xval) ::std::sin(xval)
+#define pow(xval, yval) ::std::pow(xval, yval)
 #endif

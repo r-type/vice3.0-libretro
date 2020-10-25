@@ -1647,9 +1647,9 @@ void retro_set_environment(retro_environment_t cb)
          "vice_jiffydos",
          "System > JiffyDOS",
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         "For D64/D71/D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64/D71/D81 disk images only!\n'True Drive Emulation' required!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #elif defined(__X128__)
-         "For D64/D71/D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64/D71/D81 disk images only!\n'True Drive Emulation' required!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #endif
          {
             { "disabled", NULL },

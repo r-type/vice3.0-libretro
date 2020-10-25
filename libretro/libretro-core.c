@@ -781,13 +781,13 @@ static int process_cmdline(const char* argv)
             Add_Option("-cart");
 #endif
 
-        if (strendswith(argv, ".m3u"))
+        if (strendswith(argv, "m3u"))
         {
             /* Parse the m3u file */
             dc_parse_m3u(dc, argv);
             is_fliplist = true;
         }
-        else if (strendswith(argv, ".vfl"))
+        else if (strendswith(argv, "vfl"))
         {
             /* Parse the vfl file */
             dc_parse_vfl(dc, argv);
@@ -859,7 +859,7 @@ static int process_cmdline(const char* argv)
                 cur_port = 2;
                 cur_port_locked = true;
             }
-            else if (strendswith(arg, ".m3u"))
+            else if (strendswith(arg, "m3u"))
             {
                 /* Parse the m3u file, don't pass to vice */
                 dc_parse_m3u(dc, arg);

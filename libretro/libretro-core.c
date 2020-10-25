@@ -550,6 +550,10 @@ static int process_cmdline(const char* argv)
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
         snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
 
+        /* Clean ZIP temp */
+        if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
+            remove_recurse(retro_temp_directory);
+
         char nib_input[RETRO_PATH_MAX] = {0};
         char nib_output[RETRO_PATH_MAX] = {0};
 

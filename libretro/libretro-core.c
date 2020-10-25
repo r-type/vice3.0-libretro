@@ -207,6 +207,7 @@ static char retro_content_directory[RETRO_PATH_MAX] = {0};
 
 /* Disk Control context */
 dc_storage* dc = NULL;
+char dc_savestate_filename[RETRO_PATH_MAX] = {0};
 
 int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are just starting the core from scratch */
 /* runstate = RUNSTATE_FIRST_START: first time retro_run() is called after loading and starting core */
@@ -5755,6 +5756,38 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
    return false;
 }
 
+static void dc_sync_index(void)
+{
+    unsigned dc_index;
+    char* filename = strdup(dc_savestate_filename);
+    drive_t *drive = drive_context[0]->drive;
+    if (drive == NULL || string_is_empty(filename))
+        return;
+
+    switch (drive->type)
+    {
+        case DISK_IMAGE_TYPE_D64:
+        case DISK_IMAGE_TYPE_G64:
+        case DISK_IMAGE_TYPE_D71:
+        case DISK_IMAGE_TYPE_G71:
+            if (!drive->GCR_image_loaded)
+                return;
+            break;
+        default:
+            return;
+    }
+
+    for (dc_index = 0; dc_index < dc->count; dc_index++)
+    {
+        if (strcasestr(dc->files[dc_index], filename) && dc->index != dc_index)
+        {
+            dc->index = dc_index;
+            retro_disk_set_eject_state(true);
+            retro_disk_set_eject_state(false);
+        }
+    }
+}
+
 /* CPU traps ensure we are never saving snapshots or loading them in the middle of a cpu instruction.
    Without this, savestate corruption occurs.
 */
@@ -5841,7 +5874,6 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
-      resources_set_int("WarpMode", 0);
       snapshot_stream = snapshot_memory_read_fopen(data_, size);
       int success = 0;
       interrupt_maincpu_trigger_trap(load_trap, (void *)&success);
@@ -5855,6 +5887,8 @@ bool retro_unserialize(const void *data_, size_t size)
       }
       if (success)
       {
+         resources_set_int("WarpMode", 0);
+         dc_sync_index();
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");

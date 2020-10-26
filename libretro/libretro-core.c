@@ -5565,9 +5565,6 @@ void retro_run(void)
          opt_model_auto = 2;
       }
 #endif
-      /* Update work disk */
-      if (request_update_work_disk)
-         update_work_disk();
 
       /* Update samplerate if changed by core option */
       if (prev_sound_sample_rate != core_opt.SoundSampleRate)
@@ -5628,7 +5625,13 @@ void retro_run(void)
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
       /* current aspect ratio and screen size again here */
       update_geometry(0);
-   } 
+   }
+   else if (runstate == RUNSTATE_RUNNING)
+   {
+      /* Update work disk */
+      if (request_update_work_disk)
+         update_work_disk();
+   }
 
    /* Input poll */
    retro_poll_event();

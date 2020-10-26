@@ -207,6 +207,7 @@ static char retro_content_directory[RETRO_PATH_MAX] = {0};
 
 /* Disk Control context */
 dc_storage* dc = NULL;
+char dc_savestate_filename[RETRO_PATH_MAX] = {0};
 
 int runstate = RUNSTATE_FIRST_START; /* used to detect whether we are just starting the core from scratch */
 /* runstate = RUNSTATE_FIRST_START: first time retro_run() is called after loading and starting core */
@@ -549,6 +550,10 @@ static int process_cmdline(const char* argv)
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
         snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
 
+        /* Clean ZIP temp */
+        if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
+            remove_recurse(retro_temp_directory);
+
         char nib_input[RETRO_PATH_MAX] = {0};
         char nib_output[RETRO_PATH_MAX] = {0};
 
@@ -780,13 +785,13 @@ static int process_cmdline(const char* argv)
             Add_Option("-cart");
 #endif
 
-        if (strendswith(argv, ".m3u"))
+        if (strendswith(argv, "m3u"))
         {
             /* Parse the m3u file */
             dc_parse_m3u(dc, argv);
             is_fliplist = true;
         }
-        else if (strendswith(argv, ".vfl"))
+        else if (strendswith(argv, "vfl"))
         {
             /* Parse the vfl file */
             dc_parse_vfl(dc, argv);
@@ -858,7 +863,7 @@ static int process_cmdline(const char* argv)
                 cur_port = 2;
                 cur_port_locked = true;
             }
-            else if (strendswith(arg, ".m3u"))
+            else if (strendswith(arg, "m3u"))
             {
                 /* Parse the m3u file, don't pass to vice */
                 dc_parse_m3u(dc, arg);
@@ -1646,9 +1651,9 @@ void retro_set_environment(retro_environment_t cb)
          "vice_jiffydos",
          "System > JiffyDOS",
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         "For D64/D71/D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64/D71/D81 disk images only!\n'True Drive Emulation' required!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #elif defined(__X128__)
-         "For D64/D71/D81 disk images only!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "For D64/D71/D81 disk images only!\n'True Drive Emulation' required!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #endif
          {
             { "disabled", NULL },
@@ -4794,8 +4799,18 @@ void emu_reset(int type)
    }
 }
 
+static bool retro_disk_set_eject_state(bool ejected);
+
 void retro_reset(void)
 {
+   /* Reset DC index to first entry */
+   if (dc)
+   {
+      dc->index = 0;
+      retro_disk_set_eject_state(true);
+      retro_disk_set_eject_state(false);
+   }
+
    /* Trigger autostart-reset in retro_run() */
    request_restart = true;
 }
@@ -5550,9 +5565,6 @@ void retro_run(void)
          opt_model_auto = 2;
       }
 #endif
-      /* Update work disk */
-      if (request_update_work_disk)
-         update_work_disk();
 
       /* Update samplerate if changed by core option */
       if (prev_sound_sample_rate != core_opt.SoundSampleRate)
@@ -5613,7 +5625,13 @@ void retro_run(void)
       /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
       /* current aspect ratio and screen size again here */
       update_geometry(0);
-   } 
+   }
+   else if (runstate == RUNSTATE_RUNNING)
+   {
+      /* Update work disk */
+      if (request_update_work_disk)
+         update_work_disk();
+   }
 
    /* Input poll */
    retro_poll_event();
@@ -5755,6 +5773,38 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
    return false;
 }
 
+static void dc_sync_index(void)
+{
+    unsigned dc_index;
+    char* filename = strdup(dc_savestate_filename);
+    drive_t *drive = drive_context[0]->drive;
+    if (drive == NULL || string_is_empty(filename))
+        return;
+
+    switch (drive->type)
+    {
+        case DISK_IMAGE_TYPE_D64:
+        case DISK_IMAGE_TYPE_G64:
+        case DISK_IMAGE_TYPE_D71:
+        case DISK_IMAGE_TYPE_G71:
+            if (!drive->GCR_image_loaded)
+                return;
+            break;
+        default:
+            return;
+    }
+
+    for (dc_index = 0; dc_index < dc->count; dc_index++)
+    {
+        if (strcasestr(dc->files[dc_index], filename) && dc->index != dc_index)
+        {
+            dc->index = dc_index;
+            retro_disk_set_eject_state(true);
+            retro_disk_set_eject_state(false);
+        }
+    }
+}
+
 /* CPU traps ensure we are never saving snapshots or loading them in the middle of a cpu instruction.
    Without this, savestate corruption occurs.
 */
@@ -5841,7 +5891,6 @@ bool retro_unserialize(const void *data_, size_t size)
 {
    if (retro_ui_finalized)
    {
-      resources_set_int("WarpMode", 0);
       snapshot_stream = snapshot_memory_read_fopen(data_, size);
       int success = 0;
       interrupt_maincpu_trigger_trap(load_trap, (void *)&success);
@@ -5855,6 +5904,8 @@ bool retro_unserialize(const void *data_, size_t size)
       }
       if (success)
       {
+         resources_set_int("WarpMode", 0);
+         dc_sync_index();
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");

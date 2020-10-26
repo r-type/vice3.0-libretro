@@ -4799,8 +4799,18 @@ void emu_reset(int type)
    }
 }
 
+static bool retro_disk_set_eject_state(bool ejected);
+
 void retro_reset(void)
 {
+   /* Reset DC index to first entry */
+   if (dc)
+   {
+      dc->index = 0;
+      retro_disk_set_eject_state(true);
+      retro_disk_set_eject_state(false);
+   }
+
    /* Trigger autostart-reset in retro_run() */
    request_restart = true;
 }

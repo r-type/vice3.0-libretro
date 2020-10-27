@@ -177,9 +177,9 @@ int ui_init_finalize(void)
 
    /* Sensible defaults */
    log_resources_set_int("Mouse", 1);
-   log_resources_set_int("AutostartPrgMode", 1);
-   log_resources_set_int("VirtualDevices", 1);
    log_resources_set_int("Printer4", 1);
+   log_resources_set_int("AutostartPrgMode", 1);
+   log_resources_set_int("AutostartDelayRandom", 0);
 
    /* Mute sound at startup to hide 6581 ReSID init pop, and set back to 100 in retro_run() after 3 frames */
    log_resources_set_int("SoundVolume", 0);
@@ -189,46 +189,48 @@ int ui_init_finalize(void)
    log_resources_set_int("CrtcStretchVertical", 0);
 #endif
 
-   /* Core options */
+   /*** Core options ***/
+
+   /* Video */
 #if defined(__XVIC__)
    if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("VICExternalPalette", 0);
    else
    {
-      log_resources_set_int("VICExternalPalette", 1);
       log_resources_set_string("VICPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_int("VICExternalPalette", 1);
    }
 #elif defined(__XPLUS4__)
    if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("TEDExternalPalette", 0);
    else
    {
-      log_resources_set_int("TEDExternalPalette", 1);
       log_resources_set_string("TEDPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_int("TEDExternalPalette", 1);
    }
 #elif defined(__XPET__)
    if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("CrtcExternalPalette", 0);
    else
    {
-      log_resources_set_int("CrtcExternalPalette", 1);
       log_resources_set_string("CrtcPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_int("CrtcExternalPalette", 1);
    }
 #elif defined(__XCBM2__)
    if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("CrtcExternalPalette", 0);
    else
    {
-      log_resources_set_int("CrtcExternalPalette", 1);
       log_resources_set_string("CrtcPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_int("CrtcExternalPalette", 1);
    }
 #else
    if (!strcmp(core_opt.ExternalPalette, "default"))
       log_resources_set_int("VICIIExternalPalette", 0);
    else
    {
-      log_resources_set_int("VICIIExternalPalette", 1);
       log_resources_set_string("VICIIPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_int("VICIIExternalPalette", 1);
    }
 #endif
 
@@ -252,39 +254,27 @@ int ui_init_finalize(void)
    log_resources_set_int("TEDColorBrightness", core_opt.ColorBrightness);
 #endif
 
+   /* Input */
 #if !defined(__XCBM5x0__)
    if (core_opt.UserportJoyType == -1)
       log_resources_set_int("UserportJoy", 0);
    else
    {
-      log_resources_set_int("UserportJoy", 1);
       log_resources_set_int("UserportJoyType", core_opt.UserportJoyType);
+      log_resources_set_int("UserportJoy", 1);
    }
 #endif
 
-   log_resources_set_int("DriveTrueEmulation", core_opt.DriveTrueEmulation);
-   log_resources_set_int("AttachDevice8Readonly", core_opt.AttachDevice8Readonly);
+   /* Media */
    log_resources_set_int("AutostartWarp", core_opt.AutostartWarp);
-
-   if (core_opt.DriveSoundEmulation)
-   {
-      log_resources_set_int("DriveSoundEmulation", 1);
-      log_resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
-   }
-   else
-      log_resources_set_int("DriveSoundEmulation", 0);
-
-   if (opt_autoloadwarp)
-      log_resources_set_int("DriveSoundEmulationVolume", 0);
-
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)
-   log_resources_set_int("VICIIAudioLeak", core_opt.AudioLeak);
-#elif defined(__XVIC__)
-   log_resources_set_int("VICAudioLeak", core_opt.AudioLeak);
-#elif defined(__XPLUS4__)
-   log_resources_set_int("TEDAudioLeak", core_opt.AudioLeak);
+   log_resources_set_int("DriveTrueEmulation", core_opt.DriveTrueEmulation);
+   log_resources_set_int("VirtualDevices", core_opt.VirtualDevices);
+   log_resources_set_int("AttachDevice8Readonly", core_opt.AttachDevice8Readonly);
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   log_resources_set_int("EasyFlashWriteCRT", core_opt.EasyFlashWriteCRT);
 #endif
 
+   /* ROM */
 #if defined(__XSCPU64__)
    /* Replace kernal always from backup, because kernal loading replaces the embedded variable */
    memcpy(scpu64rom_scpu64_rom, scpu64rom_scpu64_rom_original, SCPU64_SCPU64_ROM_MAXSIZE);
@@ -343,6 +333,7 @@ int ui_init_finalize(void)
    }
 #endif
 
+   /* Model */
 #if defined(__XPET__)
    petmodel_set(core_opt.Model);
    keyboard_init();
@@ -360,6 +351,37 @@ int ui_init_finalize(void)
    c64model_set(core_opt.Model);
 #endif
 
+   /* Audio */
+   if (core_opt.DriveSoundEmulation)
+   {
+      log_resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
+      log_resources_set_int("DriveSoundEmulation", 1);
+   }
+   else
+      log_resources_set_int("DriveSoundEmulation", 0);
+
+   if (opt_autoloadwarp)
+      log_resources_set_int("DriveSoundEmulationVolume", 0);
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)
+   log_resources_set_int("VICIIAudioLeak", core_opt.AudioLeak);
+#elif defined(__XVIC__)
+   log_resources_set_int("VICAudioLeak", core_opt.AudioLeak);
+#elif defined(__XPLUS4__)
+   log_resources_set_int("TEDAudioLeak", core_opt.AudioLeak);
+#endif
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   if (core_opt.SFXSoundExpanderChip)
+   {
+      log_resources_set_int("SFXSoundExpanderChip", core_opt.SFXSoundExpanderChip);
+      log_resources_set_int("SFXSoundExpander", 1);
+   }
+   else
+      log_resources_set_int("SFXSoundExpander", 0);
+#endif
+
+   /* SID */
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
    if (core_opt.SidModel == 0xff)
       resources_set_int("SidEngine", core_opt.SidEngine);
@@ -375,19 +397,18 @@ int ui_init_finalize(void)
 
    if (core_opt.SidExtra)
    {
-      log_resources_set_int("SidStereo", 1);
       log_resources_set_int("SidStereoAddressStart", core_opt.SidExtra);
+      log_resources_set_int("SidStereo", 1);
    }
    else
       log_resources_set_int("SidStereo", 0);
 #endif
 
+   /* Misc model specific */
 #if defined(__X128__)
    log_resources_set_int("Go64Mode", core_opt.Go64Mode);
    log_resources_set_int("C128ColumnKey", core_opt.C128ColumnKey);
-#endif
-
-#if defined(__XVIC__)
+#elif defined(__XVIC__)
    log_resources_set_int("MegaCartNvRAMWriteBack", 1);
 
    unsigned int vic20mem = 0;
@@ -429,7 +450,16 @@ int ui_init_finalize(void)
    log_resources_set_int("RAMBlock2", (vic_blocks & VIC_BLK2) ? 1 : 0);
    log_resources_set_int("RAMBlock3", (vic_blocks & VIC_BLK3) ? 1 : 0);
    log_resources_set_int("RAMBlock5", (vic_blocks & VIC_BLK5) ? 1 : 0);
+#elif defined(__X64__) || defined(__X64SC__)
+   if (core_opt.REUsize)
+   {
+      log_resources_set_int("REUsize", core_opt.REUsize);
+      log_resources_set_int("REU", 1);
+   }
+   else
+      log_resources_set_int("REU", 0);
 #endif
+
    retro_ui_finalized = true;
    return 0;
 }

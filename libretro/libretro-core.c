@@ -4931,7 +4931,7 @@ void emu_reset(int type)
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
 
          /* Allow restarting PRGs with RUN */
-         if (strendswith(autostartString, "prg"))
+         if (autostartString != NULL && autostartString[0] != '\0' && strendswith(autostartString, "prg"))
             autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_NONE);
          break;
       case 2:

@@ -800,55 +800,167 @@ void update_input(int disable_physical_cursor_keys)
 #endif
 }
 
+int process_keyboard_pass_through()
+{
+   unsigned process_key = 0;
+
+   /* Defaults */
+   int fire_button = RETRO_DEVICE_ID_JOYPAD_B;
+   int jump_button = -1;
+
+   /* Fire button */
+   switch (opt_retropad_options)
+   {
+      case 1:
+      case 3:
+         fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
+         break;
+   }
+
+   /* Jump button */
+   switch (opt_retropad_options)
+   {
+      case 2:
+         jump_button = RETRO_DEVICE_ID_JOYPAD_A;
+         break;
+      case 3:
+         jump_button = RETRO_DEVICE_ID_JOYPAD_B;
+         break;
+   }
+   /* Null only with RetroPad */
+   if (vice_devices[0] == RETRO_DEVICE_JOYPAD)
+   {
+      if (mapper_keys[fire_button] || fire_button == turbo_fire_button)
+         fire_button = -1;
+
+      if (mapper_keys[jump_button] || jump_button == turbo_fire_button)
+         jump_button = -1;
+   }
+
+   /* Prevent RetroPad from generating keyboard key presses when RetroPad is controlled with keyboard */
+   switch (vice_devices[0])
+   {
+      case RETRO_DEVICE_JOYPAD:
+         if ((fire_button > -1       && input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, fire_button)) ||
+             (jump_button > -1       && input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, jump_button)) ||
+             (turbo_fire_button > -1 && input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, turbo_fire_button)) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_B]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_Y]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_A]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_X]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_L]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_R]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_L2]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_R2]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_L3]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_SELECT]) ||
+             (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_START])
+            )
+            process_key = 2; /* Skip all keyboard input when RetroPad buttons are pressed */
+         else
+         if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
+             input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
+             input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
+             input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)
+            )
+            process_key = 1; /* Skip cursor keys */
+         break;
+
+      case RETRO_DEVICE_VICE_JOYSTICK:
+         if ((fire_button > -1       && input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, fire_button)) ||
+             (jump_button > -1       && input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, jump_button))
+            )
+            process_key = 2; /* Skip all keyboard input when RetroPad buttons are pressed */
+         else
+         if (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
+             input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
+             input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
+             input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)
+            )
+            process_key = 1; /* Skip cursor keys */
+         break;
+   }
+
+   /* Fire button */
+   fire_button = RETRO_DEVICE_ID_JOYPAD_B;
+   switch (opt_retropad_options)
+   {
+      case 1:
+      case 3:
+         fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
+         break;
+   }
+
+   /* Jump button */
+   jump_button = -1;
+   switch (opt_retropad_options)
+   {
+      case 2:
+         jump_button = RETRO_DEVICE_ID_JOYPAD_A;
+         break;
+      case 3:
+         jump_button = RETRO_DEVICE_ID_JOYPAD_B;
+         break;
+   }
+   /* Null only with RetroPad */
+   if (vice_devices[1] == RETRO_DEVICE_JOYPAD)
+   {
+      if (mapper_keys[fire_button] || fire_button == turbo_fire_button)
+         fire_button = -1;
+
+      if (mapper_keys[jump_button] || jump_button == turbo_fire_button)
+         jump_button = -1;
+   }
+
+   switch (vice_devices[1])
+   {
+      case RETRO_DEVICE_JOYPAD:
+         if ((fire_button > -1       && input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, fire_button)) ||
+             (jump_button > -1       && input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, jump_button)) ||
+             (turbo_fire_button > -1 && input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, turbo_fire_button)) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_B]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_Y]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_A]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_X]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_L]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_R]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_L2]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_R2]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_L3]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_SELECT]) ||
+             (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_START]) ||
+              input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
+              input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
+              input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
+              input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)
+            )
+            process_key = 2; /* Skip all keyboard input from RetroPad 2 */
+         break;
+
+      case RETRO_DEVICE_VICE_JOYSTICK:
+         if ((fire_button > -1       && input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, fire_button)) ||
+             (jump_button > -1       && input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, jump_button)) ||
+              input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
+              input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
+              input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
+              input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)
+            )
+            process_key = 2; /* Skip all keyboard input from RetroPad 2 */
+         break;
+   }
+
+   return process_key;
+}
+
 void retro_poll_event()
 {
-   /* If RetroPad is controlled with keyboard keys, then prevent RetroPad from generating keyboard key presses */
-   if (!opt_keyboard_pass_through && vice_devices[0] != RETRO_DEVICE_VICE_KEYBOARD &&
-      (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START)
-      ))
-      update_input(2); /* Skip all keyboard input when RetroPad buttons are pressed */
-
-   else if (!opt_keyboard_pass_through && vice_devices[0] != RETRO_DEVICE_VICE_KEYBOARD &&
-      (input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
-       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)
-      ))
-      update_input(1); /* Process all inputs but disable cursor keys */
-
-   else if (!opt_keyboard_pass_through && vice_devices[1] != RETRO_DEVICE_VICE_KEYBOARD &&
-      (input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT) ||
-       input_state_cb(1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT)
-      ))
-      update_input(2); /* Skip all keyboard input from RetroPad 2 */
-
-   else
-      update_input(0); /* Process all inputs */
+   /* Keyboard pass-through */
+   unsigned process_key = 0;
+   if (!opt_keyboard_pass_through)
+      process_key = process_keyboard_pass_through();
+   update_input(process_key);
 
    /* retro joypad take control over keyboard joy */
    /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
@@ -972,8 +1084,12 @@ void retro_poll_event()
                fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
                break;
          }
-         if (mapper_keys[fire_button] || fire_button == turbo_fire_button)
-            fire_button = -1;
+         /* Null only with RetroPad */
+         if (vice_devices[retro_port] == RETRO_DEVICE_JOYPAD)
+         {
+            if (mapper_keys[fire_button] || fire_button == turbo_fire_button)
+               fire_button = -1;
+         }
 
          if ((fire_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, fire_button))
          || (opt_keyrah_keypad && vice_port < 3
@@ -1003,8 +1119,12 @@ void retro_poll_event()
                jump_button = RETRO_DEVICE_ID_JOYPAD_B;
                break;
          }
-         if (mapper_keys[jump_button] || jump_button == turbo_fire_button)
-            jump_button = -1;
+         /* Null only with RetroPad */
+         if (vice_devices[retro_port] == RETRO_DEVICE_JOYPAD)
+         {
+            if (mapper_keys[jump_button] || jump_button == turbo_fire_button)
+               jump_button = -1;
+         }
 
          if (jump_button > -1 && input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, jump_button))
          {
@@ -1027,7 +1147,7 @@ void retro_poll_event()
             j &= ~0x01;
 
          /* Turbo fire */
-         if (turbo_fire_button != -1)
+         if (vice_devices[retro_port] == RETRO_DEVICE_JOYPAD && turbo_fire_button != -1)
          {
             if (input_state_cb(retro_port, RETRO_DEVICE_JOYPAD, 0, turbo_fire_button))
             {

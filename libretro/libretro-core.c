@@ -3034,7 +3034,7 @@ void retro_set_environment(retro_environment_t cb)
             { "12", "12 frames" },
             { NULL, NULL },
          },
-         "4"
+         "6"
       },
 #endif
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)

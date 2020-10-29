@@ -49,7 +49,7 @@ char retro_key_state[RETROK_LAST] = {0};
 char retro_key_state_old[RETROK_LAST] = {0};
 static bool noautostart = false;
 static char* autostartString = NULL;
-static char full_path[RETRO_PATH_MAX] = {0};
+char full_path[RETRO_PATH_MAX] = {0};
 static char* core_options_legacy_strings = NULL;
 
 static snapshot_stream_t* snapshot_stream = NULL;
@@ -1671,9 +1671,9 @@ void retro_set_environment(retro_environment_t cb)
          "vice_jiffydos",
          "System > JiffyDOS",
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         "For D64/D71/D81 disk images only!\n'True Drive Emulation' required!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #elif defined(__X128__)
-         "For D64/D71/D81 disk images only!\n'True Drive Emulation' required!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #endif
          {
             { "disabled", NULL },
@@ -1686,7 +1686,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_read_vicerc",
          "System > Read 'vicerc'",
-         "Process 'system/vice/vicerc'. The config file can be used to set other options, such as cartridges.",
+         "Process first found 'vicerc' in this order:\n1. 'saves/[content].vicerc'\n2. 'saves/vicerc'\n3. 'system/vice/vicerc'",
          {
             { "disabled", NULL },
             { "enabled", NULL },

@@ -2416,7 +2416,9 @@ void retro_set_environment(retro_environment_t cb)
             { "FastSID", NULL },
             { "ReSID", NULL },
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
+#ifdef HAVE_RESID33
             { "ReSID-3.3", NULL },
+#endif
             { "ReSID-FP", NULL },
 #endif
             { NULL, NULL },

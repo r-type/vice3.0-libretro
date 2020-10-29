@@ -650,6 +650,10 @@ static int reu_deactivate(void)
         return 0;
     }
 
+#ifdef __LIBRETRO__
+    log_message(reu_log, "REU unit uninstalled.");
+#endif
+
     if (!util_check_null_string(reu_filename)) {
         if (reu_write_image) {
             log_message(reu_log, "Writing REU image %s.", reu_filename);

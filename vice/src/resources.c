@@ -1168,25 +1168,31 @@ int resources_load(const char *fname)
 extern cmdline_option_ram_t *options;
 static char* disabled_resources[] =
 {
-    // Core options
-    "Mouse", "AutostartPrgMode", "VirtualDevices", "CrtcFilter", "CrtcStretchVertical",
+    /* Core options */
+    "Mouse", "AutostartPrgMode", "AutostartDelayRandom", "VirtualDevices", "CrtcFilter", "CrtcStretchVertical",
     "VICExternalPalette", "VICPaletteFile", "TEDExternalPalette", "TEDPaletteFile",
     "CrtcExternalPalette", "CrtcPaletteFile", "VICIIExternalPalette", "VICIIPaletteFile",
+    "VICColorGamma", "VICColorSaturation", "VICColorContrast", "VICColorBrightness", "VICColorTint",
+    "TEDColorGamma", "TEDColorSaturation", "TEDColorContrast", "TEDColorBrightness", "TEDColorTint",
     "VICIIColorGamma", "VICIIColorSaturation", "VICIIColorContrast", "VICIIColorBrightness", "VICIIColorTint",
-    "UserportJoy", "UserportJoyType", "DriveTrueEmulation", "DriveSoundEmulation", "DriveSoundEmulationVolume",
-    "AutostartWarp", "VICIIAudioLeak", "VICAudioLeak", "SidStereo", "SidStereoAddressStart",
+    "AutostartWarp", "AttachDevice8Readonly", "EasyFlashWriteCRT", "UserportJoy", "UserportJoyType",
+    "DriveTrueEmulation", "DriveSoundEmulation", "DriveSoundEmulationVolume",
+    "VICIIAudioLeak", "VICAudioLeak", "TEDAudioLeak", "SidStereo", "SidStereoAddressStart",
     "SidEngine", "SidModel", "SidResidSampling", "SidResidPassband", "SidResidGain", "SidResidFilterBias",
-    "SidResid8580Passband", "SidResid8580Gain", "SidResid8580FilterBias",
-    "Go64Mode", "C128ColumnKey", "RAMBlock0", "RAMBlock1", "RAMBlock2", "RAMBlock3", "RAMBlock5",
+    "SidResid8580Passband", "SidResid8580Gain", "SidResid8580FilterBias", "SFXSoundExpander", "SFXSoundExpanderChip",
+    "Go64Mode", "C128ColumnKey", "RAMBlock0", "RAMBlock1", "RAMBlock2", "RAMBlock3", "RAMBlock5", "REU", "REUsize",
     "Drive8Type", "WarpMode", "KeymapSymFile", "KeymapPosFile", "KeymapIndex",
 
-    // Frontend resources
+    /* Frontend resources */
     "SDLStatusbar", "ExitScreenshotName", "ExitScreenshotName1", "RefreshRate", "SoundRecordDeviceName", "SoundRecordDeviceArg",
     "SoundDeviceName", "Sound", "SoundSampleRate", "SoundBufferSize", "SoundFragmentSize", "SoundDeviceArg",
     "SoundSuspendTime", "SoundSpeedAdjustment", "SoundVolume", "SoundOutput", "MachineVideoStandard",
     "VICIIVideoCache", "VICIIDoubleScan", "VICIIHwScale", "VICIIDoubleSize", "VICIIBorderMode",
     "VICIIPALScanLineShade", "VICIIPALBlur", "VICIIPALOddLinePhase", "VICIIPALOddLineOffset", "VICIIFilter",
-    "EventSnapshotDir", "EventStartSnapshot", "EventEndSnapshot", "EventStartMode", "EventImageInclude"
+    "EventSnapshotDir", "EventStartSnapshot", "EventEndSnapshot", "EventStartMode", "EventImageInclude",
+
+    /* Stubbed resources */
+    "DebugCartEnable", "CPMCart", "MonitorServerAddress", "MonitorServer"
 };
 static int disabled_resources_num;
 static char *resources_get_description(const char *name)

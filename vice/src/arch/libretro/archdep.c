@@ -67,7 +67,9 @@
 #include "../shared/archdep_atexit.c"
 #include "../shared/archdep_extra_title_text.c"
 
+#include "libretro-core.h"
 extern unsigned int opt_read_vicerc;
+extern char full_path[RETRO_PATH_MAX];
 
 static char *argv0 = NULL;
 static char *boot_path = NULL;
@@ -298,7 +300,22 @@ char *archdep_default_resource_file_name(void)
         return util_concat(home, "/.vice/vicerc", NULL);
     } else {
         if (opt_read_vicerc)
+        {
+            char content_vicerc[RETRO_PATH_MAX] = {0};
+            char content_basename[RETRO_PATH_MAX] = {0};
+            snprintf(content_basename, sizeof(content_basename), "%s", path_basename(full_path));
+            snprintf(content_basename, sizeof(content_basename), "%s", path_remove_extension(content_basename));
+            snprintf(content_vicerc, sizeof(content_vicerc), "%s%s%s.vicerc", SAVEDIR, FSDEV_DIR_SEP_STR, content_basename);
+            /* Process "saves/[content].vicerc" */
+            if (!ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
+               return util_concat(content_vicerc, NULL);
+            /* Process "saves/vicerc" */
+            snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", SAVEDIR, FSDEV_DIR_SEP_STR);
+            if (!ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
+               return util_concat(content_vicerc, NULL);
+            /* Process "system/vice/vicerc" */
             return util_concat(archdep_pref_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
+        }
         else
             return NULL;
     }

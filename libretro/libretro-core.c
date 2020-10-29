@@ -49,7 +49,7 @@ char retro_key_state[RETROK_LAST] = {0};
 char retro_key_state_old[RETROK_LAST] = {0};
 static bool noautostart = false;
 static char* autostartString = NULL;
-static char full_path[RETRO_PATH_MAX] = {0};
+char full_path[RETRO_PATH_MAX] = {0};
 static char* core_options_legacy_strings = NULL;
 
 static snapshot_stream_t* snapshot_stream = NULL;
@@ -1631,6 +1631,26 @@ void retro_set_environment(retro_environment_t cb)
          },
          "C64 PAL auto"
       },
+#if !defined(__XSCPU64__)
+      {
+         "vice_ram_expansion_unit",
+         "System > RAM Expansion Unit",
+         "Changing while running resets the system!",
+         {
+            { "none", "disabled" },
+            { "128kB", "128kB (1700)" },
+            { "256kB", "256kB (1764)" },
+            { "512kB", "512kB (1750)" },
+            { "1024kB", "1024kB" },
+            { "2048kB", "2048kB" },
+            { "4096kB", "4096kB" },
+            { "8192kB", "8192kB" },
+            { "16384kB", "16384kB" },
+            { NULL, NULL },
+         },
+         "none"
+      },
+#endif
 #endif
 #if defined(__XSCPU64__)
       {
@@ -1651,9 +1671,9 @@ void retro_set_environment(retro_environment_t cb)
          "vice_jiffydos",
          "System > JiffyDOS",
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         "For D64/D71/D81 disk images only!\n'True Drive Emulation' required!\nROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #elif defined(__X128__)
-         "For D64/D71/D81 disk images only!\n'True Drive Emulation' required!\nROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+         "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #endif
          {
             { "disabled", NULL },
@@ -1666,7 +1686,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_read_vicerc",
          "System > Read 'vicerc'",
-         "Process 'system/vice/vicerc'. The config file can be used to set other options, such as cartridges.",
+         "Process first found 'vicerc' in this order:\n1. 'saves/[content].vicerc'\n2. 'saves/vicerc'\n3. 'system/vice/vicerc'",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1702,7 +1722,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading. Mutes 'Drive Sound Emulation'.",
+         "Toggles warp mode always during disk and tape loading. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1713,7 +1733,18 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_drive_true_emulation",
          "Media > True Drive Emulation",
-         "Loads much slower, but some games need it.",
+         "Loads much slower, but some games need it.\nRequired for 'JiffyDOS', 'Automatic Load Warp' and LED driver interface!",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
+      {
+         "vice_virtual_device_traps",
+         "Media > Virtual Device Traps",
+         "Required for printer device, but causes loading issues on rare cases.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -1732,6 +1763,19 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+      {
+         "vice_easyflash_write_protection",
+         "Media > EasyFlash Write Protection",
+         "Makes EasyFlash cartridges read only.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
       {
          "vice_work_disk",
          "Media > Global Work Disk",
@@ -2292,6 +2336,19 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
       {
+         "vice_sound_sample_rate",
+         "Audio > Output Sample Rate",
+         "Slightly higher quality or higher performance.",
+         {
+            { "22050", NULL },
+            { "44100", NULL },
+            { "48000", NULL },
+            { "96000", NULL },
+            { NULL, NULL },
+         },
+         "48000"
+      },
+      {
          "vice_drive_sound_emulation",
          "Audio > Drive Sound Emulation",
          "'True Drive Emulation' & D64/D71 disk image required.",
@@ -2349,24 +2406,11 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
 #endif
-      {
-         "vice_sound_sample_rate",
-         "Audio > Output Sample Rate",
-         "Slightly higher quality or higher performance.",
-         {
-            { "22050", NULL },
-            { "44100", NULL },
-            { "48000", NULL },
-            { "96000", NULL },
-            { NULL, NULL },
-         },
-         "48000"
-      },
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
       {
          "vice_sid_engine",
          "Audio > SID Engine",
-         "'ReSID' is accurate but slower.",
+         "'ReSID' is accurate, 'ReSID-FP' is more accurate, 'FastSID' is the last resort.",
          {
             { "FastSID", NULL },
             { "ReSID", NULL },
@@ -2386,7 +2430,7 @@ void retro_set_environment(retro_environment_t cb)
             { "default", "Default" },
             { "6581", NULL },
             { "8580", NULL },
-            { "8580RD", "8580 ReSID + Digi Boost" },
+            { "8580RD", "8580 ReSID + digi boost" },
             { NULL, NULL },
          },
          "default"
@@ -2463,7 +2507,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_resid_filterbias",
-         "Audio > ReSID Filter Bias",
+         "Audio > ReSID Filter 6581 Bias",
          "",
          {
             { "-5000", NULL },
@@ -2520,6 +2564,20 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "1500"
+      },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+      {
+         "vice_sfx_sound_expander",
+         "Audio > SFX Sound Expander",
+         "",
+         {
+            { "disabled", NULL },
+            { "3526", "YM3526" },
+            { "3812", "YM3812" },
+            { NULL, NULL },
+         },
+         "disabled"
       },
 #endif
 #if !defined(__XPET__) && !defined(__XCBM2__)
@@ -3252,6 +3310,23 @@ static void update_variables(void)
       core_opt.AttachDevice8Readonly = readonly;
    }
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   var.key = "vice_easyflash_write_protection";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int writecrt = 0;
+
+      if (!strcmp(var.value, "disabled")) writecrt = 1;
+      else                                writecrt = 0;
+
+      if (retro_ui_finalized && core_opt.EasyFlashWriteCRT != writecrt)
+         log_resources_set_int("EasyFlashWriteCRT", writecrt);
+
+      core_opt.EasyFlashWriteCRT = writecrt;
+   }
+#endif
+
    var.key = "vice_work_disk";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3272,6 +3347,22 @@ static void update_variables(void)
 
       if (work_disk_type != opt_work_disk_type || work_disk_unit != opt_work_disk_unit)
          request_update_work_disk = true;
+   }
+
+   var.key = "vice_virtual_device_traps";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (retro_ui_finalized)
+      {
+         if (!strcmp(var.value, "disabled") && core_opt.VirtualDevices)
+            log_resources_set_int("VirtualDevices", 0);
+         else if (!strcmp(var.value, "enabled") && !core_opt.VirtualDevices)
+            log_resources_set_int("VirtualDevices", 1);
+      }
+
+      if (!strcmp(var.value, "disabled")) core_opt.VirtualDevices = 0;
+      else                                core_opt.VirtualDevices = 1;
    }
 
    var.key = "vice_drive_true_emulation";
@@ -3431,7 +3522,7 @@ static void update_variables(void)
          log_resources_set_int("RAMBlock2", (vic_blocks & VIC_BLK2) ? 1 : 0);
          log_resources_set_int("RAMBlock3", (vic_blocks & VIC_BLK3) ? 1 : 0);
          log_resources_set_int("RAMBlock5", (vic_blocks & VIC_BLK5) ? 1 : 0);
-         machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+         request_restart = true;
       }
 
       core_opt.VIC20Memory = vic20mem;
@@ -3483,10 +3574,7 @@ static void update_variables(void)
       else if (!strcmp(var.value, "VDC"))   c128columnkey = 0;
 
       if (retro_ui_finalized && core_opt.C128ColumnKey != c128columnkey)
-      {
          log_resources_set_int("C128ColumnKey", c128columnkey);
-         machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
-      }
 
       core_opt.C128ColumnKey = c128columnkey;
    }
@@ -3635,6 +3723,31 @@ static void update_variables(void)
 
       core_opt.Model = model;
    }
+
+#if !defined(__XSCPU64__)
+   var.key = "vice_ram_expansion_unit";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int reusize = 0;
+
+      if (strcmp(var.value, "none"))
+         reusize = atoi(var.value);
+
+      if (retro_ui_finalized && core_opt.REUsize != reusize)
+      {
+         if (!reusize)
+            resources_set_int("REU", 0);
+         else
+         {
+            resources_set_int("REUsize", reusize);
+            resources_set_int("REU", 1);
+         }
+         request_restart = true;
+      }
+      core_opt.REUsize = reusize;
+   }
+#endif
 #endif
 
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
@@ -3690,9 +3803,9 @@ static void update_variables(void)
             log_resources_set_int("SidStereo", 0);
          else
          {
+            log_resources_set_int("SidStereoAddressStart", sid_extra);
             if (!core_opt.SidExtra)
                log_resources_set_int("SidStereo", 1);
-            log_resources_set_int("SidStereoAddressStart", sid_extra);
          }
       }
 
@@ -3769,6 +3882,29 @@ static void update_variables(void)
          log_resources_set_int("SidResid8580FilterBias", val);
 
       core_opt.SidResid8580FilterBias = val;
+   }
+#endif
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   var.key = "vice_sfx_sound_expander";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int sfx_chip = atoi(var.value);
+
+      if (retro_ui_finalized && core_opt.SFXSoundExpanderChip != sfx_chip)
+      {
+         if (!sfx_chip)
+            log_resources_set_int("SFXSoundExpander", 0);
+         else
+         {
+            log_resources_set_int("SFXSoundExpanderChip", sfx_chip);
+            if (!core_opt.SFXSoundExpanderChip)
+               log_resources_set_int("SFXSoundExpander", 1);
+         }
+      }
+
+      core_opt.SFXSoundExpanderChip = sfx_chip;
    }
 #endif
 
@@ -4659,14 +4795,14 @@ static void update_variables(void)
    /* Audio options */
    option_display.visible = opt_audio_options_display;
 
+   option_display.key = "vice_sound_sample_rate";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_audio_leak_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-   option_display.key = "vice_sound_sample_rate";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
    option_display.key = "vice_sid_engine";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -4683,6 +4819,10 @@ static void update_variables(void)
    option_display.key = "vice_resid_filterbias";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_resid_8580filterbias";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   option_display.key = "vice_sfx_sound_expander";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
 
@@ -4789,6 +4929,10 @@ void emu_reset(int type)
          break;
       case 1:
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
+
+         /* Allow restarting PRGs with RUN */
+         if (autostartString != NULL && autostartString[0] != '\0' && strendswith(autostartString, "prg"))
+            autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_NONE);
          break;
       case 2:
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);

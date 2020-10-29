@@ -131,6 +131,8 @@ struct libretro_core_options {
    int UserportJoyType;
    int AutostartWarp;
    int AttachDevice8Readonly;
+   int EasyFlashWriteCRT;
+   int VirtualDevices;
    int DriveTrueEmulation;
    int DriveSoundEmulation;
    int AudioLeak;
@@ -143,6 +145,7 @@ struct libretro_core_options {
    int SidResidGain;
    int SidResidFilterBias;
    int SidResid8580FilterBias;
+   int SFXSoundExpanderChip;
    char ExternalPalette[RETRO_PATH_MAX];
    int ColorGamma;
    int ColorTint;
@@ -152,6 +155,8 @@ struct libretro_core_options {
 #if defined(__X128__)
    int C128ColumnKey;
    int Go64Mode;
+#elif defined(__X64__) || defined(__X64SC__)
+   int REUsize;
 #elif defined(__XVIC__)
    int VIC20Memory;
 #endif

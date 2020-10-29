@@ -56,7 +56,7 @@ static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
-unsigned int vice_devices[5] = {0};
+unsigned int retro_devices[RETRO_DEVICES] = {0};
 unsigned int opt_video_options_display = 0;
 unsigned int opt_audio_options_display = 0;
 unsigned int opt_mapping_options_display = 1;
@@ -198,6 +198,7 @@ static retro_video_refresh_t video_cb = NULL;
 static retro_audio_sample_t audio_cb = NULL;
 static retro_audio_sample_batch_t audio_batch_cb = NULL;
 static retro_environment_t environ_cb = NULL;
+bool libretro_supports_bitmasks = false;
 
 char retro_save_directory[RETRO_PATH_MAX] = {0};
 char retro_temp_directory[RETRO_PATH_MAX] = {0};
@@ -2887,7 +2888,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_y",
          "RetroPad > Y",
-         "VKBD: Toggle 'CapsLock'. Remapping to non-keyboard keys overrides VKBD function!",
+         "VKBD: Toggle 'ShiftLock'. Remapping to non-keyboard keys overrides VKBD function!",
          {{ NULL, NULL }},
          "---"
       },
@@ -5274,6 +5275,9 @@ void retro_init(void)
    #undef RETRO_DESCRIPTOR_BLOCK
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &input_descriptors);
 
+   if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
+      libretro_supports_bitmasks = true;
+
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
@@ -5311,6 +5315,7 @@ void retro_deinit(void)
    pix_bytes_initialized = false;
    cur_port_locked = false;
    opt_aspect_ratio_locked = false;
+   libretro_supports_bitmasks = false;
 }
 
 unsigned retro_api_version(void)
@@ -5320,8 +5325,8 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device(unsigned port, unsigned device)
 {
-   if (port < 5)
-      vice_devices[port] = device;
+   if (port < RETRO_DEVICES)
+      retro_devices[port] = device;
 }
 
 void retro_get_system_info(struct retro_system_info *info)

@@ -1417,28 +1417,27 @@ void retro_set_led(unsigned led)
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_controller_description p1_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p2_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p3_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p4_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p5_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
 
@@ -1447,7 +1446,7 @@ void retro_set_environment(retro_environment_t cb)
       { p2_controllers, 3 }, /* port 2 */
       { p3_controllers, 3 }, /* port 3 */
       { p4_controllers, 3 }, /* port 4 */
-      { p5_controllers, 3 }, /* port 5 */
+      { p5_controllers, 2 }, /* port 5 */
       { NULL, 0 }
    };
 

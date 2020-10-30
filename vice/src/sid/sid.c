@@ -57,7 +57,9 @@
 #ifdef HAVE_RESID
 #include "resid.h"
 #if defined(__LIBRETRO__) && (defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__))
+#ifdef HAVE_RESID33
 extern sid_engine_t resid33_hooks;
+#endif
 extern sid_engine_t residfp_hooks;
 #endif
 #endif
@@ -347,9 +349,11 @@ sound_t *sid_sound_machine_open(int chipno)
         sid_engine = resid_hooks;
     }
 #if defined(__LIBRETRO__) && (defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__))
+#ifdef HAVE_RESID33
     if (sidengine == SID_ENGINE_RESID33) {
         sid_engine = resid33_hooks;
     }
+#endif
     if (sidengine == SID_ENGINE_RESIDFP) {
         sid_engine = residfp_hooks;
     }
@@ -569,7 +573,9 @@ int sid_sound_machine_cycle_based(void)
 #ifdef HAVE_RESID
         case SID_ENGINE_RESID:
 #if defined(__LIBRETRO__) && (defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__))
+#ifdef HAVE_RESID33
         case SID_ENGINE_RESID33:
+#endif
         case SID_ENGINE_RESIDFP:
 #endif
             return 1;
@@ -619,11 +625,13 @@ static void set_sound_func(void)
             sid_dump_func = sound_dump;
         }
 #if defined(__LIBRETRO__) && (defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__))
+#ifdef HAVE_RESID33
         if (sid_engine_type == SID_ENGINE_RESID33) {
             sid_read_func = sound_read;
             sid_store_func = sound_store;
             sid_dump_func = sound_dump;
         }
+#endif
         if (sid_engine_type == SID_ENGINE_RESIDFP) {
             sid_read_func = sound_read;
             sid_store_func = sound_store;

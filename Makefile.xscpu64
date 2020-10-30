@@ -42,7 +42,6 @@ SOURCES_CXX += \
     $(EMU)/resid/version.cc \
     $(EMU)/resid/voice.cc \
     $(EMU)/resid/wave.cc \
-    $(EMU)/sid/resid-33.cc \
     $(EMU)/sid/resid.cc \
     $(EMU)/sid/resid-fp.cc \
     $(EMU)/residfp/builders/residfp-builder/residfp/version.cc \
@@ -62,6 +61,11 @@ SOURCES_CXX += \
     $(EMU)/residfp/builders/residfp-builder/residfp/Spline.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/WaveformCalculator.cpp \
     $(EMU)/residfp/builders/residfp-builder/residfp/WaveformGenerator.cpp
+
+ifeq ($(HAVE_RESID33), 1)
+COMMONFLAGS += -DHAVE_RESID33
+SOURCES_CXX += $(EMU)/sid/resid-33.cc
+endif
 
 SOURCES_C += \
     $(EMU)/alarm.c \

@@ -56,7 +56,7 @@ static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
 static int save_trap_happened = 0;
 
-unsigned int vice_devices[5] = {0};
+unsigned int retro_devices[RETRO_DEVICES] = {0};
 unsigned int opt_video_options_display = 0;
 unsigned int opt_audio_options_display = 0;
 unsigned int opt_mapping_options_display = 1;
@@ -198,6 +198,7 @@ static retro_video_refresh_t video_cb = NULL;
 static retro_audio_sample_t audio_cb = NULL;
 static retro_audio_sample_batch_t audio_batch_cb = NULL;
 static retro_environment_t environ_cb = NULL;
+bool libretro_supports_bitmasks = false;
 
 char retro_save_directory[RETRO_PATH_MAX] = {0};
 char retro_temp_directory[RETRO_PATH_MAX] = {0};
@@ -1416,28 +1417,27 @@ void retro_set_led(unsigned led)
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_controller_description p1_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p2_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p3_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p4_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p5_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+      { "Keyboard", RETRO_DEVICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
 
@@ -1446,7 +1446,7 @@ void retro_set_environment(retro_environment_t cb)
       { p2_controllers, 3 }, /* port 2 */
       { p3_controllers, 3 }, /* port 3 */
       { p4_controllers, 3 }, /* port 4 */
-      { p5_controllers, 3 }, /* port 5 */
+      { p5_controllers, 2 }, /* port 5 */
       { NULL, 0 }
    };
 
@@ -2415,7 +2415,9 @@ void retro_set_environment(retro_environment_t cb)
             { "FastSID", NULL },
             { "ReSID", NULL },
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
+#ifdef HAVE_RESID33
             { "ReSID-3.3", NULL },
+#endif
             { "ReSID-FP", NULL },
 #endif
             { NULL, NULL },
@@ -2887,7 +2889,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_y",
          "RetroPad > Y",
-         "VKBD: Toggle 'CapsLock'. Remapping to non-keyboard keys overrides VKBD function!",
+         "VKBD: Toggle 'ShiftLock'. Remapping to non-keyboard keys overrides VKBD function!",
          {{ NULL, NULL }},
          "---"
       },
@@ -3031,7 +3033,7 @@ void retro_set_environment(retro_environment_t cb)
             { "12", "12 frames" },
             { NULL, NULL },
          },
-         "4"
+         "6"
       },
 #endif
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
@@ -5274,6 +5276,9 @@ void retro_init(void)
    #undef RETRO_DESCRIPTOR_BLOCK
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &input_descriptors);
 
+   if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
+      libretro_supports_bitmasks = true;
+
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
@@ -5311,6 +5316,7 @@ void retro_deinit(void)
    pix_bytes_initialized = false;
    cur_port_locked = false;
    opt_aspect_ratio_locked = false;
+   libretro_supports_bitmasks = false;
 }
 
 unsigned retro_api_version(void)
@@ -5320,8 +5326,8 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device(unsigned port, unsigned device)
 {
-   if (port < 5)
-      vice_devices[port] = device;
+   if (port < RETRO_DEVICES)
+      retro_devices[port] = device;
 }
 
 void retro_get_system_info(struct retro_system_info *info)

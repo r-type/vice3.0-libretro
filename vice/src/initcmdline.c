@@ -287,7 +287,6 @@ int initcmdline_init(void)
     }
 
 #ifndef __LIBRETRO__
-//FIXME libco
     archdep_vice_atexit(cmdline_free_startup_images);
 #endif
     return 0;
@@ -381,8 +380,8 @@ void initcmdline_check_attach(void)
         }
     }
 
-    // Keep autostart string for libretro-core
 #ifndef __LIBRETRO__
+    /* Keep autostart string for libretro-core */
     cmdline_free_autostart_string();
 #endif /* __LIBRETRO__ */
 }

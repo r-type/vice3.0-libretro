@@ -4923,6 +4923,13 @@ void emu_reset(int type)
          /* Hard reset before autostart */
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 
+         /* Check command line on autostart */
+         if (dc->command || CMDFILE[0])
+         {
+            initcmdline_check_attach();
+            break;
+         }
+
          /* Allow autostarting with a different disk */
          if (dc->count > 1)
             autostartString = x_strdup(dc->files[dc->index]);

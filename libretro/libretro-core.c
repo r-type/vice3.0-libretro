@@ -515,13 +515,17 @@ static int process_cmdline(const char* argv)
 
     /* Core command line is now parsed to ARGUV, ARGUC. */
     /* Build command file for VICE in XARGV, PARAMCOUNT. */
-
     bool single_image = strcmp(ARGUV[0], CORE_NAME) != 0;
+
+    /* Allow using command lines without CORE_NAME by not allowing single_image */
+    if (strendswith(argv, ".cmd"))
+       single_image = false;
 
     /* If first command line argument is CORE_NAME, it's an extended command line
      * otherwise it's just image filename */
     if (single_image)
     {
+        /* Command doesn't start with core name, so add it first */
         Add_Option(CORE_NAME);
 
         /* Ignore parsed arguments, read filename directly from argv */
@@ -841,11 +845,9 @@ static int process_cmdline(const char* argv)
     /* It might be single_image initially, but changed by M3U file #COMMAND line */
     if (!single_image)
     {
+        /* Command doesn't start with core name, so add it first */
         if (ARGUC == 0 || strcmp(ARGUV[0], CORE_NAME) != 0)
-        {
-            /* Command doesn't start with core name, so add it first */
             Add_Option(CORE_NAME);
-        }
 
         bool is_flipname_param = false;
         /* Scan vice arguments for special processing */

@@ -49,6 +49,7 @@ char retro_key_state[RETROK_LAST] = {0};
 char retro_key_state_old[RETROK_LAST] = {0};
 static bool noautostart = false;
 static char* autostartString = NULL;
+static char* autostartProgram = NULL;
 char full_path[RETRO_PATH_MAX] = {0};
 static char* core_options_legacy_strings = NULL;
 
@@ -492,6 +493,8 @@ static int process_cmdline(const char* argv)
     cur_port_locked = false;
     free(autostartString);
     autostartString = NULL;
+    free(autostartProgram);
+    autostartProgram = NULL;
 
     /* Load command line arguments from cmd file */
     if (strendswith(argv, ".cmd"))
@@ -812,9 +815,15 @@ static int process_cmdline(const char* argv)
 
             if (!dc->command)
             {
+                char option[RETRO_PATH_MAX] = {0};
+                if (dc->load[0])
+                    snprintf(option, sizeof(option), "%s:%s", dc->files[0], dc->load[0]);
+                else
+                    snprintf(option, sizeof(option), "%s", dc->files[0]);
+
                 /* Add first disk from list as autostart parameter */
                 if (dc->count != 0)
-                    Add_Option(dc->files[0]);
+                    Add_Option(option);
             }
             else
             {
@@ -1142,7 +1151,7 @@ void update_from_vice()
         if ((attachedImage = tape_get_file_name()) != NULL)
         {
             dc->unit = 1;
-            dc_add_file(dc, attachedImage);
+            dc_add_file(dc, attachedImage, NULL);
         }
         else
         {
@@ -1153,7 +1162,7 @@ void update_from_vice()
                 if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
                 {
                     dc->unit = unit;
-                    dc_add_file(dc, attachedImage);
+                    dc_add_file(dc, attachedImage, NULL);
                     break;
                 }
             }
@@ -1164,7 +1173,7 @@ void update_from_vice()
             if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
             {
                 dc->unit = unit;
-                dc_add_file(dc, attachedImage);
+                dc_add_file(dc, attachedImage, NULL);
             }
 #endif
         }
@@ -4930,18 +4939,27 @@ void emu_reset(int type)
             break;
          }
 
+         /* Build direct launch PRG */
+         if (dc->load[dc->index])
+         {
+            autostartString  = strdup(dc->files[dc->index]);
+            path_remove_program(autostartString);
+            autostartProgram = strdup(dc->load[dc->index]);
+            charset_petconvstring((uint8_t *)autostartProgram, 0);
+         }
+
          /* Allow autostarting with a different disk */
          if (dc->count > 1)
             autostartString = x_strdup(dc->files[dc->index]);
          if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
-            autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+            autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_RUN);
          break;
       case 1:
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
 
          /* Allow restarting PRGs with RUN */
          if (autostartString != NULL && autostartString[0] != '\0' && strendswith(autostartString, "prg"))
-            autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_NONE);
+            autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_NONE);
          break;
       case 2:
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
@@ -5096,6 +5114,7 @@ static bool retro_disk_add_image_index(void)
          dc->files[dc->count]  = NULL;
          dc->labels[dc->count] = NULL;
          dc->names[dc->count]  = NULL;
+         dc->load[dc->count]   = NULL;
          dc->types[dc->count]  = DC_IMAGE_TYPE_NONE;
          dc->count++;
          return true;
@@ -5901,6 +5920,8 @@ void retro_unload_game(void)
    dc_reset(dc);
    free(autostartString);
    autostartString = NULL;
+   free(autostartProgram);
+   autostartProgram = NULL;
 }
 
 unsigned retro_get_region(void)

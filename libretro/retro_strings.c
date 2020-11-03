@@ -17,6 +17,8 @@
  */
 
 #include "retro_strings.h"
+#include "file/file_path.h"
+#include "string/stdstring.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -83,4 +85,16 @@ bool strendswith(const char* str, const char* end)
 			return true;
 		
 	return false;
+}
+
+/* Removes ':PRG' */
+char *path_remove_program(char *path)
+{
+   char *last = !string_is_empty(path)
+      ? (char*)strrchr(path_basename(path), ':') : NULL;
+   if (!last)
+      return NULL;
+   if (*last)
+      *last = '\0';
+   return path;
 }

@@ -298,7 +298,8 @@ void dc_reset(dc_storage* dc)
         dc->labels[i] = NULL;
         free(dc->names[i]);
         dc->names[i] = NULL;
-
+        free(dc->load[i]);
+        dc->load[i] = NULL;
         dc->types[i] = DC_IMAGE_TYPE_NONE;
     }
 
@@ -327,6 +328,7 @@ dc_storage* dc_create(void)
             dc->files[i]  = NULL;
             dc->labels[i] = NULL;
             dc->names[i]  = NULL;
+            dc->load[i]   = NULL;
             dc->types[i]  = DC_IMAGE_TYPE_NONE;
         }
     }
@@ -334,7 +336,7 @@ dc_storage* dc_create(void)
     return dc;
 }
 
-bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* name)
+bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* name, char* program)
 {
     /* Verify */
     if (filename == NULL || dc == NULL || dc->count > DC_MAX_SIZE)
@@ -342,7 +344,6 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* name)
         free(filename);
         free(label);
         free(name);
-
         return false;
     }
 
@@ -351,11 +352,12 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* name)
     dc->files[dc->count-1]  = filename;
     dc->labels[dc->count-1] = label;
     dc->names[dc->count-1]  = name;
+    dc->load[dc->count-1]   = program;
     dc->types[dc->count-1]  = dc_get_image_type(filename);
     return true;
 }
 
-bool dc_add_file(dc_storage* dc, const char* filename)
+bool dc_add_file(dc_storage* dc, const char* filename, const char* program)
 {
     /* Verify */
     if (dc == NULL || string_is_empty(filename))
@@ -383,7 +385,7 @@ bool dc_add_file(dc_storage* dc, const char* filename)
     fill_short_pathname_representation(image_name, filename, sizeof(image_name));
 
     /* Copy and return */
-    return dc_add_file_int(dc, strdup(filename), get_label(filename), strdup(image_name));
+    return dc_add_file_int(dc, strdup(filename), get_label(filename), strdup(image_name), strdup(program));
 }
 
 bool dc_remove_file(dc_storage* dc, int index)
@@ -401,6 +403,8 @@ bool dc_remove_file(dc_storage* dc, int index)
     dc->labels[index] = NULL;
     free(dc->names[index]);
     dc->names[index] = NULL;
+    free(dc->load[index]);
+    dc->load[index] = NULL;
     dc->types[index] = DC_IMAGE_TYPE_NONE;
 
     /* Shift all entries after index one slot up */
@@ -409,6 +413,7 @@ bool dc_remove_file(dc_storage* dc, int index)
         memmove(dc->files + index, dc->files + index + 1, (dc->count - 1 - index) * sizeof(dc->files[0]));
         memmove(dc->labels + index, dc->labels + index + 1, (dc->count - 1 - index) * sizeof(dc->labels[0]));
         memmove(dc->names + index, dc->names + index + 1, (dc->count - 1 - index) * sizeof(dc->names[0]));
+        memmove(dc->load + index, dc->load + index + 1, (dc->count - 1 - index) * sizeof(dc->load[0]));
     }
 
     dc->count--;
@@ -437,6 +442,8 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
     dc->labels[index] = NULL;
     free(dc->names[index]);
     dc->names[index] = NULL;
+    free(dc->load[index]);
+    dc->load[index] = NULL;
     dc->types[index] = DC_IMAGE_TYPE_NONE;
 
     if (filename == NULL)
@@ -568,8 +575,9 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
 
             dc->files[index]  = strdup(full_path_replace);
             dc->labels[index] = get_label(full_path_replace);
-            dc->types[index]  = dc_get_image_type(full_path_replace);
             dc->names[index]  = strdup(image_label);
+            dc->load[index]   = NULL;
+            dc->types[index]  = dc_get_image_type(full_path_replace);
         }
     }
 
@@ -691,9 +699,21 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
             }
             dc->unit = unit;
         }
-        /* Vice doesn't allow comments in vfl files - enforce the standard */
+        /* VICE doesn't allow comments in vfl files - enforce the standard */
         else if (is_vfl || string[0] != COMMENT)
         {
+            /* Parse direct PRG load */
+            char image_prg[D64_NAME_LEN] = {0};
+            if (strstr(string, ":"))
+            {
+                char *token = strtok((char*)string, ":");
+                while (token != NULL)
+                {
+                    snprintf(image_prg, sizeof(image_prg), "%s", token);
+                    token = strtok(NULL, ":");
+                }
+            }
+
             /* Search the file (absolute, relative to m3u) */
             char* filename;
             if ((filename = m3u_search_file(basedir, string)) != NULL)
@@ -725,12 +745,12 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
                     snprintf(full_path, RETRO_PATH_MAX, "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, lastfile);
 
                     /* Add the file to the struct */
-                    dc_add_file(dc, full_path);
+                    dc_add_file(dc, full_path, image_prg);
                 }
                 else
                 {
                     /* Add the file to the struct */
-                    dc_add_file_int(dc, filename, label ? label : get_label(filename), image_name);
+                    dc_add_file_int(dc, filename, label ? label : get_label(filename), image_name, strdup(image_prg));
                     label = NULL;
                     image_name = NULL;
                 }

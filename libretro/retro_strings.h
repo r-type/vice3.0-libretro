@@ -27,5 +27,6 @@ char* strleft(const char* str, int len);
 char* strright(const char* str, int len);
 bool strstartswith(const char* str, const char* start);
 bool strendswith(const char* str, const char* end);
+char *path_remove_program(char *path);
 
 #endif

@@ -10,8 +10,8 @@
 #include "autostart.h"
 #include "drive.h"
 #include "tape.h"
-#include "vdrive.h"
 #include "diskimage.h"
+#include "vdrive.h"
 #include "vdrive-internal.h"
 #include "charset.h"
 #include "attach.h"
@@ -387,7 +387,7 @@ static void log_disk_in_tray(bool display)
         pos = strlen(queued_msg);
         snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "(%d/%d) %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
         pos += strlen(queued_msg + pos);
-        label = dc->labels[dc->index];
+        label = dc->disk_labels[dc->index];
         if (label && label[0])
             snprintf(queued_msg + pos, sizeof(queued_msg) - pos, " (%s)", label);
         log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
@@ -1151,7 +1151,7 @@ void update_from_vice()
         if ((attachedImage = tape_get_file_name()) != NULL)
         {
             dc->unit = 1;
-            dc_add_file(dc, attachedImage, NULL);
+            dc_add_file(dc, attachedImage, NULL, NULL, NULL);
         }
         else
         {
@@ -1162,7 +1162,7 @@ void update_from_vice()
                 if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
                 {
                     dc->unit = unit;
-                    dc_add_file(dc, attachedImage, NULL);
+                    dc_add_file(dc, attachedImage, NULL, NULL, NULL);
                     break;
                 }
             }
@@ -1173,7 +1173,7 @@ void update_from_vice()
             if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
             {
                 dc->unit = unit;
-                dc_add_file(dc, attachedImage, NULL);
+                dc_add_file(dc, attachedImage, NULL, NULL, NULL);
             }
 #endif
         }
@@ -1202,7 +1202,7 @@ void update_from_vice()
         log_cb(RETRO_LOG_INFO, "Image list has %d file(s)\n", dc->count);
 
         for(unsigned i = 0; i < dc->count; i++)
-            log_cb(RETRO_LOG_INFO, "File %d: %s\n", i+1, dc->files[i]);
+            log_cb(RETRO_LOG_DEBUG, "File %d: %s\n", i+1, dc->files[i]);
     }
 
     /* If flip list is not empty, but there is no image attached to drive, attach the first one from list.
@@ -1274,7 +1274,7 @@ void update_from_vice()
     if (!string_is_empty(attachedImage))
     {
         dc->eject_state = false;
-        display_current_image(attachedImage, true);
+        display_current_image(dc->labels[dc->index], true);
     }
     else
     {
@@ -5035,7 +5035,7 @@ static bool retro_disk_set_eject_state(bool ejected)
             if (strendswith(dc->files[dc->index], "prg"))
                emu_reset(0);
          }
-         display_current_image(dc->files[dc->index], true);
+         display_current_image(dc->labels[dc->index], true);
       }
    }
 
@@ -5075,7 +5075,7 @@ bool retro_disk_set_image_index(unsigned index)
       {
          dc->index = index;
          log_disk_in_tray(display_disk_name);
-         display_current_image(dc->files[dc->index], false);
+         display_current_image(dc->labels[dc->index], false);
          return true;
       }
    }
@@ -5111,11 +5111,11 @@ static bool retro_disk_add_image_index(void)
    {
       if (dc->count <= DC_MAX_SIZE)
       {
-         dc->files[dc->count]  = NULL;
-         dc->labels[dc->count] = NULL;
-         dc->names[dc->count]  = NULL;
-         dc->load[dc->count]   = NULL;
-         dc->types[dc->count]  = DC_IMAGE_TYPE_NONE;
+         dc->files[dc->count]       = NULL;
+         dc->labels[dc->count]      = NULL;
+         dc->disk_labels[dc->count] = NULL;
+         dc->load[dc->count]        = NULL;
+         dc->types[dc->count]       = DC_IMAGE_TYPE_NONE;
          dc->count++;
          return true;
       }
@@ -5153,9 +5153,9 @@ static bool retro_disk_get_image_label(unsigned index, char *label, size_t len)
    {
       if (index < dc->count)
       {
-         if (!string_is_empty(dc->names[index]))
+         if (!string_is_empty(dc->labels[index]))
          {
-            strlcpy(label, dc->names[index], len);
+            strlcpy(label, dc->labels[index], len);
             return true;
          }
       }

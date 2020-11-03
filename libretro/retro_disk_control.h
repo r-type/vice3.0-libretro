@@ -34,7 +34,8 @@ extern int disk_label_mode;
 /* Disk control structure and functions */
 #define DC_MAX_SIZE 20
 
-enum dc_image_type {
+enum dc_image_type
+{
    DC_IMAGE_TYPE_NONE = 0,
    DC_IMAGE_TYPE_FLOPPY,
    DC_IMAGE_TYPE_TAPE,
@@ -48,7 +49,7 @@ struct dc_storage
    char* command;
    char* files[DC_MAX_SIZE];
    char* labels[DC_MAX_SIZE];
-   char* names[DC_MAX_SIZE];
+   char* disk_labels[DC_MAX_SIZE];
    char* load[DC_MAX_SIZE];
    enum dc_image_type types[DC_MAX_SIZE];
    unsigned unit;
@@ -62,7 +63,7 @@ typedef struct dc_storage dc_storage;
 dc_storage* dc_create(void);
 void dc_parse_m3u(dc_storage* dc, const char* m3u_file);
 void dc_parse_vfl(dc_storage* dc, const char* vfl_file);
-bool dc_add_file(dc_storage* dc, const char* filename, const char* prg);
+bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const char* disk_label, const char* program);
 void dc_free(dc_storage* dc);
 void dc_reset(dc_storage* dc);
 bool dc_replace_file(dc_storage* dc, int index, const char* filename);

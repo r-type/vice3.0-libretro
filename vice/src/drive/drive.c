@@ -671,7 +671,10 @@ void drive_gcr_data_writeback_all(void)
 {
     drive_t *drive;
     unsigned int i;
-
+#ifdef __LIBRETRO__
+    if(!drive_context[0])
+        return;
+#endif
     for (i = 0; i < DRIVE_NUM; i++) {
         drive = drive_context[i]->drive;
         drive_gcr_data_writeback(drive);

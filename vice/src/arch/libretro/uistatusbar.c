@@ -208,7 +208,8 @@ void display_current_image(const char *image, bool inserted)
         drive_empty = (inserted) ? 0 : 1;
         snprintf(imagelabel, sizeof(imagelabel), "%s", (char*)image);
         snprintf(imagelabel, sizeof(imagelabel), "%s", path_basename(imagelabel));
-        snprintf(imagelabel, sizeof(imagelabel), "%s", path_remove_extension(imagelabel));
+        if (strstr(imagelabel, "."))
+            snprintf(imagelabel, sizeof(imagelabel), "%s", path_remove_extension(imagelabel));
         snprintf(imagename, sizeof(imagename), "%2s%.36s", "  ", imagelabel);
         snprintf(imagename_prev, sizeof(imagename_prev), "%.38s", imagename);
     }

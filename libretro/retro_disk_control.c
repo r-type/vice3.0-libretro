@@ -47,7 +47,7 @@ int tape_deinstall(void)
 
 #define COMMENT             '#'
 #define M3U_SAVEDISK        "#SAVEDISK:"
-#define M3U_SAVEDISK_LABEL  "SAVE DISK"
+#define M3U_SAVEDISK_LABEL  "Save Disk"
 #define M3U_PATH_DELIM      '|'
 #define M3U_SPECIAL_COMMAND "#COMMAND:"
 #define M3U_NONSTD_LABEL    "#LABEL:"
@@ -360,7 +360,7 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* disk_lab
         dc->files[dc->count-1]       = filename;
         dc->labels[dc->count-1]      = label;
         dc->disk_labels[dc->count-1] = disk_label;
-        dc->load[dc->count-1]        = program;
+        dc->load[dc->count-1]        = (!string_is_empty(program)) ? program : NULL;
         dc->types[dc->count-1]       = dc_get_image_type(filename);
         return true;
     }
@@ -402,7 +402,7 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
         fill_short_pathname_representation(file_label, filename, sizeof(file_label));
 
     /* Copy and return */
-    return dc_add_file_int(dc, strdup(filename), strdup(file_label), get_label(filename), strdup(program));
+    return dc_add_file_int(dc, strdup(filename), strdup(file_label), strdup(disk_label), strdup(program));
 }
 
 bool dc_remove_file(dc_storage* dc, int index)
@@ -975,7 +975,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             }
             else
             {
-                log_cb(RETRO_LOG_WARN, "File %s from list %s not found in dir %s\n", file_name, list_file, basedir);
+                log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found in dir '%s'\n", file_name, list_file, basedir);
                 /* Throw away the label and image name */
                 free(label);
                 label = NULL;

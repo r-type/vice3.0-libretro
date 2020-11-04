@@ -114,12 +114,13 @@ static unsigned int manual_crop_bottom = 0;
 static unsigned int manual_crop_left = 0;
 static unsigned int manual_crop_right = 0;
 
-static unsigned int request_reload_restart = 0;
+static bool request_reload_restart = false;
 static bool request_restart = false;
 static bool request_update_work_disk = false;
 static int request_model_set = -1;
 static int request_model_prev = -1;
 static unsigned int opt_model_auto = 1;
+unsigned int opt_autostart = 1;
 unsigned int opt_autoloadwarp = 0;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_work_disk_type = 0;
@@ -483,9 +484,9 @@ static int process_cmdline(const char* argv)
 
 #if defined(__XPLUS4__)
     /* Do not reset noautostart if already set, PLUS/4 has issues with starting carts via autostart (?!) */
-    noautostart = (noautostart) ? noautostart : false;
+    noautostart = (noautostart) ? noautostart : !opt_autostart;
 #else
-    noautostart = false;
+    noautostart = !opt_autostart;
 #endif
     PARAMCOUNT = 0;
     dc_reset(dc);
@@ -891,6 +892,11 @@ static int process_cmdline(const char* argv)
                 /* User ask to not automatically start image in drive */
                 noautostart = true;
             }
+            else if (!strcmp(arg, "-autostart"))
+            {
+                /* User ask to not automatically start image in drive */
+                noautostart = false;
+            }
             else
             {
                 /* Fill cmd arg path from argv if there is none */
@@ -1089,6 +1095,8 @@ void update_from_vice()
     /* Get autostart string from vice, handle carts differently */
     if (dc->unit == 0 && autostartString != NULL)
     {
+        free(autostartProgram);
+        autostartProgram = NULL;
         autostartString = NULL;
         attachedImage = dc->files[dc->index];
         /* Disable AutostartWarp & WarpMode, otherwise warp gets stuck with PRGs in M3Us */
@@ -1097,6 +1105,8 @@ void update_from_vice()
     }
     else
     {
+        free(autostartProgram);
+        autostartProgram = x_strdup(dc->load[dc->index]);
         free(autostartString);
         autostartString = x_strdup(cmdline_get_autostart_string());
         if (!autostartString && !string_is_empty(full_path))
@@ -1104,7 +1114,7 @@ void update_from_vice()
     }
 
     if (autostartString)
-        log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
+        log_cb(RETRO_LOG_INFO, "Image for autostart: '%s'\n", autostartString);
     else
         log_cb(RETRO_LOG_INFO, "No image for autostart\n");
 
@@ -1216,10 +1226,11 @@ void update_from_vice()
             if ((attachedImage = tape_get_file_name()) == NULL)
             {
                 attachedImage = dc->files[0];
+                autostartProgram = x_strdup(dc->load[0]);
                 /* Don't attach if we will autostart from it just in a moment */
                 if (autostartString != NULL || noautostart)
                 {
-                    log_cb(RETRO_LOG_INFO, "Attaching first tape %s\n", attachedImage);
+                    log_cb(RETRO_LOG_INFO, "Attaching first tape '%s'\n", attachedImage);
                     tape_image_attach(dc->unit, attachedImage);
                 }
             }
@@ -1229,10 +1240,11 @@ void update_from_vice()
             if ((attachedImage = file_system_get_disk_name(dc->unit)) == NULL)
             {
                 attachedImage = dc->files[0];
+                autostartProgram = x_strdup(dc->load[0]);
                 /* Don't attach if we will autostart from it just in a moment */
                 if (autostartString != NULL || noautostart)
                 {
-                    log_cb(RETRO_LOG_INFO, "Attaching first disk %s to drive #%d\n", attachedImage, dc->unit);
+                    log_cb(RETRO_LOG_INFO, "Attaching first disk '%s' to drive #%d\n", attachedImage, dc->unit);
                     file_system_attach_disk(dc->unit, attachedImage);
                 }
             }
@@ -1242,10 +1254,11 @@ void update_from_vice()
             if (attachedImage == NULL)
             {
                 attachedImage = dc->files[0];
+                autostartProgram = NULL;
                 /* Don't attach if we will autostart from it just in a moment */
                 if (autostartString != NULL || noautostart)
                 {
-                    log_cb(RETRO_LOG_INFO, "Attaching first cart %s\n", attachedImage);
+                    log_cb(RETRO_LOG_INFO, "Attaching first cart '%s'\n", attachedImage);
 #if defined(__XVIC__)
                     cartridge_attach_image(CARTRIDGE_VIC20_DETECT, attachedImage);
 #elif defined(__XPLUS4__)
@@ -1261,15 +1274,25 @@ void update_from_vice()
     }
 
     /* Disable autostart only with disks or tapes */
-    if (noautostart && !string_is_empty(attachedImage))
-       autostart_disable();
+    if (!string_is_empty(attachedImage))
+    {
+        if (noautostart)
+            autostart_disable();
+        else if (!noautostart && !string_is_empty(autostartString) &&
+                 strcmp(autostartString, attachedImage) &&
+                 string_is_empty(autostartProgram))
+            autostartString = NULL;
+    }
 
     /* If there an image attached, but autostart is empty, autostart from the image */
     if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart)
     {
-        log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image %s\n", attachedImage);
+        log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image '%s'\n", attachedImage);
         autostartString = x_strdup(attachedImage);
-        autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+        if (!string_is_empty(autostartProgram))
+            charset_petconvstring((uint8_t *)autostartProgram, 0);
+
+        autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_RUN);
     }
 
     /* If vice has image attached to drive, tell libretro that the 'tray' is closed */
@@ -1362,7 +1385,7 @@ extern int ui_init_finalize(void);
 void reload_restart()
 {
     /* Clear request */
-    request_reload_restart = 0;
+    request_reload_restart = false;
 
     /* Stop datasette */
     datasette_control(DATASETTE_CONTROL_STOP);
@@ -3281,19 +3304,23 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
+      int autostartwarp = 0;
+
+      if (!strcmp(var.value, "warp")) autostartwarp = 1;
+      else                            autostartwarp = 0;
+
+      if (!strcmp(var.value, "disabled")) opt_autostart = false;
+      else                                opt_autostart = true;
+
       if (retro_ui_finalized)
       {
-         if (!strcmp(var.value, "warp") && !core_opt.AutostartWarp)
-            log_resources_set_int("AutostartWarp", 1);
-         else if (core_opt.AutostartWarp)
-            log_resources_set_int("AutostartWarp", 0);
+         if (core_opt.AutostartWarp != autostartwarp)
+            log_resources_set_int("AutostartWarp", autostartwarp);
+
+         noautostart = !opt_autostart;
       }
 
-      if (!strcmp(var.value, "warp")) core_opt.AutostartWarp = 1;
-      else                            core_opt.AutostartWarp = 0;
-
-      if (!strcmp(var.value, "disabled")) noautostart = true;
-      else                                noautostart = false;
+      core_opt.AutostartWarp = autostartwarp;
    }
 
    var.key = "vice_autoloadwarp";
@@ -4455,7 +4482,7 @@ static void update_variables(void)
       else                                opt_read_vicerc = 1;
 
       if (retro_ui_finalized)
-         request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? 1 : request_reload_restart;
+         request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? true : request_reload_restart;
    }
 
 #if defined(__XSCPU64__)
@@ -4467,7 +4494,7 @@ static void update_variables(void)
       opt_supercpu_kernal = atoi(var.value);
 
       if (retro_ui_finalized)
-         request_reload_restart = (opt_supercpu_kernal != opt_supercpu_kernal_prev) ? 1 : request_reload_restart;
+         request_reload_restart = (opt_supercpu_kernal != opt_supercpu_kernal_prev) ? true : request_reload_restart;
    }
 #endif
 
@@ -4484,7 +4511,7 @@ static void update_variables(void)
          opt_jiffydos = 0;
 
       if (retro_ui_finalized)
-         request_reload_restart = (opt_jiffydos != opt_jiffydos_prev) ? 1 : request_reload_restart;
+         request_reload_restart = (opt_jiffydos != opt_jiffydos_prev) ? true : request_reload_restart;
    }
 #endif
 

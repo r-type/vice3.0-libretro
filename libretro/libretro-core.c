@@ -1948,8 +1948,8 @@ void retro_set_environment(retro_environment_t cb)
          "By default, the keyboard comes up with RetroPad Select.",
          {
             { "0", "C64" },
-            { "1", "C64C" },
             { "2", "Dark" },
+            { "1", "C64C" },
             { "3", "Light" },
             { NULL, NULL },
          },

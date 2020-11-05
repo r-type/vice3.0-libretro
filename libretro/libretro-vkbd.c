@@ -5,7 +5,7 @@
 bool retro_vkbd = false;
 bool retro_vkbd_transparent = true;
 extern bool retro_capslock;
-extern int vkflag[8];
+extern int vkflag[10];
 extern unsigned int opt_vkbd_theme;
 extern unsigned int opt_vkbd_alpha;
 extern unsigned int zoom_mode_id;
@@ -67,6 +67,7 @@ void print_vkbd(unsigned short int *pixels)
    int FONT_COLOR        = 0;
    int FONT_COLOR_NORMAL = 0;
    int FONT_COLOR_SEL    = 0;
+   int FONT_ALPHA        = 0;
 
    switch (opt_vkbd_theme)
    {
@@ -105,9 +106,9 @@ void print_vkbd(unsigned short int *pixels)
          break;
       
       case 3: /* Light */
-         BKG_COLOR_NORMAL  = RGB(220, 220, 220);
+         BKG_COLOR_NORMAL  = RGB(210, 210, 210);
          BKG_COLOR_ALT     = RGB(180, 180, 180);
-         BKG_COLOR_EXTRA   = RGB(160, 160, 160);
+         BKG_COLOR_EXTRA   = RGB(150, 150, 150);
          BKG_COLOR_EXTRA2  = RGB(190, 190, 190);
          BKG_COLOR_SEL     = RGB( 60,  60,  60);
          BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
@@ -214,6 +215,9 @@ void print_vkbd(unsigned short int *pixels)
 
    /* Opacity */
    BKG_ALPHA = (retro_vkbd_transparent) ? ALPHA : 255;
+   FONT_ALPHA = 255 - BKG_ALPHA;
+   FONT_ALPHA = (FONT_ALPHA < 60) ? 60 : FONT_ALPHA;
+   FONT_ALPHA = (FONT_ALPHA > 120) ? 120 : FONT_ALPHA;
 
    /* Alternate color keys */
    int alt_keys[] =
@@ -238,9 +242,10 @@ void print_vkbd(unsigned short int *pixels)
 
    /* Key label shifted */
    shifted = false;
-   if (retro_capslock || vkey_sticky1 == RETROK_LSHIFT || vkey_sticky2 == RETROK_LSHIFT || vkey_sticky1 == RETROK_RSHIFT || vkey_sticky2 == RETROK_RSHIFT)
+   if (retro_capslock || vkey_sticky1 == RETROK_LSHIFT || vkey_sticky2 == RETROK_LSHIFT ||
+                         vkey_sticky1 == RETROK_RSHIFT || vkey_sticky2 == RETROK_RSHIFT)
       shifted = true;
-   if (vkflag[4] && (vkey_pressed == RETROK_LSHIFT || vkey_pressed == RETROK_RSHIFT))
+   if (vkflag[RETRO_DEVICE_ID_JOYPAD_B] && (vkey_pressed == RETROK_LSHIFT || vkey_pressed == RETROK_RSHIFT))
       shifted = true;
 
    /* Key layout */
@@ -250,6 +255,7 @@ void print_vkbd(unsigned short int *pixels)
       {
          /* Default key color */
          BKG_COLOR = BKG_COLOR_NORMAL;
+         BKG_ALPHA = (retro_vkbd_transparent) ? ALPHA : 255;
 
          /* Reset key color */
          if (vkeys[(y * VKBDX) + x].value == -2)
@@ -291,37 +297,52 @@ void print_vkbd(unsigned short int *pixels)
          if ( (vkey_sticky1 == vkeys[(y * VKBDX) + x + page].value
           ||   vkey_sticky2 == vkeys[(y * VKBDX) + x + page].value
           ||(retro_capslock && vkeys[(y * VKBDX) + x + page].value == -5)
-          ||     (vkflag[7] && vkeys[(y * VKBDX) + x + page].value == RETROK_RETURN))
+          ||(vkflag[RETRO_DEVICE_ID_JOYPAD_START] && vkeys[(y * VKBDX) + x + page].value == RETROK_RETURN))
           && BKG_COLOR != BKG_COLOR_EXTRA && vkeys[(y * VKBDX) + x + page].value != -2)
          {
             FONT_COLOR = FONT_COLOR_NORMAL;
-            BKG_COLOR = BKG_COLOR_ACTIVE;
+            BKG_COLOR  = BKG_COLOR_ACTIVE;
+            BKG_ALPHA  = (BKG_ALPHA < 200) ? 200 : BKG_ALPHA;
          }
 
          /* Key background */
          if (pix_bytes == 4)
-            DrawFBoxBmp32((uint32_t *)pix, XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING, BKG_COLOR, BKG_ALPHA);
+            DrawFBoxBmp32((uint32_t *)pix,
+                          XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
+                          BKG_COLOR, BKG_ALPHA);
          else
-            DrawFBoxBmp(pix, XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING, BKG_COLOR, BKG_ALPHA);
+            DrawFBoxBmp(pix,
+                        XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
+                        BKG_COLOR, BKG_ALPHA);
 
          /* Key text shadow */
          if (pix_bytes == 4)
-            Draw_text32((uint32_t *)pix, (FONT_COLOR_SEL == RGB(250, 250, 250) ? XTEXT+FONT_WIDTH : XTEXT-FONT_WIDTH), (FONT_COLOR_SEL == RGB(250, 250, 250) ? YTEXT+FONT_WIDTH : YTEXT-FONT_WIDTH), (FONT_COLOR_SEL == RGB(250, 250, 250) ? RGB(80, 80, 80) : RGB(50, 50, 50)), BKG_COLOR, 100, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+            Draw_text32((uint32_t *)pix,
+                        (FONT_COLOR_SEL == RGB(250, 250, 250) ? XTEXT+FONT_WIDTH : XTEXT-FONT_WIDTH),
+                        (FONT_COLOR_SEL == RGB(250, 250, 250) ? YTEXT+FONT_WIDTH : YTEXT-FONT_WIDTH),
+                        (FONT_COLOR_SEL == RGB(250, 250, 250) ? RGB(100, 100, 100) : RGB(50, 50, 50)),
+                        BKG_COLOR, FONT_ALPHA, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                        (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
          else
-            Draw_text(pix, (FONT_COLOR_SEL == RGB(250, 250, 250) ? XTEXT+FONT_WIDTH : XTEXT-FONT_WIDTH), (FONT_COLOR_SEL == RGB(250, 250, 250) ? YTEXT+FONT_WIDTH : YTEXT-FONT_WIDTH), (FONT_COLOR_SEL == RGB(250, 250, 250) ? RGB(80, 80, 80) : RGB(50, 50, 50)), BKG_COLOR, 100, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+            Draw_text(pix,
+                      (FONT_COLOR_SEL == RGB(250, 250, 250) ? XTEXT+FONT_WIDTH : XTEXT-FONT_WIDTH),
+                      (FONT_COLOR_SEL == RGB(250, 250, 250) ? YTEXT+FONT_WIDTH : YTEXT-FONT_WIDTH),
+                      (FONT_COLOR_SEL == RGB(250, 250, 250) ? RGB(100, 100, 100) : RGB(50, 50, 50)),
+                      BKG_COLOR, FONT_ALPHA, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                      (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
 
          /* Key text */
          if (pix_bytes == 4)
          {
-            Draw_text32((uint32_t *)pix, XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, 220, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+            Draw_text32((uint32_t *)pix,
+                        XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, 250, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                        (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
          }
          else
          {
-            Draw_text(pix, XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, 220, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+            Draw_text(pix,
+                      XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, 250, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                      (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
          }
       }
    }
@@ -342,36 +363,49 @@ void print_vkbd(unsigned short int *pixels)
    BKG_ALPHA = (retro_vkbd_transparent) ? 220 : 250;
 
    /* Pressed key color */
-   if (vkflag[4] && (vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].value == vkey_sticky1 || vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].value == vkey_sticky2))
+   if (vkflag[RETRO_DEVICE_ID_JOYPAD_B] && (vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].value == vkey_sticky1 ||
+                                            vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].value == vkey_sticky2))
       ; /* no-op */
-   else if (vkflag[4])
+   else if (vkflag[RETRO_DEVICE_ID_JOYPAD_B])
       BKG_COLOR_SEL = BKG_COLOR_ACTIVE;
    else
       FONT_COLOR = FONT_COLOR_SEL;
 
    /* Selected key background */
    if (pix_bytes == 4)
-      DrawFBoxBmp32((uint32_t *)pix, XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING, BKG_COLOR_SEL, BKG_ALPHA);
+      DrawFBoxBmp32((uint32_t *)pix,
+                    XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
+                    BKG_COLOR_SEL, BKG_ALPHA);
    else
-      DrawFBoxBmp(pix, XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING, BKG_COLOR_SEL, BKG_ALPHA);
+      DrawFBoxBmp(pix,
+                  XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
+                  BKG_COLOR_SEL, BKG_ALPHA);
 
    /* Selected key text */
    if (pix_bytes == 4)
    {
-      Draw_text32((uint32_t *)pix, XTEXT, YTEXT, FONT_COLOR, 0, BKG_ALPHA, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-         (!shifted) ? vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
+      Draw_text32((uint32_t *)pix,
+                  XTEXT, YTEXT, FONT_COLOR, 0, BKG_ALPHA, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                  (!shifted) ? vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal
+                             : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
    }
    else
    {
-      Draw_text(pix, XTEXT, YTEXT, FONT_COLOR, 0, BKG_ALPHA, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-         (!shifted) ? vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
+      Draw_text(pix,
+                XTEXT, YTEXT, FONT_COLOR, 0, BKG_ALPHA, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                (!shifted) ? vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal
+                           : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
    }
 
 #ifdef POINTER_DEBUG
    if (pix_bytes == 4)
-      DrawHlineBmp32((uint32_t *)retro_bmp, pointer_x, pointer_y, 1, 1, RGB888(255, 0, 255));
+      DrawHlineBmp32((uint32_t *)retro_bmp,
+                     pointer_x, pointer_y, 1, 1,
+                     RGB888(255, 0, 255));
    else
-      DrawHlineBmp(retro_bmp, pointer_x, pointer_y, 1, 1, RGB565(255, 0, 255));
+      DrawHlineBmp(retro_bmp,
+                   pointer_x, pointer_y, 1, 1,
+                   RGB565(255, 0, 255));
 #endif
 }
 

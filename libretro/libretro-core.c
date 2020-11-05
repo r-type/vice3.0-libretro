@@ -10,8 +10,8 @@
 #include "autostart.h"
 #include "drive.h"
 #include "tape.h"
-#include "vdrive.h"
 #include "diskimage.h"
+#include "vdrive.h"
 #include "vdrive-internal.h"
 #include "charset.h"
 #include "attach.h"
@@ -26,10 +26,6 @@
 #include "sid.h"
 #if !defined(__XCBM5x0__)
 #include "userport_joystick.h"
-#endif
-
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
 /* Accurate tick for statusbar FPS counter */
@@ -49,6 +45,7 @@ char retro_key_state[RETROK_LAST] = {0};
 char retro_key_state_old[RETROK_LAST] = {0};
 static bool noautostart = false;
 static char* autostartString = NULL;
+static char* autostartProgram = NULL;
 char full_path[RETRO_PATH_MAX] = {0};
 static char* core_options_legacy_strings = NULL;
 
@@ -113,12 +110,13 @@ static unsigned int manual_crop_bottom = 0;
 static unsigned int manual_crop_left = 0;
 static unsigned int manual_crop_right = 0;
 
-static unsigned int request_reload_restart = 0;
+static bool request_reload_restart = false;
 static bool request_restart = false;
 static bool request_update_work_disk = false;
 static int request_model_set = -1;
 static int request_model_prev = -1;
 static unsigned int opt_model_auto = 1;
+unsigned int opt_autostart = 1;
 unsigned int opt_autoloadwarp = 0;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_work_disk_type = 0;
@@ -386,7 +384,7 @@ static void log_disk_in_tray(bool display)
         pos = strlen(queued_msg);
         snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "(%d/%d) %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
         pos += strlen(queued_msg + pos);
-        label = dc->labels[dc->index];
+        label = dc->disk_labels[dc->index];
         if (label && label[0])
             snprintf(queued_msg + pos, sizeof(queued_msg) - pos, " (%s)", label);
         log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
@@ -482,9 +480,9 @@ static int process_cmdline(const char* argv)
 
 #if defined(__XPLUS4__)
     /* Do not reset noautostart if already set, PLUS/4 has issues with starting carts via autostart (?!) */
-    noautostart = (noautostart) ? noautostart : false;
+    noautostart = (noautostart) ? noautostart : !opt_autostart;
 #else
-    noautostart = false;
+    noautostart = !opt_autostart;
 #endif
     PARAMCOUNT = 0;
     dc_reset(dc);
@@ -492,6 +490,8 @@ static int process_cmdline(const char* argv)
     cur_port_locked = false;
     free(autostartString);
     autostartString = NULL;
+    free(autostartProgram);
+    autostartProgram = NULL;
 
     /* Load command line arguments from cmd file */
     if (strendswith(argv, ".cmd"))
@@ -512,13 +512,17 @@ static int process_cmdline(const char* argv)
 
     /* Core command line is now parsed to ARGUV, ARGUC. */
     /* Build command file for VICE in XARGV, PARAMCOUNT. */
-
     bool single_image = strcmp(ARGUV[0], CORE_NAME) != 0;
+
+    /* Allow using command lines without CORE_NAME by not allowing single_image */
+    if (strendswith(argv, ".cmd"))
+       single_image = false;
 
     /* If first command line argument is CORE_NAME, it's an extended command line
      * otherwise it's just image filename */
     if (single_image)
     {
+        /* Command doesn't start with core name, so add it first */
         Add_Option(CORE_NAME);
 
         /* Ignore parsed arguments, read filename directly from argv */
@@ -549,11 +553,6 @@ static int process_cmdline(const char* argv)
         char zip_basename[RETRO_PATH_MAX] = {0};
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-        snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
-
-        /* Clean ZIP temp */
-        if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
-            remove_recurse(retro_temp_directory);
 
         char nib_input[RETRO_PATH_MAX] = {0};
         char nib_output[RETRO_PATH_MAX] = {0};
@@ -673,7 +672,7 @@ static int process_cmdline(const char* argv)
              * of mass renaming by differentiating them from regular program-PRGs.
              * Also separated cart PRGs meant to be assigned to specific memory
              * addresses require special care for hassle-free usage. */
-            if (file_exists(argv))
+            if (path_is_valid(argv))
             {
                 char cart_2000[RETRO_PATH_MAX] = {0};
                 char cart_6000[RETRO_PATH_MAX] = {0};
@@ -734,17 +733,17 @@ static int process_cmdline(const char* argv)
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-a000", ""));
                         snprintf(cart_A000, sizeof(cart_A000), "%s%s%s", cart_A000, "-a000", ".prg");
 
-                        if (file_exists(cart_2000))
+                        if (path_is_valid(cart_2000))
                         {
                             Add_Option("-cart2");
                             Add_Option(cart_2000);
                         }
-                        if (file_exists(cart_6000))
+                        if (path_is_valid(cart_6000))
                         {
                             Add_Option("-cart6");
                             Add_Option(cart_6000);
                         }
-                        if (file_exists(cart_A000))
+                        if (path_is_valid(cart_A000))
                         {
                             Add_Option("-cartA");
                             Add_Option(cart_A000);
@@ -812,9 +811,15 @@ static int process_cmdline(const char* argv)
 
             if (!dc->command)
             {
+                char option[RETRO_PATH_MAX] = {0};
+                if (!string_is_empty(dc->load[0]))
+                    snprintf(option, sizeof(option), "%s:%s", dc->files[0], dc->load[0]);
+                else
+                    snprintf(option, sizeof(option), "%s", dc->files[0]);
+
                 /* Add first disk from list as autostart parameter */
                 if (dc->count != 0)
-                    Add_Option(dc->files[0]);
+                    Add_Option(option);
             }
             else
             {
@@ -832,11 +837,9 @@ static int process_cmdline(const char* argv)
     /* It might be single_image initially, but changed by M3U file #COMMAND line */
     if (!single_image)
     {
+        /* Command doesn't start with core name, so add it first */
         if (ARGUC == 0 || strcmp(ARGUV[0], CORE_NAME) != 0)
-        {
-            /* Command doesn't start with core name, so add it first */
             Add_Option(CORE_NAME);
-        }
 
         bool is_flipname_param = false;
         /* Scan vice arguments for special processing */
@@ -879,6 +882,11 @@ static int process_cmdline(const char* argv)
             {
                 /* User ask to not automatically start image in drive */
                 noautostart = true;
+            }
+            else if (!strcmp(arg, "-autostart"))
+            {
+                /* User ask to not automatically start image in drive */
+                noautostart = false;
             }
             else
             {
@@ -1013,7 +1021,7 @@ void update_work_disk()
         path_join((char*)&opt_work_disk_filepath, retro_save_directory, opt_work_disk_filename);
 
         /* Create disk */
-        if (!file_exists(opt_work_disk_filepath))
+        if (!path_is_valid(opt_work_disk_filepath))
         {
             /* Label format */
             char format_name[28];
@@ -1027,7 +1035,7 @@ void update_work_disk()
         }
 
         /* Attach disk */
-        if (file_exists(opt_work_disk_filepath))
+        if (path_is_valid(opt_work_disk_filepath))
         {
             /* Detach previous disks */
             if ((attached_image = file_system_get_disk_name(8)) != NULL)
@@ -1078,6 +1086,8 @@ void update_from_vice()
     /* Get autostart string from vice, handle carts differently */
     if (dc->unit == 0 && autostartString != NULL)
     {
+        free(autostartProgram);
+        autostartProgram = NULL;
         autostartString = NULL;
         attachedImage = dc->files[dc->index];
         /* Disable AutostartWarp & WarpMode, otherwise warp gets stuck with PRGs in M3Us */
@@ -1086,6 +1096,8 @@ void update_from_vice()
     }
     else
     {
+        free(autostartProgram);
+        autostartProgram = x_strdup(dc->load[dc->index]);
         free(autostartString);
         autostartString = x_strdup(cmdline_get_autostart_string());
         if (!autostartString && !string_is_empty(full_path))
@@ -1093,7 +1105,7 @@ void update_from_vice()
     }
 
     if (autostartString)
-        log_cb(RETRO_LOG_INFO, "Image for autostart: %s\n", autostartString);
+        log_cb(RETRO_LOG_INFO, "Image for autostart: '%s'\n", autostartString);
     else
         log_cb(RETRO_LOG_INFO, "No image for autostart\n");
 
@@ -1142,7 +1154,7 @@ void update_from_vice()
         if ((attachedImage = tape_get_file_name()) != NULL)
         {
             dc->unit = 1;
-            dc_add_file(dc, attachedImage);
+            dc_add_file(dc, attachedImage, NULL, NULL, NULL);
         }
         else
         {
@@ -1153,7 +1165,7 @@ void update_from_vice()
                 if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
                 {
                     dc->unit = unit;
-                    dc_add_file(dc, attachedImage);
+                    dc_add_file(dc, attachedImage, NULL, NULL, NULL);
                     break;
                 }
             }
@@ -1164,7 +1176,7 @@ void update_from_vice()
             if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
             {
                 dc->unit = unit;
-                dc_add_file(dc, attachedImage);
+                dc_add_file(dc, attachedImage, NULL, NULL, NULL);
             }
 #endif
         }
@@ -1193,7 +1205,7 @@ void update_from_vice()
         log_cb(RETRO_LOG_INFO, "Image list has %d file(s)\n", dc->count);
 
         for(unsigned i = 0; i < dc->count; i++)
-            log_cb(RETRO_LOG_INFO, "File %d: %s\n", i+1, dc->files[i]);
+            log_cb(RETRO_LOG_DEBUG, "File %d: %s\n", i+1, dc->files[i]);
     }
 
     /* If flip list is not empty, but there is no image attached to drive, attach the first one from list.
@@ -1205,10 +1217,11 @@ void update_from_vice()
             if ((attachedImage = tape_get_file_name()) == NULL)
             {
                 attachedImage = dc->files[0];
+                autostartProgram = x_strdup(dc->load[0]);
                 /* Don't attach if we will autostart from it just in a moment */
                 if (autostartString != NULL || noautostart)
                 {
-                    log_cb(RETRO_LOG_INFO, "Attaching first tape %s\n", attachedImage);
+                    log_cb(RETRO_LOG_INFO, "Attaching first tape '%s'\n", attachedImage);
                     tape_image_attach(dc->unit, attachedImage);
                 }
             }
@@ -1218,10 +1231,11 @@ void update_from_vice()
             if ((attachedImage = file_system_get_disk_name(dc->unit)) == NULL)
             {
                 attachedImage = dc->files[0];
+                autostartProgram = x_strdup(dc->load[0]);
                 /* Don't attach if we will autostart from it just in a moment */
                 if (autostartString != NULL || noautostart)
                 {
-                    log_cb(RETRO_LOG_INFO, "Attaching first disk %s to drive #%d\n", attachedImage, dc->unit);
+                    log_cb(RETRO_LOG_INFO, "Attaching first disk '%s' to drive #%d\n", attachedImage, dc->unit);
                     file_system_attach_disk(dc->unit, attachedImage);
                 }
             }
@@ -1231,10 +1245,11 @@ void update_from_vice()
             if (attachedImage == NULL)
             {
                 attachedImage = dc->files[0];
+                autostartProgram = NULL;
                 /* Don't attach if we will autostart from it just in a moment */
                 if (autostartString != NULL || noautostart)
                 {
-                    log_cb(RETRO_LOG_INFO, "Attaching first cart %s\n", attachedImage);
+                    log_cb(RETRO_LOG_INFO, "Attaching first cart '%s'\n", attachedImage);
 #if defined(__XVIC__)
                     cartridge_attach_image(CARTRIDGE_VIC20_DETECT, attachedImage);
 #elif defined(__XPLUS4__)
@@ -1250,22 +1265,32 @@ void update_from_vice()
     }
 
     /* Disable autostart only with disks or tapes */
-    if (noautostart && !string_is_empty(attachedImage))
-       autostart_disable();
+    if (!string_is_empty(attachedImage))
+    {
+        if (noautostart)
+            autostart_disable();
+        else if (!noautostart && !string_is_empty(autostartString) &&
+                 strcmp(autostartString, attachedImage) &&
+                 string_is_empty(autostartProgram))
+            autostartString = NULL;
+    }
 
     /* If there an image attached, but autostart is empty, autostart from the image */
     if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart)
     {
-        log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image %s\n", attachedImage);
+        log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image '%s'\n", attachedImage);
         autostartString = x_strdup(attachedImage);
-        autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+        if (!string_is_empty(autostartProgram))
+            charset_petconvstring((uint8_t *)autostartProgram, 0);
+
+        autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_RUN);
     }
 
     /* If vice has image attached to drive, tell libretro that the 'tray' is closed */
     if (!string_is_empty(attachedImage))
     {
         dc->eject_state = false;
-        display_current_image(attachedImage, true);
+        display_current_image(dc->labels[dc->index], true);
     }
     else
     {
@@ -1351,7 +1376,7 @@ extern int ui_init_finalize(void);
 void reload_restart()
 {
     /* Clear request */
-    request_reload_restart = 0;
+    request_reload_restart = false;
 
     /* Stop datasette */
     datasette_control(DATASETTE_CONTROL_STOP);
@@ -1959,17 +1984,6 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20\%"
       },
-      {
-         "vice_gfx_colors",
-         "Video > Color Depth",
-         "24-bit is slower and not available on all platforms. Full restart required.",
-         {
-            { "16bit", "Thousands (16-bit)" },
-            { "24bit", "Millions (24-bit)" },
-            { NULL, NULL },
-         },
-         "16bit"
-      },
 #if defined(__XVIC__)
       {
          "vice_vic20_external_palette",
@@ -2325,6 +2339,17 @@ void retro_set_environment(retro_environment_t cb)
       },
 #endif
       {
+         "vice_gfx_colors",
+         "Video > Color Depth",
+         "24-bit is slower and not available on all platforms. Full restart required.",
+         {
+            { "16bit", "Thousands (16-bit)" },
+            { "24bit", "Millions (24-bit)" },
+            { NULL, NULL },
+         },
+         "16bit"
+      },
+      {
          "vice_audio_options_display",
          "Show Audio Options",
          "Shows/hides audio related options.\nCore options page refresh required.",
@@ -2336,44 +2361,31 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
       {
-         "vice_sound_sample_rate",
-         "Audio > Output Sample Rate",
-         "Slightly higher quality or higher performance.",
-         {
-            { "22050", NULL },
-            { "44100", NULL },
-            { "48000", NULL },
-            { "96000", NULL },
-            { NULL, NULL },
-         },
-         "48000"
-      },
-      {
          "vice_drive_sound_emulation",
          "Audio > Drive Sound Emulation",
          "'True Drive Emulation' & D64/D71 disk image required.",
          {
             { "disabled", NULL },
-            { "5\%", "5\% volume" },
-            { "10\%", "10\% volume" },
-            { "15\%", "15\% volume" },
-            { "20\%", "20\% volume" },
-            { "25\%", "25\% volume" },
-            { "30\%", "30\% volume" },
-            { "35\%", "35\% volume" },
-            { "40\%", "40\% volume" },
-            { "45\%", "45\% volume" },
-            { "50\%", "50\% volume" },
-            { "55\%", "55\% volume" },
-            { "60\%", "60\% volume" },
-            { "65\%", "65\% volume" },
-            { "70\%", "70\% volume" },
-            { "75\%", "75\% volume" },
-            { "80\%", "80\% volume" },
-            { "85\%", "85\% volume" },
-            { "90\%", "90\% volume" },
-            { "95\%", "95\% volume" },
-            { "100\%", "100\% volume" },
+            { "5\%", "5\%" },
+            { "10\%", "10\%" },
+            { "15\%", "15\%" },
+            { "20\%", "20\%" },
+            { "25\%", "25\%" },
+            { "30\%", "30\%" },
+            { "35\%", "35\%" },
+            { "40\%", "40\%" },
+            { "45\%", "45\%" },
+            { "50\%", "50\%" },
+            { "55\%", "55\%" },
+            { "60\%", "60\%" },
+            { "65\%", "65\%" },
+            { "70\%", "70\%" },
+            { "75\%", "75\%" },
+            { "80\%", "80\%" },
+            { "85\%", "85\%" },
+            { "90\%", "90\%" },
+            { "95\%", "95\%" },
+            { "100\%", "100\%" },
             { NULL, NULL },
          },
          "20\%"
@@ -2391,16 +2403,16 @@ void retro_set_environment(retro_environment_t cb)
          "",
          {
             { "disabled", NULL },
-            { "1", "100\% volume" },
-            { "2", "200\% volume" },
-            { "3", "300\% volume" },
-            { "4", "400\% volume" },
-            { "5", "500\% volume" },
-            { "6", "600\% volume" },
-            { "7", "700\% volume" },
-            { "8", "800\% volume" },
-            { "9", "900\% volume" },
-            { "10", "1000\% volume" },
+            { "1", "100\%" },
+            { "2", "200\%" },
+            { "3", "300\%" },
+            { "4", "400\%" },
+            { "5", "500\%" },
+            { "6", "600\%" },
+            { "7", "700\%" },
+            { "8", "800\%" },
+            { "9", "900\%" },
+            { "10", "1000\%" },
             { NULL, NULL },
          },
          "disabled"
@@ -2582,6 +2594,19 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
 #endif
+      {
+         "vice_sound_sample_rate",
+         "Audio > Output Sample Rate",
+         "Slightly higher quality or higher performance.",
+         {
+            { "22050", NULL },
+            { "44100", NULL },
+            { "48000", NULL },
+            { "96000", NULL },
+            { NULL, NULL },
+         },
+         "48000"
+      },
 #if !defined(__XPET__) && !defined(__XCBM2__)
       {
          "vice_analogmouse_deadzone",
@@ -3270,19 +3295,23 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
+      int autostartwarp = 0;
+
+      if (!strcmp(var.value, "warp")) autostartwarp = 1;
+      else                            autostartwarp = 0;
+
+      if (!strcmp(var.value, "disabled")) opt_autostart = false;
+      else                                opt_autostart = true;
+
       if (retro_ui_finalized)
       {
-         if (!strcmp(var.value, "warp") && !core_opt.AutostartWarp)
-            log_resources_set_int("AutostartWarp", 1);
-         else if (core_opt.AutostartWarp)
-            log_resources_set_int("AutostartWarp", 0);
+         if (core_opt.AutostartWarp != autostartwarp)
+            log_resources_set_int("AutostartWarp", autostartwarp);
+
+         noautostart = !opt_autostart;
       }
 
-      if (!strcmp(var.value, "warp")) core_opt.AutostartWarp = 1;
-      else                            core_opt.AutostartWarp = 0;
-
-      if (!strcmp(var.value, "disabled")) noautostart = true;
-      else                                noautostart = false;
+      core_opt.AutostartWarp = autostartwarp;
    }
 
    var.key = "vice_autoloadwarp";
@@ -4444,7 +4473,7 @@ static void update_variables(void)
       else                                opt_read_vicerc = 1;
 
       if (retro_ui_finalized)
-         request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? 1 : request_reload_restart;
+         request_reload_restart = (opt_read_vicerc != opt_read_vicerc_prev) ? true : request_reload_restart;
    }
 
 #if defined(__XSCPU64__)
@@ -4456,7 +4485,7 @@ static void update_variables(void)
       opt_supercpu_kernal = atoi(var.value);
 
       if (retro_ui_finalized)
-         request_reload_restart = (opt_supercpu_kernal != opt_supercpu_kernal_prev) ? 1 : request_reload_restart;
+         request_reload_restart = (opt_supercpu_kernal != opt_supercpu_kernal_prev) ? true : request_reload_restart;
    }
 #endif
 
@@ -4473,7 +4502,7 @@ static void update_variables(void)
          opt_jiffydos = 0;
 
       if (retro_ui_finalized)
-         request_reload_restart = (opt_jiffydos != opt_jiffydos_prev) ? 1 : request_reload_restart;
+         request_reload_restart = (opt_jiffydos != opt_jiffydos_prev) ? true : request_reload_restart;
    }
 #endif
 
@@ -4797,8 +4826,6 @@ static void update_variables(void)
    /* Audio options */
    option_display.visible = opt_audio_options_display;
 
-   option_display.key = "vice_sound_sample_rate";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
@@ -4827,10 +4854,20 @@ static void update_variables(void)
    option_display.key = "vice_sfx_sound_expander";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
+   option_display.key = "vice_sound_sample_rate";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 
    /* Video options */
    option_display.visible = opt_video_options_display;
 
+   option_display.key = "vice_vkbd_theme";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vkbd_alpha";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_statusbar";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_gfx_colors";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_zoom_mode";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -4847,8 +4884,6 @@ static void update_variables(void)
    option_display.key = "vice_manual_crop_right";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-   option_display.key = "vice_gfx_colors";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__XVIC__)
    option_display.key = "vice_vic20_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -4895,12 +4930,6 @@ static void update_variables(void)
    option_display.key = "vice_vicii_color_brightness",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-   option_display.key = "vice_vkbd_theme";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vkbd_alpha";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_statusbar";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 }
 
 void emu_reset(int type)
@@ -4923,18 +4952,34 @@ void emu_reset(int type)
          /* Hard reset before autostart */
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 
+         /* Check command line on autostart */
+         if (dc->command || CMDFILE[0])
+         {
+            initcmdline_check_attach();
+            break;
+         }
+
+         /* Build direct launch PRG */
+         if (dc->load[dc->index])
+         {
+            autostartString  = strdup(dc->files[dc->index]);
+            path_remove_program(autostartString);
+            autostartProgram = strdup(dc->load[dc->index]);
+            charset_petconvstring((uint8_t *)autostartProgram, 0);
+         }
+
          /* Allow autostarting with a different disk */
          if (dc->count > 1)
             autostartString = x_strdup(dc->files[dc->index]);
          if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
-            autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_RUN);
+            autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_RUN);
          break;
       case 1:
          machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
 
          /* Allow restarting PRGs with RUN */
          if (autostartString != NULL && autostartString[0] != '\0' && strendswith(autostartString, "prg"))
-            autostart_autodetect(autostartString, NULL, 0, AUTOSTART_MODE_NONE);
+            autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_NONE);
          break;
       case 2:
          machine_trigger_reset(MACHINE_RESET_MODE_HARD);
@@ -5010,7 +5055,7 @@ static bool retro_disk_set_eject_state(bool ejected)
             if (strendswith(dc->files[dc->index], "prg"))
                emu_reset(0);
          }
-         display_current_image(dc->files[dc->index], true);
+         display_current_image(dc->labels[dc->index], true);
       }
    }
 
@@ -5050,7 +5095,7 @@ bool retro_disk_set_image_index(unsigned index)
       {
          dc->index = index;
          log_disk_in_tray(display_disk_name);
-         display_current_image(dc->files[dc->index], false);
+         display_current_image(dc->labels[dc->index], false);
          return true;
       }
    }
@@ -5086,10 +5131,11 @@ static bool retro_disk_add_image_index(void)
    {
       if (dc->count <= DC_MAX_SIZE)
       {
-         dc->files[dc->count]  = NULL;
-         dc->labels[dc->count] = NULL;
-         dc->names[dc->count]  = NULL;
-         dc->types[dc->count]  = DC_IMAGE_TYPE_NONE;
+         dc->files[dc->count]       = NULL;
+         dc->labels[dc->count]      = NULL;
+         dc->disk_labels[dc->count] = NULL;
+         dc->load[dc->count]        = NULL;
+         dc->types[dc->count]       = DC_IMAGE_TYPE_NONE;
          dc->count++;
          return true;
       }
@@ -5127,9 +5173,9 @@ static bool retro_disk_get_image_label(unsigned index, char *label, size_t len)
    {
       if (index < dc->count)
       {
-         if (!string_is_empty(dc->names[index]))
+         if (!string_is_empty(dc->labels[index]))
          {
-            strlcpy(label, dc->names[index], len);
+            strlcpy(label, dc->labels[index], len);
             return true;
          }
       }
@@ -5223,6 +5269,13 @@ void retro_init(void)
       strlcpy(retro_system_directory, ".", sizeof(retro_system_directory));
 #endif
    }
+
+   /* Temp directory for ZIPs and NIB->G64 conversions */
+   snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
+
+   /* Clean ZIP temp */
+   if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
+      remove_recurse(retro_temp_directory);
 
    /* Use system directory for data files such as C64/.vpl etc. */
    snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%svice", retro_system_directory, FSDEV_DIR_SEP_STR);
@@ -5894,6 +5947,8 @@ void retro_unload_game(void)
    dc_reset(dc);
    free(autostartString);
    autostartString = NULL;
+   free(autostartProgram);
+   autostartProgram = NULL;
 }
 
 unsigned retro_get_region(void)

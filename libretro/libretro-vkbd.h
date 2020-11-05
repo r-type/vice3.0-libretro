@@ -1,5 +1,5 @@
-#ifndef VKBD_H
-#define VKBD_H
+#ifndef LIBRETRO_VKBD_H
+#define LIBRETRO_VKBD_H
 
 extern void print_vkbd(unsigned short int *pixels);
 extern int check_vkey(int x, int y);
@@ -104,4 +104,4 @@ static retro_vkeys vkeys[VKBDX * VKBDY] = {
 	{ "TTF","TTF" ,-20}, /* Toggle turbo fire */
 };
 
-#endif
+#endif /* LIBRETRO_VKBD_H */

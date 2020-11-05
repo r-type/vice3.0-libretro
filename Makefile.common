@@ -22,12 +22,10 @@ SOURCES_CXX :=
 SOURCES_C := \
 	$(CORE_DIR)/libretro/libretro-core.c \
 	$(CORE_DIR)/libretro/libretro-mapper.c \
-	$(CORE_DIR)/libretro/retro_strings.c \
-	$(CORE_DIR)/libretro/retro_files.c \
-	$(CORE_DIR)/libretro/retro_disk_control.c \
-	$(CORE_DIR)/libretro/vkbd.c \
-	$(CORE_DIR)/libretro/graph.c \
-	$(CORE_DIR)/libretro/retroglue.c \
+	$(CORE_DIR)/libretro/libretro-dc.c \
+	$(CORE_DIR)/libretro/libretro-glue.c \
+	$(CORE_DIR)/libretro/libretro-vkbd.c \
+	$(CORE_DIR)/libretro/libretro-graph.c \
 	$(DEPS_DIR)/libz/unzip.c \
 	$(DEPS_DIR)/libz/ioapi.c
 

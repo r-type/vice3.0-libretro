@@ -16,19 +16,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "retro_disk_control.h"
-#include "retro_strings.h"
-#include "retro_files.h"
-#include "file/file_path.h"
-#include "libretro.h"
+#include "libretro-dc.h"
 #include "libretro-core.h"
-#include "retroglue.h"
 
 #include "archdep.h"
 #include "attach.h"
 #include "drive.h"
 #include "tape.h"
 #include "resources.h"
+#include "charset.h"
+#include "diskimage.h"
+#include "vdrive.h"
+#include "vdrive-internal.h"
 
 #ifdef __XSCPU64__
 int tape_deinstall(void)
@@ -41,7 +40,10 @@ int tape_deinstall(void)
 #include <stdlib.h>
 #include <string.h>
 
-#define COMMENT '#'
+#define COMMENT             '#'
+#define M3U_SAVEDISK        "#SAVEDISK:"
+#define M3U_SAVEDISK_LABEL  "Save Disk"
+#define M3U_PATH_DELIM      '|'
 #define M3U_SPECIAL_COMMAND "#COMMAND:"
 #define M3U_NONSTD_LABEL    "#LABEL:"
 #define M3U_EXTSTD_LABEL    "#EXTINF:" /* Title should be following comma */
@@ -260,7 +262,7 @@ static char* m3u_search_file(const char* basedir, const char* dskName)
         char* dskPath = path_join_dup(basedir, dskName);
 
         /* Verify if this item is a relative filename (append it to the m3u path) */
-        if (file_exists(dskPath))
+        if (path_is_valid(dskPath))
         {
             /* Return */
             return dskPath;
@@ -269,7 +271,7 @@ static char* m3u_search_file(const char* basedir, const char* dskName)
     }
 
     /* Verify if this item is an absolute pathname (or the file is in working dir) */
-    if (file_exists(dskName))
+    if (path_is_valid(dskName))
     {
         /* Copy and return */
         return strdup(dskName);
@@ -296,17 +298,18 @@ void dc_reset(dc_storage* dc)
         dc->files[i] = NULL;
         free(dc->labels[i]);
         dc->labels[i] = NULL;
-        free(dc->names[i]);
-        dc->names[i] = NULL;
-
+        free(dc->disk_labels[i]);
+        dc->disk_labels[i] = NULL;
+        free(dc->load[i]);
+        dc->load[i] = NULL;
         dc->types[i] = DC_IMAGE_TYPE_NONE;
     }
 
-    dc->unit = 0;
-    dc->count = 0;
-    dc->index = 0;
+    dc->unit        = 0;
+    dc->count       = 0;
+    dc->index       = 0;
     dc->eject_state = true;
-    dc->replace = false;
+    dc->replace     = false;
 }
 
 dc_storage* dc_create(void)
@@ -316,50 +319,58 @@ dc_storage* dc_create(void)
 
     if((dc = malloc(sizeof(dc_storage))) != NULL)
     {
-        dc->unit = 0;
-        dc->count = 0;
-        dc->index = 0;
+        dc->unit        = 0;
+        dc->count       = 0;
+        dc->index       = 0;
         dc->eject_state = true;
-        dc->replace = false;
-        dc->command = NULL;
+        dc->replace     = false;
+        dc->command     = NULL;
         for(int i = 0; i < DC_MAX_SIZE; i++)
         {
-            dc->files[i]  = NULL;
-            dc->labels[i] = NULL;
-            dc->names[i]  = NULL;
-            dc->types[i]  = DC_IMAGE_TYPE_NONE;
+            dc->files[i]       = NULL;
+            dc->labels[i]      = NULL;
+            dc->disk_labels[i] = NULL;
+            dc->load[i]        = NULL;
+            dc->types[i]       = DC_IMAGE_TYPE_NONE;
         }
     }
 
     return dc;
 }
 
-bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* name)
+bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* disk_label, char* program)
 {
     /* Verify */
-    if (filename == NULL || dc == NULL || dc->count > DC_MAX_SIZE)
-    {
-        free(filename);
-        free(label);
-        free(name);
+	if (dc == NULL)
+		return false;
 
-        return false;
+	if (!filename || (*filename == '\0'))
+		return false;
+
+	/* If max size is not exceeded */
+	if(dc->count < DC_MAX_SIZE)
+	{
+        /* Add the file */
+        dc->count++;
+        dc->files[dc->count-1]       = filename;
+        dc->labels[dc->count-1]      = label;
+        dc->disk_labels[dc->count-1] = disk_label;
+        dc->load[dc->count-1]        = (!string_is_empty(program)) ? program : NULL;
+        dc->types[dc->count-1]       = dc_get_image_type(filename);
+        return true;
     }
 
-    /* Add the file */
-    dc->count++;
-    dc->files[dc->count-1]  = filename;
-    dc->labels[dc->count-1] = label;
-    dc->names[dc->count-1]  = name;
-    dc->types[dc->count-1]  = dc_get_image_type(filename);
-    return true;
+    return false;
 }
 
-bool dc_add_file(dc_storage* dc, const char* filename)
+bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const char* disk_label, const char* program)
 {
     /* Verify */
-    if (dc == NULL || string_is_empty(filename))
-        return false;
+	if(dc == NULL)
+		return false;
+
+	if (!filename || (*filename == '\0'))
+		return false;
 
     /* Determine if tape or disk fliplist from first entry */
     if (dc->unit != -1)
@@ -378,12 +389,15 @@ bool dc_add_file(dc_storage* dc, const char* filename)
      * > It would be nice to make use of the image label
      *   here, but this often bears no relationship to
      *   the actual file content... */
-    char image_name[512];
-    image_name[0] = '\0';
-    fill_short_pathname_representation(image_name, filename, sizeof(image_name));
+    char file_label[512];
+    file_label[0] = '\0';
+    if (!string_is_empty(label))
+        snprintf(file_label, sizeof(file_label), "%s", label);
+    else
+        fill_short_pathname_representation(file_label, filename, sizeof(file_label));
 
     /* Copy and return */
-    return dc_add_file_int(dc, strdup(filename), get_label(filename), strdup(image_name));
+    return dc_add_file_int(dc, strdup(filename), strdup(file_label), strdup(disk_label), strdup(program));
 }
 
 bool dc_remove_file(dc_storage* dc, int index)
@@ -399,8 +413,10 @@ bool dc_remove_file(dc_storage* dc, int index)
     dc->files[index] = NULL;
     free(dc->labels[index]);
     dc->labels[index] = NULL;
-    free(dc->names[index]);
-    dc->names[index] = NULL;
+    free(dc->disk_labels[index]);
+    dc->disk_labels[index] = NULL;
+    free(dc->load[index]);
+    dc->load[index] = NULL;
     dc->types[index] = DC_IMAGE_TYPE_NONE;
 
     /* Shift all entries after index one slot up */
@@ -408,16 +424,15 @@ bool dc_remove_file(dc_storage* dc, int index)
     {
         memmove(dc->files + index, dc->files + index + 1, (dc->count - 1 - index) * sizeof(dc->files[0]));
         memmove(dc->labels + index, dc->labels + index + 1, (dc->count - 1 - index) * sizeof(dc->labels[0]));
-        memmove(dc->names + index, dc->names + index + 1, (dc->count - 1 - index) * sizeof(dc->names[0]));
+        memmove(dc->disk_labels + index, dc->disk_labels + index + 1, (dc->count - 1 - index) * sizeof(dc->disk_labels[0]));
+        memmove(dc->load + index, dc->load + index + 1, (dc->count - 1 - index) * sizeof(dc->load[0]));
     }
 
     dc->count--;
 
     /* Reset fliplist unit after removing last entry */
     if (dc->count == 0)
-    {
         dc->unit = 0;
-    }
 
     return true;
 }
@@ -435,8 +450,10 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
     dc->files[index] = NULL;
     free(dc->labels[index]);
     dc->labels[index] = NULL;
-    free(dc->names[index]);
-    dc->names[index] = NULL;
+    free(dc->disk_labels[index]);
+    dc->disk_labels[index] = NULL;
+    free(dc->load[index]);
+    dc->load[index] = NULL;
     dc->types[index] = DC_IMAGE_TYPE_NONE;
 
     if (filename == NULL)
@@ -454,7 +471,6 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
         char zip_basename[RETRO_PATH_MAX] = {0};
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path_replace));
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-        snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
 
         char nib_input[RETRO_PATH_MAX] = {0};
         char nib_output[RETRO_PATH_MAX] = {0};
@@ -485,7 +501,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
             int zip_m3u_num = 0;
 
-            DIR *zip_dir;
+            DIR *zip_dir = NULL;
             struct dirent *zip_dirp;
 
             /* Convert all NIBs to G64 */
@@ -566,17 +582,116 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             image_label[0] = '\0';
             fill_short_pathname_representation(image_label, full_path_replace, sizeof(image_label));
 
-            dc->files[index]  = strdup(full_path_replace);
-            dc->labels[index] = get_label(full_path_replace);
-            dc->types[index]  = dc_get_image_type(full_path_replace);
-            dc->names[index]  = strdup(image_label);
+            dc->files[index]       = strdup(full_path_replace);
+            dc->labels[index]      = strdup(image_label);
+            dc->disk_labels[index] = get_label(full_path_replace);
+            dc->load[index]        = NULL;
+            dc->types[index]       = dc_get_image_type(full_path_replace);
         }
     }
 
     return true;
 }
 
-void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
+static bool dc_add_m3u_save_disk(
+		dc_storage* dc,
+		const char* m3u_file, const char* save_dir,
+		const char* disk_name, unsigned int index)
+{
+    bool save_disk_exists                     = false;
+    const char *m3u_file_name                 = NULL;
+    char m3u_file_name_no_ext[RETRO_PATH_MAX] = {0};
+    char save_disk_file_name[RETRO_PATH_MAX]  = {0};
+    char save_disk_path[RETRO_PATH_MAX]       = {0};
+    char volume_name[MAX_LABEL_LEN]           = {0};
+    char format_name[MAX_LABEL_LEN]           = {0};
+
+    /* Verify */
+    if(dc == NULL)
+        return false;
+
+    if(m3u_file == NULL)
+        return false;
+
+    if(save_dir == NULL)
+        return false;
+
+    /* Get m3u file name */
+    m3u_file_name = path_basename(m3u_file);
+    if (!m3u_file_name || (*m3u_file_name == '\0'))
+        return false;
+
+    /* Get m3u file name without extension */
+    snprintf(m3u_file_name_no_ext, sizeof(m3u_file_name_no_ext),
+             "%s", path_remove_extension((char*)m3u_file_name));
+
+    if (!m3u_file_name_no_ext || (*m3u_file_name_no_ext == '\0'))
+        return false;
+
+    /* Construct save disk file name */
+    snprintf(save_disk_file_name, RETRO_PATH_MAX, "%s.save%u.d64",
+             m3u_file_name_no_ext, index);
+
+    /* Construct save disk path */
+    path_join(save_disk_path, save_dir, save_disk_file_name);
+
+    /* Check whether save disk already exists
+     * Note: If a disk already exists, we should be
+     * able to support changing the volume label if
+     * it differs from 'disk_name'. This is quite
+     * fiddly, however - perhaps it can be added later... */
+    save_disk_exists = path_is_valid(save_disk_path);
+
+    /* ...if not, create a new one */
+    if (!save_disk_exists)
+    {
+        /* Get volume name
+         * > If disk_name is NULL or empty/EMPTY,
+         *   no volume name is set */
+        if (disk_name && (*disk_name != '\0'))
+        {
+            if(strncasecmp(disk_name, "empty", strlen("empty")))
+            {
+                char *scrub_pointer = NULL;
+
+                /* Ensure volume name is valid
+                 * > Must be <= 30 characters
+                 * > Cannot contain '/' or ':' */
+                strncpy(volume_name, disk_name, sizeof(volume_name) - 1);
+
+                while((scrub_pointer = strpbrk(volume_name, "/:")))
+                    *scrub_pointer = ' ';
+            }
+        }
+
+        /* Label format */
+        if (string_is_empty(volume_name))
+            snprintf(volume_name, sizeof(volume_name), "%s %u",
+                     M3U_SAVEDISK_LABEL, index);
+
+        snprintf(format_name, sizeof(format_name), "%s", string_to_lower(volume_name));
+        charset_petconvstring(format_name, 0);
+
+        /* Create save disk */
+        save_disk_exists = !vdrive_internal_create_format_disk_image(save_disk_path, format_name, DISK_IMAGE_TYPE_D64);
+    }
+
+    /* If save disk exists/was created, add it to the list */
+    if (save_disk_exists)
+    {
+        char save_disk_label[64] = {0};
+
+        snprintf(save_disk_label, 64, "%s %u",
+                 M3U_SAVEDISK_LABEL, index);
+
+        dc_add_file(dc, save_disk_path, save_disk_label, format_name, NULL);
+        return true;
+    }
+
+    return false;
+}
+
+void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const char* save_dir)
 {
     /* Verify */
     if (dc == NULL)
@@ -598,7 +713,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
     }
 
     /* Read the lines while there is line to read and we have enough space */
-    char buffer[2048];
+    char buffer[1024];
 
     /* Enforce standard compatibility to avoid invalid vfl files on the loose */
     if (is_vfl)
@@ -615,6 +730,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
 
     /* Get the list base dir for resolving relative path */
     char* basedir = dirname_int(list_file);
+    unsigned int save_disk_index = 0;
 
     /* Label for the following file */
     char* label = NULL;
@@ -691,12 +807,86 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
             }
             dc->unit = unit;
         }
-        /* Vice doesn't allow comments in vfl files - enforce the standard */
+        /* Save disk (#SAVEDISK:) */
+        else if (strstartswith(string, M3U_SAVEDISK))
+        {
+            /* Get volume name */
+            char* disk_name = strright(string, strlen(string) - strlen(M3U_SAVEDISK));
+
+            /* Add save disk, creating it if necessary */
+            if (dc_add_m3u_save_disk(
+                    dc, list_file, save_dir,
+                    disk_name, save_disk_index))
+                    save_disk_index++;
+
+            /* Clean up */
+            if (disk_name != NULL)
+                free(disk_name);
+        }
+        /* VICE doesn't allow comments in vfl files - enforce the standard */
         else if (is_vfl || string[0] != COMMENT)
         {
+            /* Path format:
+             *    FILE_NAME|FILE_LABEL
+             * Delimiter + FILE_LABEL is optional */
+            char file_name[RETRO_PATH_MAX]  = {0};
+            char file_label[RETRO_PATH_MAX] = {0};
+            char* delim_ptr                 = strchr(string, M3U_PATH_DELIM);
+            bool label_set                  = false;
+
+            if (delim_ptr)
+            {
+                /* Not going to use strleft()/strright() here,
+                 * since these functions allocate new strings,
+                 * which we don't want to do... */
+
+                /* Get FILE_NAME segment */
+                size_t len = (size_t)(1 + delim_ptr - string);
+                if (len > 0)
+                    strncpy(
+                            file_name, string,
+                            ((len < RETRO_PATH_MAX ? len : RETRO_PATH_MAX) * sizeof(char)) - 1);
+
+                /* Get FILE_LABEL segment */
+                delim_ptr++;
+                if (*delim_ptr != '\0')
+                    strncpy(
+                            file_label, delim_ptr, sizeof(file_label) - 1);
+
+                /* Note: If delimiter is present but FILE_LABEL
+                 * is omitted, label is intentionally left blank */
+                label_set = true;
+            }
+            else
+                strncpy(file_name, string, sizeof(file_name) - 1);
+
+            /* Parse direct PRG load */
+            char image_prg[D64_NAME_LEN] = {0};
+            if (strstr(file_name, ":"))
+            {
+                char *token = strtok((char*)file_name, ":");
+                while (token != NULL)
+                {
+                    snprintf(image_prg, sizeof(image_prg), "%s", token);
+                    token = strtok(NULL, ":");
+                }
+            }
+
+            /* "Browsed" file in ZIP */
+            char browsed_file[RETRO_PATH_MAX] = {0};
+            if (strstr(file_name, ".zip#"))
+            {
+                char *token = strtok((char*)file_name, "#");
+                while (token != NULL)
+                {
+                    snprintf(browsed_file, sizeof(browsed_file), "%s", token);
+                    token = strtok(NULL, "#");
+                }
+            }
+
             /* Search the file (absolute, relative to m3u) */
-            char* filename;
-            if ((filename = m3u_search_file(basedir, string)) != NULL)
+            char* filename = NULL;
+            if ((filename = m3u_search_file(basedir, file_name)) != NULL)
             {
                 /* If image name is missing, use filename without extension */
                 if (!image_name)
@@ -704,45 +894,102 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
                     char tmp[512];
                     tmp[0] = '\0';
 
-                    fill_short_pathname_representation(tmp, filename, sizeof(tmp));
+                    if (!string_is_empty(browsed_file))
+                        fill_short_pathname_representation(tmp, browsed_file, sizeof(tmp));
+                    else
+                        fill_short_pathname_representation(tmp, filename, sizeof(tmp));
+
                     image_name = strdup(tmp);
+                }
+
+                if (!file_label[0] && !label_set)
+                    snprintf(file_label, sizeof(file_label), "%s", image_name);
+
+                char full_path[RETRO_PATH_MAX] = {0};
+                snprintf(full_path, sizeof(full_path), "%s", filename);
+
+                /* ZIP + NIB vars, use the same temp directory for single NIBs */
+                char zip_basename[RETRO_PATH_MAX] = {0};
+                snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
+                snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+
+                char nib_input[RETRO_PATH_MAX] = {0};
+                char nib_output[RETRO_PATH_MAX] = {0};
+
+                /* NIB convert to G64 */
+                if (dc_get_image_type(filename) == DC_IMAGE_TYPE_NIBBLER)
+                {
+                    snprintf(nib_input, sizeof(nib_input), "%s", filename);
+                    snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+                    path_mkdir(retro_temp_directory);
+                    nib_convert(nib_input, nib_output);
+                    snprintf(full_path, sizeof(full_path), "%s", nib_output);
                 }
 
                 /* ZIP */
                 if (strendswith(filename, "zip"))
                 {
-                    char full_path[RETRO_PATH_MAX] = {0};
-                    snprintf(full_path, sizeof(full_path), "%s", filename);
-
-                    char zip_basename[RETRO_PATH_MAX] = {0};
-                    snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
-                    snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-                    snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
                     char lastfile[RETRO_PATH_MAX] = {0};
 
                     path_mkdir(retro_temp_directory);
                     zip_uncompress(full_path, retro_temp_directory, lastfile);
-                    snprintf(full_path, RETRO_PATH_MAX, "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, lastfile);
 
-                    /* Add the file to the struct */
-                    dc_add_file(dc, full_path);
+                    /* Convert all NIBs to G64 */
+                    if (!string_is_empty(browsed_file))
+                    {
+                        snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, browsed_file);
+                        if (dc_get_image_type(nib_input) == DC_IMAGE_TYPE_NIBBLER && path_is_valid(nib_input))
+                        {
+                            /* Reuse lastfile */
+                            snprintf(lastfile, sizeof(lastfile), "%s", browsed_file);
+                            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(lastfile));
+                            nib_convert(nib_input, nib_output);
+                            snprintf(browsed_file, sizeof(browsed_file), "%s", path_basename(nib_output));
+                        }
+                        snprintf(lastfile, sizeof(lastfile), "%s", browsed_file);
+                    }
+                    else
+                    {
+                        DIR *zip_dir = NULL;
+                        struct dirent *zip_dirp;
+
+                        zip_dir = opendir(retro_temp_directory);
+                        while ((zip_dirp = readdir(zip_dir)) != NULL)
+                        {
+                            if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
+                            {
+                                snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+                                snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
+                                nib_convert(nib_input, nib_output);
+                                snprintf(lastfile, sizeof(lastfile), "%s", path_basename(nib_output));
+                            }
+                        }
+                        closedir(zip_dir);
+                    }
+
+                    snprintf(full_path, RETRO_PATH_MAX, "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, lastfile);
                 }
-                else
-                {
-                    /* Add the file to the struct */
-                    dc_add_file_int(dc, filename, label ? label : get_label(filename), image_name);
-                    label = NULL;
-                    image_name = NULL;
-                }
+
+                /* Add the file to the struct */
+                if (path_is_valid(full_path))
+                    dc_add_file(dc, full_path,
+                                file_label,
+                                label ? label : get_label(filename),
+                                image_prg);
+                label = NULL;
+                image_name = NULL;
+                filename = NULL;
             }
             else
             {
-                log_cb(RETRO_LOG_WARN, "File %s from list %s not found in dir %s\n", string, list_file, basedir);
+                log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found in dir '%s'\n", file_name, list_file, basedir);
                 /* Throw away the label and image name */
                 free(label);
                 label = NULL;
                 free(image_name);
                 image_name = NULL;
+                free(filename);
+                filename = NULL;
             }
         }
     }
@@ -760,9 +1007,9 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
             tmp = dc->labels[idx];
             dc->labels[idx] = dc->labels[ridx];
             dc->labels[ridx] = tmp;
-            tmp = dc->names[idx];
-            dc->names[idx] = dc->names[ridx];
-            dc->names[ridx] = tmp;
+            tmp = dc->disk_labels[idx];
+            dc->disk_labels[idx] = dc->disk_labels[ridx];
+            dc->disk_labels[ridx] = tmp;
             ++idx; --ridx;
         }
     }
@@ -813,12 +1060,12 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl)
 
 void dc_parse_m3u(dc_storage* dc, const char* m3u_file)
 {
-    dc_parse_list(dc, m3u_file, false);
+    dc_parse_list(dc, m3u_file, false, retro_save_directory);
 }
 
 void dc_parse_vfl(dc_storage* dc, const char* vfl_file)
 {
-    dc_parse_list(dc, vfl_file, true);
+    dc_parse_list(dc, vfl_file, true, retro_save_directory);
 }
 
 void dc_free(dc_storage* dc)

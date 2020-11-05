@@ -1,5 +1,5 @@
 #ifndef LIBRETRO_CORE_H
-#define LIBRETRO_CORE_H 1
+#define LIBRETRO_CORE_H
 
 #include <stdint.h>
 #include <string.h>
@@ -9,10 +9,8 @@
 #include <stdbool.h>
 #include <dirent.h>
 
-#include "retroglue.h"
-#include "retro_files.h"
-#include "retro_strings.h"
-#include "retro_disk_control.h"
+#include "libretro-glue.h"
+#include "libretro-dc.h"
 #include "string/stdstring.h"
 #include "file/file_path.h"
 #include "compat/strcasestr.h"
@@ -21,6 +19,17 @@
 #define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
 #define RGB888(r, g, b) (((r * 255 / 31) << 16) | ((g * 255 / 31) << 8) | (b * 255 / 31))
 #define ARGB888(a, r, g, b) ((a << 24) | (r << 16) | (g << 8) | b)
+
+/* File helpers functions */
+#define RETRO_PATH_MAX              512
+
+#ifdef _WIN32
+#define RETRO_PATH_SEPARATOR   		"\\"
+/* Windows also support the unix path separator */
+#define RETRO_PATH_SEPARATOR_ALT   	"/"
+#else
+#define RETRO_PATH_SEPARATOR   		"/"
+#endif
 
 /* Log */
 #if defined(__ANDROID__) || defined(ANDROID)
@@ -163,4 +172,5 @@ struct libretro_core_options {
 };
 
 extern struct libretro_core_options core_opt;
-#endif
+
+#endif /* LIBRETRO_CORE_H */

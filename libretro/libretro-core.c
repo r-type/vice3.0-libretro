@@ -676,7 +676,7 @@ static int process_cmdline(const char* argv)
              * of mass renaming by differentiating them from regular program-PRGs.
              * Also separated cart PRGs meant to be assigned to specific memory
              * addresses require special care for hassle-free usage. */
-            if (file_exists(argv))
+            if (path_is_valid(argv))
             {
                 char cart_2000[RETRO_PATH_MAX] = {0};
                 char cart_6000[RETRO_PATH_MAX] = {0};
@@ -737,17 +737,17 @@ static int process_cmdline(const char* argv)
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-a000", ""));
                         snprintf(cart_A000, sizeof(cart_A000), "%s%s%s", cart_A000, "-a000", ".prg");
 
-                        if (file_exists(cart_2000))
+                        if (path_is_valid(cart_2000))
                         {
                             Add_Option("-cart2");
                             Add_Option(cart_2000);
                         }
-                        if (file_exists(cart_6000))
+                        if (path_is_valid(cart_6000))
                         {
                             Add_Option("-cart6");
                             Add_Option(cart_6000);
                         }
-                        if (file_exists(cart_A000))
+                        if (path_is_valid(cart_A000))
                         {
                             Add_Option("-cartA");
                             Add_Option(cart_A000);
@@ -1025,7 +1025,7 @@ void update_work_disk()
         path_join((char*)&opt_work_disk_filepath, retro_save_directory, opt_work_disk_filename);
 
         /* Create disk */
-        if (!file_exists(opt_work_disk_filepath))
+        if (!path_is_valid(opt_work_disk_filepath))
         {
             /* Label format */
             char format_name[28];
@@ -1039,7 +1039,7 @@ void update_work_disk()
         }
 
         /* Attach disk */
-        if (file_exists(opt_work_disk_filepath))
+        if (path_is_valid(opt_work_disk_filepath))
         {
             /* Detach previous disks */
             if ((attached_image = file_system_get_disk_name(8)) != NULL)

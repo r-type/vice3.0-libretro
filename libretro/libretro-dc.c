@@ -16,13 +16,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "retro_disk_control.h"
-#include "retro_strings.h"
-#include "retro_files.h"
-#include "file/file_path.h"
-#include "libretro.h"
+#include "libretro-dc.h"
 #include "libretro-core.h"
-#include "retroglue.h"
 
 #include "archdep.h"
 #include "attach.h"
@@ -267,7 +262,7 @@ static char* m3u_search_file(const char* basedir, const char* dskName)
         char* dskPath = path_join_dup(basedir, dskName);
 
         /* Verify if this item is a relative filename (append it to the m3u path) */
-        if (file_exists(dskPath))
+        if (path_is_valid(dskPath))
         {
             /* Return */
             return dskPath;
@@ -276,7 +271,7 @@ static char* m3u_search_file(const char* basedir, const char* dskName)
     }
 
     /* Verify if this item is an absolute pathname (or the file is in working dir) */
-    if (file_exists(dskName))
+    if (path_is_valid(dskName))
     {
         /* Copy and return */
         return strdup(dskName);
@@ -645,7 +640,7 @@ static bool dc_add_m3u_save_disk(
      * able to support changing the volume label if
      * it differs from 'disk_name'. This is quite
      * fiddly, however - perhaps it can be added later... */
-    save_disk_exists = file_exists(save_disk_path);
+    save_disk_exists = path_is_valid(save_disk_path);
 
     /* ...if not, create a new one */
     if (!save_disk_exists)

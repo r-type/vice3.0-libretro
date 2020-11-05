@@ -1,7 +1,7 @@
 #include "libretro.h"
 #include "libretro-core.h"
 #include "libretro-mapper.h"
-#include "vkbd.h"
+#include "libretro-vkbd.h"
 
 #include "archdep.h"
 #include "joystick.h"

@@ -16,8 +16,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef RETRO_DISK_CONTROL_H__
-#define RETRO_DISK_CONTROL_H__
+#ifndef LIBRETRO_DC_H
+#define LIBRETRO_DC_H
 
 #include <stdbool.h>
 
@@ -70,4 +70,4 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename);
 bool dc_remove_file(dc_storage* dc, int index);
 enum dc_image_type dc_get_image_type(const char* filename);
 
-#endif
+#endif /* LIBRETRO_DC_H */

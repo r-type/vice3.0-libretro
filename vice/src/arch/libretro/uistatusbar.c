@@ -37,15 +37,11 @@
 #include "uiapi.h"
 #include "uistatusbar.h"
 #include "videoarch.h"
-
-#include "libretro.h"
-#include "libretro-core.h"
-#include "graph.h"
-#include "file/file_path.h"
-#include "retro_miscellaneous.h"
-
 #include "joystick.h"
 #include "archdep.h"
+
+#include "libretro-core.h"
+#include "libretro-graph.h"
 
 extern unsigned int opt_joyport_type;
 extern unsigned int mouse_value[2 + 1];
@@ -199,9 +195,9 @@ static int drive_pwm = 0;
 
 void display_current_image(const char *image, bool inserted)
 {
-    static char imagename[PATH_MAX_LENGTH] = {0};
-    static char imagename_prev[PATH_MAX_LENGTH] = {0};
-    static char imagelabel[PATH_MAX_LENGTH] = {0};
+    static char imagename[RETRO_PATH_MAX] = {0};
+    static char imagename_prev[RETRO_PATH_MAX] = {0};
+    static char imagelabel[RETRO_PATH_MAX] = {0};
 
     if (strcmp(image, ""))
     {

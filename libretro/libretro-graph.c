@@ -5,7 +5,7 @@
 
 #include "libretro.h"
 #include "libretro-core.h"
-#include "graph.h"
+#include "libretro-graph.h"
 
 #include "font.i"
 

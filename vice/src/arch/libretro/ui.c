@@ -55,7 +55,6 @@ BYTE scpu64rom_scpu64_rom_original[SCPU64_SCPU64_ROM_MAXSIZE] = {0};
 BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 #endif
 
-#include "retro_files.h"
 #include "libretro-core.h"
 #if defined(__XVIC__)
 extern int vic20mem_forced;

@@ -557,11 +557,6 @@ static int process_cmdline(const char* argv)
         char zip_basename[RETRO_PATH_MAX] = {0};
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-        snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
-
-        /* Clean ZIP temp */
-        if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
-            remove_recurse(retro_temp_directory);
 
         char nib_input[RETRO_PATH_MAX] = {0};
         char nib_output[RETRO_PATH_MAX] = {0};
@@ -821,7 +816,7 @@ static int process_cmdline(const char* argv)
             if (!dc->command)
             {
                 char option[RETRO_PATH_MAX] = {0};
-                if (dc->load[0])
+                if (!string_is_empty(dc->load[0]))
                     snprintf(option, sizeof(option), "%s:%s", dc->files[0], dc->load[0]);
                 else
                     snprintf(option, sizeof(option), "%s", dc->files[0]);
@@ -5278,6 +5273,13 @@ void retro_init(void)
       strlcpy(retro_system_directory, ".", sizeof(retro_system_directory));
 #endif
    }
+
+   /* Temp directory for ZIPs and NIB->G64 conversions */
+   snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
+
+   /* Clean ZIP temp */
+   if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
+      remove_recurse(retro_temp_directory);
 
    /* Use system directory for data files such as C64/.vpl etc. */
    snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%svice", retro_system_directory, FSDEV_DIR_SEP_STR);

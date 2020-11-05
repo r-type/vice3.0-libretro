@@ -476,7 +476,6 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
         char zip_basename[RETRO_PATH_MAX] = {0};
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path_replace));
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-        snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
 
         char nib_input[RETRO_PATH_MAX] = {0};
         char nib_output[RETRO_PATH_MAX] = {0};
@@ -507,7 +506,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
             int zip_m3u_num = 0;
 
-            DIR *zip_dir;
+            DIR *zip_dir = NULL;
             struct dirent *zip_dirp;
 
             /* Convert all NIBs to G64 */
@@ -690,7 +689,7 @@ static bool dc_add_m3u_save_disk(
         snprintf(save_disk_label, 64, "%s %u",
                  M3U_SAVEDISK_LABEL, index);
 
-        dc_add_file(dc, strdup(save_disk_path), strdup(save_disk_label), strdup(format_name), NULL);
+        dc_add_file(dc, save_disk_path, save_disk_label, format_name, NULL);
         return true;
     }
 
@@ -719,7 +718,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
     }
 
     /* Read the lines while there is line to read and we have enough space */
-    char buffer[2048];
+    char buffer[1024];
 
     /* Enforce standard compatibility to avoid invalid vfl files on the loose */
     if (is_vfl)
@@ -891,7 +890,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             }
 
             /* Search the file (absolute, relative to m3u) */
-            char* filename;
+            char* filename = NULL;
             if ((filename = m3u_search_file(basedir, file_name)) != NULL)
             {
                 /* If image name is missing, use filename without extension */
@@ -900,7 +899,11 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
                     char tmp[512];
                     tmp[0] = '\0';
 
-                    fill_short_pathname_representation(tmp, filename, sizeof(tmp));
+                    if (!string_is_empty(browsed_file))
+                        fill_short_pathname_representation(tmp, browsed_file, sizeof(tmp));
+                    else
+                        fill_short_pathname_representation(tmp, filename, sizeof(tmp));
+
                     image_name = strdup(tmp);
                 }
 
@@ -914,8 +917,6 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
                 char zip_basename[RETRO_PATH_MAX] = {0};
                 snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
                 snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
-                snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s",
-                         retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
 
                 char nib_input[RETRO_PATH_MAX] = {0};
                 char nib_output[RETRO_PATH_MAX] = {0};
@@ -927,51 +928,62 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
                     snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
                     path_mkdir(retro_temp_directory);
                     nib_convert(nib_input, nib_output);
-                    filename = strdup(nib_output);
+                    snprintf(full_path, sizeof(full_path), "%s", nib_output);
                 }
 
                 /* ZIP */
                 if (strendswith(filename, "zip"))
                 {
                     char lastfile[RETRO_PATH_MAX] = {0};
-                    char full_path[RETRO_PATH_MAX] = {0};
-                    snprintf(full_path, sizeof(full_path), "%s", filename);
 
                     path_mkdir(retro_temp_directory);
                     zip_uncompress(full_path, retro_temp_directory, lastfile);
 
-                    DIR *zip_dir;
-                    struct dirent *zip_dirp;
-
                     /* Convert all NIBs to G64 */
-                    zip_dir = opendir(retro_temp_directory);
-                    while ((zip_dirp = readdir(zip_dir)) != NULL)
-                    {
-                        if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
-                        {
-                            snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
-                            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
-                            nib_convert(nib_input, nib_output);
-                            snprintf(lastfile, sizeof(lastfile), "%s", path_basename(nib_output));
-                        }
-                    }
-                    closedir(zip_dir);
-
                     if (!string_is_empty(browsed_file))
-                        snprintf(lastfile, sizeof(lastfile), "%s", string_replace_substring((const char*)browsed_file, ".nib", ".g64"));
+                    {
+                        snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, browsed_file);
+                        if (dc_get_image_type(nib_input) == DC_IMAGE_TYPE_NIBBLER && path_is_valid(nib_input))
+                        {
+                            /* Reuse lastfile */
+                            snprintf(lastfile, sizeof(lastfile), "%s", browsed_file);
+                            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(lastfile));
+                            nib_convert(nib_input, nib_output);
+                            snprintf(browsed_file, sizeof(browsed_file), "%s", path_basename(nib_output));
+                        }
+                        snprintf(lastfile, sizeof(lastfile), "%s", browsed_file);
+                    }
+                    else
+                    {
+                        DIR *zip_dir = NULL;
+                        struct dirent *zip_dirp;
 
-                    strcpy(filename, retro_temp_directory);
-                    strcat(filename, FSDEV_DIR_SEP_STR);
-                    strcat(filename, lastfile);
+                        zip_dir = opendir(retro_temp_directory);
+                        while ((zip_dirp = readdir(zip_dir)) != NULL)
+                        {
+                            if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
+                            {
+                                snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+                                snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
+                                nib_convert(nib_input, nib_output);
+                                snprintf(lastfile, sizeof(lastfile), "%s", path_basename(nib_output));
+                            }
+                        }
+                        closedir(zip_dir);
+                    }
+
+                    snprintf(full_path, RETRO_PATH_MAX, "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, lastfile);
                 }
 
                 /* Add the file to the struct */
-                dc_add_file(dc, trimwhitespace(filename),
-                                strdup(file_label),
+                if (path_is_valid(full_path))
+                    dc_add_file(dc, full_path,
+                                file_label,
                                 label ? label : get_label(filename),
-                                strdup(image_prg));
+                                image_prg);
                 label = NULL;
                 image_name = NULL;
+                filename = NULL;
             }
             else
             {
@@ -981,6 +993,8 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
                 label = NULL;
                 free(image_name);
                 image_name = NULL;
+                free(filename);
+                filename = NULL;
             }
         }
     }

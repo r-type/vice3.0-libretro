@@ -90,7 +90,8 @@ void zip_uncompress(char *in, char *out, char *lastfile)
 
         err = unzGetCurrentFileInfo(uf, &file_info, filename_inzip, sizeof(filename_inzip), NULL, 0, NULL, 0);
         snprintf(filename_withpath, sizeof(filename_withpath), "%s%s%s", out, FSDEV_DIR_SEP_STR, filename_inzip);
-        if ((dc_get_image_type(filename_inzip) == DC_IMAGE_TYPE_FLOPPY || dc_get_image_type(filename_inzip) == DC_IMAGE_TYPE_TAPE) && lastfile != NULL)
+        if ((dc_get_image_type(filename_inzip) == DC_IMAGE_TYPE_FLOPPY ||
+             dc_get_image_type(filename_inzip) == DC_IMAGE_TYPE_TAPE) && lastfile != NULL)
             snprintf(lastfile, RETRO_PATH_MAX, "%s", filename_inzip);
         p = filename_withoutpath = filename_inzip;
         while ((*p) != '\0')
@@ -105,7 +106,7 @@ void zip_uncompress(char *in, char *out, char *lastfile)
             fprintf(stdout, "Mkdir: %s\n", filename_withpath);
             path_mkdir(filename_withpath);
         }
-        else
+        else if (!path_is_valid(filename_withpath))
         {
             const char* write_filename;
             int skip = 0;

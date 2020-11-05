@@ -28,10 +28,6 @@
 #include "userport_joystick.h"
 #endif
 
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-
 /* Accurate tick for statusbar FPS counter */
 long retro_now = 0;
 /* Main CPU loop */
@@ -1988,17 +1984,6 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20\%"
       },
-      {
-         "vice_gfx_colors",
-         "Video > Color Depth",
-         "24-bit is slower and not available on all platforms. Full restart required.",
-         {
-            { "16bit", "Thousands (16-bit)" },
-            { "24bit", "Millions (24-bit)" },
-            { NULL, NULL },
-         },
-         "16bit"
-      },
 #if defined(__XVIC__)
       {
          "vice_vic20_external_palette",
@@ -2354,6 +2339,17 @@ void retro_set_environment(retro_environment_t cb)
       },
 #endif
       {
+         "vice_gfx_colors",
+         "Video > Color Depth",
+         "24-bit is slower and not available on all platforms. Full restart required.",
+         {
+            { "16bit", "Thousands (16-bit)" },
+            { "24bit", "Millions (24-bit)" },
+            { NULL, NULL },
+         },
+         "16bit"
+      },
+      {
          "vice_audio_options_display",
          "Show Audio Options",
          "Shows/hides audio related options.\nCore options page refresh required.",
@@ -2365,44 +2361,31 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
       {
-         "vice_sound_sample_rate",
-         "Audio > Output Sample Rate",
-         "Slightly higher quality or higher performance.",
-         {
-            { "22050", NULL },
-            { "44100", NULL },
-            { "48000", NULL },
-            { "96000", NULL },
-            { NULL, NULL },
-         },
-         "48000"
-      },
-      {
          "vice_drive_sound_emulation",
          "Audio > Drive Sound Emulation",
          "'True Drive Emulation' & D64/D71 disk image required.",
          {
             { "disabled", NULL },
-            { "5\%", "5\% volume" },
-            { "10\%", "10\% volume" },
-            { "15\%", "15\% volume" },
-            { "20\%", "20\% volume" },
-            { "25\%", "25\% volume" },
-            { "30\%", "30\% volume" },
-            { "35\%", "35\% volume" },
-            { "40\%", "40\% volume" },
-            { "45\%", "45\% volume" },
-            { "50\%", "50\% volume" },
-            { "55\%", "55\% volume" },
-            { "60\%", "60\% volume" },
-            { "65\%", "65\% volume" },
-            { "70\%", "70\% volume" },
-            { "75\%", "75\% volume" },
-            { "80\%", "80\% volume" },
-            { "85\%", "85\% volume" },
-            { "90\%", "90\% volume" },
-            { "95\%", "95\% volume" },
-            { "100\%", "100\% volume" },
+            { "5\%", "5\%" },
+            { "10\%", "10\%" },
+            { "15\%", "15\%" },
+            { "20\%", "20\%" },
+            { "25\%", "25\%" },
+            { "30\%", "30\%" },
+            { "35\%", "35\%" },
+            { "40\%", "40\%" },
+            { "45\%", "45\%" },
+            { "50\%", "50\%" },
+            { "55\%", "55\%" },
+            { "60\%", "60\%" },
+            { "65\%", "65\%" },
+            { "70\%", "70\%" },
+            { "75\%", "75\%" },
+            { "80\%", "80\%" },
+            { "85\%", "85\%" },
+            { "90\%", "90\%" },
+            { "95\%", "95\%" },
+            { "100\%", "100\%" },
             { NULL, NULL },
          },
          "20\%"
@@ -2420,16 +2403,16 @@ void retro_set_environment(retro_environment_t cb)
          "",
          {
             { "disabled", NULL },
-            { "1", "100\% volume" },
-            { "2", "200\% volume" },
-            { "3", "300\% volume" },
-            { "4", "400\% volume" },
-            { "5", "500\% volume" },
-            { "6", "600\% volume" },
-            { "7", "700\% volume" },
-            { "8", "800\% volume" },
-            { "9", "900\% volume" },
-            { "10", "1000\% volume" },
+            { "1", "100\%" },
+            { "2", "200\%" },
+            { "3", "300\%" },
+            { "4", "400\%" },
+            { "5", "500\%" },
+            { "6", "600\%" },
+            { "7", "700\%" },
+            { "8", "800\%" },
+            { "9", "900\%" },
+            { "10", "1000\%" },
             { NULL, NULL },
          },
          "disabled"
@@ -2611,6 +2594,19 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
 #endif
+      {
+         "vice_sound_sample_rate",
+         "Audio > Output Sample Rate",
+         "Slightly higher quality or higher performance.",
+         {
+            { "22050", NULL },
+            { "44100", NULL },
+            { "48000", NULL },
+            { "96000", NULL },
+            { NULL, NULL },
+         },
+         "48000"
+      },
 #if !defined(__XPET__) && !defined(__XCBM2__)
       {
          "vice_analogmouse_deadzone",
@@ -4830,8 +4826,6 @@ static void update_variables(void)
    /* Audio options */
    option_display.visible = opt_audio_options_display;
 
-   option_display.key = "vice_sound_sample_rate";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
@@ -4860,10 +4854,20 @@ static void update_variables(void)
    option_display.key = "vice_sfx_sound_expander";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
+   option_display.key = "vice_sound_sample_rate";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 
    /* Video options */
    option_display.visible = opt_video_options_display;
 
+   option_display.key = "vice_vkbd_theme";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vkbd_alpha";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_statusbar";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_gfx_colors";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_zoom_mode";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -4880,8 +4884,6 @@ static void update_variables(void)
    option_display.key = "vice_manual_crop_right";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-   option_display.key = "vice_gfx_colors";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__XVIC__)
    option_display.key = "vice_vic20_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -4928,12 +4930,6 @@ static void update_variables(void)
    option_display.key = "vice_vicii_color_brightness",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
-   option_display.key = "vice_vkbd_theme";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vkbd_alpha";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_statusbar";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 }
 
 void emu_reset(int type)

@@ -185,6 +185,7 @@ void zip_uncompress(char *in, char *out, char *lastfile)
         if ((dc_get_image_type(filename_inzip) == DC_IMAGE_TYPE_FLOPPY ||
              dc_get_image_type(filename_inzip) == DC_IMAGE_TYPE_TAPE) && lastfile != NULL)
             snprintf(lastfile, RETRO_PATH_MAX, "%s", filename_inzip);
+
         p = filename_withoutpath = filename_inzip;
         while ((*p) != '\0')
         {

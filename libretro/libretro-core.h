@@ -20,15 +20,19 @@
 #define RGB888(r, g, b) (((r * 255 / 31) << 16) | ((g * 255 / 31) << 8) | (b * 255 / 31))
 #define ARGB888(a, r, g, b) ((a << 24) | (r << 16) | (g << 8) | b)
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 /* File helpers functions */
 #define RETRO_PATH_MAX              512
 
 #ifdef _WIN32
-#define RETRO_PATH_SEPARATOR   		"\\"
+#define RETRO_PATH_SEPARATOR        "\\"
 /* Windows also support the unix path separator */
-#define RETRO_PATH_SEPARATOR_ALT   	"/"
+#define RETRO_PATH_SEPARATOR_ALT    "/"
 #else
-#define RETRO_PATH_SEPARATOR   		"/"
+#define RETRO_PATH_SEPARATOR        "/"
 #endif
 
 /* Log */

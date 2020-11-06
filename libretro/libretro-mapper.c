@@ -62,8 +62,8 @@ bool cur_port_locked = false;
 unsigned int mouse_value[2] = {0};
 unsigned int mouse_speed[2] = {0};
 
-unsigned int statusbar = 0;
-unsigned int warpmode = 0;
+unsigned int retro_statusbar = 0;
+unsigned int retro_warpmode = 0;
 extern bool retro_vkbd;
 extern bool retro_vkbd_transparent;
 extern unsigned int retro_devices[RETRO_DEVICES];
@@ -140,8 +140,8 @@ void emu_function(int function)
          retro_vkbd = !retro_vkbd;
          break;
       case EMU_STATUSBAR:
-         statusbar = (statusbar) ? 0 : 1;
-         resources_set_int("SDLStatusbar", statusbar);
+         retro_statusbar = (retro_statusbar) ? 0 : 1;
+         resources_set_int("SDLStatusbar", retro_statusbar);
          break;
       case EMU_JOYPORT:
 #if defined(__XPET__) || defined(__XCBM2__) || defined(__XVIC__)
@@ -191,8 +191,8 @@ void emu_function(int function)
          }
          break;
       case EMU_WARP_MODE:
-         warpmode = (warpmode) ? 0 : 1;
-         resources_set_int("WarpMode", warpmode);
+         retro_warpmode = (retro_warpmode) ? 0 : 1;
+         resources_set_int("WarpMode", retro_warpmode);
          break;
       case EMU_DATASETTE_HOTKEYS:
          datasette_hotkeys = !datasette_hotkeys;

@@ -694,7 +694,7 @@ void archdep_shutdown(void)
     lib_free(boot_path);
 }
 
-/*
+#if 0
 int archdep_network_init(void)
 {
     return 0;
@@ -708,7 +708,7 @@ void archdep_vice_exit(int excode)
 {
     exit(excode);
 }
-*/
+#endif
 
 char *archdep_get_runtime_os(void)
 {

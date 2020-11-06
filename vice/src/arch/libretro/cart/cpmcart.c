@@ -28,7 +28,7 @@
  */
 
 #include "vice.h"
-
+#if 0
 #include <stdlib.h>
 
 #include "6510core.h"
@@ -38,7 +38,9 @@
 #include "cartio.h"
 #include "cartridge.h"
 #include "cmdline.h"
+#endif
 #include "cpmcart.h"
+#if 0
 #include "daa.h"
 #include "export.h"
 #include "interrupt.h"
@@ -47,6 +49,7 @@
 #include "mem.h"
 #include "monitor.h"
 #include "resources.h"
+#endif
 #include "snapshot.h"
 #include "types.h"
 #include "z80regs.h"
@@ -56,7 +59,7 @@
 #else
 #define CLK_ADD(clock, amount) clock += amount
 #endif
-
+#if 0
 static uint8_t reg_a = 0;
 static uint8_t reg_b = 0;
 static uint8_t reg_c = 0;
@@ -114,21 +117,23 @@ static void set_write_item(int index, void (*func)(uint16_t addr, uint8_t val))
 static void cpmcart_mem_init(void)
 {
 }
-
+#endif
+#if 0
 static void cpmcart_io_store(uint16_t addr, uint8_t byte)
 {
 }
-
+#endif
 int cpmcart_cart_enabled(void)
 {
     return 0;
 }
-
+#if 0
 static int cpmcart_dump(void)
 {
     return 0;
 }
-
+#endif
+#if 0
 static io_source_t cpmcart_device = {
     "CP/M Cartridge",
     IO_DETACH_RESOURCE,
@@ -160,12 +165,13 @@ static const resource_int_t resources_int[] = {
       &cpmcart_enabled, set_cpmcart_enabled, NULL },
     RESOURCE_INT_LIST_END
 };
-
+#endif
 int cpmcart_resources_init(void)
 {
     return 0;
 }
 
+#if 0
 static const cmdline_option_t cmdline_options[] =
 {
     { "-cpmcart", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
@@ -176,12 +182,12 @@ static const cmdline_option_t cmdline_options[] =
       NULL, "Disable the CP/M cartridge" },
     CMDLINE_LIST_END
 };
-
+#endif
 int cpmcart_cmdline_options_init(void)
 {
     return 0;
 }
-
+#if 0
 struct cpmcart_ba_s {
     cpmcart_ba_check_callback_t *check;
     cpmcart_ba_steal_callback_t *steal;
@@ -193,7 +199,7 @@ struct cpmcart_ba_s {
 static struct cpmcart_ba_s cpmcart_ba = {
     NULL, NULL, NULL, 0, 0
 };
-
+#endif
 void cpmcart_ba_register(cpmcart_ba_check_callback_t *ba_check,
                          cpmcart_ba_steal_callback_t *ba_steal,
                          int *ba_var, int ba_mask)
@@ -204,6 +210,7 @@ void cpmcart_reset(void)
 {
 }
 
+#if 0
 #ifdef Z80_4MHZ
 static int z80_half_cycle = 0;
 
@@ -218,9 +225,9 @@ void cpmcart_clock_stretch(void)
 #endif
 
 /* ------------------------------------------------------------------------- */
-
+#endif
 z80_regs_t z80_regs;
-
+#if 0
 static void import_registers(void)
 {
 }
@@ -262,11 +269,11 @@ static void opcode_fd(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint16_t ip12, uint
 static void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *cpu_alarm_context)
 {
 }
-
+#endif
 void cpmcart_check_and_run_z80(void)
 {
 }
-
+#if 0
 /* ------------------------------------------------------------------------- */
 
 /* CPMCART snapshot module format:
@@ -308,7 +315,7 @@ void cpmcart_check_and_run_z80(void)
 static char snap_module_name[] = "CPMCART";
 #define SNAP_MAJOR 0
 #define SNAP_MINOR 0
-
+#endif
 int cpmcart_snapshot_write_module(snapshot_t *s)
 {
     return -1;

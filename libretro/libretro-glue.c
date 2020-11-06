@@ -357,7 +357,7 @@ int load_file(char *filename, BYTE *file_buffer)
 			return 0;
 	}
 
-	printf("Successfully loaded %d bytes.", size);
+	if(verbose) printf("Successfully loaded %d bytes.", size);
 	fclose(fpin);
 	return size;
 }
@@ -366,14 +366,14 @@ int read_nib(BYTE *file_buffer, int file_buffer_size, BYTE *track_buffer, BYTE *
 {
 	int track, t_index=0, h_index=0;
 
-	printf("\nParsing NIB data...\n");
+	if(verbose) printf("\nParsing NIB data...\n");
 
 	if (memcmp(file_buffer, "MNIB-1541-RAW", 13) != 0)
 	{
 		printf("Not valid NIB data!\n");
 		return 0;
 	}
-	else
+	else if(verbose)
 		printf("NIB file version %d\n", file_buffer[13]);
 
 	while(file_buffer[0x10+h_index])
@@ -389,7 +389,7 @@ int read_nib(BYTE *file_buffer, int file_buffer_size, BYTE *track_buffer, BYTE *
 		h_index+=2;
 		t_index++;
 	}
-	printf("Successfully parsed NIB data for %d tracks\n", t_index);
+	if(verbose) printf("Successfully parsed NIB data for %d tracks\n", t_index);
 	return 1;
 }
 
@@ -399,7 +399,7 @@ int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, 
 	BYTE nibdata[NIB_TRACK_LENGTH];
 
 	memset(nibdata, 0, sizeof(nibdata));
-	printf("Aligning tracks...\n");
+	if(verbose) printf("Aligning tracks...\n");
 
 	for (track = start_track; track <= end_track; track ++)
 	{
@@ -430,7 +430,7 @@ int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, 
 			if(track_density[track] & BM_NO_SYNC) printf("NOSYNC:");
 			if(track_density[track] & BM_FF_TRACK) printf("KILLER:");
 			printf("(%d:", track_density[track]&3);
-			printf("%d) ", track_length[track]);
+			printf("%lld) ", track_length[track]);
 			printf("[align=%s]\n",alignments[track_alignment[track]]);
 		}
 	}
@@ -478,7 +478,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 			G64_TRACK_MAXLEN = track_length[index+2];
 	}
 #endif
-	printf("G64 Track Length = %d", G64_TRACK_MAXLEN);
+	if(verbose) printf("G64 Track Length = %d", G64_TRACK_MAXLEN);
 
 	/* Create G64 header */
 	strcpy((char *) header, "GCR-1541");
@@ -578,13 +578,13 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 				printf("\n%4.1f: (", (float)track/2);
 				printf("%d", track_density[track]&3);
 				if ( (track_density[track]&3) != speed_map[track/2]) printf("!");
-				printf(":%d) ", track_length[track]);
+				printf(":%lld) ", track_length[track]);
 				if (track_density[track] & BM_NO_SYNC) printf("NOSYNC ");
 				if (track_density[track] & BM_FF_TRACK) printf("KILLER ");
 			}
 
 			track_len = compress_halftrack(track, buffer, track_density[track], track_len);
-			if(verbose) printf("(%d)", track_len);
+			if(verbose) printf("(%lld)", track_len);
 		}
 		else
 		{
@@ -592,7 +592,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 			track_len = compress_halftrack(track, buffer, track_density[track], track_len);
 		}
 		if(verbose>1) printf("(fill:$%.2x) ",tempfillbyte);
-		if(verbose>1) printf("{badgcr:%d}",badgcr);
+		if(verbose>1) printf("{badgcr:%lld}",badgcr);
 
 		gcr_track[0] = (BYTE) (track_len % 256);
 		gcr_track[1] = (BYTE) (track_len / 256);
@@ -618,7 +618,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 		}
 	}
 	fclose(fpout);
-	printf("\nSuccessfully saved G64 file\n");
+	if(verbose) printf("\nSuccessfully saved G64 file\n");
 	return 1;
 }
 
@@ -642,7 +642,7 @@ size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE density, size_
 		{
 			/* reduce sync marks within the track */
 			length = reduce_runs(gcrdata, length, capacity[density&3], reduce_sync, 0xff);
-			if(verbose>1) printf("(-sync:%d)", orglen - length);
+			if(verbose>1) printf("(-sync:%lld)", orglen - length);
 		}
 
 		/* reduce bad GCR runs */
@@ -651,7 +651,7 @@ size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE density, size_
 			(reduce_map[halftrack/2] & REDUCE_BAD) )
 		{
 			length = reduce_runs(gcrdata, length, capacity[density&3], 0, 0x00);
-			if(verbose) printf("(-badgcr:%d)", orglen - length);
+			if(verbose) printf("(-badgcr:%lld)", orglen - length);
 		}
 
 		/* reduce sector gaps -  they occur at the end of every sector and vary from 4-19 bytes, typically  */
@@ -660,7 +660,7 @@ size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE density, size_
 			(reduce_map[halftrack/2] & REDUCE_GAP) )
 		{
 			length = reduce_gaps(gcrdata, length, capacity[density & 3]);
-			if(verbose) printf("(-gap:%d)", orglen - length);
+			if(verbose) printf("(-gap:%lld)", orglen - length);
 		}
 
 		/* still not small enough, we have to truncate the end (reduce tail) */
@@ -668,7 +668,7 @@ size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE density, size_
 		if (length > capacity[density&3])
 		{
 			length = capacity[density&3];
-			if(verbose>1) printf("(-trunc:%d)", orglen - length);
+			if(verbose>1) printf("(-trunc:%lld)", orglen - length);
 		}
 	}
 

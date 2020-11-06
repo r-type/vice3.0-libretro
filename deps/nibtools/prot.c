@@ -18,7 +18,7 @@ void search_fat_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_le
 	size_t diff = 0;
 	char errorstring[0x1000];
 
-	printf("Searching for fat tracks...\n");
+	if(verbose) printf("Searching for fat tracks...\n");
 
 	if(!fattrack) /* autodetect fat tracks */
 	{
@@ -34,7 +34,7 @@ void search_fat_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_le
 
 				if (diff<=10)
 				{
-					printf("Fat track found on T%d (diff=%d)\n",track/2,(int)diff);
+					if(verbose) printf("Fat track found on T%d (diff=%d)\n",track/2,(int)diff);
 
 					memcpy(track_buffer + ((track+1) * NIB_TRACK_LENGTH),
 						track_buffer + (track * NIB_TRACK_LENGTH),
@@ -48,7 +48,7 @@ void search_fat_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_le
 	}
 	else	if(fattrack!=99) /* manually overridden */
 	{
-		printf("Handle FAT track on %d\n",fattrack);
+		if(verbose) printf("Handle FAT track on %d\n",fattrack);
 
 		memcpy(track_buffer + ((fattrack+1) * NIB_TRACK_LENGTH),
 			track_buffer + (fattrack * NIB_TRACK_LENGTH),

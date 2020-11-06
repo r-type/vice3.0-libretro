@@ -99,7 +99,6 @@ static char* joystick_value_human(char val, int vice_device)
 
 static void display_joyport(void)
 {
-    int len = 0;
     char tmpstr[25] = {0};
 
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
@@ -160,8 +159,7 @@ static void display_joyport(void)
     if (opt_statusbar & STATUSBAR_BASIC)
         snprintf(tmpstr, sizeof(tmpstr), "%24s", "");
 
-    len = sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-38s", tmpstr);
-    /*statusbar_text[STATUSBAR_JOY_POS + len] = ' ';*/
+    sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-38s", tmpstr);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -175,13 +173,11 @@ static int paused = 0;
 
 static void display_speed(void)
 {
-    int len;
     /*char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';*/
     char fps_str[3];
     sprintf(fps_str, "%2d", fps);
 
-    len = sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2s", fps_str);
-    /*statusbar_text[STATUSBAR_SPEED_POS + len] = ' ';*/ /* No end separator for last element */
+    sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2s", fps_str);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -381,14 +377,10 @@ static void display_tape(void)
             resources_set_int("WarpMode", 0);
     }
 
-    int len;
-
-    if (tape_enabled) {
-        len = sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? '*' : ' ', tape_counter, " >f<R"[tape_control]);
-    } else {
-        len = sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "     ");
-    }
-    /*statusbar_text[STATUSBAR_TAPE_POS + len] = ' ';*/
+    if (tape_enabled)
+        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? '*' : ' ', tape_counter, " >f<R"[tape_control]);
+    else
+        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "     ");
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;

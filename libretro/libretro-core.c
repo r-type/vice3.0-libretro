@@ -888,7 +888,7 @@ static int process_cmdline(const char* argv)
             }
             else if (!strcmp(arg, "-autostart"))
             {
-                /* User ask to not automatically start image in drive */
+                /* User ask to automatically start image in drive */
                 noautostart = false;
             }
             else
@@ -1091,6 +1091,7 @@ void update_from_vice()
     {
         free(autostartProgram);
         autostartProgram = NULL;
+        free(autostartString);
         autostartString = NULL;
         attachedImage = dc->files[dc->index];
         /* Disable AutostartWarp & WarpMode, otherwise warp gets stuck with PRGs in M3Us */
@@ -1279,7 +1280,7 @@ void update_from_vice()
     }
 
     /* If there an image attached, but autostart is empty, autostart from the image */
-    if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart)
+    if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart && !CMDFILE[0])
     {
         log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image '%s'\n", attachedImage);
         autostartString = x_strdup(attachedImage);
@@ -4970,6 +4971,8 @@ void emu_reset(int type)
             autostartProgram = strdup(dc->load[dc->index]);
             charset_petconvstring((uint8_t *)autostartProgram, 0);
          }
+         else
+            autostartProgram = NULL;
 
          /* Allow autostarting with a different disk */
          if (dc->count > 1)

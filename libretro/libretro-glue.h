@@ -2,9 +2,10 @@
 #define LIBRETRO_GLUE_H
 
 /* zlib */
-#include "deps/libz/zlib.h"
-#include "deps/libz/unzip.h"
 void zip_uncompress(char *in, char *out, char *lastfile);
+
+/* 7z */
+void sevenzip_uncompress(char *in, char *out, char *lastfile);
 
 /* NIBTOOLS */
 int nib_convert(char *in, char *out);

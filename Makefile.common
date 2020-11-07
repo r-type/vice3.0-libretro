@@ -54,22 +54,22 @@ endif
 SOURCES_CXX += $(LOCAL_SRC_CC_FILES)
 SOURCES_C += \
 	$(LOCAL_SRC_FILES) \
-	$(EMU)/arch/libretro/joy.c \
-	$(EMU)/arch/libretro/video.c \
-	$(EMU)/arch/libretro/ui.c \
-	$(EMU)/arch/libretro/kbd.c \
-	$(EMU)/arch/libretro/main.c \
 	$(EMU)/arch/libretro/archdep.c \
-	$(EMU)/arch/libretro/vsidui.c \
 	$(EMU)/arch/libretro/blockdev.c \
 	$(EMU)/arch/libretro/c64ui.c \
 	$(EMU)/arch/libretro/console.c \
-	$(EMU)/arch/libretro/uicmdline.c \
-	$(EMU)/arch/libretro/uimon.c \
-	$(EMU)/arch/libretro/vsyncarch.c \
+	$(EMU)/arch/libretro/joy.c \
+	$(EMU)/arch/libretro/kbd.c \
+	$(EMU)/arch/libretro/main.c \
 	$(EMU)/arch/libretro/mousedrv.c \
 	$(EMU)/arch/libretro/signals.c \
-	$(EMU)/arch/libretro/uistatusbar.c
+	$(EMU)/arch/libretro/ui.c \
+	$(EMU)/arch/libretro/uicmdline.c \
+	$(EMU)/arch/libretro/uimon.c \
+	$(EMU)/arch/libretro/uistatusbar.c \
+	$(EMU)/arch/libretro/video.c \
+	$(EMU)/arch/libretro/vsidui.c \
+	$(EMU)/arch/libretro/vsyncarch.c
 
 ifneq ($(STATIC_LINKING),1)
 SOURCES_C += \

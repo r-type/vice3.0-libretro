@@ -538,7 +538,7 @@ static int process_cmdline(const char* argv)
 
         /* "Browsed" file in ZIP */
         char browsed_file[RETRO_PATH_MAX] = {0};
-        if (strstr(argv, ".zip#"))
+        if (strstr(argv, ".zip#") || strstr(argv, ".7z#"))
         {
             char *token = strtok((char*)argv, "#");
             while (token != NULL)
@@ -568,10 +568,13 @@ static int process_cmdline(const char* argv)
         }
 
         /* ZIP */
-        if (strendswith(argv, ".zip"))
+        if (strendswith(argv, "zip") || strendswith(argv, "7z"))
         {
             path_mkdir(retro_temp_directory);
-            zip_uncompress(full_path, retro_temp_directory, NULL);
+            if (strendswith(argv, "zip"))
+               zip_uncompress(full_path, retro_temp_directory, NULL);
+            else if (strendswith(argv, "7z"))
+               sevenzip_uncompress(full_path, retro_temp_directory, NULL);
 
             /* Default to directory mode */
             int zip_mode = 0;
@@ -5392,9 +5395,9 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.3" GIT_VERSION;
 #if defined(__XVIC__)
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|20|40|60|a0|b0|rom";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|20|40|60|a0|b0|rom";
 #else
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
 #endif
    info->need_fullpath    = true;
    info->block_extract    = true;

@@ -385,6 +385,7 @@ endif
 
 include Makefile.common
 
+LDFLAGS     += -Wl,--gc-sections -s
 COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\" -D__LIBRETRO__ -DWANT_ZLIB -DHAVE_CONFIG_H
 
 OBJECTS     += $(patsubst %.cpp,%.o,$(SOURCES_CXX:.cc=.o)) $(SOURCES_C:.c=.o)

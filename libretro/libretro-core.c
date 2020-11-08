@@ -41,8 +41,6 @@ unsigned int opt_vkbd_alpha = 204;
 unsigned int vkbd_alpha = 204;
 
 /* Core vars */
-char retro_key_state[RETROK_LAST] = {0};
-char retro_key_state_old[RETROK_LAST] = {0};
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char* autostartProgram = NULL;
@@ -581,7 +579,7 @@ static int process_cmdline(const char* argv)
             snprintf(full_path, sizeof(full_path), "%s", retro_temp_directory);
 
             FILE *zip_m3u;
-            char zip_m3u_list[20][RETRO_PATH_MAX] = {0};
+            char zip_m3u_list[DC_MAX_SIZE][RETRO_PATH_MAX] = {0};
             char zip_m3u_path[RETRO_PATH_MAX] = {0};
             snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
             int zip_m3u_num = 0;
@@ -1446,27 +1444,27 @@ void retro_set_led(unsigned led)
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_controller_description p1_controllers[] = {
-      { "Joystick", RETRO_DEVICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p2_controllers[] = {
-      { "Joystick", RETRO_DEVICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p3_controllers[] = {
-      { "Joystick", RETRO_DEVICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p4_controllers[] = {
-      { "Joystick", RETRO_DEVICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p5_controllers[] = {
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
 
@@ -5350,8 +5348,6 @@ void retro_init(void)
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
 
    memset(retro_bmp, 0, sizeof(retro_bmp));
-   memset(retro_key_state, 0, sizeof(retro_key_state));
-   memset(retro_key_state_old, 0, sizeof(retro_key_state_old));
 
    retro_ui_finalized = false;
    update_variables();

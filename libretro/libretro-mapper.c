@@ -14,9 +14,6 @@
 #include "kbd.h"
 #include "mousedrv.h"
 
-extern char retro_key_state[RETROK_LAST];
-extern char retro_key_state_old[RETROK_LAST];
-
 static retro_input_state_t input_state_cb;
 static retro_input_poll_t input_poll_cb;
 
@@ -68,6 +65,7 @@ extern bool retro_vkbd;
 extern bool retro_vkbd_transparent;
 extern unsigned int retro_devices[RETRO_DEVICES];
 
+static unsigned retro_key_state[RETROK_LAST] = {0};
 static int16_t joypad_bits[RETRO_DEVICES];
 extern bool libretro_supports_bitmasks;
 
@@ -243,26 +241,27 @@ void retro_key_down(int symkey)
       kbd_handle_keydown(symkey);
 }
 
-void process_key(int disable_physical_cursor_keys)
+void process_key(int disable_keys)
 {
-   int i;
+   int i = 0;
+   unsigned state = 0;
 
    for (i = RETROK_BACKSPACE; i < RETROK_LAST; i++)
    {
-      retro_key_state[i] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, i);
-
-      if (disable_physical_cursor_keys && (i == RETROK_UP || i == RETROK_DOWN || i == RETROK_LEFT || i == RETROK_RIGHT))
+      if (disable_keys && (i == RETROK_UP || i == RETROK_DOWN || i == RETROK_LEFT || i == RETROK_RIGHT))
          continue;
 
-      if (retro_key_state[i] && !retro_key_state_old[i])
+      state = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, i);
+
+      if (state && !retro_key_state[i])
       {
+         retro_key_state[i] = 1;
          retro_key_down(i);
-         retro_key_state_old[i] = 1;
       }
-      else if (!retro_key_state[i] && retro_key_state_old[i])
+      else if (!state && retro_key_state[i])
       {
+         retro_key_state[i] = 0;
          retro_key_up(i);
-         retro_key_state_old[i] = 0;
       }
    }
 }
@@ -846,7 +845,7 @@ void update_input(int disable_physical_cursor_keys)
 
 int process_keyboard_pass_through()
 {
-   unsigned process_key = 0;
+   unsigned process = 0;
 
    /* Defaults */
    int fire_button = RETRO_DEVICE_ID_JOYPAD_B;
@@ -900,25 +899,25 @@ int process_keyboard_pass_through()
              ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_R3))     && mapper_keys[RETRO_DEVICE_ID_JOYPAD_R3]) ||
              ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_SELECT)) && mapper_keys[RETRO_DEVICE_ID_JOYPAD_SELECT]) ||
              ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_START))  && mapper_keys[RETRO_DEVICE_ID_JOYPAD_START]))
-            process_key = 2; /* Skip all keyboard input when RetroPad buttons are pressed */
+            process = 2; /* Skip all keyboard input when RetroPad buttons are pressed */
          else
          if ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) ||
              (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) ||
              (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) ||
              (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-            process_key = 1; /* Skip cursor keys */
+            process = 1; /* Skip cursor keys */
          break;
 
-      case RETRO_DEVICE_JOYSTICK:
+      case RETRO_DEVICE_VICE_JOYSTICK:
          if ((fire_button > -1 && (joypad_bits[0] & (1 << fire_button))) ||
              (jump_button > -1 && (joypad_bits[0] & (1 << jump_button))))
-            process_key = 2; /* Skip all keyboard input when RetroPad buttons are pressed */
+            process = 2; /* Skip all keyboard input when RetroPad buttons are pressed */
          else
          if ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) ||
              (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) ||
              (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) ||
              (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-            process_key = 1; /* Skip cursor keys */
+            process = 1; /* Skip cursor keys */
          break;
    }
 
@@ -975,21 +974,21 @@ int process_keyboard_pass_through()
               (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) ||
               (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) ||
               (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-            process_key = 2; /* Skip all keyboard input from RetroPad 2 */
+            process = 2; /* Skip all keyboard input from RetroPad 2 */
          break;
 
-      case RETRO_DEVICE_JOYSTICK:
+      case RETRO_DEVICE_VICE_JOYSTICK:
          if ((fire_button > -1 && (joypad_bits[1] & (1 << fire_button))) ||
              (jump_button > -1 && (joypad_bits[1] & (1 << jump_button))) ||
               (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) ||
               (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) ||
               (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) ||
               (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-            process_key = 2; /* Skip all keyboard input from RetroPad 2 */
+            process = 2; /* Skip all keyboard input from RetroPad 2 */
          break;
    }
 
-   return process_key;
+   return process;
 }
 
 void retro_poll_event()
@@ -1022,7 +1021,7 @@ void retro_poll_event()
    int retro_port;
    for (retro_port = 0; retro_port <= 4; retro_port++)
    {
-      if (retro_devices[retro_port] == RETRO_DEVICE_JOYSTICK || retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
+      if (retro_devices[retro_port] == RETRO_DEVICE_VICE_JOYSTICK || retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
       {
          int vice_port = cur_port;
          BYTE j = 0;

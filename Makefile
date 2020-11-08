@@ -381,12 +381,12 @@ ifeq ($(DEBUG), 1)
    COMMONFLAGS += -O0 -g
 else
    COMMONFLAGS += -O3 -DNDEBUG
+   LDFLAGS     += -Wl,--gc-sections -s
 endif
 
-include Makefile.common
+COMMONFLAGS += -DWANT_ZLIB -DHAVE_CONFIG_H -D__LIBRETRO__ -DCORE_NAME=\"$(EMUTYPE)\"
 
-LDFLAGS     += -Wl,--gc-sections -s
-COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\" -D__LIBRETRO__ -DWANT_ZLIB -DHAVE_CONFIG_H
+include Makefile.common
 
 OBJECTS     += $(patsubst %.cpp,%.o,$(SOURCES_CXX:.cc=.o)) $(SOURCES_C:.c=.o)
 CXXFLAGS    += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
@@ -399,7 +399,7 @@ LDFLAGS     += -lm $(fpic)
 #CFLAGS      += -std=c99
 CXXFLAGS    += -std=c++98
 
-$(info CFLAGS: $(CFLAGS))
+$(info CFLAGS: $(COMMONFLAGS))
 $(info -------)
 
 ifeq ($(platform), theos_ios)

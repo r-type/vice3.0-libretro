@@ -4,8 +4,10 @@
 #ifndef __7Z_FILE_H
 #define __7Z_FILE_H
 
+#if 0
 #ifdef _WIN32
 #define USE_WINDOWS_FILE
+#endif
 #endif
 
 #ifdef USE_WINDOWS_FILE

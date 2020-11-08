@@ -334,7 +334,7 @@ static void sevenzip_replace_path(UInt16 *name, char *path, char *full_path)
    char temp[RETRO_PATH_MAX];
    utf16_to_char_string(name, temp, sizeof(temp));
    snprintf(full_path, RETRO_PATH_MAX, "%s%s%s", path, FSDEV_DIR_SEP_STR, temp);
-   swprintf(name, RETRO_PATH_MAX, L"%s", full_path);
+   mbstowcs(name, full_path, RETRO_PATH_MAX);
    return;
 }
 

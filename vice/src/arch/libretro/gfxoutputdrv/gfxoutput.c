@@ -27,15 +27,18 @@
 
 #include "vice.h"
 
+#if 0
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 #include "archdep.h"
 #include "gfxoutput.h"
+#if 0
 #include "lib.h"
 #include "log.h"
-
+#endif
 #if 0
 #include "bmpdrv.h"
 #include "gifdrv.h"
@@ -60,7 +63,6 @@
 #ifdef HAVE_QUICKTIME
 #include "quicktimedrv.h"
 #endif
-#endif
 
 struct gfxoutputdrv_list_s {
     struct gfxoutputdrv_s *drv;
@@ -72,7 +74,6 @@ static gfxoutputdrv_list_t *gfxoutputdrv_list = NULL;
 static int gfxoutputdrv_list_count = 0;
 static log_t gfxoutput_log = LOG_ERR;
 static gfxoutputdrv_list_t *gfxoutputdrv_list_iter = NULL;
-
 
 int gfxoutput_num_drivers(void)
 {
@@ -88,7 +89,7 @@ gfxoutputdrv_t *gfxoutput_drivers_iter_next(void)
 {
     return NULL;
 }
-
+#endif
 int gfxoutput_early_init(int help)
 {
     return 0;

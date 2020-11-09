@@ -37,7 +37,7 @@
 #include "mon_register.h"
 #include "montypes.h"
 #include "types.h"
-
+#if 0
 static const asm_opcode_info_t *asm_opcode_info_get(unsigned int p0, unsigned int p1, unsigned int p2)
 {
     return 0;
@@ -48,7 +48,7 @@ static unsigned int asm_addr_mode_get_size(unsigned int mode, unsigned int p0,
 {
     return 0;
 }
-
+#endif
 void asm6502_init(monitor_cpu_type_t *monitor_cpu_type)
 {
 }

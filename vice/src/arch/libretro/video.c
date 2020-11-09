@@ -44,11 +44,12 @@ void video_canvas_resize(struct video_canvas_s *canvas,  char resizecv)
 {
 }
 
+#if 0
 static video_canvas_t *retro_canvas_create(video_canvas_t *canvas, unsigned int *width, unsigned int *height)
 {
    return canvas;
 }
-
+#endif
 video_canvas_t *video_canvas_create(video_canvas_t *canvas, 
       unsigned int *width, unsigned int *height, int mapped)
 {
@@ -62,24 +63,29 @@ void video_canvas_destroy(struct video_canvas_s *canvas)
 {
 }
 
+#if 0
 static int video_frame_buffer_alloc(video_canvas_t *canvas, 
       BYTE **draw_buffer, 
       unsigned int fb_width, 
       unsigned int fb_height, 
       unsigned int *fb_pitch);
+
 static void video_frame_buffer_free(video_canvas_t *canvas, 
       BYTE *draw_buffer);
+
 static void video_frame_buffer_clear(video_canvas_t *canvas, 
       BYTE *draw_buffer, 
       BYTE value, 
       unsigned int fb_width, 
       unsigned int fb_height, 
       unsigned int fb_pitch);
+#endif
 
 void video_arch_canvas_init(struct video_canvas_s *canvas)
 {
 }
 
+#if 0
 static int video_frame_buffer_alloc(video_canvas_t *canvas, 
       BYTE **draw_buffer, 
       unsigned int fb_width, 
@@ -102,7 +108,7 @@ static void video_frame_buffer_clear(video_canvas_t *canvas,
 {
    memset(draw_buffer, value, fb_pitch * fb_height);
 }
-
+#endif
 char video_canvas_can_resize(video_canvas_t *canvas)
 {
    return 1;

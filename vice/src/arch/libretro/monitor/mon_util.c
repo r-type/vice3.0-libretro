@@ -26,6 +26,7 @@
 
 #include "vice.h"
 
+#if 0
 #include <assert.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -42,7 +43,6 @@
 #include "monitor_network.h"
 #include "types.h"
 #include "uimon.h"
-
 
 static char *bigbuffer = NULL;
 static const unsigned int bigbuffersize = 10000;
@@ -93,12 +93,12 @@ static int mon_out_buffered(const char *buffer)
 {
     return 0;
 }
-
+#endif
 int mon_out(const char *format, ...)
 {
     return 0;
 }
-
+#if 0
 char *mon_disassemble_with_label(MEMSPACE memspace, uint16_t loc, int hex,
                                  unsigned *opc_size_p, unsigned *label_p)
 {
@@ -122,4 +122,6 @@ char *uimon_in(const char *prompt)
 {
     return NULL;
 }
+#endif
+
 #endif

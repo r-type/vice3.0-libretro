@@ -38,10 +38,11 @@
 #include "translate.h"
 #endif
 #include "types.h"
-
+#if 0
 static const resource_int_t resources_int[] = {
     { NULL }
 };
+#endif
 /* ------------------------------------------------------------------------- */
 
 int joystick_arch_init_resources(void)

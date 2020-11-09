@@ -87,7 +87,7 @@ static char* dirname_int(const char* filename)
 }
 
 /* Add known disk labels from conversion tools, famous collectors etc. */
-static const char const* rude_words[] = {
+static const char* rude_words[] = {
     "semprini",
     "ass presents",
 };
@@ -119,7 +119,9 @@ static char* get_label(const char* filename)
 {
     unsigned char label[MAX_LABEL_LEN + 1];
     bool have_disk_label = false;
+#if 0
     bool have_tape_label = false;
+#endif
     bool have_shifted = false;
     int i;
 
@@ -152,7 +154,9 @@ static char* get_label(const char* filename)
                 && fread(label, T64_NAME_LEN, 1, fd) == 1)
             {
                 label[T64_NAME_LEN] = '\0';
+#if 0
                 have_tape_label = true;
+#endif
             }
             fclose(fd);
         }
@@ -486,10 +490,13 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
         }
 
         /* ZIP */
-        if (strendswith(full_path_replace, "zip"))
+        if (strendswith(full_path_replace, "zip") || strendswith(full_path_replace, "7z"))
         {
             path_mkdir(retro_temp_directory);
-            zip_uncompress(full_path_replace, retro_temp_directory, NULL);
+            if (strendswith(full_path_replace, "zip"))
+               zip_uncompress(full_path_replace, retro_temp_directory, NULL);
+            else if (strendswith(full_path_replace, "7z"))
+               sevenzip_uncompress(full_path_replace, retro_temp_directory, NULL);
 
             /* Default to directory mode */
             int zip_mode = 0;
@@ -625,7 +632,7 @@ static bool dc_add_m3u_save_disk(
     snprintf(m3u_file_name_no_ext, sizeof(m3u_file_name_no_ext),
              "%s", path_remove_extension((char*)m3u_file_name));
 
-    if (!m3u_file_name_no_ext || (*m3u_file_name_no_ext == '\0'))
+    if (*m3u_file_name_no_ext == '\0')
         return false;
 
     /* Construct save disk file name */
@@ -670,7 +677,7 @@ static bool dc_add_m3u_save_disk(
                      M3U_SAVEDISK_LABEL, index);
 
         snprintf(format_name, sizeof(format_name), "%s", string_to_lower(volume_name));
-        charset_petconvstring(format_name, 0);
+        charset_petconvstring((uint8_t*)format_name, 0);
 
         /* Create save disk */
         save_disk_exists = !vdrive_internal_create_format_disk_image(save_disk_path, format_name, DISK_IMAGE_TYPE_D64);
@@ -874,7 +881,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
 
             /* "Browsed" file in ZIP */
             char browsed_file[RETRO_PATH_MAX] = {0};
-            if (strstr(file_name, ".zip#"))
+            if (strstr(file_name, ".zip#") || strstr(file_name, ".7z#"))
             {
                 char *token = strtok((char*)file_name, "#");
                 while (token != NULL)
@@ -927,12 +934,15 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
                 }
 
                 /* ZIP */
-                if (strendswith(filename, "zip"))
+                if (strendswith(filename, "zip") || strendswith(filename, "7z"))
                 {
                     char lastfile[RETRO_PATH_MAX] = {0};
 
                     path_mkdir(retro_temp_directory);
-                    zip_uncompress(full_path, retro_temp_directory, lastfile);
+                    if (strendswith(filename, "zip"))
+                        zip_uncompress(full_path, retro_temp_directory, lastfile);
+                    else if (strendswith(filename, "7z"))
+                        sevenzip_uncompress(full_path, retro_temp_directory, lastfile);
 
                     /* Convert all NIBs to G64 */
                     if (!string_is_empty(browsed_file))

@@ -41,8 +41,6 @@ unsigned int opt_vkbd_alpha = 204;
 unsigned int vkbd_alpha = 204;
 
 /* Core vars */
-char retro_key_state[RETROK_LAST] = {0};
-char retro_key_state_old[RETROK_LAST] = {0};
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char* autostartProgram = NULL;
@@ -538,7 +536,7 @@ static int process_cmdline(const char* argv)
 
         /* "Browsed" file in ZIP */
         char browsed_file[RETRO_PATH_MAX] = {0};
-        if (strstr(argv, ".zip#"))
+        if (strstr(argv, ".zip#") || strstr(argv, ".7z#"))
         {
             char *token = strtok((char*)argv, "#");
             while (token != NULL)
@@ -568,17 +566,20 @@ static int process_cmdline(const char* argv)
         }
 
         /* ZIP */
-        if (strendswith(argv, ".zip"))
+        if (strendswith(argv, "zip") || strendswith(argv, "7z"))
         {
             path_mkdir(retro_temp_directory);
-            zip_uncompress(full_path, retro_temp_directory, NULL);
+            if (strendswith(argv, "zip"))
+               zip_uncompress(full_path, retro_temp_directory, NULL);
+            else if (strendswith(argv, "7z"))
+               sevenzip_uncompress(full_path, retro_temp_directory, NULL);
 
             /* Default to directory mode */
             int zip_mode = 0;
             snprintf(full_path, sizeof(full_path), "%s", retro_temp_directory);
 
             FILE *zip_m3u;
-            char zip_m3u_list[20][RETRO_PATH_MAX] = {0};
+            char zip_m3u_list[DC_MAX_SIZE][RETRO_PATH_MAX] = {0};
             char zip_m3u_path[RETRO_PATH_MAX] = {0};
             snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
             int zip_m3u_num = 0;
@@ -885,7 +886,7 @@ static int process_cmdline(const char* argv)
             }
             else if (!strcmp(arg, "-autostart"))
             {
-                /* User ask to not automatically start image in drive */
+                /* User ask to automatically start image in drive */
                 noautostart = false;
             }
             else
@@ -1088,6 +1089,7 @@ void update_from_vice()
     {
         free(autostartProgram);
         autostartProgram = NULL;
+        free(autostartString);
         autostartString = NULL;
         attachedImage = dc->files[dc->index];
         /* Disable AutostartWarp & WarpMode, otherwise warp gets stuck with PRGs in M3Us */
@@ -1276,7 +1278,7 @@ void update_from_vice()
     }
 
     /* If there an image attached, but autostart is empty, autostart from the image */
-    if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart)
+    if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart && !CMDFILE[0])
     {
         log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image '%s'\n", attachedImage);
         autostartString = x_strdup(attachedImage);
@@ -1442,27 +1444,27 @@ void retro_set_led(unsigned led)
 void retro_set_environment(retro_environment_t cb)
 {
    static const struct retro_controller_description p1_controllers[] = {
-      { "Joystick", RETRO_DEVICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p2_controllers[] = {
-      { "Joystick", RETRO_DEVICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p3_controllers[] = {
-      { "Joystick", RETRO_DEVICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p4_controllers[] = {
-      { "Joystick", RETRO_DEVICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
    static const struct retro_controller_description p5_controllers[] = {
-      { "Keyboard", RETRO_DEVICE_KEYBOARD },
+      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
       { "None", RETRO_DEVICE_NONE },
    };
 
@@ -1948,8 +1950,8 @@ void retro_set_environment(retro_environment_t cb)
          "By default, the keyboard comes up with RetroPad Select.",
          {
             { "0", "C64" },
-            { "1", "C64C" },
             { "2", "Dark" },
+            { "1", "C64C" },
             { "3", "Light" },
             { NULL, NULL },
          },
@@ -4967,6 +4969,8 @@ void emu_reset(int type)
             autostartProgram = strdup(dc->load[dc->index]);
             charset_petconvstring((uint8_t *)autostartProgram, 0);
          }
+         else
+            autostartProgram = NULL;
 
          /* Allow autostarting with a different disk */
          if (dc->count > 1)
@@ -5344,8 +5348,6 @@ void retro_init(void)
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
 
    memset(retro_bmp, 0, sizeof(retro_bmp));
-   memset(retro_key_state, 0, sizeof(retro_key_state));
-   memset(retro_key_state_old, 0, sizeof(retro_key_state_old));
 
    retro_ui_finalized = false;
    update_variables();
@@ -5392,9 +5394,9 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.3" GIT_VERSION;
 #if defined(__XVIC__)
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|20|40|60|a0|b0|rom";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|20|40|60|a0|b0|rom";
 #else
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
 #endif
    info->need_fullpath    = true;
    info->block_extract    = true;

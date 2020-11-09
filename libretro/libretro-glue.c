@@ -1,4 +1,5 @@
 #include "libretro-core.h"
+#include "encodings/utf.h"
 #include "archdep.h"
 
 /* Misc */
@@ -237,7 +238,7 @@ void zip_uncompress(char *in, char *out, char *lastfile)
                     {
                         if (!fwrite(buf, err, 1, fout))
                         {
-                            fprintf(stderr, "Unzip: Error in writing extracted file\n");
+                            fprintf(stderr, "Unzip: Error writing extracted file %s\n", write_filename);
                             err = UNZ_ERRNO;
                             break;
                         }
@@ -281,11 +282,337 @@ void zip_uncompress(char *in, char *out, char *lastfile)
     }
 }
 
+/* 7zip */
+#include "deps/7zip/7z.h"
+#include "deps/7zip/7zAlloc.h"
+#include "deps/7zip/7zBuf.h"
+#include "deps/7zip/7zCrc.h"
+#include "deps/7zip/7zFile.h"
+#include "deps/7zip/7zTypes.h"
+
+#ifndef __STATIC__
+#include "deps/7zip/7zAlloc.c"
+#include "deps/7zip/7zArcIn.c"
+#include "deps/7zip/7zBuf.c"
+#include "deps/7zip/7zCrc.c"
+#include "deps/7zip/7zCrcOpt.c"
+#include "deps/7zip/7zDec.c"
+#include "deps/7zip/7zFile.c"
+#include "deps/7zip/7zStream.c"
+#include "deps/7zip/Bcj2.c"
+#include "deps/7zip/Bra.c"
+#include "deps/7zip/Bra86.c"
+#include "deps/7zip/BraIA64.c"
+#include "deps/7zip/CpuArch.c"
+#include "deps/7zip/Delta.c"
+#include "deps/7zip/Lzma2Dec.c"
+#include "deps/7zip/LzmaDec.c"
+#include "deps/7zip/Sha256.c"
+#else
+#include "deps/7zip/7zAlloc.c"
+#define GET_LookToRead2 CLookToRead2 *p = CONTAINER_FROM_VTBL(pp, CLookToRead2, vt);
+static SRes LookToRead2_Look_Lookahead(const ILookInStream *pp, const void **buf, size_t *size)
+{
+  SRes res = SZ_OK;
+  GET_LookToRead2
+  size_t size2 = p->size - p->pos;
+  if (size2 == 0 && *size != 0)
+  {
+    p->pos = 0;
+    p->size = 0;
+    size2 = p->bufSize;
+    res = ISeekInStream_Read(p->realStream, p->buf, &size2);
+    p->size = size2;
+  }
+  if (*size > size2)
+    *size = size2;
+  *buf = p->buf + p->pos;
+  return res;
+}
+
+static SRes LookToRead2_Look_Exact(const ILookInStream *pp, const void **buf, size_t *size)
+{
+  SRes res = SZ_OK;
+  GET_LookToRead2
+  size_t size2 = p->size - p->pos;
+  if (size2 == 0 && *size != 0)
+  {
+    p->pos = 0;
+    p->size = 0;
+    if (*size > p->bufSize)
+      *size = p->bufSize;
+    res = ISeekInStream_Read(p->realStream, p->buf, size);
+    size2 = p->size = *size;
+  }
+  if (*size > size2)
+    *size = size2;
+  *buf = p->buf + p->pos;
+  return res;
+}
+
+static SRes LookToRead2_Skip(const ILookInStream *pp, size_t offset)
+{
+  GET_LookToRead2
+  p->pos += offset;
+  return SZ_OK;
+}
+
+static SRes LookToRead2_Read(const ILookInStream *pp, void *buf, size_t *size)
+{
+  GET_LookToRead2
+  size_t rem = p->size - p->pos;
+  if (rem == 0)
+    return ISeekInStream_Read(p->realStream, buf, size);
+  if (rem > *size)
+    rem = *size;
+  memcpy(buf, p->buf + p->pos, rem);
+  p->pos += rem;
+  *size = rem;
+  return SZ_OK;
+}
+
+static SRes LookToRead2_Seek(const ILookInStream *pp, Int64 *pos, ESzSeek origin)
+{
+  GET_LookToRead2
+  p->pos = p->size = 0;
+  return ISeekInStream_Seek(p->realStream, pos, origin);
+}
+
+void LookToRead2_CreateVTable(CLookToRead2 *p, int lookahead)
+{
+  p->vt.Look = lookahead ?
+      LookToRead2_Look_Lookahead :
+      LookToRead2_Look_Exact;
+  p->vt.Skip = LookToRead2_Skip;
+  p->vt.Read = LookToRead2_Read;
+  p->vt.Seek = LookToRead2_Seek;
+}
+#endif
+#define kInputBufSize ((size_t)1 << 18)
+static const ISzAlloc g_Alloc = { SzAlloc, SzFree };
+
+static int Buf_EnsureSize(CBuf *dest, size_t size)
+{
+   if (dest->size >= size)
+      return 1;
+   Buf_Free(dest, &g_Alloc);
+   return Buf_Create(dest, size, &g_Alloc);
+}
+
+static WRes MyCreateDir(const UInt16 *name)
+{
+   char temp[RETRO_PATH_MAX];
+   utf16_to_char_string(name, temp, sizeof(temp));
+   return archdep_mkdir((const char *)temp, 0777);
+}
+
+static WRes OutFile_OpenUtf16(CSzFile *p, const UInt16 *name)
+{
+   char temp[RETRO_PATH_MAX];
+   utf16_to_char_string(name, temp, sizeof(temp));
+   return OutFile_Open(p, (const char *)temp);
+}
+
+static void sevenzip_replace_path(UInt16 *name, char *path, char *full_path)
+{
+   char temp[RETRO_PATH_MAX];
+   utf16_to_char_string(name, temp, sizeof(temp));
+   snprintf(full_path, RETRO_PATH_MAX, "%s%s%s", path, FSDEV_DIR_SEP_STR, temp);
+   mbstowcs(name, full_path, RETRO_PATH_MAX);
+   return;
+}
+
+void sevenzip_uncompress(char *in, char *out, char *lastfile)
+{
+   ISzAlloc allocImp;
+   ISzAlloc allocTempImp;
+
+   CFileInStream archiveStream;
+   CLookToRead2 lookStream;
+   CSzArEx db;
+   SRes res;
+   UInt16 *temp = NULL;
+   size_t tempSize = RETRO_PATH_MAX;
+
+   SzFree(NULL, temp);
+   temp = (UInt16 *)SzAlloc(NULL, tempSize * sizeof(temp[0]));
+
+   if (!temp)
+   {
+      res = SZ_ERROR_MEM;
+      return;
+   }
+
+   if (InFile_Open(&archiveStream.file, in))
+   {
+      fprintf(stderr, "Un7ip: Error opening %s\n", in);
+      return;
+   }
+
+   allocImp = g_Alloc;
+   allocTempImp = g_Alloc;
+
+   FileInStream_CreateVTable(&archiveStream);
+   LookToRead2_CreateVTable(&lookStream, false);
+   lookStream.buf = NULL;
+
+   res = SZ_OK;
+
+   {
+      lookStream.buf = (Byte *)IAlloc_Alloc(&allocImp, kInputBufSize);
+      if (!lookStream.buf)
+         res = SZ_ERROR_MEM;
+      else
+      {
+         lookStream.bufSize = kInputBufSize;
+         lookStream.realStream = &archiveStream.vt;
+         LookToRead2_Init(&lookStream);
+      }
+   }
+
+   CrcGenerateTable();
+
+   SzArEx_Init(&db);
+
+   if (res == SZ_OK)
+      res = SzArEx_Open(&db, &lookStream.vt, &allocImp, &allocTempImp);
+
+   if (res == SZ_OK)
+   {
+      char *command = "x";
+      int listCommand = 0, testCommand = 0, fullPaths = 0;
+
+      if (strcmp(command, "l") == 0) listCommand = 1;
+      else if (strcmp(command, "t") == 0) testCommand = 1;
+      else if (strcmp(command, "e") == 0) { }
+      else if (strcmp(command, "x") == 0) fullPaths = 1;
+      else
+      {
+         fprintf(stderr, "Un7ip: Incorrect command\n");
+         res = SZ_ERROR_FAIL;
+      }
+
+      if (res == SZ_OK)
+      {
+         UInt32 i;
+
+         /*
+         if you need cache, use these 3 variables.
+         if you use external function, you can make these variable as static.
+         */
+         UInt32 blockIndex = 0xFFFFFFFF; /* it can have any value before first call (if outBuffer = 0) */
+         Byte *outBuffer = 0; /* it must be 0 before first call for each new archive. */
+         size_t outBufferSize = 0;   /* it can have any value before first call (if outBuffer = 0) */
+
+         for (i = 0; i < db.NumFiles; i++)
+         {
+            size_t offset = 0;
+            size_t outSizeProcessed = 0;
+            size_t len;
+            unsigned isDir = SzArEx_IsDir(&db, i);
+            if (listCommand == 0 && isDir && !fullPaths)
+               continue;
+            len = SzArEx_GetFileNameUtf16(&db, i, temp);
+
+            if (!isDir)
+            {
+               res = SzArEx_Extract(&db, &lookStream.vt, i,
+                     &blockIndex, &outBuffer, &outBufferSize,
+                     &offset, &outSizeProcessed,
+                     &allocImp, &allocTempImp);
+               if (res != SZ_OK)
+                  break;
+            }
+
+            if (!testCommand)
+            {
+               CSzFile outFile;
+               size_t processedSize;
+               size_t j;
+
+               char full_path[RETRO_PATH_MAX] = {0};
+               sevenzip_replace_path(temp, out, full_path);
+               if ((dc_get_image_type(full_path) == DC_IMAGE_TYPE_FLOPPY ||
+                    dc_get_image_type(full_path) == DC_IMAGE_TYPE_TAPE) && lastfile != NULL)
+                  snprintf(lastfile, RETRO_PATH_MAX, "%s", path_basename(full_path));
+
+               UInt16 *name = (UInt16 *)temp;
+               UInt16 *destPath = (UInt16 *)name;
+
+               for (j = 0; name[j] != 0; j++)
+               {
+                  if (name[j] == '/')
+                  {
+                     if (fullPaths)
+                     {
+                        name[j] = 0;
+                        MyCreateDir(name);
+                        name[j] = CHAR_PATH_SEPARATOR;
+                     }
+                     else
+                        destPath = name + j + 1;
+                  }
+               }
+
+               if (path_is_valid(full_path))
+                   continue;
+               else if (isDir)
+               {
+                  MyCreateDir(destPath);
+                  fprintf(stdout, "Mkdir: %s\n", full_path);
+                  continue;
+               }
+               else if (OutFile_OpenUtf16(&outFile, destPath))
+               {
+                  fprintf(stderr, "Un7ip: Error opening %s\n", full_path);
+                  res = SZ_ERROR_FAIL;
+                  break;
+               }
+
+               processedSize = outSizeProcessed;
+
+               if (File_Write(&outFile, outBuffer + offset, &processedSize) != 0 || processedSize != outSizeProcessed)
+               {
+                  fprintf(stderr, "Un7ip: Error writing extracted file %s\n", full_path);
+                  res = SZ_ERROR_FAIL;
+                  break;
+               }
+               else
+                   fprintf(stdout, "Un7ip: %s\n", full_path);
+
+               if (File_Close(&outFile))
+               {
+                  fprintf(stderr, "Un7ip: Error closing %s\n", full_path);
+                  res = SZ_ERROR_FAIL;
+                  break;
+               }
+            }
+         }
+         ISzAlloc_Free(&allocImp, outBuffer);
+      }
+   }
+
+   SzFree(NULL, temp);
+   SzArEx_Free(&db, &allocImp);
+   IAlloc_Free(&allocImp, lookStream.buf);
+
+   File_Close(&archiveStream.file);
+
+   if (res == SZ_OK)
+      return;
+
+   if (res == SZ_ERROR_UNSUPPORTED)
+      fprintf(stderr, "Un7ip: Decoder doesn't support this archive\n");
+   else if (res == SZ_ERROR_MEM)
+      fprintf(stderr, "Un7ip: Can not allocate memory\n");
+   else if (res == SZ_ERROR_CRC)
+      fprintf(stderr, "Un7ip: CRC error\n");
+}
+
 /* NIBTOOLS */
 typedef unsigned char BYTE;
 typedef unsigned char __u_char;
 #include "deps/nibtools/nibtools.h"
-#include "deps/nibtools/lz.h"
 
 #include "deps/nibtools/gcr.c"
 #include "deps/nibtools/prot.c"
@@ -340,7 +667,7 @@ int load_file(char *filename, BYTE *file_buffer)
 	int size;
 	FILE *fpin;
 
-	printf("Loading \"%s\"...\n",filename);
+	if(verbose) printf("Loading \"%s\"...\n",filename);
 
 	if ((fpin = fopen(filename, "rb")) == NULL)
 	{
@@ -357,7 +684,7 @@ int load_file(char *filename, BYTE *file_buffer)
 			return 0;
 	}
 
-	printf("Successfully loaded %d bytes.", size);
+	if(verbose) printf("Successfully loaded %d bytes.", size);
 	fclose(fpin);
 	return size;
 }
@@ -366,14 +693,14 @@ int read_nib(BYTE *file_buffer, int file_buffer_size, BYTE *track_buffer, BYTE *
 {
 	int track, t_index=0, h_index=0;
 
-	printf("\nParsing NIB data...\n");
+	if(verbose) printf("\nParsing NIB data...\n");
 
 	if (memcmp(file_buffer, "MNIB-1541-RAW", 13) != 0)
 	{
 		printf("Not valid NIB data!\n");
 		return 0;
 	}
-	else
+	else if(verbose)
 		printf("NIB file version %d\n", file_buffer[13]);
 
 	while(file_buffer[0x10+h_index])
@@ -389,7 +716,7 @@ int read_nib(BYTE *file_buffer, int file_buffer_size, BYTE *track_buffer, BYTE *
 		h_index+=2;
 		t_index++;
 	}
-	printf("Successfully parsed NIB data for %d tracks\n", t_index);
+	if(verbose) printf("Successfully parsed NIB data for %d tracks\n", t_index);
 	return 1;
 }
 
@@ -399,7 +726,7 @@ int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, 
 	BYTE nibdata[NIB_TRACK_LENGTH];
 
 	memset(nibdata, 0, sizeof(nibdata));
-	printf("Aligning tracks...\n");
+	if(verbose) printf("Aligning tracks...\n");
 
 	for (track = start_track; track <= end_track; track ++)
 	{
@@ -430,7 +757,7 @@ int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, 
 			if(track_density[track] & BM_NO_SYNC) printf("NOSYNC:");
 			if(track_density[track] & BM_FF_TRACK) printf("KILLER:");
 			printf("(%d:", track_density[track]&3);
-			printf("%d) ", track_length[track]);
+			printf("%lld) ", track_length[track]);
 			printf("[align=%s]\n",alignments[track_alignment[track]]);
 		}
 	}
@@ -461,7 +788,11 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 	size_t raw_track_size[4] = { 6250, 6666, 7142, 7692 };
 	/*char errorstring[0x1000]; */
 
+#if 0
 	printf("Writing G64 file...\n");
+#else
+    printf("->G64: %s\n", filename);
+#endif
 
 	fpout = fopen(filename, "wb");
 	if (fpout == NULL)
@@ -478,7 +809,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 			G64_TRACK_MAXLEN = track_length[index+2];
 	}
 #endif
-	printf("G64 Track Length = %d", G64_TRACK_MAXLEN);
+	if(verbose) printf("G64 Track Length = %d", G64_TRACK_MAXLEN);
 
 	/* Create G64 header */
 	strcpy((char *) header, "GCR-1541");
@@ -578,13 +909,13 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 				printf("\n%4.1f: (", (float)track/2);
 				printf("%d", track_density[track]&3);
 				if ( (track_density[track]&3) != speed_map[track/2]) printf("!");
-				printf(":%d) ", track_length[track]);
+				printf(":%lld) ", track_length[track]);
 				if (track_density[track] & BM_NO_SYNC) printf("NOSYNC ");
 				if (track_density[track] & BM_FF_TRACK) printf("KILLER ");
 			}
 
 			track_len = compress_halftrack(track, buffer, track_density[track], track_len);
-			if(verbose) printf("(%d)", track_len);
+			if(verbose) printf("(%lld)", track_len);
 		}
 		else
 		{
@@ -592,7 +923,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 			track_len = compress_halftrack(track, buffer, track_density[track], track_len);
 		}
 		if(verbose>1) printf("(fill:$%.2x) ",tempfillbyte);
-		if(verbose>1) printf("{badgcr:%d}",badgcr);
+		if(verbose>1) printf("{badgcr:%lld}",badgcr);
 
 		gcr_track[0] = (BYTE) (track_len % 256);
 		gcr_track[1] = (BYTE) (track_len / 256);
@@ -618,7 +949,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 		}
 	}
 	fclose(fpout);
-	printf("\nSuccessfully saved G64 file\n");
+	if(verbose) printf("\nSuccessfully saved G64 file\n");
 	return 1;
 }
 
@@ -642,7 +973,7 @@ size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE density, size_
 		{
 			/* reduce sync marks within the track */
 			length = reduce_runs(gcrdata, length, capacity[density&3], reduce_sync, 0xff);
-			if(verbose>1) printf("(-sync:%d)", orglen - length);
+			if(verbose>1) printf("(-sync:%lld)", orglen - length);
 		}
 
 		/* reduce bad GCR runs */
@@ -651,7 +982,7 @@ size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE density, size_
 			(reduce_map[halftrack/2] & REDUCE_BAD) )
 		{
 			length = reduce_runs(gcrdata, length, capacity[density&3], 0, 0x00);
-			if(verbose) printf("(-badgcr:%d)", orglen - length);
+			if(verbose) printf("(-badgcr:%lld)", orglen - length);
 		}
 
 		/* reduce sector gaps -  they occur at the end of every sector and vary from 4-19 bytes, typically  */
@@ -660,7 +991,7 @@ size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE density, size_
 			(reduce_map[halftrack/2] & REDUCE_GAP) )
 		{
 			length = reduce_gaps(gcrdata, length, capacity[density & 3]);
-			if(verbose) printf("(-gap:%d)", orglen - length);
+			if(verbose) printf("(-gap:%lld)", orglen - length);
 		}
 
 		/* still not small enough, we have to truncate the end (reduce tail) */
@@ -668,7 +999,7 @@ size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE density, size_
 		if (length > capacity[density&3])
 		{
 			length = capacity[density&3];
-			if(verbose>1) printf("(-trunc:%d)", orglen - length);
+			if(verbose>1) printf("(-trunc:%lld)", orglen - length);
 		}
 	}
 

@@ -372,7 +372,7 @@ else ifeq ($(platform), wincross64)
 else
    CFLAGS += -D__WIN32__ -DHAVE_SNPRINTF -DHAVE_VSNPRINTF -D__USE_MINGW_ANSI_STDIO=1
    TARGET := $(TARGET_NAME)_libretro.dll
-   LDFLAGS += --shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(CORE_DIR)/libretro/link.T -L/usr/x86_64-w64-mingw32/lib
+   LDFLAGS += --shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--gc-sections -L/usr/x86_64-w64-mingw32/lib
    LDFLAGS += -lws2_32 -luser32 -lwinmm -ladvapi32 -lshlwapi -lwsock32 -lws2_32 -lpsapi -liphlpapi -lshell32 -luserenv -lmingw32 -shared -lgcc -lm -lmingw32
 endif
 
@@ -381,7 +381,7 @@ ifeq ($(DEBUG), 1)
    COMMONFLAGS += -O0 -g
 else
    COMMONFLAGS += -O3 -DNDEBUG
-   LDFLAGS     += -Wl,--gc-sections -s
+   LDFLAGS     += -s
 endif
 
 COMMONFLAGS += -DWANT_ZLIB -DHAVE_CONFIG_H -D__LIBRETRO__ -DCORE_NAME=\"$(EMUTYPE)\"

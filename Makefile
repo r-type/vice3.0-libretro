@@ -386,10 +386,6 @@ endif
 
 COMMONFLAGS += -DWANT_ZLIB -DHAVE_CONFIG_H -D__LIBRETRO__ -DCORE_NAME=\"$(EMUTYPE)\"
 
-ifeq ($(STATIC_LINKING), 1)
-   COMMONFLAGS += -D__STATIC__
-endif
-
 include Makefile.common
 
 OBJECTS     += $(patsubst %.cpp,%.o,$(SOURCES_CXX:.cc=.o)) $(SOURCES_C:.c=.o)

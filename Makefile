@@ -384,6 +384,11 @@ else
    LDFLAGS     += -s
 endif
 
+# Skip 7zip for static builds
+ifneq ($(STATIC_LINKING), 1)
+   COMMONFLAGS += -DHAVE_7ZIP
+endif
+
 COMMONFLAGS += -DWANT_ZLIB -DHAVE_CONFIG_H -D__LIBRETRO__ -DCORE_NAME=\"$(EMUTYPE)\"
 
 include Makefile.common

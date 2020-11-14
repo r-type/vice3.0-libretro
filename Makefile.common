@@ -5,11 +5,9 @@ LIBRETRO_COMM_DIR := $(CORE_DIR)/libretro-common
 INCFLAGS += \
 	-I$(CORE_DIR) \
 	-I$(CORE_DIR)/libretro \
-	-I$(CORE_DIR)/libretro/include \
-	-I$(LIBRETRO_COMM_DIR)/include \
 	-I$(CORE_DIR)/include \
 	-I$(CORE_DIR)/include/embedded \
-	-I$(CORE_DIR)/include/compat \
+	-I$(LIBRETRO_COMM_DIR)/include \
 
 CXXFLAGS += $(CPPFLAGS)
 

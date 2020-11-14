@@ -2476,7 +2476,7 @@ void retro_set_environment(retro_environment_t cb)
             { "resampling", "Resampling" },
             { NULL, NULL },
          },
-#if defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX)
+#if defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
          "fast"
 #else
          "resampling"
@@ -5265,7 +5265,7 @@ void retro_init(void)
 
    if (retro_system_directory == NULL)
    {
-#if defined(__ANDROID__) || defined(ANDROID)
+#if defined(ANDROID)
       strlcpy(retro_system_directory, "/mnt/sdcard", sizeof(retro_system_directory));
 #elif defined(VITA)
       strlcpy(retro_system_directory, "ux0:/data", sizeof(retro_system_directory));

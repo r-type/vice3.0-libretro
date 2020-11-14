@@ -8,6 +8,7 @@ INCFLAGS += \
 	-I$(CORE_DIR)/include \
 	-I$(CORE_DIR)/include/embedded \
 	-I$(LIBRETRO_COMM_DIR)/include \
+	-I$(LIBRETRO_COMM_DIR)/include/compat \
 
 CXXFLAGS += $(CPPFLAGS)
 

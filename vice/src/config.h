@@ -214,7 +214,7 @@
 /* #undef HAVE_GETRLIMIT */
 
 /* Define to 1 if you have the `gettimeofday' function. */
-#define HAVE_GETTIMEOFDAY 1
+/* #define HAVE_GETTIMEOFDAY 1 */
 
 /* Can we use the GIF or UNGIF library? */
 #define HAVE_GIF /**/

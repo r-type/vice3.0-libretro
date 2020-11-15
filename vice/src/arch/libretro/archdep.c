@@ -131,6 +131,7 @@ int gettimeofday(struct timeval* x, int unused)
 
 int archdep_rtc_get_centisecond(void)
 {
+#if 0
     struct timespec dtm;
     int status;
 #if defined(PSP) || defined(VITA) || defined(_3DS) || defined(__PSL1GHT__) || defined(__CELLOS_LV2__)
@@ -144,6 +145,7 @@ int archdep_rtc_get_centisecond(void)
     if (status == 0) {
         return dtm.tv_nsec / 10000L;
     }
+#endif
     return 0;
 }
 

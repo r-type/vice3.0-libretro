@@ -1061,7 +1061,7 @@ void update_work_disk()
         /* Detach work disk if disabled while running */
         if ((attached_image = file_system_get_disk_name(8)) != NULL && strstr(attached_image, "vice_work"))
         {
-            if (full_path == NULL || (full_path != NULL && !strstr(full_path, "vice_work")))
+            if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, "vice_work")))
             {
                 log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
                 file_system_detach_disk(8);
@@ -1412,7 +1412,7 @@ long GetTicks(void) {
 static int retro_keymap_id(const char *val)
 {
    int i = 0;
-   while (retro_keys[i].value != NULL)
+   while (retro_keys[i].id < RETROK_LAST)
    {
       if (!strcmp(retro_keys[i].value, val))
          return retro_keys[i].id;
@@ -2476,7 +2476,7 @@ void retro_set_environment(retro_environment_t cb)
             { "resampling", "Resampling" },
             { NULL, NULL },
          },
-#if defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX)
+#if defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
          "fast"
 #else
          "resampling"
@@ -3119,7 +3119,7 @@ void retro_set_environment(retro_environment_t cb)
    int hotkey = 0;
    int hotkeys_skipped = 0;
    /* Count special hotkeys */
-   while (retro_keys[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+   while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
    {
       if (retro_keys[j].id < 0)
          hotkeys_skipped++;
@@ -3142,8 +3142,7 @@ void retro_set_environment(retro_environment_t cb)
             || strstr(core_options[i].key, "vice_mapper_datasette_stop")
             || strstr(core_options[i].key, "vice_mapper_datasette_rewind")
             || strstr(core_options[i].key, "vice_mapper_datasette_forward")
-            || strstr(core_options[i].key, "vice_mapper_datasette_reset")
-            )
+            || strstr(core_options[i].key, "vice_mapper_datasette_reset"))
             hotkey = 1;
          else
             hotkey = 0;
@@ -3151,7 +3150,7 @@ void retro_set_environment(retro_environment_t cb)
          j = 0;
          if (hotkey)
          {
-            while (retro_keys[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+            while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
             {
                if (j == 0) /* "---" unmapped */
                {
@@ -3177,7 +3176,7 @@ void retro_set_environment(retro_environment_t cb)
          }
          else
          {
-            while (retro_keys[j].value && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+            while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
             {
                core_options[i].values[j].value = retro_keys[j].value;
 
@@ -4805,6 +4804,8 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+   option_display.key = "vice_mapper_aspect_ratio_toggle";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_zoom_mode_toggle";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -5261,9 +5262,9 @@ void retro_init(void)
               sizeof(retro_save_directory));
    }
 
-   if (retro_system_directory == NULL)
+   if (string_is_empty(retro_system_directory))
    {
-#if defined(__ANDROID__) || defined(ANDROID)
+#if defined(ANDROID)
       strlcpy(retro_system_directory, "/mnt/sdcard", sizeof(retro_system_directory));
 #elif defined(VITA)
       strlcpy(retro_system_directory, "ux0:/data", sizeof(retro_system_directory));

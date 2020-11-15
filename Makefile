@@ -206,7 +206,7 @@ else ifeq ($(platform), qnx)
    CC_AS = qcc -Vgcc_ntoarmv7le
    CXX = QCC -Vgcc_ntoarmv7le_cpp
    AR = QCC -Vgcc_ntoarmv7le
-   PLATFORM_DEFINES := -D__BLACKBERRY_QNX__ -fexceptions -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
+   COMMONFLAGS += -D__BLACKBERRY_QNX__ -fexceptions -marm -mcpu=cortex-a9 -mfpu=neon -mfloat-abi=softfp
    CFLAGS += -std=gnu99
 
 # ANDROID STANDALONE TOOLCHAIN
@@ -215,7 +215,7 @@ else ifeq ($(platform), androidstc)
    CC = arm-linux-androideabi-gcc
    CXX = arm-linux-androideabi-g++
    LDFLAGS += -lstdc++ -llog -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--no-undefined
-   CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
+   CFLAGS += -DHAVE_GETCWD=1 -DHAVE_MEMMOVE=1 -DHAVE_ATEXIT=1 -DARM -DALIGN_DWORD -DANDROID -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -marm
    CFLAGS += -O2 -pipe -fstack-protector
    CXXFLAGS += $(CFLAGS)
    fpic = -fPIC
@@ -393,6 +393,9 @@ COMMONFLAGS += -DWANT_ZLIB -DHAVE_CONFIG_H -D__LIBRETRO__ -DCORE_NAME=\"$(EMUTYP
 
 include Makefile.common
 
+$(info CFLAGS: $(CFLAGS) $(COMMONFLAGS))
+$(info -------)
+
 OBJECTS     += $(patsubst %.cpp,%.o,$(SOURCES_CXX:.cc=.o)) $(SOURCES_C:.c=.o)
 CXXFLAGS    += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 CFLAGS      += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
@@ -403,9 +406,6 @@ LDFLAGS     += -lm $(fpic)
 # properly in that case.
 #CFLAGS      += -std=c99
 CXXFLAGS    += -std=c++98
-
-$(info CFLAGS: $(COMMONFLAGS))
-$(info -------)
 
 ifeq ($(platform), theos_ios)
 	COMMON_FLAGS := -DIOS -DARM $(COMMON_DEFINES) $(INCFLAGS) -I$(THEOS_INCLUDE_PATH) -Wno-error

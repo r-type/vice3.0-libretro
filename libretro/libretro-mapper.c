@@ -1196,7 +1196,9 @@ void retro_poll_event()
             j &= ~0x01;
 
          /* Turbo fire */
-         if (retro_devices[retro_port] == RETRO_DEVICE_JOYPAD && turbo_fire_button != -1)
+         if (retro_devices[retro_port] == RETRO_DEVICE_JOYPAD
+          && turbo_fire_button != -1
+          && !(joypad_bits[retro_port] & (1 << fire_button)))
          {
             if ((joypad_bits[retro_port] & (1 << turbo_fire_button)))
             {

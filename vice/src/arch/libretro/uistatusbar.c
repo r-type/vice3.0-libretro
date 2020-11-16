@@ -512,8 +512,13 @@ void uistatusbar_close(void)
 
 void uistatusbar_draw(void)
 {
-    int i;
-    BYTE c;
+    unsigned int i = 0;
+    unsigned int c = 0;
+    unsigned char s[2] = {0};
+
+    unsigned int char_width = 7;
+    unsigned int char_offset = 1;
+    int x = 0, y = 0;
 
     unsigned short int color_f_16, color_b_16;
     unsigned short int color_black_16, color_white_16, color_red_16, color_green_16, color_greenb_16, color_greend_16, color_brown_16;
@@ -539,11 +544,6 @@ void uistatusbar_draw(void)
     color_f_32      = color_white_32;
     color_b_32      = color_black_32;
 
-    unsigned int char_width = 7;
-    unsigned int char_offset = 1;
-
-    char tmpstr[512] = {0};
-    int x = 0, y = 0;
 
     /* Statusbar position */
     x = 1;
@@ -659,10 +659,10 @@ void uistatusbar_draw(void)
         int x_char = x + char_offset + x_align + (i * char_width);
 
         /* Output */
-        sprintf(tmpstr, "%c", c);
+        snprintf(s, sizeof(s), "%c", c);
         if (pix_bytes == 2)
-            Draw_text(retro_bmp, x_char, y, color_f_16, color_b_16, 255, 1, 1, 10, tmpstr);
+            Draw_text(retro_bmp, x_char, y, color_f_16, color_b_16, 255, 1, 1, 10, s);
         else
-            Draw_text32((uint32_t *)retro_bmp, x_char, y, color_f_32, color_b_32, 255, 1, 1, 10, tmpstr);
+            Draw_text32((uint32_t *)retro_bmp, x_char, y, color_f_32, color_b_32, 255, 1, 1, 10, s);
     }
 }

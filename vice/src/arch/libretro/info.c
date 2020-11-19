@@ -35,8 +35,8 @@
 #include "infocontrib.h"
 #endif
 
-const char info_license_text[] = {};
-const char info_license_text40[] = {};
-const char info_warranty_text[] = {};
-const char info_warranty_text40[] = {};
-vice_team_t core_team[] = {};
+const char info_license_text[] = {0};
+const char info_license_text40[] = {0};
+const char info_warranty_text[] = {0};
+const char info_warranty_text40[] = {0};
+vice_team_t core_team[] = {0};

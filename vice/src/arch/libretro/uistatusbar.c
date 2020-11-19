@@ -85,13 +85,13 @@ static char* joystick_value_human(char val, int vice_device)
     else if (val & 0x08) /* RIGHT */
         str[2] = 29;
 
-    str[1] = (val & 0x10) ? (str[1] | 0x80) : str[1];
+    str[1] = (val & 0x10) ? (str[1] | -0x80) : str[1];
 
     if (vice_device > 0)
     {
-        str[1] = (val & 0x10) ? ('L' | 0x80) : str[1];
-        str[1] = (val & 0x20) ? ('R' | 0x80) : str[1];
-        str[1] = (val & 0x40) ? ('M' | 0x80) : str[1];
+        str[1] = (val & 0x10) ? ('L' | -0x80) : str[1];
+        str[1] = (val & 0x20) ? ('R' | -0x80) : str[1];
+        str[1] = (val & 0x40) ? ('M' | -0x80) : str[1];
     }
 
     return str;
@@ -107,9 +107,9 @@ static void display_joyport(void)
     sprintf(joy1, "%s", "1");
     sprintf(joy2, "%s", "2");
     if(cur_port == 1)
-        joy1[0] = (joy1[0] | 0x80);
+        joy1[0] = (joy1[0] | -0x80);
     else if(cur_port == 2)
-        joy2[0] = (joy2[0] | 0x80);
+        joy2[0] = (joy2[0] | -0x80);
 
     /* Mouse */
     if (opt_joyport_type > 2 && cur_port == 1)
@@ -159,7 +159,7 @@ static void display_joyport(void)
     if (opt_statusbar & STATUSBAR_BASIC)
         snprintf(tmpstr, sizeof(tmpstr), "%24s", "");
 
-    sprintf(&(statusbar_text[STATUSBAR_JOY_POS]), "%-38s", tmpstr);
+    sprintf(&statusbar_text[STATUSBAR_JOY_POS], "%-38s", tmpstr);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -173,11 +173,10 @@ static int paused = 0;
 
 static void display_speed(void)
 {
-    /*char sep = paused ? ('P' | 0x80) : warp ? ('W' | 0x80) : ' ';*/
     char fps_str[3];
     sprintf(fps_str, "%2d", fps);
 
-    sprintf(&(statusbar_text[STATUSBAR_SPEED_POS]), "%2s", fps_str);
+    sprintf(&statusbar_text[STATUSBAR_SPEED_POS], "%2s", fps_str);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -218,9 +217,9 @@ void display_current_image(const char *image, bool inserted)
         imagename_timer = 150;
 
         if (inserted)
-            statusbar_text[0] = 8 | 0x80;
+            statusbar_text[0] = (8 | -0x80);
         else if (!strcmp(image, ""))
-            statusbar_text[0] = 9 | 0x80;
+            statusbar_text[0] = (9 | -0x80);
     }
 
     if (drive_empty)
@@ -514,7 +513,7 @@ void uistatusbar_draw(void)
 {
     unsigned int i = 0;
     unsigned int c = 0;
-    unsigned char s[2] = {0};
+    char s[2] = {0};
 
     unsigned int char_width = 7;
     unsigned int char_offset = 1;

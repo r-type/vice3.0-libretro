@@ -145,7 +145,9 @@ extern bool datasette_hotkeys;
 extern unsigned int cur_port;
 extern bool cur_port_locked;
 
-extern int turbo_fire_button;
+extern bool retro_turbo_fire;
+extern bool turbo_fire_locked;
+extern unsigned int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
 /* VICE includes */
@@ -1962,29 +1964,29 @@ void retro_set_environment(retro_environment_t cb)
          "Video > Virtual KBD Transparency",
          "Keyboard transparency can be toggled with RetroPad A.",
          {
-            { "0\%", NULL },
-            { "5\%", NULL },
-            { "10\%", NULL },
-            { "15\%", NULL },
-            { "20\%", NULL },
-            { "25\%", NULL },
-            { "30\%", NULL },
-            { "35\%", NULL },
-            { "40\%", NULL },
-            { "45\%", NULL },
-            { "50\%", NULL },
-            { "55\%", NULL },
-            { "60\%", NULL },
-            { "65\%", NULL },
-            { "70\%", NULL },
-            { "75\%", NULL },
-            { "80\%", NULL },
-            { "85\%", NULL },
-            { "90\%", NULL },
-            { "95\%", NULL },
+            { "0%", NULL },
+            { "5%", NULL },
+            { "10%", NULL },
+            { "15%", NULL },
+            { "20%", NULL },
+            { "25%", NULL },
+            { "30%", NULL },
+            { "35%", NULL },
+            { "40%", NULL },
+            { "45%", NULL },
+            { "50%", NULL },
+            { "55%", NULL },
+            { "60%", NULL },
+            { "65%", NULL },
+            { "70%", NULL },
+            { "75%", NULL },
+            { "80%", NULL },
+            { "85%", NULL },
+            { "90%", NULL },
+            { "95%", NULL },
             { NULL, NULL },
          },
-         "20\%"
+         "20%"
       },
 #if defined(__XVIC__)
       {
@@ -2136,43 +2138,43 @@ void retro_set_environment(retro_environment_t cb)
 #endif
          "Brightness for the internal palette.",
          {
-            { "200", "10\%" },
-            { "250", "12.5\%" },
-            { "300", "15\%" },
-            { "350", "17.5\%" },
-            { "400", "20\%" },
-            { "450", "22.5\%" },
-            { "500", "25\%" },
-            { "550", "27.5\%" },
-            { "600", "30\%" },
-            { "650", "32.5\%" },
-            { "700", "35\%" },
-            { "750", "37.5\%" },
-            { "800", "40\%" },
-            { "850", "42.5\%" },
-            { "900", "45\%" },
-            { "950", "47.5\%" },
-            { "1000", "50\%" },
-            { "1050", "52.5\%" },
-            { "1100", "55\%" },
-            { "1150", "57.5\%" },
-            { "1200", "60\%" },
-            { "1250", "62.5\%" },
-            { "1300", "65\%" },
-            { "1350", "67.5\%" },
-            { "1400", "70\%" },
-            { "1450", "72.5\%" },
-            { "1500", "75\%" },
-            { "1550", "77.5\%" },
-            { "1600", "80\%" },
-            { "1650", "82.5\%" },
-            { "1700", "85\%" },
-            { "1750", "87.5\%" },
-            { "1800", "90\%" },
-            { "1850", "92.5\%" },
-            { "1900", "95\%" },
-            { "1950", "97.5\%" },
-            { "2000", "100\%" },
+            { "200", "10%" },
+            { "250", "12.5%" },
+            { "300", "15%" },
+            { "350", "17.5%" },
+            { "400", "20%" },
+            { "450", "22.5%" },
+            { "500", "25%" },
+            { "550", "27.5%" },
+            { "600", "30%" },
+            { "650", "32.5%" },
+            { "700", "35%" },
+            { "750", "37.5%" },
+            { "800", "40%" },
+            { "850", "42.5%" },
+            { "900", "45%" },
+            { "950", "47.5%" },
+            { "1000", "50%" },
+            { "1050", "52.5%" },
+            { "1100", "55%" },
+            { "1150", "57.5%" },
+            { "1200", "60%" },
+            { "1250", "62.5%" },
+            { "1300", "65%" },
+            { "1350", "67.5%" },
+            { "1400", "70%" },
+            { "1450", "72.5%" },
+            { "1500", "75%" },
+            { "1550", "77.5%" },
+            { "1600", "80%" },
+            { "1650", "82.5%" },
+            { "1700", "85%" },
+            { "1750", "87.5%" },
+            { "1800", "90%" },
+            { "1850", "92.5%" },
+            { "1900", "95%" },
+            { "1950", "97.5%" },
+            { "2000", "100%" },
             { NULL, NULL },
          },
          "1000"
@@ -2190,43 +2192,43 @@ void retro_set_environment(retro_environment_t cb)
 #endif
          "Contrast for the internal palette.",
          {
-            { "200", "10\%" },
-            { "250", "12.5\%" },
-            { "300", "15\%" },
-            { "350", "17.5\%" },
-            { "400", "20\%" },
-            { "450", "22.5\%" },
-            { "500", "25\%" },
-            { "550", "27.5\%" },
-            { "600", "30\%" },
-            { "650", "32.5\%" },
-            { "700", "35\%" },
-            { "750", "37.5\%" },
-            { "800", "40\%" },
-            { "850", "42.5\%" },
-            { "900", "45\%" },
-            { "950", "47.5\%" },
-            { "1000", "50\%" },
-            { "1050", "52.5\%" },
-            { "1100", "55\%" },
-            { "1150", "57.5\%" },
-            { "1200", "60\%" },
-            { "1250", "62.5\%" },
-            { "1300", "65\%" },
-            { "1350", "67.5\%" },
-            { "1400", "70\%" },
-            { "1450", "72.5\%" },
-            { "1500", "75\%" },
-            { "1550", "77.5\%" },
-            { "1600", "80\%" },
-            { "1650", "82.5\%" },
-            { "1700", "85\%" },
-            { "1750", "87.5\%" },
-            { "1800", "90\%" },
-            { "1850", "92.5\%" },
-            { "1900", "95\%" },
-            { "1950", "97.5\%" },
-            { "2000", "100\%" },
+            { "200", "10%" },
+            { "250", "12.5%" },
+            { "300", "15%" },
+            { "350", "17.5%" },
+            { "400", "20%" },
+            { "450", "22.5%" },
+            { "500", "25%" },
+            { "550", "27.5%" },
+            { "600", "30%" },
+            { "650", "32.5%" },
+            { "700", "35%" },
+            { "750", "37.5%" },
+            { "800", "40%" },
+            { "850", "42.5%" },
+            { "900", "45%" },
+            { "950", "47.5%" },
+            { "1000", "50%" },
+            { "1050", "52.5%" },
+            { "1100", "55%" },
+            { "1150", "57.5%" },
+            { "1200", "60%" },
+            { "1250", "62.5%" },
+            { "1300", "65%" },
+            { "1350", "67.5%" },
+            { "1400", "70%" },
+            { "1450", "72.5%" },
+            { "1500", "75%" },
+            { "1550", "77.5%" },
+            { "1600", "80%" },
+            { "1650", "82.5%" },
+            { "1700", "85%" },
+            { "1750", "87.5%" },
+            { "1800", "90%" },
+            { "1850", "92.5%" },
+            { "1900", "95%" },
+            { "1950", "97.5%" },
+            { "2000", "100%" },
             { NULL, NULL },
          },
          "1000"
@@ -2244,43 +2246,43 @@ void retro_set_environment(retro_environment_t cb)
 #endif
          "Saturation for the internal palette.",
          {
-            { "200", "10\%" },
-            { "250", "12.5\%" },
-            { "300", "15\%" },
-            { "350", "17.5\%" },
-            { "400", "20\%" },
-            { "450", "22.5\%" },
-            { "500", "25\%" },
-            { "550", "27.5\%" },
-            { "600", "30\%" },
-            { "650", "32.5\%" },
-            { "700", "35\%" },
-            { "750", "37.5\%" },
-            { "800", "40\%" },
-            { "850", "42.5\%" },
-            { "900", "45\%" },
-            { "950", "47.5\%" },
-            { "1000", "50\%" },
-            { "1050", "52.5\%" },
-            { "1100", "55\%" },
-            { "1150", "57.5\%" },
-            { "1200", "60\%" },
-            { "1250", "62.5\%" },
-            { "1300", "65\%" },
-            { "1350", "67.5\%" },
-            { "1400", "70\%" },
-            { "1450", "72.5\%" },
-            { "1500", "75\%" },
-            { "1550", "77.5\%" },
-            { "1600", "80\%" },
-            { "1650", "82.5\%" },
-            { "1700", "85\%" },
-            { "1750", "87.5\%" },
-            { "1800", "90\%" },
-            { "1850", "92.5\%" },
-            { "1900", "95\%" },
-            { "1950", "97.5\%" },
-            { "2000", "100\%" },
+            { "200", "10%" },
+            { "250", "12.5%" },
+            { "300", "15%" },
+            { "350", "17.5%" },
+            { "400", "20%" },
+            { "450", "22.5%" },
+            { "500", "25%" },
+            { "550", "27.5%" },
+            { "600", "30%" },
+            { "650", "32.5%" },
+            { "700", "35%" },
+            { "750", "37.5%" },
+            { "800", "40%" },
+            { "850", "42.5%" },
+            { "900", "45%" },
+            { "950", "47.5%" },
+            { "1000", "50%" },
+            { "1050", "52.5%" },
+            { "1100", "55%" },
+            { "1150", "57.5%" },
+            { "1200", "60%" },
+            { "1250", "62.5%" },
+            { "1300", "65%" },
+            { "1350", "67.5%" },
+            { "1400", "70%" },
+            { "1450", "72.5%" },
+            { "1500", "75%" },
+            { "1550", "77.5%" },
+            { "1600", "80%" },
+            { "1650", "82.5%" },
+            { "1700", "85%" },
+            { "1750", "87.5%" },
+            { "1800", "90%" },
+            { "1850", "92.5%" },
+            { "1900", "95%" },
+            { "1950", "97.5%" },
+            { "2000", "100%" },
             { NULL, NULL },
          },
          "1000"
@@ -2298,43 +2300,43 @@ void retro_set_environment(retro_environment_t cb)
 #endif
          "Tint for the internal palette.",
          {
-            { "200", "10\%" },
-            { "250", "12.5\%" },
-            { "300", "15\%" },
-            { "350", "17.5\%" },
-            { "400", "20\%" },
-            { "450", "22.5\%" },
-            { "500", "25\%" },
-            { "550", "27.5\%" },
-            { "600", "30\%" },
-            { "650", "32.5\%" },
-            { "700", "35\%" },
-            { "750", "37.5\%" },
-            { "800", "40\%" },
-            { "850", "42.5\%" },
-            { "900", "45\%" },
-            { "950", "47.5\%" },
-            { "1000", "50\%" },
-            { "1050", "52.5\%" },
-            { "1100", "55\%" },
-            { "1150", "57.5\%" },
-            { "1200", "60\%" },
-            { "1250", "62.5\%" },
-            { "1300", "65\%" },
-            { "1350", "67.5\%" },
-            { "1400", "70\%" },
-            { "1450", "72.5\%" },
-            { "1500", "75\%" },
-            { "1550", "77.5\%" },
-            { "1600", "80\%" },
-            { "1650", "82.5\%" },
-            { "1700", "85\%" },
-            { "1750", "87.5\%" },
-            { "1800", "90\%" },
-            { "1850", "92.5\%" },
-            { "1900", "95\%" },
-            { "1950", "97.5\%" },
-            { "2000", "100\%" },
+            { "200", "10%" },
+            { "250", "12.5%" },
+            { "300", "15%" },
+            { "350", "17.5%" },
+            { "400", "20%" },
+            { "450", "22.5%" },
+            { "500", "25%" },
+            { "550", "27.5%" },
+            { "600", "30%" },
+            { "650", "32.5%" },
+            { "700", "35%" },
+            { "750", "37.5%" },
+            { "800", "40%" },
+            { "850", "42.5%" },
+            { "900", "45%" },
+            { "950", "47.5%" },
+            { "1000", "50%" },
+            { "1050", "52.5%" },
+            { "1100", "55%" },
+            { "1150", "57.5%" },
+            { "1200", "60%" },
+            { "1250", "62.5%" },
+            { "1300", "65%" },
+            { "1350", "67.5%" },
+            { "1400", "70%" },
+            { "1450", "72.5%" },
+            { "1500", "75%" },
+            { "1550", "77.5%" },
+            { "1600", "80%" },
+            { "1650", "82.5%" },
+            { "1700", "85%" },
+            { "1750", "87.5%" },
+            { "1800", "90%" },
+            { "1850", "92.5%" },
+            { "1900", "95%" },
+            { "1950", "97.5%" },
+            { "2000", "100%" },
             { NULL, NULL },
          },
          "1000"
@@ -2368,29 +2370,29 @@ void retro_set_environment(retro_environment_t cb)
          "'True Drive Emulation' & D64/D71 disk image required.",
          {
             { "disabled", NULL },
-            { "5\%", "5\%" },
-            { "10\%", "10\%" },
-            { "15\%", "15\%" },
-            { "20\%", "20\%" },
-            { "25\%", "25\%" },
-            { "30\%", "30\%" },
-            { "35\%", "35\%" },
-            { "40\%", "40\%" },
-            { "45\%", "45\%" },
-            { "50\%", "50\%" },
-            { "55\%", "55\%" },
-            { "60\%", "60\%" },
-            { "65\%", "65\%" },
-            { "70\%", "70\%" },
-            { "75\%", "75\%" },
-            { "80\%", "80\%" },
-            { "85\%", "85\%" },
-            { "90\%", "90\%" },
-            { "95\%", "95\%" },
-            { "100\%", "100\%" },
+            { "5%", NULL },
+            { "10%", NULL },
+            { "15%", NULL },
+            { "20%", NULL },
+            { "25%", NULL },
+            { "30%", NULL },
+            { "35%", NULL },
+            { "40%", NULL },
+            { "45%", NULL },
+            { "50%", NULL },
+            { "55%", NULL },
+            { "60%", NULL },
+            { "65%", NULL },
+            { "70%", NULL },
+            { "75%", NULL },
+            { "80%", NULL },
+            { "85%", NULL },
+            { "90%", NULL },
+            { "95%", NULL },
+            { "100%", NULL },
             { NULL, NULL },
          },
-         "20\%"
+         "20%"
       },
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
@@ -2405,16 +2407,16 @@ void retro_set_environment(retro_environment_t cb)
          "",
          {
             { "disabled", NULL },
-            { "1", "100\%" },
-            { "2", "200\%" },
-            { "3", "300\%" },
-            { "4", "400\%" },
-            { "5", "500\%" },
-            { "6", "600\%" },
-            { "7", "700\%" },
-            { "8", "800\%" },
-            { "9", "900\%" },
-            { "10", "1000\%" },
+            { "1", "100%" },
+            { "2", "200%" },
+            { "3", "300%" },
+            { "4", "400%" },
+            { "5", "500%" },
+            { "6", "600%" },
+            { "7", "700%" },
+            { "8", "800%" },
+            { "9", "900%" },
+            { "10", "1000%" },
             { NULL, NULL },
          },
          "disabled"
@@ -2615,17 +2617,17 @@ void retro_set_environment(retro_environment_t cb)
          "Input > Analog Stick Mouse Deadzone",
          "",
          {
-            { "0", "0\%" },
-            { "5", "5\%" },
-            { "10", "10\%" },
-            { "15", "15\%" },
-            { "20", "20\%" },
-            { "25", "25\%" },
-            { "30", "30\%" },
-            { "35", "35\%" },
-            { "40", "40\%" },
-            { "45", "45\%" },
-            { "50", "50\%" },
+            { "0", "0%" },
+            { "5", "5%" },
+            { "10", "10%" },
+            { "15", "15%" },
+            { "20", "20%" },
+            { "25", "25%" },
+            { "30", "30%" },
+            { "35", "35%" },
+            { "40", "40%" },
+            { "45", "45%" },
+            { "50", "50%" },
             { NULL, NULL },
          },
          "20"
@@ -2635,17 +2637,17 @@ void retro_set_environment(retro_environment_t cb)
          "Input > Analog Stick Mouse Speed",
          "",
          {
-            { "0.5", "50\%" },
-            { "0.6", "60\%" },
-            { "0.7", "70\%" },
-            { "0.8", "80\%" },
-            { "0.9", "90\%" },
-            { "1.0", "100\%" },
-            { "1.1", "110\%" },
-            { "1.2", "120\%" },
-            { "1.3", "130\%" },
-            { "1.4", "140\%" },
-            { "1.5", "150\%" },
+            { "0.5", "50%" },
+            { "0.6", "60%" },
+            { "0.7", "70%" },
+            { "0.8", "80%" },
+            { "0.9", "90%" },
+            { "1.0", "100%" },
+            { "1.1", "110%" },
+            { "1.2", "120%" },
+            { "1.3", "130%" },
+            { "1.4", "140%" },
+            { "1.5", "150%" },
             { NULL, NULL },
          },
          "1.0"
@@ -2655,16 +2657,16 @@ void retro_set_environment(retro_environment_t cb)
          "Input > D-Pad Mouse Speed",
          "",
          {
-            { "3", "50\%" },
-            { "4", "66\%" },
-            { "5", "83\%" },
-            { "6", "100\%" },
-            { "7", "116\%" },
-            { "8", "133\%" },
-            { "9", "150\%" },
-            { "10", "166\%" },
-            { "11", "183\%" },
-            { "12", "200\%" },
+            { "3", "50%" },
+            { "4", "66%" },
+            { "5", "83%" },
+            { "6", "100%" },
+            { "7", "116%" },
+            { "8", "133%" },
+            { "9", "150%" },
+            { "10", "166%" },
+            { "11", "183%" },
+            { "12", "200%" },
             { NULL, NULL },
          },
          "6"
@@ -2674,26 +2676,26 @@ void retro_set_environment(retro_environment_t cb)
          "Input > Mouse Speed",
          "Affects mouse speed globally.",
          {
-            { "10", "10\%" },
-            { "20", "20\%" },
-            { "30", "30\%" },
-            { "40", "40\%" },
-            { "50", "50\%" },
-            { "60", "60\%" },
-            { "70", "70\%" },
-            { "80", "80\%" },
-            { "90", "90\%" },
-            { "100", "100\%" },
-            { "110", "110\%" },
-            { "120", "120\%" },
-            { "130", "130\%" },
-            { "140", "140\%" },
-            { "150", "150\%" },
-            { "160", "160\%" },
-            { "170", "170\%" },
-            { "180", "180\%" },
-            { "190", "190\%" },
-            { "200", "200\%" },
+            { "10", "10%" },
+            { "20", "20%" },
+            { "30", "30%" },
+            { "40", "40%" },
+            { "50", "50%" },
+            { "60", "60%" },
+            { "70", "70%" },
+            { "80", "80%" },
+            { "90", "90%" },
+            { "100", "100%" },
+            { "110", "110%" },
+            { "120", "120%" },
+            { "130", "130%" },
+            { "140", "140%" },
+            { "150", "150%" },
+            { "160", "160%" },
+            { "170", "170%" },
+            { "180", "180%" },
+            { "190", "190%" },
+            { "200", "200%" },
             { NULL, NULL },
          },
          "100"
@@ -3030,11 +3032,21 @@ void retro_set_environment(retro_environment_t cb)
 #if !defined(__XPET__) && !defined(__XCBM2__)
       /* Turbo Fire */
       {
+         "vice_turbo_fire",
+         "RetroPad > Turbo Fire",
+         "Hotkey toggling disables this option until core restart.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
          "vice_turbo_fire_button",
          "RetroPad > Turbo Fire",
          "Replaces the mapped button with turbo fire button.",
          {
-            { "disabled", NULL },
             { "B", "RetroPad B" },
             { "A", "RetroPad A" },
             { "Y", "RetroPad Y" },
@@ -3045,7 +3057,7 @@ void retro_set_environment(retro_environment_t cb)
             { "R2", "RetroPad R2" },
             { NULL, NULL },
          },
-         "disabled"
+         "B"
       },
       {
          "vice_turbo_pulse",
@@ -4381,19 +4393,29 @@ static void update_variables(void)
       else if (!strcmp(var.value, "rotate_jump")) opt_retropad_options = 3;
    }
 
+   var.key = "vice_turbo_fire";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!turbo_fire_locked)
+      {
+         if (!strcmp(var.value, "disabled")) retro_turbo_fire = false;
+         else                                retro_turbo_fire = true;
+      }
+   }
+
    var.key = "vice_turbo_fire_button";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if      (!strcmp(var.value, "disabled")) turbo_fire_button = -1;
-      else if (!strcmp(var.value, "B"))        turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_B;
-      else if (!strcmp(var.value, "A"))        turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_A;
-      else if (!strcmp(var.value, "Y"))        turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
-      else if (!strcmp(var.value, "X"))        turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_X;
-      else if (!strcmp(var.value, "L"))        turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L;
-      else if (!strcmp(var.value, "R"))        turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R;
-      else if (!strcmp(var.value, "L2"))       turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L2;
-      else if (!strcmp(var.value, "R2"))       turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R2;
+      if      (!strcmp(var.value, "B"))  turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_B;
+      else if (!strcmp(var.value, "A"))  turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_A;
+      else if (!strcmp(var.value, "Y"))  turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_Y;
+      else if (!strcmp(var.value, "X"))  turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_X;
+      else if (!strcmp(var.value, "L"))  turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L;
+      else if (!strcmp(var.value, "R"))  turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R;
+      else if (!strcmp(var.value, "L2")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_L2;
+      else if (!strcmp(var.value, "R2")) turbo_fire_button = RETRO_DEVICE_ID_JOYPAD_R2;
    }
 
    var.key = "vice_turbo_pulse";
@@ -5024,43 +5046,53 @@ static bool retro_disk_set_eject_state(bool ejected)
       else
          dc->eject_state = ejected;
 
-      if (ejected && dc->index <= dc->count && dc->files[dc->index] != NULL)
+      if (!dc->files[dc->index])
+         return false;
+
+      if (path_is_valid(dc->files[dc->index]))
+          display_current_image(((!dc->eject_state) ? dc->labels[dc->index] : ""), !dc->eject_state);
+
+      if (dc->eject_state)
       {
-         if (unit == 1)
-            tape_image_detach(unit);
-         else if (unit >= 8 && unit <= 11)
-            file_system_detach_disk(unit);
-         else if (unit == 0)
-            cartridge_detach_image(-1);
-         display_current_image("", false);
+         switch (unit)
+         {
+            case 0:
+               cartridge_detach_image(-1);
+               break;
+            case 1:
+               tape_image_detach(unit);
+               break;
+            default:
+               file_system_detach_disk(unit);
+               break;
+         }
       }
-      else if (!ejected && dc->index < dc->count && dc->files[dc->index] != NULL)
+      else if (path_is_valid(dc->files[dc->index]))
       {
-         if (unit == 1)
+         switch (unit)
          {
-            tape_image_attach(unit, dc->files[dc->index]);
-         }
-         else if (unit >= 8 && unit <= 11)
-         {
-            file_system_attach_disk(unit, dc->files[dc->index]);
-            autodetect_drivetype(unit);
-         }
-         else if (unit == 0)
-         {
+            case 0:
 #if defined(__XVIC__)
-            cartridge_attach_image(CARTRIDGE_VIC20_DETECT, dc->files[dc->index]);
+               cartridge_attach_image(CARTRIDGE_VIC20_DETECT, dc->files[dc->index]);
 #elif defined(__XPLUS4__)
-            cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, dc->files[dc->index]);
-            /* Soft reset required, otherwise gfx gets corrupted (?!) */
-            emu_reset(1);
+               cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, dc->files[dc->index]);
+               /* Soft reset required, otherwise gfx gets corrupted (?!) */
+               emu_reset(1);
 #else
-            cartridge_attach_image(0, dc->files[dc->index]);
+               cartridge_attach_image(0, dc->files[dc->index]);
 #endif
-            /* PRGs must autostart on attach, cartridges reset anyway */
-            if (strendswith(dc->files[dc->index], "prg"))
-               emu_reset(0);
+               /* PRGs must autostart on attach, cartridges reset anyway */
+               if (strendswith(dc->files[dc->index], "prg"))
+                  emu_reset(0);
+               break;
+            case 1:
+               tape_image_attach(unit, dc->files[dc->index]);
+               break;
+            default:
+               file_system_attach_disk(unit, dc->files[dc->index]);
+               autodetect_drivetype(unit);
+               break;
          }
-         display_current_image(dc->labels[dc->index], true);
       }
    }
 

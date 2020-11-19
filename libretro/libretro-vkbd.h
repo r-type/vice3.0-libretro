@@ -101,7 +101,7 @@ static retro_vkeys vkeys[VKBDX * VKBDY] = {
 	{ {27} ,{27}  ,RETROK_LEFT},
 	{ {28} ,{28}  ,RETROK_DOWN},
 	{ {29} ,{29}  ,RETROK_RIGHT},
-	{ "TTF","TTF" ,-20}, /* Toggle turbo fire */
+	{ "TRF","TRF" ,-20}, /* Toggle turbo fire */
 };
 
 #endif /* LIBRETRO_VKBD_H */

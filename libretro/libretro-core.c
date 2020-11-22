@@ -1,6 +1,7 @@
 #include "libretro.h"
 #include "libretro-core.h"
 #include "libretro-mapper.h"
+#include "libretro-graph.h"
 #include "encodings/utf.h"
 
 #include "archdep.h"
@@ -37,8 +38,7 @@ int cpuloop = 1;
 extern bool retro_vkbd;
 extern void print_vkbd(unsigned short int *pixels);
 unsigned int opt_vkbd_theme = 0;
-unsigned int opt_vkbd_alpha = 204;
-unsigned int vkbd_alpha = 204;
+libretro_graph_alpha_t opt_vkbd_alpha = GRAPH_ALPHA_75;
 
 /* Core vars */
 static bool noautostart = false;
@@ -1960,33 +1960,18 @@ void retro_set_environment(retro_environment_t cb)
          "0"
       },
       {
-         "vice_vkbd_alpha",
+         "vice_vkbd_transparency",
          "Video > Virtual KBD Transparency",
          "Keyboard transparency can be toggled with RetroPad A.",
          {
-            { "0%", NULL },
-            { "5%", NULL },
-            { "10%", NULL },
-            { "15%", NULL },
-            { "20%", NULL },
-            { "25%", NULL },
-            { "30%", NULL },
-            { "35%", NULL },
-            { "40%", NULL },
-            { "45%", NULL },
-            { "50%", NULL },
-            { "55%", NULL },
-            { "60%", NULL },
-            { "65%", NULL },
-            { "70%", NULL },
-            { "75%", NULL },
-            { "80%", NULL },
-            { "85%", NULL },
-            { "90%", NULL },
-            { "95%", NULL },
+            { "0%",   NULL },
+            { "25%",  NULL },
+            { "50%",  NULL },
+            { "75%",  NULL },
+            { "100%", NULL },
             { NULL, NULL },
          },
-         "20%"
+         "25%"
       },
 #if defined(__XVIC__)
       {
@@ -4442,12 +4427,15 @@ static void update_variables(void)
       opt_vkbd_theme = atoi(var.value);
    }
 
-   var.key = "vice_vkbd_alpha";
+   var.key = "vice_vkbd_transparency";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      opt_vkbd_alpha = 255 - (255 * atoi(var.value) / 100);
-      vkbd_alpha = opt_vkbd_alpha;
+      if      (!strcmp(var.value, "0%"))   opt_vkbd_alpha = GRAPH_ALPHA_100;
+      else if (!strcmp(var.value, "25%"))  opt_vkbd_alpha = GRAPH_ALPHA_75;
+      else if (!strcmp(var.value, "50%"))  opt_vkbd_alpha = GRAPH_ALPHA_50;
+      else if (!strcmp(var.value, "75%"))  opt_vkbd_alpha = GRAPH_ALPHA_25;
+      else if (!strcmp(var.value, "100%")) opt_vkbd_alpha = GRAPH_ALPHA_0;
    }
 
    var.key = "vice_statusbar";
@@ -5399,6 +5387,9 @@ void retro_deinit(void)
    /* Clean ZIP temp */
    if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
       remove_recurse(retro_temp_directory);
+
+   /* Free buffers uses by libretro-graph */
+   LibretroGraphFree();
 
    /* 'Reset' troublesome static variables */
    pix_bytes_initialized = false;

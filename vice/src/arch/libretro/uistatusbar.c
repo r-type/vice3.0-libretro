@@ -577,9 +577,9 @@ void uistatusbar_draw(void)
     }
 
     if (pix_bytes == 2)
-        DrawFBoxBmp(retro_bmp, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
+        DrawFBoxBmp(retro_bmp, bkg_x, bkg_y, bkg_width, bkg_height, 0, GRAPH_ALPHA_100);
     else
-        DrawFBoxBmp32((uint32_t *)retro_bmp, bkg_x, bkg_y, bkg_width, bkg_height, 0, 255);
+        DrawFBoxBmp32((uint32_t *)retro_bmp, bkg_x, bkg_y, bkg_width, bkg_height, 0, GRAPH_ALPHA_100);
 
     if (imagename_timer == 0)
         display_joyport();
@@ -660,8 +660,8 @@ void uistatusbar_draw(void)
         /* Output */
         snprintf(s, sizeof(s), "%c", c);
         if (pix_bytes == 2)
-            Draw_text(retro_bmp, x_char, y, color_f_16, color_b_16, 255, 1, 1, 10, s);
+            Draw_text(retro_bmp, x_char, y, color_f_16, color_b_16, GRAPH_ALPHA_100, true, 1, 1, 10, s);
         else
-            Draw_text32((uint32_t *)retro_bmp, x_char, y, color_f_32, color_b_32, 255, 1, 1, 10, s);
+            Draw_text32((uint32_t *)retro_bmp, x_char, y, color_f_32, color_b_32, GRAPH_ALPHA_100, true, 1, 1, 10, s);
     }
 }

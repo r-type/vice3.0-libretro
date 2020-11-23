@@ -862,10 +862,10 @@ int process_keyboard_pass_through()
    /* Null only with RetroPad */
    if (retro_devices[0] == RETRO_DEVICE_JOYPAD)
    {
-      if (mapper_keys[fire_button] || fire_button == turbo_fire_button)
+      if (mapper_keys[fire_button] || (retro_turbo_fire && fire_button == turbo_fire_button))
          fire_button = -1;
 
-      if (mapper_keys[jump_button] || jump_button == turbo_fire_button)
+      if (mapper_keys[jump_button] || (retro_turbo_fire && jump_button == turbo_fire_button))
          jump_button = -1;
    }
 
@@ -934,10 +934,10 @@ int process_keyboard_pass_through()
    /* Null only with RetroPad */
    if (retro_devices[1] == RETRO_DEVICE_JOYPAD)
    {
-      if (mapper_keys[fire_button] || fire_button == turbo_fire_button)
+      if (mapper_keys[fire_button] || (retro_turbo_fire && fire_button == turbo_fire_button))
          fire_button = -1;
 
-      if (mapper_keys[jump_button] || jump_button == turbo_fire_button)
+      if (mapper_keys[jump_button] || (retro_turbo_fire && jump_button == turbo_fire_button))
          jump_button = -1;
    }
 
@@ -1129,7 +1129,7 @@ void retro_poll_event()
          /* Null only with RetroPad */
          if (retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
          {
-            if (mapper_keys[fire_button] || fire_button == turbo_fire_button)
+            if (mapper_keys[fire_button] || (retro_turbo_fire && fire_button == turbo_fire_button))
                fire_button = -1;
          }
 
@@ -1160,7 +1160,7 @@ void retro_poll_event()
          /* Null only with RetroPad */
          if (retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
          {
-            if (mapper_keys[jump_button] || jump_button == turbo_fire_button)
+            if (mapper_keys[jump_button] || (retro_turbo_fire && jump_button == turbo_fire_button))
                jump_button = -1;
          }
 

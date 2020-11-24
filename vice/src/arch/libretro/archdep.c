@@ -303,19 +303,29 @@ char *archdep_default_resource_file_name(void)
     } else {
         if (opt_read_vicerc)
         {
-            char content_vicerc[RETRO_PATH_MAX] = {0};
+            char content_vicerc[RETRO_PATH_MAX]   = {0};
             char content_basename[RETRO_PATH_MAX] = {0};
-            snprintf(content_basename, sizeof(content_basename), "%s", path_basename(full_path));
-            snprintf(content_basename, sizeof(content_basename), "%s", path_remove_extension(content_basename));
-            snprintf(content_vicerc, sizeof(content_vicerc), "%s%s%s.vicerc", SAVEDIR, FSDEV_DIR_SEP_STR, content_basename);
-            /* Process "saves/[content].vicerc" */
-            if (!ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
-               return util_concat(content_vicerc, NULL);
+            if (!string_is_empty(full_path))
+            {
+               snprintf(content_basename, sizeof(content_basename), "%s", path_basename(full_path));
+               snprintf(content_basename, sizeof(content_basename), "%s", path_remove_extension(content_basename));
+               snprintf(content_vicerc, sizeof(content_vicerc), "%s%s%s.vicerc", SAVEDIR, FSDEV_DIR_SEP_STR, content_basename);
+               /* Process "saves/[content].vicerc" */
+               if (!ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
+                  return util_concat(content_vicerc, NULL);
+               else
+                  log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
+            }
             /* Process "saves/vicerc" */
             snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", SAVEDIR, FSDEV_DIR_SEP_STR);
             if (!ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
                return util_concat(content_vicerc, NULL);
+            else
+               log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
             /* Process "system/vice/vicerc" */
+            snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", archdep_pref_path, FSDEV_DIR_SEP_STR);
+            if (ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
+               log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
             return util_concat(archdep_pref_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
         }
         else

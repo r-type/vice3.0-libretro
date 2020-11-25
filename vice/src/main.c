@@ -204,7 +204,9 @@ int main_program(int argc, char **argv)
 #ifdef __LIBRETRO__
     log_message(LOG_DEFAULT, LOG_HR);
     log_message(LOG_DEFAULT, "VICE %s", VERSION);
+#ifdef GIT_VERSION
     log_message(LOG_DEFAULT, "Git commit:%s", GIT_VERSION);
+#endif
     log_message(LOG_DEFAULT, "Build date: " __DATE__ " " __TIME__);
     log_message(LOG_DEFAULT, "");
     log_message(LOG_DEFAULT, "Welcome to %s, the free portable %s Emulator.", program_name, machine_name);

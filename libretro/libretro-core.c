@@ -486,6 +486,7 @@ static int process_cmdline(const char* argv)
 #endif
     PARAMCOUNT = 0;
     dc_reset(dc);
+    snprintf(full_path, sizeof(full_path), "%s", argv);
 
     cur_port_locked = false;
     free(autostartString);

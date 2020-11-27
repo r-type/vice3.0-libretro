@@ -85,13 +85,13 @@ static char* joystick_value_human(char val, int vice_device)
     else if (val & 0x08) /* RIGHT */
         str[2] = 29;
 
-    str[1] = (val & 0x10) ? (str[1] | -0x80) : str[1];
+    str[1] = (val & 0x10) ? (str[1] | 0x80) : str[1];
 
     if (vice_device > 0)
     {
-        str[1] = (val & 0x10) ? ('L' | -0x80) : str[1];
-        str[1] = (val & 0x20) ? ('R' | -0x80) : str[1];
-        str[1] = (val & 0x40) ? ('M' | -0x80) : str[1];
+        str[1] = (val & 0x10) ? ('L' | 0x80) : str[1];
+        str[1] = (val & 0x20) ? ('R' | 0x80) : str[1];
+        str[1] = (val & 0x40) ? ('M' | 0x80) : str[1];
     }
 
     return str;
@@ -107,9 +107,9 @@ static void display_joyport(void)
     sprintf(joy1, "%s", "1");
     sprintf(joy2, "%s", "2");
     if(cur_port == 1)
-        joy1[0] = (joy1[0] | -0x80);
+        joy1[0] = (joy1[0] | 0x80);
     else if(cur_port == 2)
-        joy2[0] = (joy2[0] | -0x80);
+        joy2[0] = (joy2[0] | 0x80);
 
     /* Mouse */
     if (opt_joyport_type > 2 && cur_port == 1)
@@ -217,9 +217,9 @@ void display_current_image(const char *image, bool inserted)
         imagename_timer = 150;
 
         if (inserted)
-            statusbar_text[0] = (8 | -0x80);
+            statusbar_text[0] = (8 | 0x80);
         else if (!strcmp(image, ""))
-            statusbar_text[0] = (9 | -0x80);
+            statusbar_text[0] = (9 | 0x80);
     }
 
     if (drive_empty)
@@ -512,7 +512,7 @@ void uistatusbar_close(void)
 void uistatusbar_draw(void)
 {
     unsigned int i = 0;
-    unsigned int c = 0;
+    char c = 0;
     char s[2] = {0};
 
     unsigned int char_width = 7;
@@ -542,7 +542,6 @@ void uistatusbar_draw(void)
     color_brown_32  = ARGB888(255,  89,  79,  78);
     color_f_32      = color_white_32;
     color_b_32      = color_black_32;
-
 
     /* Statusbar position */
     x = 1;

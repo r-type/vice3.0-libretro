@@ -66,7 +66,7 @@ extern int retro_warp_mode_enabled();
 #define STATUSBAR_PAUSE_POS         45
 #define STATUSBAR_SPEED_POS         45
 
-static char statusbar_text[MAX_STATUSBAR_LEN] = {0};
+static signed char statusbar_text[MAX_STATUSBAR_LEN] = {0};
 
 static char* joystick_value_human(char val, int vice_device)
 {
@@ -85,13 +85,13 @@ static char* joystick_value_human(char val, int vice_device)
     else if (val & 0x08) /* RIGHT */
         str[2] = 29;
 
-    str[1] = (val & 0x10) ? (str[1] | 0x80) : str[1];
+    str[1] = (val & 0x10) ? -str[1] : str[1];
 
     if (vice_device > 0)
     {
-        str[1] = (val & 0x10) ? ('L' | 0x80) : str[1];
-        str[1] = (val & 0x20) ? ('R' | 0x80) : str[1];
-        str[1] = (val & 0x40) ? ('M' | 0x80) : str[1];
+        str[1] = (val & 0x10) ? -'L' : str[1];
+        str[1] = (val & 0x20) ? -'R' : str[1];
+        str[1] = (val & 0x40) ? -'M' : str[1];
     }
 
     return str;
@@ -107,9 +107,9 @@ static void display_joyport(void)
     sprintf(joy1, "%s", "1");
     sprintf(joy2, "%s", "2");
     if(cur_port == 1)
-        joy1[0] = (joy1[0] | 0x80);
+        joy1[0] = -joy1[0];
     else if(cur_port == 2)
-        joy2[0] = (joy2[0] | 0x80);
+        joy2[0] = -joy2[0];
 
     /* Mouse */
     if (opt_joyport_type > 2 && cur_port == 1)
@@ -192,16 +192,11 @@ void display_current_image(const char *image, bool inserted)
 {
     static char imagename[RETRO_PATH_MAX] = {0};
     static char imagename_prev[RETRO_PATH_MAX] = {0};
-    static char imagelabel[RETRO_PATH_MAX] = {0};
 
     if (strcmp(image, ""))
     {
         drive_empty = (inserted) ? 0 : 1;
-        snprintf(imagelabel, sizeof(imagelabel), "%s", (char*)image);
-        snprintf(imagelabel, sizeof(imagelabel), "%s", path_basename(imagelabel));
-        if (strstr(imagelabel, "."))
-            snprintf(imagelabel, sizeof(imagelabel), "%s", path_remove_extension(imagelabel));
-        snprintf(imagename, sizeof(imagename), "%2s%.36s", "  ", imagelabel);
+        snprintf(imagename, sizeof(imagename), "%2s%.36s", "  ", image);
         snprintf(imagename_prev, sizeof(imagename_prev), "%.38s", imagename);
     }
     else
@@ -217,9 +212,9 @@ void display_current_image(const char *image, bool inserted)
         imagename_timer = 150;
 
         if (inserted)
-            statusbar_text[0] = (8 | 0x80);
+            statusbar_text[0] = -8;
         else if (!strcmp(image, ""))
-            statusbar_text[0] = (9 | 0x80);
+            statusbar_text[0] = -9;
     }
 
     if (drive_empty)
@@ -512,8 +507,8 @@ void uistatusbar_close(void)
 void uistatusbar_draw(void)
 {
     unsigned int i = 0;
-    char c = 0;
-    char s[2] = {0};
+    signed char c = 0;
+    signed char s[2] = {0};
 
     unsigned int char_width = 7;
     unsigned int char_offset = 1;

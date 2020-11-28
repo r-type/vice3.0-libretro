@@ -543,7 +543,7 @@ void Draw_string32(uint32_t *surf, signed short int x, signed short int y,
 
 void Draw_text(unsigned short *buffer, int x, int y,
       unsigned short fgcol, unsigned short bgcol, libretro_graph_alpha_t alpha, bool draw_bg,
-      int scalex, int scaley, int max, char *string, ...)
+      int scalex, int scaley, int max, signed char *string, ...)
 {
    char text[256];
    va_list ap;
@@ -558,7 +558,7 @@ void Draw_text(unsigned short *buffer, int x, int y,
 #if 0
    Draw_string(buffer, x, y, text, max, scalex, scaley, fgcol, bgcol, alpha, draw_bg);
 #else
-   char c;
+   signed char c;
    char s[2] = {0};
    int charwidth = 6;
    int cmax;
@@ -569,9 +569,9 @@ void Draw_text(unsigned short *buffer, int x, int y,
       c = text[i];
       if (c == 0)
          break;
-      if (c & 0x80)
+      if (c < 0)
       {
-         snprintf(s, sizeof(s), "%c", c - 0x80);
+         snprintf(s, sizeof(s), "%c", -c);
          Draw_string(buffer, x+(i*charwidth*scalex), y, s, 1, scalex, scaley, bgcol, fgcol, alpha, draw_bg);
       }
       else
@@ -585,7 +585,7 @@ void Draw_text(unsigned short *buffer, int x, int y,
 
 void Draw_text32(uint32_t *buffer, int x, int y,
       uint32_t fgcol, uint32_t bgcol, libretro_graph_alpha_t alpha, bool draw_bg,
-      int scalex, int scaley, int max, char *string,...)
+      int scalex, int scaley, int max, signed char *string, ...)
 {
    char text[256];
    va_list ap;
@@ -600,7 +600,7 @@ void Draw_text32(uint32_t *buffer, int x, int y,
 #if 0
    Draw_string32(buffer, x, y, text, max, scalex, scaley, fgcol, bgcol, alpha, draw_bg);
 #else
-   char c;
+   signed char c;
    char s[2] = {0};
    int charwidth = 6;
    int cmax;
@@ -611,9 +611,9 @@ void Draw_text32(uint32_t *buffer, int x, int y,
       c = text[i];
       if (c == 0)
          break;
-      if (c & 0x80)
+      if (c < 0)
       {
-         snprintf(s, sizeof(s), "%c", c - 0x80);
+         snprintf(s, sizeof(s), "%c", -c);
          Draw_string32(buffer, x+(i*charwidth*scalex), y, s, 1, scalex, scaley, bgcol, fgcol, alpha, draw_bg);
       }
       else

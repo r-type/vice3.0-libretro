@@ -360,6 +360,8 @@ static int tape_control = 0;
 
 static void display_tape(void)
 {
+    char tape_chars[5] = {0, 20, 22, 21, 'R'};
+
     if (drive_enabled)
         return;
 
@@ -372,7 +374,7 @@ static void display_tape(void)
     }
 
     if (tape_enabled)
-        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? ('*' | 0x80) : (' ' | 0x80), tape_counter, (" p><R"[tape_control] | 0x80));
+        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? ('*' | 0x80) : (' ' | 0x80), tape_counter, (tape_chars[tape_control] | 0x80));
     else
         sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "     ");
 
@@ -645,7 +647,9 @@ void uistatusbar_draw(void)
         }
         else if (tape_enabled)
         {
-            if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS)
+            if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 2)
+                x_align = x_align - 2 + char_width;
+            else if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 1)
                 x_align = x_align - 1 + char_width;
         }
 

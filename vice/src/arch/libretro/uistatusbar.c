@@ -66,11 +66,11 @@ extern int retro_warp_mode_enabled();
 #define STATUSBAR_PAUSE_POS         45
 #define STATUSBAR_SPEED_POS         45
 
-static signed char statusbar_text[MAX_STATUSBAR_LEN] = {0};
+static unsigned char statusbar_text[MAX_STATUSBAR_LEN] = {0};
 
-static char* joystick_value_human(char val, int vice_device)
+static unsigned char* joystick_value_human(char val, int vice_device)
 {
-    static char str[6] = {0};
+    static unsigned char str[6] = {0};
     sprintf(str, "%3s", "   ");
 
     if (val & 0x01) /* UP */
@@ -85,13 +85,13 @@ static char* joystick_value_human(char val, int vice_device)
     else if (val & 0x08) /* RIGHT */
         str[2] = 29;
 
-    str[1] = (val & 0x10) ? -str[1] : str[1];
+    str[1] = (val & 0x10) ? (str[1] | 0x80) : str[1];
 
     if (vice_device > 0)
     {
-        str[1] = (val & 0x10) ? -'L' : str[1];
-        str[1] = (val & 0x20) ? -'R' : str[1];
-        str[1] = (val & 0x40) ? -'M' : str[1];
+        str[1] = (val & 0x10) ? ('L' | 0x80) : str[1];
+        str[1] = (val & 0x20) ? ('R' | 0x80) : str[1];
+        str[1] = (val & 0x40) ? ('M' | 0x80) : str[1];
     }
 
     return str;
@@ -99,17 +99,17 @@ static char* joystick_value_human(char val, int vice_device)
 
 static void display_joyport(void)
 {
-    char tmpstr[25] = {0};
+    unsigned char tmpstr[25] = {0};
 
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
-    char joy1[2];
-    char joy2[2];
+    unsigned char joy1[2];
+    unsigned char joy2[2];
     sprintf(joy1, "%s", "1");
     sprintf(joy2, "%s", "2");
     if(cur_port == 1)
-        joy1[0] = -joy1[0];
+        joy1[0] = (joy1[0] | 0x80);
     else if(cur_port == 2)
-        joy2[0] = -joy2[0];
+        joy2[0] = (joy2[0] | 0x80);
 
     /* Mouse */
     if (opt_joyport_type > 2 && cur_port == 1)
@@ -212,9 +212,9 @@ void display_current_image(const char *image, bool inserted)
         imagename_timer = 150;
 
         if (inserted)
-            statusbar_text[0] = -8;
+            statusbar_text[0] = (8 | 0x80);
         else if (!strcmp(image, ""))
-            statusbar_text[0] = -9;
+            statusbar_text[0] = (9 | 0x80);
     }
 
     if (drive_empty)
@@ -372,7 +372,7 @@ static void display_tape(void)
     }
 
     if (tape_enabled)
-        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? '*' : ' ', tape_counter, " >f<R"[tape_control]);
+        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? ('*' | 0x80) : (' ' | 0x80), tape_counter, (" p><R"[tape_control] | 0x80));
     else
         sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "     ");
 
@@ -507,8 +507,8 @@ void uistatusbar_close(void)
 void uistatusbar_draw(void)
 {
     unsigned int i = 0;
-    signed char c = 0;
-    signed char s[2] = {0};
+    unsigned char c = 0;
+    unsigned char s[2] = {0};
 
     unsigned int char_width = 7;
     unsigned int char_offset = 1;

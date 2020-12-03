@@ -2471,7 +2471,7 @@ void retro_set_environment(retro_environment_t cb)
             { "resampling", "Resampling" },
             { NULL, NULL },
          },
-#if defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
+#if defined(__X64__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
          "fast"
 #else
          "resampling"

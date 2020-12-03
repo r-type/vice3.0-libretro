@@ -4883,7 +4883,7 @@ static void update_variables(void)
 
    option_display.key = "vice_vkbd_theme";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vkbd_alpha";
+   option_display.key = "vice_vkbd_transparency";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);

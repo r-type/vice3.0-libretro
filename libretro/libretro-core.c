@@ -1200,7 +1200,7 @@ void update_from_vice()
     {
         opt_jiffydos_allow = 0;
         opt_jiffydos = 0;
-        request_reload_restart = true;
+        reload_restart();
     }
 #endif
 

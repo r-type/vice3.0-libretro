@@ -1116,12 +1116,12 @@ void update_from_vice()
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
     /* Automatic model request */
-    if (opt_model_auto && autostartString)
+    if (opt_model_auto && !string_is_empty(full_path))
     {
-        if (strstr(autostartString, "NTSC") != NULL ||
-            strstr(autostartString, "(USA)") != NULL ||
-            strstr(autostartString, "(Japan)") != NULL ||
-            strstr(autostartString, "(Japan, USA)") != NULL)
+        if (strstr(full_path, "NTSC") ||
+            strstr(full_path, "(USA)") ||
+            strstr(full_path, "(Japan)") ||
+            strstr(full_path, "(Japan, USA)"))
         {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_NTSC;
@@ -1132,13 +1132,13 @@ void update_from_vice()
 #endif
         }
 
-        if (strstr(autostartString, "PAL") != NULL ||
-            strstr(autostartString, "(Europe)") != NULL ||
-            strstr(autostartString, "(Finland)") != NULL ||
-            strstr(autostartString, "(France)") != NULL ||
-            strstr(autostartString, "(Germany)") != NULL ||
-            strstr(autostartString, "(Netherlands)") != NULL ||
-            strstr(autostartString, "(Sweden)") != NULL)
+        if (strstr(full_path, "PAL") ||
+            strstr(full_path, "(Europe)") ||
+            strstr(full_path, "(Finland)") ||
+            strstr(full_path, "(France)") ||
+            strstr(full_path, "(Germany)") ||
+            strstr(full_path, "(Netherlands)") ||
+            strstr(full_path, "(Sweden)"))
         {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_PAL;
@@ -1148,6 +1148,13 @@ void update_from_vice()
             request_model_set = VIC20MODEL_VIC20_PAL;
 #endif
         }
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+        if (strstr(full_path, "(GS)"))
+            request_model_set = C64MODEL_C64_GS;
+        else if (strstr(full_path, "(MAX)"))
+            request_model_set = C64MODEL_ULTIMAX;
+#endif
     }
     else
         request_model_set = -1;
@@ -1193,7 +1200,7 @@ void update_from_vice()
     {
         opt_jiffydos_allow = 0;
         opt_jiffydos = 0;
-        runstate = RUNSTATE_LOADED_CONTENT;
+        reload_restart();
     }
 #endif
 
@@ -1378,7 +1385,7 @@ int pre_main()
 static void update_variables(void);
 extern int ui_init_finalize(void);
 
-void reload_restart()
+void reload_restart(void)
 {
     /* Clear request */
     request_reload_restart = false;
@@ -2464,7 +2471,7 @@ void retro_set_environment(retro_environment_t cb)
             { "resampling", "Resampling" },
             { NULL, NULL },
          },
-#if defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
+#if defined(__X64__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
          "fast"
 #else
          "resampling"
@@ -4876,7 +4883,7 @@ static void update_variables(void)
 
    option_display.key = "vice_vkbd_theme";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vkbd_alpha";
+   option_display.key = "vice_vkbd_transparency";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -5780,6 +5787,10 @@ void retro_run(void)
                 log_cb(RETRO_LOG_INFO, "Forcing NTSC mode\n");
              else if (request_model_set == C64MODEL_C64_PAL || request_model_set == C64MODEL_C64C_PAL)
                 log_cb(RETRO_LOG_INFO, "Forcing PAL mode\n");
+             else if (request_model_set == C64MODEL_C64_GS)
+                log_cb(RETRO_LOG_INFO, "Forcing C64GS mode\n");
+             else if (request_model_set == C64MODEL_ULTIMAX)
+                log_cb(RETRO_LOG_INFO, "Forcing ULTIMAX mode\n");
 
              c64model_set(request_model_set);
 #elif defined(__XVIC__)

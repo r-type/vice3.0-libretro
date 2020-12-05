@@ -137,6 +137,7 @@ enum {
 extern void maincpu_mainloop_retro(void);
 extern long GetTicks(void);
 extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
+extern void reload_restart(void);
 
 /* Core options */
 struct libretro_core_options {

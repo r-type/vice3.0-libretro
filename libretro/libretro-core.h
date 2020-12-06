@@ -127,7 +127,8 @@ extern unsigned int opt_statusbar;
 extern unsigned int cur_port;
 extern unsigned int retro_region;
 
-enum {
+enum
+{
    RUNSTATE_FIRST_START = 0,
    RUNSTATE_LOADED_CONTENT,
    RUNSTATE_RUNNING,
@@ -139,8 +140,9 @@ extern long GetTicks(void);
 extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
 extern void reload_restart(void);
 
-/* Core options */
-struct libretro_core_options {
+/* VICE options */
+struct libretro_core_options
+{
    int Model;
    int UserportJoyType;
    int AutostartWarp;
@@ -177,5 +179,38 @@ struct libretro_core_options {
 };
 
 extern struct libretro_core_options core_opt;
+
+/* VICE includes */
+#if defined(__X64__) || defined(__X64SC__)
+#include "c64.h"
+#include "c64mem.h"
+#include "c64model.h"
+#elif defined(__XSCPU64__)
+#include "scpu64.h"
+#include "c64mem.h"
+#include "c64model.h"
+#elif defined(__X64DTV__)
+#include "c64dtv.h"
+#include "c64dtvmem.h"
+#include "c64dtvmodel.h"
+#elif defined(__X128__)
+#include "c128.h"
+#include "c128mem.h"
+#include "c128model.h"
+#elif defined(__XVIC__)
+#include "vic20.h"
+#include "vic20mem.h"
+#include "vic20model.h"
+#include "vic20cart.h"
+#elif defined(__XPLUS4__)
+#include "plus4.h"
+#include "plus4model.h"
+#elif defined(__XCBM2__) || defined(__XCBM5x0__)
+#include "cbm2.h"
+#include "cbm2model.h"
+#elif defined(__XPET__)
+#include "pet.h"
+#include "petmodel.h"
+#endif
 
 #endif /* LIBRETRO_CORE_H */

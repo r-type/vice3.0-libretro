@@ -152,7 +152,8 @@ void emu_function(int function)
          /* Lock current port */
          cur_port_locked = true;
          /* Statusbar notification */
-         snprintf(statusbar_text, 56, "Port %d%-50s", cur_port, " ");
+         snprintf(statusbar_text, 56, "%c Port %-50d",
+               (' ' | 0x80), cur_port);
          imagename_timer = 50;
          break;
       case EMU_RESET:
@@ -167,6 +168,10 @@ void emu_function(int function)
          zoom_mode_id_prev = -1;
          /* Lock aspect ratio */
          opt_aspect_ratio_locked = true;
+         /* Statusbar notification */
+         snprintf(statusbar_text, 56, "%c Pixel Aspect %-50s",
+               (' ' | 0x80), (opt_aspect_ratio == 1) ? "PAL" : (opt_aspect_ratio == 2) ? "NTSC" : "1:1");
+         imagename_timer = 50;
          break;
       case EMU_ZOOM_MODE:
          if (zoom_mode_id == 0 && opt_zoom_mode_id == 0)
@@ -180,6 +185,10 @@ void emu_function(int function)
          retro_turbo_fire = !retro_turbo_fire;
          /* Lock turbo fire */
          turbo_fire_locked = true;
+         /* Statusbar notification */
+         snprintf(statusbar_text, 56, "%c Turbo Fire %-50s",
+               (' ' | 0x80), (retro_turbo_fire) ? "ON" : "OFF");
+         imagename_timer = 50;
          break;
       case EMU_WARP_MODE:
          retro_warpmode = (retro_warpmode) ? 0 : 1;

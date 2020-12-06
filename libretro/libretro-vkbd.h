@@ -4,14 +4,15 @@
 extern void print_vkbd(unsigned short int *pixels);
 extern int check_vkey(int x, int y);
 
-typedef struct {
+typedef struct
+{
    char normal[5];
    char shift[5];
    int value;
 } retro_vkeys;
 
-static retro_vkeys vkeys[VKBDX * VKBDY] = {
-
+static retro_vkeys vkeys[VKBDX * VKBDY] =
+{
 	/* 0 */
 	{ "1"  ,"!"   ,RETROK_1},
 	{ "2"  ,"\""  ,RETROK_2},

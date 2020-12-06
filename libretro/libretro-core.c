@@ -113,7 +113,7 @@ static unsigned int manual_crop_right = 0;
 static bool request_reload_restart = false;
 static bool request_restart = false;
 static bool request_update_work_disk = false;
-static int request_model_set = -1;
+int request_model_set = -1;
 static int request_model_prev = -1;
 static unsigned int opt_model_auto = 1;
 unsigned int opt_autostart = 1;
@@ -152,40 +152,9 @@ extern bool turbo_fire_locked;
 extern unsigned int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
-/* VICE includes */
-#if defined(__X64__) || defined(__X64SC__)
-#include "c64.h"
-#include "c64mem.h"
-#include "c64model.h"
-#elif defined(__XSCPU64__)
-#include "scpu64.h"
-#include "c64mem.h"
-#include "c64model.h"
-#elif defined(__X64DTV__)
-#include "c64dtv.h"
-#include "c64dtvmem.h"
-#include "c64dtvmodel.h"
-#elif defined(__X128__)
-#include "c128.h"
-#include "c128mem.h"
-#include "c128model.h"
-#elif defined(__XVIC__)
-#include "vic20.h"
-#include "vic20mem.h"
-#include "vic20model.h"
-#include "vic20cart.h"
-void cartridge_trigger_freeze(void) {}
-#elif defined(__XPLUS4__)
-#include "plus4.h"
-#include "plus4model.h"
-void cartridge_trigger_freeze(void) {}
-#elif defined(__XCBM2__) || defined(__XCBM5x0__)
-#include "cbm2.h"
-#include "cbm2model.h"
+#if defined(__XVIC__) || defined(__XPLUS4__) || defined(__XCBM2__) || defined(__XCBM5x0__)
 void cartridge_trigger_freeze(void) {}
 #elif defined(__XPET__)
-#include "pet.h"
-#include "petmodel.h"
 void cartridge_detach_image(int type) {}
 void cartridge_trigger_freeze(void) {}
 #endif

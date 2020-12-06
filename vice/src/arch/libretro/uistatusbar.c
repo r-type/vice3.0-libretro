@@ -55,18 +55,18 @@ extern int retro_warp_mode_enabled();
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-#define MAX_STATUSBAR_LEN           48
+#define MAX_STATUSBAR_LEN           64
 #define STATUSBAR_JOY_POS           0
-#define STATUSBAR_DRIVE_POS         41
-#define STATUSBAR_DRIVE8_TRACK_POS  43
-#define STATUSBAR_DRIVE9_TRACK_POS  43
-#define STATUSBAR_DRIVE10_TRACK_POS 43
-#define STATUSBAR_DRIVE11_TRACK_POS 43
-#define STATUSBAR_TAPE_POS          39
-#define STATUSBAR_PAUSE_POS         45
-#define STATUSBAR_SPEED_POS         45
+#define STATUSBAR_DRIVE_POS         57
+#define STATUSBAR_DRIVE8_TRACK_POS  59
+#define STATUSBAR_DRIVE9_TRACK_POS  59
+#define STATUSBAR_DRIVE10_TRACK_POS 59
+#define STATUSBAR_DRIVE11_TRACK_POS 59
+#define STATUSBAR_TAPE_POS          56
+#define STATUSBAR_PAUSE_POS         61
+#define STATUSBAR_SPEED_POS         61
 
-static unsigned char statusbar_text[MAX_STATUSBAR_LEN] = {0};
+unsigned char statusbar_text[MAX_STATUSBAR_LEN] = {0};
 
 static unsigned char* joystick_value_human(char val, int vice_device)
 {
@@ -106,10 +106,6 @@ static void display_joyport(void)
     unsigned char joy2[2];
     sprintf(joy1, "%s", "1");
     sprintf(joy2, "%s", "2");
-    if(cur_port == 1)
-        joy1[0] = (joy1[0] | 0x80);
-    else if(cur_port == 2)
-        joy2[0] = (joy2[0] | 0x80);
 
     /* Mouse */
     if (opt_joyport_type > 2 && cur_port == 1)
@@ -159,7 +155,7 @@ static void display_joyport(void)
     if (opt_statusbar & STATUSBAR_BASIC)
         snprintf(tmpstr, sizeof(tmpstr), "%24s", "");
 
-    sprintf(&statusbar_text[STATUSBAR_JOY_POS], "%-38s", tmpstr);
+    sprintf(&statusbar_text[STATUSBAR_JOY_POS], "%-55s", tmpstr);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -196,19 +192,19 @@ void display_current_image(const char *image, bool inserted)
     if (strcmp(image, ""))
     {
         drive_empty = (inserted) ? 0 : 1;
-        snprintf(imagename, sizeof(imagename), "%2s%.36s", "  ", image);
-        snprintf(imagename_prev, sizeof(imagename_prev), "%.38s", imagename);
+        snprintf(imagename, sizeof(imagename), "%.56s", image);
+        snprintf(imagename_prev, sizeof(imagename_prev), "%.56s", imagename);
     }
     else
     {
         drive_empty = 1;
         if (strcmp(imagename_prev, ""))
-            snprintf(imagename, sizeof(imagename), "%.38s", imagename_prev);
+            snprintf(imagename, sizeof(imagename), "%.56s", imagename_prev);
     }
 
     if (strcmp(imagename, ""))
     {
-        snprintf(&statusbar_text[STATUSBAR_JOY_POS], sizeof(statusbar_text), "%-38s", imagename);
+        snprintf(&statusbar_text[STATUSBAR_JOY_POS], sizeof(statusbar_text), "%2s%-54s", "  ", imagename);
         imagename_timer = 150;
 
         if (inserted)
@@ -374,9 +370,9 @@ static void display_tape(void)
     }
 
     if (tape_enabled)
-        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d%c", (tape_motor) ? ('*' | 0x80) : (' ' | 0x80), tape_counter, (tape_chars[tape_control] | 0x80));
+        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d", (tape_chars[tape_control] | 0x80), tape_counter);
     else
-        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "     ");
+        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "    ");
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -512,31 +508,37 @@ void uistatusbar_draw(void)
     unsigned char c = 0;
     unsigned char s[2] = {0};
 
-    unsigned int char_width = 7;
+    unsigned int char_width = 6;
     unsigned int char_offset = 1;
     int x = 0, y = 0;
 
     unsigned short int color_f_16, color_b_16;
-    unsigned short int color_black_16, color_white_16, color_red_16, color_green_16, color_greenb_16, color_greend_16, color_brown_16;
+    unsigned short int color_black_16, color_white_16,
+            color_red_16, color_green_16, color_greenb_16, color_greend_16,
+            color_brown_16, color_brownd_16;
     color_white_16  = RGB565(255, 255, 255);
     color_black_16  = 0;
     color_red_16    = RGB565(187,   0,   0);
     color_greenb_16 = RGB565(  0, 187,   0);
     color_green_16  = RGB565(  0,  85,   0);
     color_greend_16 = RGB565(  0,  34,   0);
-    color_brown_16  = RGB565( 89,  79,  78);
+    color_brown_16  = RGB565(109,  99,  98);
+    color_brownd_16 = RGB565( 45,  35,  35);
     color_f_16      = color_white_16;
     color_b_16      = color_black_16;
 
     unsigned int color_f_32, color_b_32;
-    unsigned int color_black_32, color_white_32, color_red_32, color_green_32, color_greenb_32, color_greend_32, color_brown_32;
+    unsigned int color_black_32, color_white_32,
+            color_red_32, color_green_32, color_greenb_32, color_greend_32,
+            color_brown_32, color_brownd_32;
     color_white_32  = ARGB888(255, 255, 255, 255);
     color_black_32  = 0;
     color_red_32    = ARGB888(255, 187,   0,   0); /* 0xffbb0000 */
     color_greenb_32 = ARGB888(255,   0, 187,   0); /* 0xff00bb00 */
     color_green_32  = ARGB888(255,   0,  85,   0); /* 0xff005500 */
     color_greend_32 = ARGB888(255,   0,  34,   0); /* 0xff002200 */
-    color_brown_32  = ARGB888(255,  89,  79,  78);
+    color_brown_32  = ARGB888(255, 109,  99,  98);
+    color_brownd_32 = ARGB888(255,  45,  35,  35);
     color_f_32      = color_white_32;
     color_b_32      = color_black_32;
 
@@ -545,27 +547,25 @@ void uistatusbar_draw(void)
     if (opt_statusbar & STATUSBAR_TOP)
         y = zoomed_YS_offset + 1;
     else
-        y = zoomed_height + zoomed_YS_offset - char_width - 1;
+        y = zoomed_height + zoomed_YS_offset - (char_width + 1) - 1;
 
     /* Statusbar background */
     int bkg_x = retroXS_offset + x - 1;
     int bkg_y = y - 1;
     int max_width = zoomed_width;
     int bkg_width = max_width;
-    int bkg_height = char_width + 2;
+    int bkg_height = (char_width + 1) + 2;
 
     /* Right alignment offset */
-    int x_align_offset = 4;
-    if (retrow != zoomed_width && retroXS_offset != 0)
-        x_align_offset += 1;
+    int x_align_offset = 2;
 
     /* Basic mode statusbar background */
     if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)
     {
         if (drive_enabled)
-            bkg_width = (char_width * 5) - x_align_offset;
+            bkg_width = (char_width * 5) - x_align_offset + 1;
         else if (tape_enabled)
-            bkg_width = (char_width * 8) - x_align_offset;
+            bkg_width = (char_width * 8) - x_align_offset - 2;
         else
             bkg_width = (char_width * 3) - x_align_offset - 1;
 
@@ -591,15 +591,23 @@ void uistatusbar_draw(void)
         color_b_32 = color_black_32;
 
         /* Drive/tape LED color */
-        if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 1)
+        if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS)
         {
             color_f_16 = color_black_16;
             color_f_32 = color_black_32;
 
             if (tape_enabled)
             {
-                color_b_16 = color_brown_16;
-                color_b_32 = color_brown_32;
+                if (tape_motor)
+                {
+                    color_b_16 = color_brown_16;
+                    color_b_32 = color_brown_32;
+                }
+                else
+                {
+                    color_b_16 = color_brownd_16;
+                    color_b_32 = color_brownd_32;
+                }
             }
         }
 
@@ -643,14 +651,14 @@ void uistatusbar_draw(void)
         if (drive_enabled)
         {
             if (i == STATUSBAR_DRIVE8_TRACK_POS || i == STATUSBAR_DRIVE8_TRACK_POS + 1)
-                x_align--;
+                x_align -= 2;
         }
         else if (tape_enabled)
         {
-            if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 2)
-                x_align = x_align - 2 + char_width;
+            if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 4)
+                x_align = x_align - 4 + char_width;
             else if (i >= STATUSBAR_TAPE_POS && i < STATUSBAR_SPEED_POS - 1)
-                x_align = x_align - 1 + char_width;
+                x_align = x_align - 2 + char_width;
         }
 
         int x_char = x + char_offset + x_align + (i * char_width);

@@ -56,10 +56,11 @@ int retro_capslock = false;
 unsigned int cur_port = 2;
 static int cur_port_prev = -1;
 bool cur_port_locked = false;
-unsigned int mouse_value[2] = {0};
+unsigned int mouse_value[2 + 1] = {0};
 unsigned int mouse_speed[2] = {0};
 
 unsigned int retro_statusbar = 0;
+extern unsigned char statusbar_text[64];
 unsigned int retro_warpmode = 0;
 extern bool retro_vkbd;
 extern bool retro_vkbd_transparent;
@@ -150,6 +151,9 @@ void emu_function(int function)
          if (cur_port > 2) cur_port = 1;
          /* Lock current port */
          cur_port_locked = true;
+         /* Statusbar notification */
+         snprintf(statusbar_text, 56, "Port %d%-50s", cur_port, " ");
+         imagename_timer = 50;
          break;
       case EMU_RESET:
          emu_reset(-1);

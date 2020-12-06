@@ -1421,71 +1421,73 @@ void retro_poll_event()
       /* Ports 1 & 2 to VICE */
       for (j = 0; j < 2; j++)
       {
-         if (!retro_mouse_l[j] && !retro_mouse_r[j] && !retro_mouse_m[j])
-            mouse_value[j+1] = 0;
+         retro_j = j + 1;
+         if (!retro_mouse_l[j] && !retro_mouse_r[j] && !retro_mouse_m[j] &&
+             !retro_mouse_x[j] && !retro_mouse_y[j])
+               mouse_value[retro_j] = 0;
 
          /* Buttons */
          if (retro_mouse_l[j] && !vice_mouse_l[j])
          {
             mouse_button(0, 1);
-            mouse_value[j+1] |= 0x10;
+            mouse_value[retro_j] |= 0x10;
             vice_mouse_l[j] = 1;
          }
          else if (!retro_mouse_l[j] && vice_mouse_l[j])
          {
             mouse_button(0, 0);
-            mouse_value[j+1] &= ~0x10;
+            mouse_value[retro_j] &= ~0x10;
             vice_mouse_l[j] = 0;
          }
 
          if (retro_mouse_r[j] && !vice_mouse_r[j])
          {
             mouse_button(1, 1);
-            mouse_value[j+1] |= 0x20;
+            mouse_value[retro_j] |= 0x20;
             vice_mouse_r[j] = 1;            
          }
          else if (!retro_mouse_r[j] && vice_mouse_r[j])
          {
             mouse_button(1, 0);
-            mouse_value[j+1] &= ~0x20;
+            mouse_value[retro_j] &= ~0x20;
             vice_mouse_r[j] = 0;            
          }
 
          if (retro_mouse_m[j] && !vice_mouse_m[j])
          {
             mouse_button(2, 1);
-            mouse_value[j+1] |= 0x40;
+            mouse_value[retro_j] |= 0x40;
             vice_mouse_m[j] = 1;
          }
          else if (!retro_mouse_m[j] && vice_mouse_m[j])
          {
             mouse_button(2, 0);
-            mouse_value[j+1] &= ~0x40;
+            mouse_value[retro_j] &= ~0x40;
             vice_mouse_m[j] = 0;
          }
 
          /* Movement */
          if (retro_mouse_x[j] || retro_mouse_y[j])
          {
-            if (retro_mouse_y[j] < 0 && !(mouse_value[j+1] & 0x01))
-               mouse_value[j+1] |= 0x01;
-            if (retro_mouse_y[j] > -1 && mouse_value[j+1] & 0x01)
-               mouse_value[j+1] &= ~0x01;
+            if (retro_mouse_y[j] < 0 && !(mouse_value[retro_j] & 0x01))
+               mouse_value[retro_j] |= 0x01;
+            if (retro_mouse_y[j] > -1 && mouse_value[retro_j] & 0x01)
+               mouse_value[retro_j] &= ~0x01;
 
-            if (retro_mouse_y[j] > 0 && !(mouse_value[j+1] & 0x02))
-               mouse_value[j+1] |= 0x02;
-            if (retro_mouse_y[j] < -1 && mouse_value[j+1] & 0x02)
-               mouse_value[j+1] &= ~0x02;
+            if (retro_mouse_y[j] > 0 && !(mouse_value[retro_j] & 0x02))
+               mouse_value[retro_j] |= 0x02;
+            if (retro_mouse_y[j] < -1 && mouse_value[retro_j] & 0x02)
+               mouse_value[retro_j] &= ~0x02;
 
-            if (retro_mouse_x[j] < 0 && !(mouse_value[j+1] & 0x04))
-               mouse_value[j+1] |= 0x04;
-            if (retro_mouse_x[j] > -1 && mouse_value[j+1] & 0x04)
-               mouse_value[j+1] &= ~0x04;
+            if (retro_mouse_x[j] < 0 && !(mouse_value[retro_j] & 0x04))
+               mouse_value[retro_j] |= 0x04;
+            if (retro_mouse_x[j] > -1 && mouse_value[retro_j] & 0x04)
+               mouse_value[retro_j] &= ~0x04;
 
-            if (retro_mouse_x[j] > 0 && !(mouse_value[j+1] & 0x08))
-               mouse_value[j+1] |= 0x08;
-            if (retro_mouse_x[j] < -1 && mouse_value[j+1] & 0x08)
-               mouse_value[j+1] &= ~0x08;
+            if (retro_mouse_x[j] > 0 && !(mouse_value[retro_j] & 0x08))
+               mouse_value[retro_j] |= 0x08;
+            if (retro_mouse_x[j] < -1 && mouse_value[retro_j] & 0x08)
+               mouse_value[retro_j] &= ~0x08;
 
             mouse_move(retro_mouse_x[j], retro_mouse_y[j]);
          }

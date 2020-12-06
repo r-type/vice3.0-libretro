@@ -613,7 +613,7 @@ int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, 
 		/* Arnd's version */
 		if (isTrackBitshifted(nibdata, NIB_TRACK_LENGTH))
 		{
-			printf("[bitshifted] ");
+			if(verbose) printf("[bitshifted] ");
 			align_bitshifted_track(nibdata, NIB_TRACK_LENGTH, NULL, NULL);
 		}
 

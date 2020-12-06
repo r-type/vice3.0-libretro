@@ -882,6 +882,8 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
                snprintf(image_prg, sizeof(image_prg), "%s", token);
                token = strtok(NULL, ":");
             }
+            free(token);
+            token = NULL;
          }
 
          /* "Browsed" file in ZIP */
@@ -894,6 +896,8 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
                snprintf(browsed_file, sizeof(browsed_file), "%s", token);
                token = strtok(NULL, "#");
             }
+            free(token);
+            token = NULL;
          }
 
          /* Search the file (absolute, relative to m3u) */

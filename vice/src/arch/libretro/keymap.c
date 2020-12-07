@@ -580,13 +580,13 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(RETROK_RIGHT,        6, 3, 8);   /*        Right -> CRSR RIGHT   */
 
             keyboard_parse_set_pos_row(RETROK_F1,           0, 4, 8);   /*           F1 -> F1           */
-            keyboard_parse_set_pos_row(RETROK_F2,           0, 5, 9);   /*           F2 -> F2           */
+            keyboard_parse_set_pos_row(RETROK_F2,           0, 5, 8);   /*           F2 -> F2           */
             keyboard_parse_set_pos_row(RETROK_F3,           0, 6, 8);   /*           F3 -> F3           */
-            keyboard_parse_set_pos_row(RETROK_F4,           0, 4, 1);   /*           F4 -> F4           */
-            keyboard_parse_set_pos_row(RETROK_F5,           0, 5, 1);   /*           F5 -> F5           */
-            keyboard_parse_set_pos_row(RETROK_F6,           0, 6, 1);   /*           F6 -> F6           */
-            keyboard_parse_set_pos_row(RETROK_F7,           0, 3, 1);   /*           F7 -> F7           */
-            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 0);   /*           F8 -> HELP         */
+            keyboard_parse_set_pos_row(RETROK_F4,           0, 4, 2);   /*           F4 -> F4           */
+            keyboard_parse_set_pos_row(RETROK_F5,           0, 5, 2);   /*           F5 -> F5           */
+            keyboard_parse_set_pos_row(RETROK_F6,           0, 6, 2);   /*           F6 -> F6           */
+            keyboard_parse_set_pos_row(RETROK_F7,           0, 3, 2);   /*           F7 -> F7           */
+            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 8);   /*           F8 -> HELP         */
             break;
 
         case 1: /* Positional */
@@ -659,13 +659,13 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(RETROK_RIGHT,        6, 3, 8);   /*        Right -> CRSR RIGHT   */
 
             keyboard_parse_set_pos_row(RETROK_F1,           0, 4, 8);   /*           F1 -> F1           */
-            keyboard_parse_set_pos_row(RETROK_F2,           0, 5, 9);   /*           F2 -> F2           */
+            keyboard_parse_set_pos_row(RETROK_F2,           0, 5, 8);   /*           F2 -> F2           */
             keyboard_parse_set_pos_row(RETROK_F3,           0, 6, 8);   /*           F3 -> F3           */
-            keyboard_parse_set_pos_row(RETROK_F4,           0, 4, 1);   /*           F4 -> F4           */
-            keyboard_parse_set_pos_row(RETROK_F5,           0, 5, 1);   /*           F5 -> F5           */
-            keyboard_parse_set_pos_row(RETROK_F6,           0, 6, 1);   /*           F6 -> F6           */
-            keyboard_parse_set_pos_row(RETROK_F7,           0, 3, 1);   /*           F7 -> F7           */
-            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 0);   /*           F8 -> HELP         */
+            keyboard_parse_set_pos_row(RETROK_F4,           0, 4, 2);   /*           F4 -> F4           */
+            keyboard_parse_set_pos_row(RETROK_F5,           0, 5, 2);   /*           F5 -> F5           */
+            keyboard_parse_set_pos_row(RETROK_F6,           0, 6, 2);   /*           F6 -> F6           */
+            keyboard_parse_set_pos_row(RETROK_F7,           0, 3, 2);   /*           F7 -> F7           */
+            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 8);   /*           F8 -> HELP         */
             break;
     }
 

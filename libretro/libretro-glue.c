@@ -486,7 +486,6 @@ void sevenzip_uncompress(char *in, char *out, char *lastfile)
 #endif
 
 /* NIBTOOLS */
-typedef unsigned char BYTE;
 typedef unsigned char __u_char;
 #include "deps/nibtools/nibtools.h"
 

@@ -365,7 +365,7 @@ static void log_disk_in_tray(bool display)
 }
 
 #if defined(__XVIC__)
-static int autodetect_vic20_cartridge_type(const char* argv)
+static int vic20_autodetect_cartridge_type(const char* argv)
 {
     FILE *fd;
     int addr = 0, len = 0, type = 0;
@@ -444,6 +444,33 @@ static int autodetect_vic20_cartridge_type(const char* argv)
 
     fclose(fd);
     return type;
+}
+
+static void vic20_mem_force(const char* argv)
+{
+    char vic20buf1[6] = {0};
+    char vic20buf2[6] = {0};
+    int vic20mem      = 0;
+    int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
+
+    for (int i = 0; i < sizeof(vic20mems)/sizeof(vic20mems[0]); i++)
+    {
+        vic20mem = vic20mems[i];
+        snprintf(vic20buf1, sizeof(vic20buf1), "%c%d%c", '(', vic20mem, 'k');
+        snprintf(vic20buf2, sizeof(vic20buf2), "%c%d%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k');
+        if (strcasestr(argv, vic20buf1))
+        {
+            vic20mem_forced = i;
+            log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
+            break;
+        }
+        else if (strcasestr(argv, vic20buf2))
+        {
+            vic20mem_forced = i;
+            log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dkB\n", argv, vic20mem);
+            break;
+        }
+    }
 }
 #endif
 
@@ -659,7 +686,7 @@ static int process_cmdline(const char* argv)
                 char cartmega_nvram[RETRO_PATH_MAX] = {0};
                 char cartmega_temp[RETRO_PATH_MAX] = {0};
 
-                int type = autodetect_vic20_cartridge_type(argv);
+                int type = vic20_autodetect_cartridge_type(argv);
                 switch (type)
                 {
                     case CARTRIDGE_VIC20_16KB_2000:
@@ -731,7 +758,7 @@ static int process_cmdline(const char* argv)
                         argv = "";
                         break;
                     case -2: /* Separate ROM combination shenanigans, no-intro style */
-                        /* Need to take the first entry as argv */
+                        /* Need to examine the first playlist entry */
                         if (strcasestr(argv, ".m3u"))
                         {
                             FILE *fd;
@@ -790,29 +817,11 @@ static int process_cmdline(const char* argv)
             }
         }
 
-        char vic20buf1[6] = {0};
-        char vic20buf2[6] = {0};
-        int vic20mem      = 0;
-        int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
+        /* Memory expansion force:
+         * First from content path,
+         * then from playlist entry after m3u parsing */
+        vic20_mem_force(argv);
 
-        for (int i = 0; i < sizeof(vic20mems)/sizeof(vic20mems[0]); i++)
-        {
-            vic20mem = vic20mems[i];
-            snprintf(vic20buf1, sizeof(vic20buf1), "%c%d%c", '(', vic20mem, 'k');
-            snprintf(vic20buf2, sizeof(vic20buf2), "%c%d%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k');
-            if (strcasestr(argv, vic20buf1))
-            {
-                vic20mem_forced = i;
-                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
-                break;
-            }
-            else if (strcasestr(argv, vic20buf2))
-            {
-                vic20mem_forced = i;
-                log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dkB\n", argv, vic20mem);
-                break;
-            }
-        }
 #elif defined(__XPLUS4__)
         if (strendswith(argv, ".crt") || strendswith(argv, ".bin"))
             Add_Option("-cart");
@@ -823,6 +832,11 @@ static int process_cmdline(const char* argv)
             /* Parse the m3u file */
             dc_parse_m3u(dc, argv);
             is_fliplist = true;
+#if defined(__XVIC__)
+            /* Memory expansion force */
+            if (vic20mem_forced < 0)
+                vic20_mem_force(dc->files[0]);
+#endif
         }
         else if (strendswith(argv, "vfl"))
         {
@@ -1292,7 +1306,7 @@ void update_from_vice()
                 {
                     log_cb(RETRO_LOG_INFO, "Attaching first cart '%s'\n", attachedImage);
 #if defined(__XVIC__)
-                    cartridge_attach_image(autodetect_vic20_cartridge_type(attachedImage), attachedImage);
+                    cartridge_attach_image(vic20_autodetect_cartridge_type(attachedImage), attachedImage);
 #elif defined(__XPLUS4__)
                     cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, attachedImage);
                     /* No autostarting carts, otherwise gfx gets corrupted (?!) */
@@ -5099,7 +5113,7 @@ static bool retro_disk_set_eject_state(bool ejected)
          {
             case 0:
 #if defined(__XVIC__)
-               cartridge_attach_image(autodetect_vic20_cartridge_type(dc->files[dc->index]), dc->files[dc->index]);
+               cartridge_attach_image(vic20_autodetect_cartridge_type(dc->files[dc->index]), dc->files[dc->index]);
 #elif defined(__XPLUS4__)
                cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, dc->files[dc->index]);
                /* Soft reset required, otherwise gfx gets corrupted (?!) */

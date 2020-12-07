@@ -522,8 +522,6 @@ static int process_cmdline(const char* argv)
                 snprintf(browsed_file, sizeof(browsed_file), "%s", token);
                 token = strtok(NULL, "#");
             }
-            free(token);
-            token = NULL;
         }
         snprintf(full_path, sizeof(full_path), "%s", argv);
 

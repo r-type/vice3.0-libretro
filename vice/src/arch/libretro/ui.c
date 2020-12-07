@@ -63,7 +63,6 @@ extern unsigned int opt_supercpu_kernal;
 #endif
 
 extern bool retro_ui_finalized;
-extern bool cur_port_locked;
 extern unsigned int opt_jiffydos;
 extern unsigned int opt_autoloadwarp;
 extern char retro_system_data_directory[RETRO_PATH_MAX];

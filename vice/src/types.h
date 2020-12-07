@@ -47,11 +47,11 @@
 
 #ifdef __LIBRETRO__
 
-#if defined(__WIN32__) && defined(__LIBRETRO__)
+#if defined(__WIN32__)
 #include <windef.h>
 #endif
 
-#if !defined(_WINDEF_) && !defined(_WINDEF_H)
+#ifndef BYTE
 #define BYTE unsigned char
 #endif
 
@@ -63,7 +63,7 @@ typedef unsigned int DWORD;
 #endif
 typedef signed int SDWORD;
 
-#endif
+#endif /* __LIBRETRO__ */
 
 typedef uint32_t CLOCK;
 

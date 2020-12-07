@@ -23,6 +23,7 @@
 #include "vsync.h"
 #include "log.h"
 #include "keyboard.h"
+#include "kbdbuf.h"
 #include "resources.h"
 #include "sid.h"
 #if !defined(__XCBM5x0__)
@@ -41,6 +42,7 @@ unsigned int opt_vkbd_theme = 0;
 libretro_graph_alpha_t opt_vkbd_alpha = GRAPH_ALPHA_75;
 
 /* Core vars */
+static bool autocommand = true;
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char* autostartProgram = NULL;
@@ -111,7 +113,7 @@ static unsigned int manual_crop_right = 0;
 static bool request_reload_restart = false;
 static bool request_restart = false;
 static bool request_update_work_disk = false;
-static int request_model_set = -1;
+int request_model_set = -1;
 static int request_model_prev = -1;
 static unsigned int opt_model_auto = 1;
 unsigned int opt_autostart = 1;
@@ -150,40 +152,9 @@ extern bool turbo_fire_locked;
 extern unsigned int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
-/* VICE includes */
-#if defined(__X64__) || defined(__X64SC__)
-#include "c64.h"
-#include "c64mem.h"
-#include "c64model.h"
-#elif defined(__XSCPU64__)
-#include "scpu64.h"
-#include "c64mem.h"
-#include "c64model.h"
-#elif defined(__X64DTV__)
-#include "c64dtv.h"
-#include "c64dtvmem.h"
-#include "c64dtvmodel.h"
-#elif defined(__X128__)
-#include "c128.h"
-#include "c128mem.h"
-#include "c128model.h"
-#elif defined(__XVIC__)
-#include "vic20.h"
-#include "vic20mem.h"
-#include "vic20model.h"
-#include "vic20cart.h"
-void cartridge_trigger_freeze(void) {}
-#elif defined(__XPLUS4__)
-#include "plus4.h"
-#include "plus4model.h"
-void cartridge_trigger_freeze(void) {}
-#elif defined(__XCBM2__) || defined(__XCBM5x0__)
-#include "cbm2.h"
-#include "cbm2model.h"
+#if defined(__XVIC__) || defined(__XPLUS4__) || defined(__XCBM2__) || defined(__XCBM5x0__)
 void cartridge_trigger_freeze(void) {}
 #elif defined(__XPET__)
-#include "pet.h"
-#include "petmodel.h"
 void cartridge_detach_image(int type) {}
 void cartridge_trigger_freeze(void) {}
 #endif
@@ -445,6 +416,8 @@ static int autodetect_vic20_cartridge_type(const char* argv)
     /* Separate ROM combinations (type = -1) */
     if (strcasestr(argv, "-2000.") || strcasestr(argv, "-6000.") || strcasestr(argv, "-a000."))
         type = -1;
+    else if (strcasestr(argv, "$2000") || strcasestr(argv, "$6000") || strcasestr(argv, "$A000"))
+        type = -2;
 
     /* M3U analyzing */
     if (strcasestr(argv, ".m3u"))
@@ -454,7 +427,9 @@ static int autodetect_vic20_cartridge_type(const char* argv)
         {
             if (strcasestr(buf, "-2000.") || strcasestr(buf, "-6000.") || strcasestr(buf, "-a000."))
                 type = -1;
-            if (strcasestr(buf, ".20"))
+            else if (strcasestr(buf, "$2000") || strcasestr(buf, "$6000") || strcasestr(buf, "$A000"))
+                type = -2;
+            else if (strcasestr(buf, ".20"))
                 type = CARTRIDGE_VIC20_16KB_2000;
             else if (strcasestr(buf, ".40"))
                 type = CARTRIDGE_VIC20_16KB_4000;
@@ -547,6 +522,8 @@ static int process_cmdline(const char* argv)
                 snprintf(browsed_file, sizeof(browsed_file), "%s", token);
                 token = strtok(NULL, "#");
             }
+            free(token);
+            token = NULL;
         }
         snprintf(full_path, sizeof(full_path), "%s", argv);
 
@@ -715,7 +692,7 @@ static int process_cmdline(const char* argv)
                         Add_Option(cartmega_nvram);
                         Add_Option("-cartmega");
                         break;
-                    case -1: /* Separate ROM combination shenanigans */
+                    case -1: /* Separate ROM combination shenanigans, gamebase style */
                         snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
                         snprintf(cart_2000, sizeof(cart_2000), "%s", path_remove_extension(cart_2000));
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-2000", ""));
@@ -736,6 +713,60 @@ static int process_cmdline(const char* argv)
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-6000", ""));
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-a000", ""));
                         snprintf(cart_A000, sizeof(cart_A000), "%s%s%s", cart_A000, "-a000", ".prg");
+
+                        if (path_is_valid(cart_2000))
+                        {
+                            Add_Option("-cart2");
+                            Add_Option(cart_2000);
+                        }
+                        if (path_is_valid(cart_6000))
+                        {
+                            Add_Option("-cart6");
+                            Add_Option(cart_6000);
+                        }
+                        if (path_is_valid(cart_A000))
+                        {
+                            Add_Option("-cartA");
+                            Add_Option(cart_A000);
+                        }
+
+                        argv = "";
+                        break;
+                    case -2: /* Separate ROM combination shenanigans, no-intro style */
+                        /* Need to take the first entry as argv */
+                        if (strcasestr(argv, ".m3u"))
+                        {
+                            FILE *fd;
+                            char buf[RETRO_PATH_MAX] = {0};
+                            char basepath[RETRO_PATH_MAX] = {0};
+                            snprintf(basepath, sizeof(basepath), "%s", argv);
+                            path_basedir(basepath);
+
+                            fd = fopen(argv, MODE_READ);
+                            if (fgets(buf, sizeof(buf), fd) != NULL)
+                                snprintf(basepath, sizeof(basepath), "%s%s", basepath, buf);
+                            fclose(fd);
+
+                            argv = basepath;
+                        }
+
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", path_remove_extension(cart_2000));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "$6000", "$2000"));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "$A000", "$2000"));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_2000, ".20");
+
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", path_remove_extension(cart_6000));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "$2000", "$6000"));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "$A000", "$6000"));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_6000, ".60");
+
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", path_remove_extension(cart_A000));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "$2000", "$A000"));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "$6000", "$A000"));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_A000, ".a0");
 
                         if (path_is_valid(cart_2000))
                         {
@@ -1263,7 +1294,7 @@ void update_from_vice()
                 {
                     log_cb(RETRO_LOG_INFO, "Attaching first cart '%s'\n", attachedImage);
 #if defined(__XVIC__)
-                    cartridge_attach_image(CARTRIDGE_VIC20_DETECT, attachedImage);
+                    cartridge_attach_image(autodetect_vic20_cartridge_type(attachedImage), attachedImage);
 #elif defined(__XPLUS4__)
                     cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, attachedImage);
                     /* No autostarting carts, otherwise gfx gets corrupted (?!) */
@@ -1283,7 +1314,8 @@ void update_from_vice()
             autostart_disable();
         else if (!noautostart && !string_is_empty(autostartString) &&
                  strcmp(autostartString, attachedImage) &&
-                 string_is_empty(autostartProgram))
+                 string_is_empty(autostartProgram) &&
+                 dc_get_image_type(attachedImage) != DC_IMAGE_TYPE_MEM)
             autostartString = NULL;
     }
 
@@ -5069,13 +5101,13 @@ static bool retro_disk_set_eject_state(bool ejected)
          {
             case 0:
 #if defined(__XVIC__)
-               cartridge_attach_image(CARTRIDGE_VIC20_DETECT, dc->files[dc->index]);
+               cartridge_attach_image(autodetect_vic20_cartridge_type(dc->files[dc->index]), dc->files[dc->index]);
 #elif defined(__XPLUS4__)
                cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, dc->files[dc->index]);
                /* Soft reset required, otherwise gfx gets corrupted (?!) */
                emu_reset(1);
 #else
-               cartridge_attach_image(0, dc->files[dc->index]);
+               cartridge_attach_image(unit, dc->files[dc->index]);
 #endif
                /* PRGs must autostart on attach, cartridges reset anyway */
                if (strendswith(dc->files[dc->index], "prg"))
@@ -5872,6 +5904,45 @@ void retro_run(void)
       /* Update work disk */
       if (request_update_work_disk)
          update_work_disk();
+
+#if defined(__XVIC__)
+      /* Autorun "(SYS x)" command */
+      if (autocommand)
+      {
+         autocommand = false;
+         if (strcasestr(full_path, "(SYS "))
+         {
+            char command[20] = {0};
+            char tmp_path[RETRO_PATH_MAX] = {0};
+            snprintf(tmp_path, sizeof(tmp_path), "%s", path_basename(full_path));
+            char *token = strtok((char*)tmp_path, " ");
+            char *token_prev = token;
+            while (token != NULL)
+            {
+                token = strtok(NULL, " ");
+                if (!strcmp(token_prev, "(SYS"))
+                {
+                   snprintf(command, sizeof(command), "%s", token);
+                   token = NULL;
+                }
+                token_prev = token;
+            }
+            free(token);
+            token = NULL;
+            free(token_prev);
+            token_prev = NULL;
+            path_remove_extension(command);
+            string_remove_all_chars(command, ')');
+
+            if (!string_is_empty(command))
+            {
+               kbdbuf_feed("SYS ");
+               kbdbuf_feed(command);
+               kbdbuf_feed("\r");
+            }
+         }
+      }
+#endif
    }
 
    /* Input poll */

@@ -58,12 +58,11 @@ extern int RGB(int r, int g, int b);
 #endif
 
 #if defined(__XVIC__)
-#define STATUSBAR_RESOLUTION_POS    33
-#else
-#define STATUSBAR_RESOLUTION_POS    28
+extern int vic20mem_forced;
 #endif
 
-#define STATUSBAR_MODEL_POS         42
+#define STATUSBAR_RESOLUTION_POS    28
+#define STATUSBAR_MODEL_POS         45
 
 #define STATUSBAR_JOY_POS           0
 #define STATUSBAR_TAPE_POS          56
@@ -110,7 +109,16 @@ static unsigned char* joystick_value_human(char val, int vice_device)
 static void display_joyport(void)
 {
     unsigned char tmpstr[25] = {0};
-    int zoomed_centering = (retrow - zoomed_width) / 12;
+    unsigned int width_offset = 0;
+
+    int zoomed_centering = (retrow - zoomed_width + width_offset) / 12;
+#if defined(__XVIC__)
+    /* PAL offset */
+    zoomed_centering -= 5;
+    /* NTSC offset */
+    if (retrow == 400)
+       zoomed_centering += 4;
+#endif
     if (zoomed_centering > STATUSBAR_RESOLUTION_POS)
        zoomed_centering = 0;
 
@@ -176,11 +184,13 @@ static void display_joyport(void)
     sprintf(&statusbar_text[STATUSBAR_RESOLUTION_POS-zoomed_centering], "%dx%d", zoomed_width, zoomed_height);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+    /* Model */
     unsigned model = 0;
-    tmpstr[0] = '\0';
     model = core_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
+
+    tmpstr[0] = '\0';
     switch (model)
     {
         case C64MODEL_C64_PAL:
@@ -194,7 +204,7 @@ static void display_joyport(void)
             strcpy(tmpstr, "C64C"); break;
         case C64MODEL_C64SX_PAL:
         case C64MODEL_C64SX_NTSC:
-            strcpy(tmpstr, "C64SX"); break;
+            strcpy(tmpstr, "SX-64"); break;
         case C64MODEL_PET64_PAL:
         case C64MODEL_PET64_NTSC:
             strcpy(tmpstr, "PET64"); break;
@@ -205,7 +215,47 @@ static void display_joyport(void)
         case C64MODEL_ULTIMAX:
             strcpy(tmpstr, "MAX"); break;
     }
-    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-zoomed_centering], "%5s", tmpstr);
+    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-zoomed_centering], "%-5s", tmpstr);
+
+    /* Memory */
+    unsigned memory = 0;
+#if defined(__XSCPU64__)
+    memory = 16384;
+#else
+    memory = core_opt.REUsize;
+#endif
+
+    tmpstr[0] = '\0';
+    snprintf(tmpstr, sizeof(tmpstr), "%5dkB", memory);
+    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-9-zoomed_centering], "%7s", tmpstr);
+#elif defined(__XVIC__)
+    /* Model */
+    unsigned model = 0;
+    model = core_opt.Model;
+    if (request_model_set > -1 && request_model_set != model)
+        model = request_model_set;
+
+    tmpstr[0] = '\0';
+    switch (model)
+    {
+        case VIC20MODEL_VIC20_PAL:
+        case VIC20MODEL_VIC20_NTSC:
+            strcpy(tmpstr, "VIC20"); break;
+        case VIC20MODEL_VIC21:
+            strcpy(tmpstr, "VIC21"); break;
+    }
+    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-zoomed_centering], "%-5s", tmpstr);
+
+    /* Memory */
+    unsigned memory = 0;
+    memory = (vic20mem_forced > -1) ? vic20mem_forced : core_opt.VIC20Memory;
+    if (!memory && core_opt.Model == VIC20MODEL_VIC21)
+        memory = 3;
+
+    tmpstr[0] = '\0';
+    int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
+    snprintf(tmpstr, sizeof(tmpstr), "%2dkB", vic20mems[memory]);
+    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-8-zoomed_centering], "%5s", tmpstr);
 #endif
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {

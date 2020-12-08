@@ -2009,7 +2009,13 @@ void retro_set_environment(retro_environment_t cb)
             { "3", "Light" },
             { NULL, NULL },
          },
+#if defined(__XPET__)
+         "2"
+#elif defined(__XPLUS4__) || defined(__X128__)
+         "1"
+#else
          "0"
+#endif
       },
       {
          "vice_vkbd_transparency",

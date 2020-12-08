@@ -233,6 +233,9 @@ void print_vkbd(unsigned short int *pixels)
    int alt_keys[] =
    {
       RETROK_F1, RETROK_F3, RETROK_F5, RETROK_F7,
+#ifdef __XPLUS4__
+      RETROK_F2, RETROK_F8
+#endif
    };
    int alt_keys_len = sizeof(alt_keys) / sizeof(alt_keys[0]);
 
@@ -291,8 +294,10 @@ void print_vkbd(unsigned short int *pixels)
          /* Key centering */
          BKG_PADDING_X     = BKG_PADDING_X_DEFAULT;
          BKG_PADDING_Y     = BKG_PADDING_Y_DEFAULT;
-         if (strlen(vkeys[(y * VKBDX) + x + page].normal) > 1)
+         if (!shifted && strlen(vkeys[(y * VKBDX) + x + page].normal) > 1)
             BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].normal));
+         else if (shifted && strlen(vkeys[(y * VKBDX) + x + page].shift) > 1)
+            BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].shift));
 
          /* Key positions */
          XKEY  = XBASEKEY + (x * XSIDE) + XOFFSET;
@@ -373,8 +378,10 @@ void print_vkbd(unsigned short int *pixels)
    /* Key centering */
    BKG_PADDING_X = BKG_PADDING_X_DEFAULT;
    BKG_PADDING_Y = BKG_PADDING_Y_DEFAULT;
-   if (strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal) > 1)
+   if (!shifted && strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal) > 1)
       BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal));
+   else if (shifted && strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift) > 1)
+      BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift));
 
    /* Selected key position */
    XKEY  = XBASEKEY + (vkey_pos_x * XSIDE) + XOFFSET;

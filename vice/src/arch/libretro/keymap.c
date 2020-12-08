@@ -586,7 +586,8 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(RETROK_F5,           0, 5, 2);   /*           F5 -> F5           */
             keyboard_parse_set_pos_row(RETROK_F6,           0, 6, 2);   /*           F6 -> F6           */
             keyboard_parse_set_pos_row(RETROK_F7,           0, 3, 2);   /*           F7 -> F7           */
-            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 8);   /*           F8 -> HELP         */
+            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 40);  /*           F8 -> HELP         */
+            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 2);   /*          sF8 -> F7           */
             break;
 
         case 1: /* Positional */
@@ -665,7 +666,8 @@ static void libretro_keyboard()
             keyboard_parse_set_pos_row(RETROK_F5,           0, 5, 2);   /*           F5 -> F5           */
             keyboard_parse_set_pos_row(RETROK_F6,           0, 6, 2);   /*           F6 -> F6           */
             keyboard_parse_set_pos_row(RETROK_F7,           0, 3, 2);   /*           F7 -> F7           */
-            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 8);   /*           F8 -> HELP         */
+            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 40);  /*           F8 -> HELP         */
+            keyboard_parse_set_pos_row(RETROK_F8,           0, 3, 2);   /*          sF8 -> F7           */
             break;
     }
 

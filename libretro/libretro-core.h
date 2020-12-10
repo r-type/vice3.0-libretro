@@ -210,6 +210,9 @@ struct libretro_core_options
    int ColorSaturation;
    int ColorContrast;
    int ColorBrightness;
+#if !defined(__XPET__)
+   char CartridgeFile[RETRO_PATH_MAX];
+#endif
 #if defined(__X128__)
    int C128ColumnKey;
    int Go64Mode;

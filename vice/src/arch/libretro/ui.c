@@ -358,7 +358,7 @@ int ui_init_finalize(void)
    else
       log_resources_set_int("DriveSoundEmulation", 0);
 
-   if (opt_autoloadwarp)
+   if (opt_autoloadwarp & AUTOLOADWARP_DISK)
       log_resources_set_int("DriveSoundEmulationVolume", 0);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)

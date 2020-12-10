@@ -1017,7 +1017,7 @@ static void autodetect_drivetype(int unit)
             file_system_attach_disk(unit, attached_image);
 
             /* Don't bother with drive sound muting when autoloadwarp is on */
-            if (opt_autoloadwarp)
+            if (opt_autoloadwarp & AUTOLOADWARP_DISK)
                return;
             /* Drive motor sound keeps on playing if the drive type is changed while the motor is running */
             /* Also happens when toggling TDE */
@@ -1803,10 +1803,12 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
+         "Toggles warp mode during disk and/or tape access. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
+            { "disk", "Disk only" },
+            { "tape", "Tape only" },
             { NULL, NULL },
          },
          "disabled"
@@ -1863,12 +1865,12 @@ void retro_set_environment(retro_environment_t cb)
          "Global disk in device 8 is only inserted when the core is started without content.",
          {
             { "disabled", NULL },
-            { "8_d64", "D64 - 664 blocks, 170KB - Device 8" },
-            { "9_d64", "D64 - 664 blocks, 170KB - Device 9" },
-            { "8_d71", "D71 - 1328 blocks, 340KB - Device 8" },
-            { "9_d71", "D71 - 1328 blocks, 340KB - Device 9" },
-            { "8_d81", "D81 - 3160 blocks, 800KB - Device 8" },
-            { "9_d81", "D81 - 3160 blocks, 800KB - Device 9" },
+            { "8_d64", "D64 - 664 blocks, 170kB - Device 8" },
+            { "9_d64", "D64 - 664 blocks, 170kB - Device 9" },
+            { "8_d71", "D71 - 1328 blocks, 340kB - Device 8" },
+            { "9_d71", "D71 - 1328 blocks, 340kB - Device 9" },
+            { "8_d81", "D81 - 3160 blocks, 800kB - Device 8" },
+            { "9_d81", "D81 - 3160 blocks, 800kB - Device 9" },
             { NULL, NULL },
          },
          "disabled"
@@ -3185,11 +3187,14 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
-      else                                opt_autoloadwarp = 1;
+      if      (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
+      else if (!strcmp(var.value, "disk"))     opt_autoloadwarp = AUTOLOADWARP_DISK;
+      else if (!strcmp(var.value, "tape"))     opt_autoloadwarp = AUTOLOADWARP_TAPE;
+      else                                     opt_autoloadwarp = AUTOLOADWARP_DISK | AUTOLOADWARP_TAPE;
 
       /* Silently restore sounds when autoloadwarp is disabled and DSE is enabled */
-      if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation && !opt_autoloadwarp)
+      if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation &&
+          !(opt_autoloadwarp & AUTOLOADWARP_DISK))
          resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
    }
 
@@ -3308,7 +3313,8 @@ static void update_variables(void)
       /* Silently mute sounds without TDE,
        * because motor sound will not stop if TDE is changed during motor spinning
        * and also with autoloadwarping, because warping is muted anyway */
-      if (retro_ui_finalized && core_opt.DriveSoundEmulation && (!core_opt.DriveTrueEmulation || opt_autoloadwarp))
+      if (retro_ui_finalized && core_opt.DriveSoundEmulation &&
+          (!core_opt.DriveTrueEmulation || opt_autoloadwarp & AUTOLOADWARP_DISK))
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 

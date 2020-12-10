@@ -1762,7 +1762,7 @@ void keyboard_init(void)
 #ifdef __LIBRETRO__
     libretro_keyboard();
     load_keymap_ok = 0;
-    // Only load files with user-defined maps
+    /* Only load files with user-defined maps */
     if (opt_keyboard_keymap > KBD_INDEX_POS)
     {
         load_keymap_ok = 1;

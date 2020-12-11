@@ -364,6 +364,13 @@ static void log_disk_in_tray(bool display)
     }
 }
 
+/* ReSID 6581 init pop mute shenanigans */
+void sound_volume_counter_reset()
+{
+   resources_set_int("SoundVolume", 0);
+   sound_volume_counter = 3;
+}
+
 #if defined(__XVIC__)
 static int vic20_autodetect_cartridge_type(const char* argv)
 {
@@ -1446,7 +1453,7 @@ void reload_restart(void)
     initcmdline_cleanup();
 
     /* Update resources from environment just like on fresh start of core */
-    sound_volume_counter = 3;
+    sound_volume_counter_reset();
     retro_ui_finalized = false;
     update_variables();
     /* Some resources are not set until we call this */
@@ -3820,11 +3827,13 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int sid_engine = 0;
+      int sid_engine = SID_ENGINE_FASTSID;
 
-      if      (!strcmp(var.value, "ReSID"))     sid_engine = 1;
-      else if (!strcmp(var.value, "ReSID-3.3")) sid_engine = 6;
-      else if (!strcmp(var.value, "ReSID-FP"))  sid_engine = 7;
+      if      (!strcmp(var.value, "ReSID"))     sid_engine = SID_ENGINE_RESID;
+#ifdef HAVE_RESID33
+      else if (!strcmp(var.value, "ReSID-3.3")) sid_engine = SID_ENGINE_RESID33;
+#endif
+      else if (!strcmp(var.value, "ReSID-FP"))  sid_engine = SID_ENGINE_RESIDFP;
 
       if (retro_ui_finalized && core_opt.SidEngine != sid_engine)
       {
@@ -5937,7 +5946,7 @@ void retro_run(void)
    {
       sound_volume_counter--;
       if (sound_volume_counter == 0)
-         log_resources_set_int("SoundVolume", 100);
+         resources_set_int("SoundVolume", 100);
    }
 
    /* Statusbar disk display timer */

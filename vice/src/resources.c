@@ -1209,7 +1209,7 @@ static char *resources_get_description(const char *name)
 
 static char *string_resource_item(int num, const char *delim)
 {
-    // Skip core optionized & frontend resources
+    /* Skip core optionized & frontend resources */
     for (int d = 0; d < disabled_resources_num; d++)
     {
         if (!strcmp(resources[num].name, disabled_resources[d]))

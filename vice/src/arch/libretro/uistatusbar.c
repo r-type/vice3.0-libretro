@@ -45,7 +45,8 @@
 
 extern unsigned int opt_joyport_type;
 extern unsigned int mouse_value[2 + 1];
-extern bool opt_autoloadwarp;
+extern unsigned int opt_autoloadwarp;
+extern unsigned int retro_warpmode;
 extern int retro_warp_mode_enabled();
 extern int request_model_set;
 extern int RGB(int r, int g, int b);
@@ -462,12 +463,22 @@ static void display_tape(void)
     if (drive_enabled)
         return;
 
-    if (opt_autoloadwarp && tape_enabled)
+    if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || retro_warp_mode_enabled()) && !retro_warpmode)
     {
         if (tape_control && tape_motor && !retro_warp_mode_enabled())
+        {
             resources_set_int("WarpMode", 1);
-        else if ((!tape_control || !tape_motor) && retro_warp_mode_enabled())
+#if 0
+            printf("Tape Warp ON\n");
+#endif
+        }
+        else if ((!tape_control || !tape_motor) && retro_warp_mode_enabled() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
+        {
             resources_set_int("WarpMode", 0);
+#if 0
+            printf("Tape Warp OFF\n");
+#endif
+        }
     }
 
     if (tape_enabled)

@@ -169,7 +169,8 @@ int ui_init_finalize(void)
 {
    /* Dump machine specific defaults for 'vicerc' usage, if not already dumped */
    char resources_dump_path[RETRO_PATH_MAX] = {0};
-   snprintf(resources_dump_path, sizeof(resources_dump_path), "%s%s%s%s", retro_system_data_directory, FSDEV_DIR_SEP_STR, "vicerc-dump-", machine_get_name());
+   snprintf(resources_dump_path, sizeof(resources_dump_path), "%s%s%s%s",
+         retro_system_data_directory, FSDEV_DIR_SEP_STR, "vicerc-dump-", machine_get_name());
    if (!util_file_exists(resources_dump_path))
       resources_dump(resources_dump_path);
 
@@ -358,7 +359,7 @@ int ui_init_finalize(void)
    else
       log_resources_set_int("DriveSoundEmulation", 0);
 
-   if (opt_autoloadwarp)
+   if (opt_autoloadwarp & AUTOLOADWARP_DISK)
       log_resources_set_int("DriveSoundEmulationVolume", 0);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)
@@ -456,6 +457,12 @@ int ui_init_finalize(void)
    }
    else
       log_resources_set_int("REU", 0);
+#endif
+
+#if !defined(__XPET__)
+   /* Cartridge */
+   if (strcmp(core_opt.CartridgeFile, ""))
+      log_resources_set_string("CartridgeFile", core_opt.CartridgeFile);
 #endif
 
    retro_ui_finalized = true;

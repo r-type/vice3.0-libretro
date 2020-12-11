@@ -148,6 +148,10 @@ extern int vkbd_y_max;
 #define STATUSBAR_BASIC   0x04
 #define STATUSBAR_MINIMAL 0x08
 
+/* Autoloadwarp */
+#define AUTOLOADWARP_DISK 0x01
+#define AUTOLOADWARP_TAPE 0x02
+
 /* Variables */
 extern int cpuloop;
 extern int retroXS;
@@ -206,6 +210,9 @@ struct libretro_core_options
    int ColorSaturation;
    int ColorContrast;
    int ColorBrightness;
+#if !defined(__XPET__)
+   char CartridgeFile[RETRO_PATH_MAX];
+#endif
 #if defined(__X128__)
    int C128ColumnKey;
    int Go64Mode;

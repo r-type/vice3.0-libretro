@@ -752,6 +752,7 @@ static void drive_led_update(drive_t *drive, drive_t *drive0)
 
 #ifdef __LIBRETRO__
 #include <stdbool.h>
+#include "libretro-core.h"
 extern unsigned int opt_autoloadwarp;
 extern unsigned int retro_warpmode;
 extern int retro_warp_mode_enabled();
@@ -793,15 +794,19 @@ void drive_update_ui_status(void)
                                        drive->current_half_track + (drive->side * DRIVE_HALFTRACKS_1571));
             }
 #ifdef __LIBRETRO__
-            if (opt_autoloadwarp && !retro_warpmode && !retro_disk_get_eject_state())
+            if (opt_autoloadwarp & AUTOLOADWARP_DISK && !retro_warpmode && !retro_disk_get_eject_state())
             {
                 drive_half_track = drive->current_half_track;
-                //printf("track:%2d prev:%2d led:%d timer:%2d\n", drive_half_track, drive_half_track_prev, drive->led_status, warpmode_counter);
+#if 0
+                printf("track:%2d prev:%2d led:%d timer:%2d\n", drive_half_track, drive_half_track_prev, drive->led_status, warpmode_counter);
+#endif
                 if ((drive_half_track != drive_half_track_prev || drive->led_status != 0) && !retro_warp_mode_enabled())
                 {
                     warpmode_counter = 0;
                     resources_set_int("WarpMode", 1);
-                    //printf("warp on\n");
+#if 0
+                    printf("Disk Warp ON\n");
+#endif
                 }
                 else if (drive_half_track == drive_half_track_prev && drive->led_status == 0 && retro_warp_mode_enabled())
                 {
@@ -809,7 +814,9 @@ void drive_update_ui_status(void)
                     if (warpmode_counter > 19)
                     {
                         resources_set_int("WarpMode", 0);
-                        //printf("warp off\n");
+#if 0
+                        printf("Disk Warp OFF\n");
+#endif
                     }
                 }
                 else

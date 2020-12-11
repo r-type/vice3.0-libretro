@@ -658,6 +658,11 @@ static int process_cmdline(const char* argv)
 #endif
 
 #if defined(__XVIC__)
+        /* Pretend to launch cartridge if using core option cartridge while launching
+         * without content, because XVIC does not care about CartridgeFile resource */
+        if (string_is_empty(argv) && !string_is_empty(core_opt.CartridgeFile))
+            argv = core_opt.CartridgeFile;
+
         if (strendswith(argv, ".20"))
             Add_Option("-cart2");
         else if (strendswith(argv, ".40"))
@@ -1017,7 +1022,7 @@ static void autodetect_drivetype(int unit)
             file_system_attach_disk(unit, attached_image);
 
             /* Don't bother with drive sound muting when autoloadwarp is on */
-            if (opt_autoloadwarp)
+            if (opt_autoloadwarp & AUTOLOADWARP_DISK)
                return;
             /* Drive motor sound keeps on playing if the drive type is changed while the motor is running */
             /* Also happens when toggling TDE */
@@ -1495,8 +1500,75 @@ void retro_set_led(unsigned led)
    led_state_cb(0, led);
 }
 
+void retro_set_paths(void)
+{
+   const char *system_dir = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir) && system_dir)
+   {
+      strlcpy(retro_system_directory,
+              system_dir,
+              sizeof(retro_system_directory));
+   }
+
+   const char *content_dir = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY, &content_dir) && content_dir)
+   {
+      strlcpy(retro_content_directory,
+              content_dir,
+              sizeof(retro_content_directory));
+   }
+
+   /* Paths are first run in retro_set_environment(), but saves will not yet be correct then,
+    * therefore re-run in retro_init() and replace when necessary */
+   if (string_is_empty(retro_save_directory) || !strcmp(retro_save_directory, retro_system_directory))
+   {
+      const char *save_dir = NULL;
+      if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) && save_dir)
+      {
+         /* If save directory is defined use it, otherwise use system directory */
+         strlcpy(retro_save_directory,
+                 string_is_empty(save_dir) ? retro_system_directory : save_dir,
+                 sizeof(retro_save_directory));
+      }
+      else
+      {
+         /* Make retro_save_directory the same in case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY is not implemented by the frontend */
+         strlcpy(retro_save_directory,
+                 retro_system_directory,
+                 sizeof(retro_save_directory));
+      }
+   }
+
+   if (string_is_empty(retro_system_directory))
+   {
+#if defined(ANDROID)
+      strlcpy(retro_system_directory, "/mnt/sdcard", sizeof(retro_system_directory));
+#elif defined(VITA)
+      strlcpy(retro_system_directory, "ux0:/data", sizeof(retro_system_directory));
+#elif defined(__SWITCH__)
+      strlcpy(retro_system_directory, "/", sizeof(retro_system_directory));
+#else
+      strlcpy(retro_system_directory, ".", sizeof(retro_system_directory));
+#endif
+   }
+
+   /* Temp directory for ZIPs and NIB->G64 conversions */
+   snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s",
+            retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
+
+   /* Use system directory for data files such as JiffyDOS and keymaps */
+   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%s%s",
+            retro_system_directory, FSDEV_DIR_SEP_STR, "vice");
+   if (!path_is_directory(retro_system_data_directory))
+      archdep_mkdir(retro_system_data_directory, 0);
+}
+
 void retro_set_environment(retro_environment_t cb)
 {
+   environ_cb = cb;
+   retro_set_paths();
+
+   /* Controller ports */
    static const struct retro_controller_description p1_controllers[] = {
       { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
       { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
@@ -1531,6 +1603,9 @@ void retro_set_environment(retro_environment_t cb)
       { NULL, 0 }
    };
 
+   cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+
+   /* Core options */
    static struct retro_core_option_definition core_options[] =
    {
 #if defined(__XVIC__)
@@ -1788,6 +1863,18 @@ void retro_set_environment(retro_environment_t cb)
          },
          "autostart"
       },
+#if !defined(__XPET__)
+      /* Sublabel and options filled dynamically in retro_set_environment() */
+      {
+         "vice_cartridge",
+         "Media > Cartridge",
+         "",
+         {
+            { NULL, NULL },
+         },
+         NULL
+      },
+#endif
       {
          "vice_autostart",
          "Media > Autostart",
@@ -1803,10 +1890,12 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
-         "Toggles warp mode always during disk and tape loading. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
+         "Toggles warp mode during disk and/or tape access. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
+            { "disk", "Disk only" },
+            { "tape", "Tape only" },
             { NULL, NULL },
          },
          "disabled"
@@ -1863,12 +1952,12 @@ void retro_set_environment(retro_environment_t cb)
          "Global disk in device 8 is only inserted when the core is started without content.",
          {
             { "disabled", NULL },
-            { "8_d64", "D64 - 664 blocks, 170KB - Device 8" },
-            { "9_d64", "D64 - 664 blocks, 170KB - Device 9" },
-            { "8_d71", "D71 - 1328 blocks, 340KB - Device 8" },
-            { "9_d71", "D71 - 1328 blocks, 340KB - Device 9" },
-            { "8_d81", "D81 - 3160 blocks, 800KB - Device 8" },
-            { "9_d81", "D81 - 3160 blocks, 800KB - Device 9" },
+            { "8_d64", "D64 - 664 blocks, 170kB - Device 8" },
+            { "9_d64", "D64 - 664 blocks, 170kB - Device 9" },
+            { "8_d71", "D71 - 1328 blocks, 340kB - Device 8" },
+            { "9_d71", "D71 - 1328 blocks, 340kB - Device 9" },
+            { "8_d81", "D81 - 3160 blocks, 800kB - Device 8" },
+            { "9_d81", "D81 - 3160 blocks, 800kB - Device 9" },
             { NULL, NULL },
          },
          "disabled"
@@ -3038,7 +3127,7 @@ void retro_set_environment(retro_environment_t cb)
                      core_options[i].values[j].label = retro_keys[j + hotkeys_skipped + 1].label;
                }
                ++j;
-            };
+            }
          }
          else
          {
@@ -3057,16 +3146,58 @@ void retro_set_environment(retro_environment_t cb)
                   core_options[i].values[j].label = retro_keys[j].label;
 
                ++j;
-            };
+            }
          }
          core_options[i].values[j].value = NULL;
          core_options[i].values[j].label = NULL;
-      };
+      }
+      else if (!strcmp(core_options[i].key, "vice_cartridge"))
+      {
+         j = 0;
+         core_options[i].values[0].value = "none";
+         core_options[i].values[0].label = "disabled";
+         ++j;
+
+         DIR *cart_dir;
+         struct dirent *cart_dirp;
+
+         char machine_directory[RETRO_PATH_MAX] = {0};
+         snprintf(machine_directory, sizeof(machine_directory), "%s%s%s",
+               retro_system_data_directory, FSDEV_DIR_SEP_STR, machine_name);
+
+         /* Scan system/vice/machine directory for cartridges */
+         cart_dir = opendir(machine_directory);
+         while ((cart_dirp = readdir(cart_dir)) != NULL && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+         {
+             /* Blacklisted */
+             if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
+                 !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
+                 continue;
+
+             if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
+             {
+                 char cart_path[RETRO_PATH_MAX] = {0};
+                 char cart_label[50] = {0};
+                 snprintf(cart_path, sizeof(cart_path), "%s", cart_dirp->d_name);
+                 snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
+
+                 core_options[i].values[j].value = strdup(cart_path);
+                 core_options[i].values[j].label = strdup(cart_label);
+                 ++j;
+             }
+         }
+         closedir(cart_dir);
+
+         core_options[i].values[j].value = NULL;
+         core_options[i].values[j].label = NULL;
+
+         /* Info sublabel */
+         char info[100] = {0};
+         snprintf(info, sizeof(info), "Cartridge images go in 'system/vice/%s'.\nChanging while running resets the system!", machine_name);
+         core_options[i].info = strdup(info);
+      }
       ++i;
    }
-
-   environ_cb = cb;
-   cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
    unsigned version = 0;
    if (!cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version))
@@ -3158,6 +3289,38 @@ static void update_variables(void)
    log_cb(RETRO_LOG_INFO, "Updating variables, UI finalized = %d\n", retro_ui_finalized);
 #endif
 
+#if !defined(__XPET__)
+   var.key = "vice_cartridge";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      char cart_full[RETRO_PATH_MAX] = {0};
+
+      if (!strcmp(var.value, "none"))
+         snprintf(cart_full, sizeof(cart_full), "");
+      else
+         snprintf(cart_full, sizeof(cart_full), "%s%s%s%s%s",
+               retro_system_data_directory, FSDEV_DIR_SEP_STR, machine_name, FSDEV_DIR_SEP_STR, var.value);
+
+      if (retro_ui_finalized && strcmp(core_opt.CartridgeFile, cart_full))
+      {
+         if (!strcmp(cart_full, ""))
+            cartridge_detach_image(-1);
+         else
+#if defined(__XVIC__)
+            cartridge_attach_image(vic20_autodetect_cartridge_type(cart_full), cart_full);
+#elif defined(__XPLUS4__)
+            cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, cart_full);
+#else
+            cartridge_attach_image(0, cart_full);
+#endif
+         request_restart = true;
+      }
+
+      sprintf(core_opt.CartridgeFile, "%s", cart_full);
+   }
+#endif
+
    var.key = "vice_autostart";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3185,11 +3348,14 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
-      else                                opt_autoloadwarp = 1;
+      if      (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
+      else if (!strcmp(var.value, "disk"))     opt_autoloadwarp = AUTOLOADWARP_DISK;
+      else if (!strcmp(var.value, "tape"))     opt_autoloadwarp = AUTOLOADWARP_TAPE;
+      else                                     opt_autoloadwarp = AUTOLOADWARP_DISK | AUTOLOADWARP_TAPE;
 
       /* Silently restore sounds when autoloadwarp is disabled and DSE is enabled */
-      if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation && !opt_autoloadwarp)
+      if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation &&
+          !(opt_autoloadwarp & AUTOLOADWARP_DISK))
          resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
    }
 
@@ -3308,7 +3474,8 @@ static void update_variables(void)
       /* Silently mute sounds without TDE,
        * because motor sound will not stop if TDE is changed during motor spinning
        * and also with autoloadwarping, because warping is muted anyway */
-      if (retro_ui_finalized && core_opt.DriveSoundEmulation && (!core_opt.DriveTrueEmulation || opt_autoloadwarp))
+      if (retro_ui_finalized && core_opt.DriveSoundEmulation &&
+          (!core_opt.DriveTrueEmulation || opt_autoloadwarp & AUTOLOADWARP_DISK))
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
@@ -5119,62 +5286,11 @@ void retro_init(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
       log_cb = log.log;
 
-   const char *system_dir = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir) && system_dir)
-   {
-      strlcpy(retro_system_directory,
-              system_dir,
-              sizeof(retro_system_directory));
-   }
-
-   const char *content_dir = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY, &content_dir) && content_dir)
-   {
-      strlcpy(retro_content_directory,
-              content_dir,
-              sizeof(retro_content_directory));
-   }
-
-   const char *save_dir = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) && save_dir)
-   {
-      /* If save directory is defined use it, otherwise use system directory */
-      strlcpy(retro_save_directory,
-              string_is_empty(save_dir) ? retro_system_directory : save_dir,
-              sizeof(retro_save_directory));
-   }
-   else
-   {
-      /* Make retro_save_directory the same in case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY is not implemented by the frontend */
-      strlcpy(retro_save_directory,
-              retro_system_directory,
-              sizeof(retro_save_directory));
-   }
-
-   if (string_is_empty(retro_system_directory))
-   {
-#if defined(ANDROID)
-      strlcpy(retro_system_directory, "/mnt/sdcard", sizeof(retro_system_directory));
-#elif defined(VITA)
-      strlcpy(retro_system_directory, "ux0:/data", sizeof(retro_system_directory));
-#elif defined(__SWITCH__)
-      strlcpy(retro_system_directory, "/", sizeof(retro_system_directory));
-#else
-      strlcpy(retro_system_directory, ".", sizeof(retro_system_directory));
-#endif
-   }
-
-   /* Temp directory for ZIPs and NIB->G64 conversions */
-   snprintf(retro_temp_directory, sizeof(retro_temp_directory), "%s%s%s", retro_save_directory, FSDEV_DIR_SEP_STR, "TEMP");
+   retro_set_paths();
 
    /* Clean ZIP temp */
    if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
       remove_recurse(retro_temp_directory);
-
-   /* Use system directory for data files such as C64/.vpl etc. */
-   snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%svice", retro_system_directory, FSDEV_DIR_SEP_STR);
-   if (!path_is_directory(retro_system_data_directory))
-      archdep_mkdir(retro_system_data_directory, 0);
 
    /* Disk Control interface */
    dc = dc_create();
@@ -5854,6 +5970,9 @@ bool retro_load_game(const struct retro_game_info *info)
       else
          return false;
    }
+   else
+      /* Empty cmdline processing required for VIC-20 core option cartridges on startup */
+      process_cmdline("");
 
    pre_main();
 

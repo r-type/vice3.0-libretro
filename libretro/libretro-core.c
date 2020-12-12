@@ -1446,8 +1446,8 @@ void reload_restart(void)
     /* Clear request */
     request_reload_restart = false;
 
-    /* Stop datasette */
-    datasette_control(DATASETTE_CONTROL_STOP);
+    /* Reset Datasette */
+    datasette_control(DATASETTE_CONTROL_RESET);
 
     /* Cleanup after previous content and reset resources */
     initcmdline_cleanup();
@@ -5001,10 +5001,13 @@ static void update_variables(void)
 
 void emu_reset(int type)
 {
-   /* Always stop datasette or autostart from tape will fail */
-   datasette_control(DATASETTE_CONTROL_STOP);
+   /* Reset LED */
+   retro_set_led(0);
 
-   /* Always disable Warp */
+   /* Reset Datasette or autostart from tape will fail */
+   datasette_control(DATASETTE_CONTROL_RESET);
+
+   /* Disable Warp */
    resources_set_int("WarpMode", 0);
 
    /* Changing opt_read_vicerc requires reloading */

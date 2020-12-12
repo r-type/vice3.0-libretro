@@ -47,6 +47,7 @@ extern unsigned int opt_joyport_type;
 extern unsigned int mouse_value[2 + 1];
 extern unsigned int opt_autoloadwarp;
 extern unsigned int retro_warpmode;
+extern void retro_set_led(unsigned);
 extern int retro_warp_mode_enabled();
 extern int request_model_set;
 extern int RGB(int r, int g, int b);
@@ -462,6 +463,9 @@ static void display_tape(void)
 
     if (drive_enabled)
         return;
+
+    if (tape_enabled)
+        retro_set_led((tape_control && tape_motor) ? 1 : 0);
 
     if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || retro_warp_mode_enabled()) && !retro_warpmode)
     {

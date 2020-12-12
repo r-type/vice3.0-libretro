@@ -1921,13 +1921,13 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_virtual_device_traps",
          "Media > Virtual Device Traps",
-         "Required for printer device, but causes loading issues on rare cases.",
+         "Required for printer device, but causes loading issues on rare cases. Enabled forcefully by disabling 'True Drive Emulation'.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "enabled"
+         "disabled"
       },
       {
          "vice_floppy_write_protection",
@@ -3454,6 +3454,15 @@ static void update_variables(void)
       /* Silently restore sounds when TDE and DSE is enabled */
       if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation)
          resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
+
+      /* Forcefully enable Virtual Device Traps if TDE is disabled,
+       * otherwise floppy access does not work at all */
+      if (!core_opt.DriveTrueEmulation && !core_opt.VirtualDevices)
+      {
+         core_opt.VirtualDevices = 1;
+         if (retro_ui_finalized)
+            log_resources_set_int("VirtualDevices", core_opt.VirtualDevices);
+      }
    }
 
    var.key = "vice_drive_sound_emulation";

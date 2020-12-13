@@ -174,14 +174,14 @@ int ui_init_finalize(void)
    if (!util_file_exists(resources_dump_path))
       resources_dump(resources_dump_path);
 
+   /* Mute sound at startup to hide 6581 ReSID init pop, and set back to 100 in retro_run() after 3 frames */
+   resources_set_int("SoundVolume", 0);
+
    /* Sensible defaults */
    log_resources_set_int("Mouse", 1);
    log_resources_set_int("Printer4", 1);
    log_resources_set_int("AutostartPrgMode", 1);
    log_resources_set_int("AutostartDelayRandom", 0);
-
-   /* Mute sound at startup to hide 6581 ReSID init pop, and set back to 100 in retro_run() after 3 frames */
-   log_resources_set_int("SoundVolume", 0);
 
 #if defined(__XCBM2__) || defined(__XPET__)
    log_resources_set_int("CrtcFilter", 0);

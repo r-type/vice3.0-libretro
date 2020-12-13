@@ -59,6 +59,11 @@
 #include "math.h"
 #include "ui.h"
 
+#ifdef __LIBRETRO__
+#include "sid.h"
+#include "libretro-core.h"
+extern void sound_volume_counter_reset(void);
+#endif
 
 static log_t sound_log = LOG_ERR;
 
@@ -1655,6 +1660,15 @@ void sound_set_warp_mode(int value)
 {
     warp_mode_enabled = value;
 
+#ifdef __LIBRETRO__
+    if (core_opt.SidEngine != SID_ENGINE_FASTSID)
+    {
+        resources_set_int("SidEngine", (value) ? SID_ENGINE_FASTSID : core_opt.SidEngine);
+        /* 6581 init pop muting */
+        if (!value)
+            sound_volume_counter_reset();
+    }
+#endif
     if (value) {
         sound_suspend();
     } else {

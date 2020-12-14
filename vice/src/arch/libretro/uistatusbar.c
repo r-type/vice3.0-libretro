@@ -43,11 +43,11 @@
 #include "libretro-core.h"
 #include "libretro-graph.h"
 
-extern unsigned int opt_joyport_type;
 extern unsigned int mouse_value[2 + 1];
+extern unsigned int vice_led_state[3];
+extern unsigned int opt_joyport_type;
 extern unsigned int opt_autoloadwarp;
 extern unsigned int retro_warpmode;
-extern void retro_set_led(unsigned);
 extern int retro_warp_mode_enabled();
 extern int request_model_set;
 extern int RGB(int r, int g, int b);
@@ -427,6 +427,7 @@ void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, 
 void ui_display_drive_led(int drive_number, unsigned int pwm1, unsigned int led_pwm2)
 {
     drive_pwm = pwm1;
+    vice_led_state[1] = (drive_pwm > 1) ? 1 : 0;
     return;
 
     char c;
@@ -465,7 +466,7 @@ static void display_tape(void)
         return;
 
     if (tape_enabled)
-        retro_set_led((tape_control && tape_motor) ? 1 : 0);
+        vice_led_state[2] = (tape_control && tape_motor) ? 1 : 0;
 
     if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || retro_warp_mode_enabled()) && !retro_warpmode)
     {

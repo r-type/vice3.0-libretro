@@ -690,9 +690,6 @@ void drive_gcr_data_writeback_all(void)
 }
 
 /* ------------------------------------------------------------------------- */
-#ifdef __LIBRETRO__
-extern void retro_set_led(unsigned);
-#endif
 
 static void drive_led_update(drive_t *drive, drive_t *drive0)
 {
@@ -735,9 +732,6 @@ static void drive_led_update(drive_t *drive, drive_t *drive0)
     if (led_pwm > MAX_PWM) {
         led_pwm = MAX_PWM;
     }
-#ifdef __LIBRETRO__
-    retro_set_led((led_pwm > 1) ? 1 : 0);
-#endif
 
     drive->led_active_ticks = 0;
 

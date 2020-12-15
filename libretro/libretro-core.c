@@ -30,8 +30,6 @@
 #include "userport_joystick.h"
 #endif
 
-/* Accurate tick for statusbar FPS counter */
-long retro_now = 0;
 /* Main CPU loop */
 int cpuloop = 1;
 
@@ -167,6 +165,8 @@ static retro_video_refresh_t video_cb = NULL;
 static retro_audio_sample_t audio_cb = NULL;
 static retro_audio_sample_batch_t audio_batch_cb = NULL;
 static retro_environment_t environ_cb = NULL;
+
+static struct retro_perf_callback perf_cb;
 
 bool libretro_supports_bitmasks = false;
 static unsigned int retro_led_state[3] = {0};
@@ -1474,8 +1474,10 @@ void reload_restart(void)
     update_from_vice();
 }
 
-long GetTicks(void) {
-   return retro_now;
+/* FPS counter + mapper tick */
+long GetTicks(void)
+{
+   return perf_cb.get_time_usec();
 }
 
 static int retro_keymap_id(const char *val)
@@ -5309,6 +5311,9 @@ void retro_init(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
       log_cb = log.log;
 
+   if (!environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &perf_cb))
+      perf_cb.get_time_usec = NULL;
+
    retro_set_paths();
 
    /* Clean ZIP temp */
@@ -5916,32 +5921,13 @@ void retro_run(void)
    /* Input poll */
    retro_poll_event();
 
-   /* Measure frame-time and time between frames to render as much frames as possible when warp is enabled. Does not work
-      perfectly as the time needed by the framework cannot be accounted, but should not reduce amount of actually rendered
-      frames too much. */
+   /* Main loop with Warp Mode maximizing without too much input lag */
+   unsigned int frame_max = retro_warp_mode_enabled() ? retro_refresh : 1;
+   for (int frame_count = 0; frame_count < frame_max; ++frame_count)
    {
-      static struct retro_perf_callback pcb;
-      if (!pcb.get_time_usec)
-         environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &pcb);
-
-      static unsigned int f_time = 0, f_minimum = 1;
-      if (!f_time)
-      {
-          f_time = 1000000 / retro_refresh;
-          f_minimum = f_time / 100;
-      }
-
-      if (pcb.get_time_usec)
-         retro_now = pcb.get_time_usec();
-      else
-         retro_now += f_time;
-
-      for (int frame_count = 1; frame_count <= (retro_warp_mode_enabled() ? (f_time / f_minimum) : 1); ++frame_count)
-      {
-         while (cpuloop)
-            maincpu_mainloop_retro();
-         cpuloop = 1;
-      }
+      while (cpuloop)
+         maincpu_mainloop_retro();
+      cpuloop = 1;
    }
 
    /* LED interface */
@@ -5999,6 +5985,12 @@ bool retro_load_game(const struct retro_game_info *info)
    else
       /* Empty cmdline processing required for VIC-20 core option cartridges on startup */
       process_cmdline("");
+
+   if (!perf_cb.get_time_usec)
+   {
+      log_cb(RETRO_LOG_ERROR, "PERF_INTERFACE required!\n");
+      return false;
+   }
 
    pre_main();
 

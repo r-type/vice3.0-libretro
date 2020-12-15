@@ -167,7 +167,10 @@ static retro_video_refresh_t video_cb = NULL;
 static retro_audio_sample_t audio_cb = NULL;
 static retro_audio_sample_batch_t audio_batch_cb = NULL;
 static retro_environment_t environ_cb = NULL;
+
 bool libretro_supports_bitmasks = false;
+static unsigned int retro_led_state[3] = {0};
+unsigned int vice_led_state[3] = {0};
 
 char retro_save_directory[RETRO_PATH_MAX] = {0};
 char retro_temp_directory[RETRO_PATH_MAX] = {0};
@@ -1487,24 +1490,26 @@ static int retro_keymap_id(const char *val)
    return 0;
 }
 
-/* LED spam shenanigans needed for autoloadwarp */
-static unsigned led_on    = 0;
-static unsigned led_count = 0;
-static unsigned led_max   = 20;
-void retro_set_led(unsigned led)
+static void retro_led_interface(void)
 {
-   if (led == led_on)
-   {
-      if (led_count < led_max + 1)
-         led_count++;
-      if (led_count > led_max)
-         return;
-   }
-   else
-      led_count = 0;
-   led_on = led;
+   /* 0: Power
+    * 1: Floppy
+    * 2: Tape */
 
-   led_state_cb(0, led);
+   unsigned int led_state[3] = {0};
+
+   led_state[0] = (request_restart) ? 0 : 1;
+   led_state[1] = (core_opt.DriveTrueEmulation) ? vice_led_state[1] : 0;
+   led_state[2] = vice_led_state[2];
+
+   for (unsigned l = 0; l < sizeof(led_state)/sizeof(led_state[0]); l++)
+   {
+      if (retro_led_state[l] != led_state[l])
+      {
+         retro_led_state[l] = led_state[l];
+         led_state_cb(l, led_state[l]);
+      }
+   }
 }
 
 void retro_set_paths(void)
@@ -5001,9 +5006,6 @@ static void update_variables(void)
 
 void emu_reset(int type)
 {
-   /* Reset LED */
-   retro_set_led(0);
-
    /* Reset Datasette or autostart from tape will fail */
    datasette_control(DATASETTE_CONTROL_RESET);
 
@@ -5942,7 +5944,10 @@ void retro_run(void)
       }
    }
 
-   /* Show VKBD */
+   /* LED interface */
+   retro_led_interface();
+
+   /* Virtual keyboard */
    if (retro_vkbd)
       print_vkbd(retro_bmp);
 

@@ -4570,6 +4570,10 @@ static void update_variables(void)
       if (!strcmp(var.value, "disabled")) opt_jiffydos = 0;
       else                                opt_jiffydos = 1;
 
+      /* Forcefully disable JiffyDOS if TDE is disabled */
+      if (!core_opt.DriveTrueEmulation)
+         opt_jiffydos = 0;
+
       if (!opt_jiffydos_allow)
          opt_jiffydos = 0;
 

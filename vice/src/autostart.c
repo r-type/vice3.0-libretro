@@ -74,6 +74,12 @@
 #include "vdrive-bam.h"
 #include "vice-event.h"
 
+#ifdef __LIBRETRO__
+#include "keyboard.h"
+#include "libretro.h"
+extern unsigned int opt_autostart;
+#endif
+
 #ifdef DEBUG_AUTOSTART
 #define DBG(_x_)        log_debug _x_
 #else
@@ -749,6 +755,20 @@ static void advance_loadingtape(void)
         case NOT_YET:
             /* leave autostart and disable warp if ROM area was left */
             check_rom_area();
+#ifdef __LIBRETRO__
+            if (!opt_autostart)
+                break;
+            switch (check("FOUND ", AUTOSTART_NOWAIT_BLINK)) {
+                case YES:
+                    keyboard_key_pressed(RETROK_LCTRL);
+                    break;
+                case NO:
+                    keyboard_key_released(RETROK_LCTRL);
+                    break;
+                case NOT_YET:
+                    break;
+            }
+#endif
             break;
     }
 }

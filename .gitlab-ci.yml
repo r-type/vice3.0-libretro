@@ -52,51 +52,6 @@
     CORENAME: vice_xvic
     EMUTYPE: xvic
 
-.core-defs-android:
-  extends: .core-defs
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=x64
-
-.core-defs-x64sc-android:
-  extends: .core-defs-x64sc
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=x64sc
-
-.core-defs-x128-android:
-  extends: .core-defs-x128
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=x128
-
-.core-defs-xcbm2-android:
-  extends: .core-defs-xcbm2
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=xcbm2
-
-.core-defs-xcbm5x0-android:
-  extends: .core-defs-xcbm5x0
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=xcbm5x0
-
-.core-defs-xpet-android:
-  extends: .core-defs-xpet
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=xpet
-
-.core-defs-xplus4-android:
-  extends: .core-defs-xplus4
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=xplus4
-
-.core-defs-xscpu64-android:
-  extends: .core-defs-xscpu64
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=xscpu64
-
-.core-defs-xvic-android:
-  extends: .core-defs-xvic
-  variables:
-    PLATFORM_ARGS: APP_ABI=$ANDROID_ABI EMUTYPE=xvic
-
 include:
   - template: Jobs/Code-Quality.gitlab-ci.yml
   - project: 'libretro-infrastructure/ci-templates'
@@ -146,22 +101,22 @@ libretro-build-dingux-mips32:
 android-armeabi-v7a:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-android
+    - .core-defs
 
 android-arm64-v8a:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-android
+    - .core-defs
 
 android-x86_64:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-android
+    - .core-defs
 
 android-x86:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-android
+    - .core-defs
 
 # Static
 libretro-build-libnx-aarch64:
@@ -203,22 +158,22 @@ libretro-build-windows-x64-x64sc:
 android-armeabi-v7a-x64sc:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-x64sc-android
+    - .core-defs-x64sc
 
 android-arm64-v8a-x64sc:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-x64sc-android
+    - .core-defs-x64sc
 
 android-x86_64-x64sc:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-x64sc-android
+    - .core-defs-x64sc
 
 android-x86-x64sc:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-x64sc-android
+    - .core-defs-x64sc
 
 # Static
 libretro-build-libnx-aarch64-x64sc:
@@ -260,22 +215,22 @@ libretro-build-windows-x64-x128:
 android-armeabi-v7a-x128:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-x128-android
+    - .core-defs-x128
 
 android-arm64-v8a-x128:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-x128-android
+    - .core-defs-x128
 
 android-x86_64-x128:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-x128-android
+    - .core-defs-x128
 
 android-x86-x128:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-x128-android
+    - .core-defs-x128
 
 # Static
 libretro-build-libnx-aarch64-x128:
@@ -317,22 +272,22 @@ libretro-build-windows-x64-xcbm2:
 android-armeabi-v7a-xcbm2:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-xcbm2-android
+    - .core-defs-xcbm2
 
 android-arm64-v8a-xcbm2:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-xcbm2-android
+    - .core-defs-xcbm2
 
 android-x86_64-xcbm2:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-xcbm2-android
+    - .core-defs-xcbm2
 
 android-x86-xcbm2:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-xcbm2-android
+    - .core-defs-xcbm2
 
 # Static
 libretro-build-libnx-aarch64-xcbm2:
@@ -374,22 +329,22 @@ libretro-build-windows-x64-xcbm5x0:
 android-armeabi-v7a-xcbm5x0:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-xcbm5x0-android
+    - .core-defs-xcbm5x0
 
 android-arm64-v8a-xcbm5x0:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-xcbm5x0-android
+    - .core-defs-xcbm5x0
 
 android-x86_64-xcbm5x0:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-xcbm5x0-android
+    - .core-defs-xcbm5x0
 
 android-x86-xcbm5x0:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-xcbm5x0-android
+    - .core-defs-xcbm5x0
 
 # Static
 libretro-build-libnx-aarch64-xcbm5x0:
@@ -431,22 +386,22 @@ libretro-build-windows-x64-xpet:
 android-armeabi-v7a-xpet:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-xpet-android
+    - .core-defs-xpet
 
 android-arm64-v8a-xpet:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-xpet-android
+    - .core-defs-xpet
 
 android-x86_64-xpet:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-xpet-android
+    - .core-defs-xpet
 
 android-x86-xpet:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-xpet-android
+    - .core-defs-xpet
 
 # Static
 libretro-build-libnx-aarch64-xpet:
@@ -488,22 +443,22 @@ libretro-build-windows-x64-xplus4:
 android-armeabi-v7a-xplus4:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-xplus4-android
+    - .core-defs-xplus4
 
 android-arm64-v8a-xplus4:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-xplus4-android
+    - .core-defs-xplus4
 
 android-x86_64-xplus4:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-xplus4-android
+    - .core-defs-xplus4
 
 android-x86-xplus4:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-xplus4-android
+    - .core-defs-xplus4
 
 # Static
 libretro-build-libnx-aarch64-xplus4:
@@ -545,22 +500,22 @@ libretro-build-windows-x64-xscpu64:
 android-armeabi-v7a-xscpu64:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-xscpu64-android
+    - .core-defs-xscpu64
 
 android-arm64-v8a-xscpu64:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-xscpu64-android
+    - .core-defs-xscpu64
 
 android-x86_64-xscpu64:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-xscpu64-android
+    - .core-defs-xscpu64
 
 android-x86-xscpu64:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-xscpu64-android
+    - .core-defs-xscpu64
 
 # Static
 libretro-build-libnx-aarch64-xscpu64:
@@ -602,22 +557,22 @@ libretro-build-windows-x64-xvic:
 android-armeabi-v7a-xvic:
   extends:
     - .libretro-android-jni-armeabi-v7a
-    - .core-defs-xvic-android
+    - .core-defs-xvic
 
 android-arm64-v8a-xvic:
   extends:
     - .libretro-android-jni-arm64-v8a
-    - .core-defs-xvic-android
+    - .core-defs-xvic
 
 android-x86_64-xvic:
   extends:
     - .libretro-android-jni-x86_64
-    - .core-defs-xvic-android
+    - .core-defs-xvic
 
 android-x86-xvic:
   extends:
     - .libretro-android-jni-x86
-    - .core-defs-xvic-android
+    - .core-defs-xvic
 
 # Static
 libretro-build-libnx-aarch64-xvic:

@@ -1457,6 +1457,7 @@ void reload_restart(void)
 
     /* Update resources from environment just like on fresh start of core */
     sound_volume_counter_reset();
+    request_model_prev = -1;
     retro_ui_finalized = false;
     update_variables();
     /* Some resources are not set until we call this */
@@ -2605,6 +2606,11 @@ void retro_set_environment(retro_environment_t cb)
             { "1.3", "130%" },
             { "1.4", "140%" },
             { "1.5", "150%" },
+            { "1.6", "160%" },
+            { "1.7", "170%" },
+            { "1.8", "180%" },
+            { "1.9", "190%" },
+            { "2.0", "200%" },
             { NULL, NULL },
          },
          "1.0"
@@ -3807,6 +3813,7 @@ static void update_variables(void)
       {
          c64model_set(model);
          request_model_prev = -1;
+         reload_restart();
       }
 
       core_opt.Model = model;
@@ -5540,7 +5547,6 @@ void update_geometry(int mode)
          /* Update av_info only when PAL/NTSC change occurs */
          if (retro_region != retro_get_region())
          {
-            retro_region = retro_get_region();
             retro_get_system_av_info(&system_av_info);
             environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
             return;
@@ -5708,6 +5714,9 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
       }
    }
 
+   /* Remember region for av_info update */
+   retro_region = retro_get_region();
+
    info->geometry.max_width    = defaultw;
    info->geometry.max_height   = defaulth;
    info->geometry.base_width   = retrow;
@@ -5715,9 +5724,6 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
    info->timing.sample_rate    = core_opt.SoundSampleRate;
    prev_sound_sample_rate      = core_opt.SoundSampleRate;
-
-   /* Remember region for av_info update */
-   retro_region = retro_get_region();
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__)
    retro_refresh = (retro_region == RETRO_REGION_PAL) ? C64_PAL_RFSH_PER_SEC : C64_NTSC_RFSH_PER_SEC;
@@ -5831,12 +5837,6 @@ void retro_run(void)
          retro_get_system_av_info(&system_av_info);
          environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
       }
-
-      /* Update geometry if model or zoom mode changes */
-      if ((lastw == retrow && lasth == retroh) && zoom_mode_id != zoom_mode_id_prev)
-         update_geometry(1);
-      else if (lastw != retrow || lasth != retroh)
-         update_geometry(0);
    }
 
 #ifdef RETRO_DEBUG
@@ -5941,13 +5941,6 @@ void retro_run(void)
    if (retro_vkbd)
       print_vkbd(retro_bmp);
 
-   /* Finalize zoom offsets */
-   if (zoomed_XS_offset != retroXS_offset || zoomed_YS_offset != retroYS_offset)
-   {
-      retroXS_offset = zoomed_XS_offset;
-      retroYS_offset = zoomed_YS_offset;
-   }
-
    /* Set volume back to maximum after starting with mute, due to ReSID 6581 init pop */
    if (sound_volume_counter > 0)
    {
@@ -5960,9 +5953,23 @@ void retro_run(void)
    if (imagename_timer > 0)
       imagename_timer--;
 
+   /* Video output */
    video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retrow<<(pix_bytes/4))), zoomed_width, zoomed_height, retrow<<(pix_bytes/2));
 
-   /* retro_reset() needs to postponed here for proper JiffyDOS+vicerc core option refresh operation */
+   /* Update geometry if model or zoom mode changes */
+   if ((lastw == retrow && lasth == retroh) && zoom_mode_id != zoom_mode_id_prev)
+      update_geometry(1);
+   else if (lastw != retrow || lasth != retroh)
+      update_geometry(0);
+
+   /* Finalize zoom offsets */
+   if (zoomed_XS_offset != retroXS_offset || zoomed_YS_offset != retroYS_offset)
+   {
+      retroXS_offset = zoomed_XS_offset;
+      retroYS_offset = zoomed_YS_offset;
+   }
+
+   /* retro_reset() postponed here for proper JiffyDOS+vicerc core option refresh operation */
    if (request_restart)
    {
       request_restart = false;
@@ -6032,21 +6039,23 @@ void retro_unload_game(void)
 
 unsigned retro_get_region(void)
 {
-    int machine_sync = 0;
-    if (retro_ui_finalized)
-        resources_get_int("MachineVideoStandard", &machine_sync);
-    switch (machine_sync)
-    {
-        default:
-        case MACHINE_SYNC_PAL:
-        case MACHINE_SYNC_PALN:
-            return RETRO_REGION_PAL;
-            break;
-        case MACHINE_SYNC_NTSC:
-        case MACHINE_SYNC_NTSCOLD:
-            return RETRO_REGION_NTSC;
-            break;
-    }
+   int machine_sync = 0;
+   if (!retro_ui_finalized)
+      return retro_region;
+
+   resources_get_int("MachineVideoStandard", &machine_sync);
+   switch (machine_sync)
+   {
+      default:
+      case MACHINE_SYNC_PAL:
+      case MACHINE_SYNC_PALN:
+         return RETRO_REGION_PAL;
+         break;
+      case MACHINE_SYNC_NTSC:
+      case MACHINE_SYNC_NTSCOLD:
+         return RETRO_REGION_NTSC;
+         break;
+   }
 }
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)

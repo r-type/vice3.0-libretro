@@ -705,11 +705,11 @@ static void advance_hastape(void)
         case YES:
             log_message(autostart_log, "Loading file.");
             if (autostart_program_name) {
-                tmp = util_concat("LOAD\"", autostart_program_name, "\":\r", NULL);
+                tmp = util_concat("LOAD\"", autostart_program_name, "\"\r", NULL);
                 kbdbuf_feed(tmp);
                 lib_free(tmp);
             } else {
-                kbdbuf_feed("LOAD:\r");
+                kbdbuf_feed("LOAD\r");
             }
             autostartmode = AUTOSTART_PRESSPLAYONTAPE;
             entered_rom = 0;
@@ -819,7 +819,7 @@ static void advance_hasdisk(void)
                 }
             }
 
-            tmp = lib_msprintf("LOAD\"%s\",8%s:\r",
+            tmp = lib_msprintf("LOAD\"%s\",8%s\r",
                                autostart_program_name ?
                                autostart_program_name : "*",
                                autostart_basic_load ? "" : ",1");

@@ -375,6 +375,23 @@ void sound_volume_counter_reset()
 }
 
 #if defined(__XVIC__)
+static int vic20_cart_is_multipart(int prev_type, const char* argv)
+{
+    int mp_type = prev_type;
+
+    if (strcasestr(argv, "-2000.") || strcasestr(argv, "-4000.")
+     || strcasestr(argv, "-6000.") || strcasestr(argv, "-a000."))
+        mp_type = -1;
+    else if (strcasestr(argv, "[2000]") || strcasestr(argv, "[4000]")
+          || strcasestr(argv, "[6000]") || strcasestr(argv, "[A000]"))
+        mp_type = -2;
+    else if (strcasestr(argv, "$2000") || strcasestr(argv, "$4000")
+          || strcasestr(argv, "$6000") || strcasestr(argv, "$A000"))
+        mp_type = -3;
+
+    return mp_type;
+}
+
 static int vic20_autodetect_cartridge_type(const char* argv)
 {
     FILE *fd;
@@ -423,11 +440,8 @@ static int vic20_autodetect_cartridge_type(const char* argv)
             type = CARTRIDGE_VIC20_MEGACART;
     }
 
-    /* Separate ROM combinations (type = -1) */
-    if (strcasestr(argv, "-2000.") || strcasestr(argv, "-6000.") || strcasestr(argv, "-a000."))
-        type = -1;
-    else if (strcasestr(argv, "$2000") || strcasestr(argv, "$6000") || strcasestr(argv, "$A000"))
-        type = -2;
+    /* Multipart ROM combinations (type < 0) */
+    type = vic20_cart_is_multipart(type, argv);
 
     /* M3U analyzing */
     if (strcasestr(argv, ".m3u"))
@@ -435,11 +449,7 @@ static int vic20_autodetect_cartridge_type(const char* argv)
         fseek(fd, 0, SEEK_SET);
         if (fgets(buf, sizeof(buf), fd) != NULL)
         {
-            if (strcasestr(buf, "-2000.") || strcasestr(buf, "-6000.") || strcasestr(buf, "-a000."))
-                type = -1;
-            else if (strcasestr(buf, "$2000") || strcasestr(buf, "$6000") || strcasestr(buf, "$A000"))
-                type = -2;
-            else if (strcasestr(buf, ".20"))
+            if (strcasestr(buf, ".20"))
                 type = CARTRIDGE_VIC20_16KB_2000;
             else if (strcasestr(buf, ".40"))
                 type = CARTRIDGE_VIC20_16KB_4000;
@@ -449,6 +459,8 @@ static int vic20_autodetect_cartridge_type(const char* argv)
                 type = CARTRIDGE_VIC20_8KB_A000;
             else if (strcasestr(buf, ".b0"))
                 type = CARTRIDGE_VIC20_4KB_B000;
+
+            type = vic20_cart_is_multipart(type, buf);
         }
     }
 
@@ -458,23 +470,32 @@ static int vic20_autodetect_cartridge_type(const char* argv)
 
 static void vic20_mem_force(const char* argv)
 {
-    char vic20buf1[6] = {0};
-    char vic20buf2[6] = {0};
+    char buf[6]       = {0};
     int vic20mem      = 0;
     int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
 
     for (int i = 0; i < sizeof(vic20mems)/sizeof(vic20mems[0]); i++)
     {
         vic20mem = vic20mems[i];
-        snprintf(vic20buf1, sizeof(vic20buf1), "%c%d%c", '(', vic20mem, 'k');
-        snprintf(vic20buf2, sizeof(vic20buf2), "%c%d%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k');
-        if (strcasestr(argv, vic20buf1))
+
+        snprintf(buf, sizeof(buf), "%c%d%c", '(', vic20mem, 'k');
+        if (strcasestr(argv, buf))
         {
             vic20mem_forced = i;
             log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
             break;
         }
-        else if (strcasestr(argv, vic20buf2))
+
+        snprintf(buf, sizeof(buf), "%c%d%c", '[', vic20mem, 'k');
+        if (strcasestr(argv, buf))
+        {
+            vic20mem_forced = i;
+            log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
+            break;
+        }
+
+        snprintf(buf, sizeof(buf), "%c%d%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k');
+        if (strcasestr(argv, buf))
         {
             vic20mem_forced = i;
             log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dkB\n", argv, vic20mem);
@@ -696,6 +717,7 @@ static int process_cmdline(const char* argv)
             if (path_is_valid(argv))
             {
                 char cart_2000[RETRO_PATH_MAX] = {0};
+                char cart_4000[RETRO_PATH_MAX] = {0};
                 char cart_6000[RETRO_PATH_MAX] = {0};
                 char cart_A000[RETRO_PATH_MAX] = {0};
                 char cartmega_nvram[RETRO_PATH_MAX] = {0};
@@ -732,7 +754,7 @@ static int process_cmdline(const char* argv)
                         Add_Option(cartmega_nvram);
                         Add_Option("-cartmega");
                         break;
-                    case -1: /* Separate ROM combination shenanigans, gamebase style */
+                    case -1: /* Separate ROM combination shenanigans, Gamebase style */
                         snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
                         snprintf(cart_2000, sizeof(cart_2000), "%s", path_remove_extension(cart_2000));
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-2000", ""));
@@ -772,7 +794,76 @@ static int process_cmdline(const char* argv)
 
                         argv = "";
                         break;
-                    case -2: /* Separate ROM combination shenanigans, no-intro style */
+                    case -2: /* Separate ROM combination shenanigans, TOSEC style */
+                        /* Need to examine the first playlist entry */
+                        if (strcasestr(argv, ".m3u"))
+                        {
+                            FILE *fd;
+                            char buf[RETRO_PATH_MAX] = {0};
+                            char basepath[RETRO_PATH_MAX] = {0};
+                            snprintf(basepath, sizeof(basepath), "%s", argv);
+                            path_basedir(basepath);
+
+                            fd = fopen(argv, MODE_READ);
+                            if (fgets(buf, sizeof(buf), fd) != NULL)
+                                snprintf(basepath, sizeof(basepath), "%s%s", basepath, buf);
+                            fclose(fd);
+
+                            argv = basepath;
+                        }
+
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", path_remove_extension(cart_2000));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[4000]", "[2000]"));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[6000]", "[2000]"));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[A000]", "[2000]"));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_2000, ".crt");
+
+                        snprintf(cart_4000, sizeof(cart_4000), "%s", argv);
+                        snprintf(cart_4000, sizeof(cart_4000), "%s", path_remove_extension(cart_4000));
+                        snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[2000]", "[4000]"));
+                        snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[6000]", "[4000]"));
+                        snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[A000]", "[4000]"));
+                        snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_4000, ".crt");
+
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", path_remove_extension(cart_6000));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[2000]", "[6000]"));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[4000]", "[6000]"));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[A000]", "[6000]"));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_6000, ".crt");
+
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", path_remove_extension(cart_A000));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[2000]", "[A000]"));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[4000]", "[A000]"));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[6000]", "[A000]"));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_A000, ".crt");
+
+                        if (path_is_valid(cart_2000))
+                        {
+                            Add_Option("-cart2");
+                            Add_Option(cart_2000);
+                        }
+                        if (path_is_valid(cart_4000))
+                        {
+                            Add_Option("-cart4");
+                            Add_Option(cart_4000);
+                        }
+                        if (path_is_valid(cart_6000))
+                        {
+                            Add_Option("-cart6");
+                            Add_Option(cart_6000);
+                        }
+                        if (path_is_valid(cart_A000))
+                        {
+                            Add_Option("-cartA");
+                            Add_Option(cart_A000);
+                        }
+
+                        argv = "";
+                        break;
+                    case -3: /* Separate ROM combination shenanigans, No-Intro style */
                         /* Need to examine the first playlist entry */
                         if (strcasestr(argv, ".m3u"))
                         {
@@ -5883,11 +5974,11 @@ void retro_run(void)
          update_work_disk();
 
 #if defined(__XVIC__)
-      /* Autorun "(SYS x)" command */
+      /* Autorun "SYS x" command */
       if (autocommand)
       {
          autocommand = false;
-         if (strcasestr(full_path, "(SYS "))
+         if (strcasestr(full_path, "(SYS ") || strcasestr(full_path, "[SYS "))
          {
             char command[20] = {0};
             char tmp_path[RETRO_PATH_MAX] = {0};
@@ -5897,7 +5988,7 @@ void retro_run(void)
             while (token != NULL)
             {
                 token = strtok(NULL, " ");
-                if (!strcmp(token_prev, "(SYS"))
+                if (strcasestr(token_prev, "(SYS") || strcasestr(token_prev, "[SYS") )
                 {
                    snprintf(command, sizeof(command), "%s", token);
                    token = NULL;
@@ -5910,9 +6001,11 @@ void retro_run(void)
             token_prev = NULL;
             path_remove_extension(command);
             string_remove_all_chars(command, ')');
+            string_remove_all_chars(command, ']');
 
             if (!string_is_empty(command))
             {
+               log_cb(RETRO_LOG_INFO, "Executing 'SYS %s'\n", command);
                kbdbuf_feed("SYS ");
                kbdbuf_feed(command);
                kbdbuf_feed("\r");

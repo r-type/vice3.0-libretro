@@ -143,7 +143,7 @@ This allows:
 External ROM files required in `system/vice`:
 
 | Filename                         | Size   | MD5                              |
-|----------------------------------|--------|----------------------------------|
+|----------------------------------|-------:|----------------------------------|
 | **JiffyDOS_C64.bin**             |  8 192 | be09394f0576cf81fa8bacf634daf9a2 |
 | **JiffyDOS_C128.bin**            | 16 384 | cbbd1bbcb5e4fd8046b6030ab71fc021 |
 | **JiffyDOS_1541-II.bin**         | 16 384 | 1b1e985ea5325a1f46eb7fd9681707bf |
@@ -173,7 +173,7 @@ xvic -memory 20 "/path/to/rom/some-8k-game.d64"
 
 **VIC-20 memory expansion can be set with filename tags or directory matching:**
 
-- `some game (8k).prg` or `/8k/some game.prg`
+- `some game (8k).prg` or `some game [8k].prg` or `/8k/some game.prg`
 - `vicdoom (35k).d64`
 
 ## Latest features

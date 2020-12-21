@@ -6020,11 +6020,16 @@ void retro_run(void)
 
    /* Main loop with Warp Mode maximizing without too much input lag */
    unsigned int frame_max = retro_warp_mode_enabled() ? retro_refresh : 1;
+   unsigned int frame_time = 0;
    for (int frame_count = 0; frame_count < frame_max; ++frame_count)
    {
+      frame_time = GetTicks();
       while (cpuloop)
          maincpu_mainloop_retro();
       cpuloop = 1;
+
+      if (frame_max > 1)
+         frame_max = 1000000 / (retro_refresh / 5) / (GetTicks() - frame_time);
    }
 
    /* LED interface */

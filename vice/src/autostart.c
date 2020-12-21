@@ -744,6 +744,11 @@ static void advance_loadingtape(void)
 {
     switch (check("READY.", AUTOSTART_WAIT_BLINK)) {
         case YES:
+#ifdef __LIBRETRO__
+            /* Kludge required for T64s */
+            if (opt_autostart)
+               keyboard_key_released(RETROK_LCTRL);
+#endif
             disable_warp_if_was_requested();
             autostart_finish();
             autostart_done();

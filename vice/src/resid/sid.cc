@@ -26,7 +26,7 @@
 
 #include "sid.h"
 #include <math.h>
-#ifdef __CELLOS_LV2__
+#ifdef __PS3__
 #include "PS3_include.h"
 #endif
 

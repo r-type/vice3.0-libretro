@@ -76,34 +76,34 @@
 
 int ioutil_access(const char *pathname, int mode)
 {
-#if defined( __PSL1GHT__) || defined (__CELLOS_LV2__)
-    struct stat buf;
-    /* This can be improved but since ps3 os doesn't really have ACLs, who
-       cares? */
-    if (stat(pathname, &buf) == 0 &&
-        (buf.st_mode & (S_IRUSR|S_IWUSR)))
-      {
-        /* file points to user readable or writable file */
-        return 0;
-      }
-    return -1;
+#if defined(__PS3__)
+   struct stat buf;
+   /* This can be improved but since ps3 os doesn't really have ACLs, who
+      cares? */
+   if (stat(pathname, &buf) == 0 &&
+         (buf.st_mode & (S_IRUSR|S_IWUSR)))
+   {
+      /* file points to user readable or writable file */
+      return 0;
+   }
+   return -1;
 #else
-    int access_mode = 0;
+   int access_mode = 0;
 
-    if ((mode & IOUTIL_ACCESS_R_OK) == IOUTIL_ACCESS_R_OK) {
-        access_mode |= ARCHDEP_R_OK;
-    }
-    if ((mode & IOUTIL_ACCESS_W_OK) == IOUTIL_ACCESS_W_OK) {
-        access_mode |= ARCHDEP_W_OK;
-    }
-    if ((mode & IOUTIL_ACCESS_X_OK) == IOUTIL_ACCESS_X_OK) {
-        access_mode |= ARCHDEP_X_OK;
-    }
-    if ((mode & IOUTIL_ACCESS_F_OK) == IOUTIL_ACCESS_F_OK) {
-        access_mode |= ARCHDEP_F_OK;
-    }
+   if ((mode & IOUTIL_ACCESS_R_OK) == IOUTIL_ACCESS_R_OK) {
+      access_mode |= ARCHDEP_R_OK;
+   }
+   if ((mode & IOUTIL_ACCESS_W_OK) == IOUTIL_ACCESS_W_OK) {
+      access_mode |= ARCHDEP_W_OK;
+   }
+   if ((mode & IOUTIL_ACCESS_X_OK) == IOUTIL_ACCESS_X_OK) {
+      access_mode |= ARCHDEP_X_OK;
+   }
+   if ((mode & IOUTIL_ACCESS_F_OK) == IOUTIL_ACCESS_F_OK) {
+      access_mode |= ARCHDEP_F_OK;
+   }
 
-    return access(pathname, access_mode);
+   return access(pathname, access_mode);
 #endif
 }
 

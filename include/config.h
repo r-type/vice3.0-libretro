@@ -58,7 +58,7 @@
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1
 
-#ifndef __CELLOS_LV2__
+#ifndef __PS3__
 /* Define to 1 if you have the `getcwd' function. */
 #define HAVE_GETCWD 1
 #endif
@@ -79,7 +79,7 @@
 #define HAVE_MEMMOVE 1
 
 /* Define to 1 if you have the `mkstemp' function. */
-#ifndef __CELLOS_LV2__
+#ifndef __PS3__
 #define HAVE_MKSTEMP 1
 #endif
 

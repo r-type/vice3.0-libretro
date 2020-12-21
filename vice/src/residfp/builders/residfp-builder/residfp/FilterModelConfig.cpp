@@ -23,7 +23,7 @@
 #include "FilterModelConfig.h"
 
 #ifdef __LIBRETRO__
-#ifdef __CELLOS_LV2__
+#ifdef __PS3__
 #include "PS3_include.h"
 #endif
 #else

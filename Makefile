@@ -260,15 +260,6 @@ else ifeq ($(platform), psp1)
    CXXFLAGS += -std=c99
    STATIC_LINKING = 1
 
-# PS3
-else ifeq ($(platform), ps3)
-   TARGET := $(TARGET_NAME)_libretro_$(platform).a
-   CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
-   CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
-   AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
-   COMMONFLAGS += -D__CELLOS_LV2__ -D__POWERPC__ -D__ppc__ -DWORDS_BIGENDIAN=1 -D__unix__ -DHAVE_STRTOUL -D_NO_CPP_INLINES
-   STATIC_LINKING=1
-
 # Vita
 else ifeq ($(platform), vita)
    TARGET := $(TARGET_NAME)_libretro_vita.a
@@ -307,16 +298,6 @@ else ifeq ($(platform), wiiu)
    COMMONFLAGS += -DHAVE_STRTOUL -DWIIU
    STATIC_LINKING = 1
 
-# PS3
-else ifeq ($(platform), ps3)
-   TARGET := $(TARGET_NAME)_libretro_$(platform).a
-   CC      = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
-   CXX     = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
-   AR      = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
-   OLD_GCC := 1
-   COMMONFLAGS += -DHAVE_STRTOUL
-   STATIC_LINKING = 1
-
 # Lightweight PS3 Homebrew SDK
 else ifeq ($(platform), psl1ght)
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
@@ -325,7 +306,7 @@ else ifeq ($(platform), psl1ght)
    CC_AS = $(PS3DEV)/ppu/bin/ppu-gcc$(EXE_EXT)
    AR = $(PS3DEV)/ppu/bin/ppu-ar$(EXE_EXT)
    OLD_GCC := 1
-   COMMONFLAGS += -DHAVE_STRTOUL -D__PSL1GHT__
+   COMMONFLAGS += -DHAVE_STRTOUL -D__PSL1GHT__ -D__PS3__
    STATIC_LINKING = 1
 
 # GCW0

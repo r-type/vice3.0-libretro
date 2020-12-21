@@ -38,7 +38,7 @@
 #include "montypes.h"
 #include "types.h"
 
-#ifdef __CELLOS_LV2__
+#ifdef __PS3__
 #undef CLI
 #endif
 

@@ -46,7 +46,7 @@
 #define IOUTIL_ERRNO_ENOENT 3
 #define IOUTIL_ERRNO_ERANGE 4
 
-#ifdef __CELLOS_LV2__
+#ifdef __PS3__
 #include "PS3_include.h"
 #endif
 

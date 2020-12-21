@@ -400,7 +400,7 @@
 #define HAVE_MIDI /**/
 
 /* Define to 1 if you have the `mkstemp' function. */
-#ifndef __CELLOS_LV2__
+#ifndef __PS3__
 #define HAVE_MKSTEMP 1
 #endif
 

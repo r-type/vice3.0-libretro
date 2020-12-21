@@ -46,7 +46,7 @@
 #include <strings.h>
 #endif
 
-#if defined(PSP) || defined(VITA) || defined(__PSL1GHT__) || defined(__CELLOS_LV2__)
+#if defined(PSP) || defined(VITA) || defined(__PSL1GHT__)
 #include <sys/time.h>
 #endif
 
@@ -114,13 +114,17 @@ int kbd_arch_get_host_mapping(void)
 }
 
 #include <time.h>
-#ifdef __CELLOS_LV2__
+
+#ifdef __PS3__
 #include <pthread_types.h>
+
+#ifndef __PSL1GHT__
+#define sysGetCurrentTime sys_time_get_current_time
 int gettimeofday(struct timeval* x, int unused)
 {
     sys_time_sec_t s;
     sys_time_nsec_t ns;
-    int ret = sys_time_get_current_time(&s, &ns);
+    int ret = sysGetCurrentTime(&s, &ns);
 
     x->tv_sec = s;
     x->tv_usec = ns / 1000;
@@ -129,23 +133,10 @@ int gettimeofday(struct timeval* x, int unused)
 }
 #endif
 
+#endif
+
 int archdep_rtc_get_centisecond(void)
 {
-#if 0
-    struct timespec dtm;
-    int status;
-#if defined(PSP) || defined(VITA) || defined(_3DS) || defined(__PSL1GHT__) || defined(__CELLOS_LV2__)
-    struct timeval tm;
-    status = gettimeofday(&tm, NULL);
-    if(status==0)
-        dtm.tv_nsec = tm.tv_usec * 1000;
-#else
-    status = clock_gettime(CLOCK_REALTIME, &dtm);
-#endif
-    if (status == 0) {
-        return dtm.tv_nsec / 10000L;
-    }
-#endif
     return 0;
 }
 

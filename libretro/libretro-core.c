@@ -3277,27 +3277,30 @@ void retro_set_environment(retro_environment_t cb)
                retro_system_data_directory, FSDEV_DIR_SEP_STR, machine_name);
 
          /* Scan system/vice/machine directory for cartridges */
-         cart_dir = opendir(machine_directory);
-         while ((cart_dirp = readdir(cart_dir)) != NULL && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+         if (path_is_directory(machine_directory))
          {
-             /* Blacklisted */
-             if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
-                 !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
-                 continue;
+            cart_dir = opendir(machine_directory);
+            while ((cart_dirp = readdir(cart_dir)) != NULL && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+            {
+                /* Blacklisted */
+                if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
+                    !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
+                    continue;
 
-             if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
-             {
-                 char cart_path[RETRO_PATH_MAX] = {0};
-                 char cart_label[50] = {0};
-                 snprintf(cart_path, sizeof(cart_path), "%s", cart_dirp->d_name);
-                 snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
+                if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
+                {
+                    char cart_value[RETRO_PATH_MAX] = {0};
+                    char cart_label[50] = {0};
+                    snprintf(cart_value, sizeof(cart_value), "%s", cart_dirp->d_name);
+                    snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
 
-                 core_options[i].values[j].value = strdup(cart_path);
-                 core_options[i].values[j].label = strdup(cart_label);
-                 ++j;
-             }
+                    core_options[i].values[j].value = strdup(cart_value);
+                    core_options[i].values[j].label = strdup(cart_label);
+                    ++j;
+                }
+            }
+            closedir(cart_dir);
          }
-         closedir(cart_dir);
 
          core_options[i].values[j].value = NULL;
          core_options[i].values[j].label = NULL;

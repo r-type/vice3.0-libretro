@@ -3411,7 +3411,7 @@ static void update_variables(void)
       char cart_full[RETRO_PATH_MAX] = {0};
 
       if (!strcmp(var.value, "none"))
-         snprintf(cart_full, sizeof(cart_full), "");
+         snprintf(cart_full, sizeof(cart_full), "%s", "");
       else
          snprintf(cart_full, sizeof(cart_full), "%s%s%s%s%s",
                retro_system_data_directory, FSDEV_DIR_SEP_STR, machine_name, FSDEV_DIR_SEP_STR, var.value);

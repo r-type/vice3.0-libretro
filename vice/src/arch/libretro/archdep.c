@@ -299,7 +299,7 @@ char *archdep_default_resource_file_name(void)
             if (!string_is_empty(full_path))
             {
                snprintf(content_basename, sizeof(content_basename), "%s", path_basename(full_path));
-               snprintf(content_basename, sizeof(content_basename), "%s", path_remove_extension(content_basename));
+               path_remove_extension(content_basename);
                snprintf(content_vicerc, sizeof(content_vicerc), "%s%s%s.vicerc", SAVEDIR, FSDEV_DIR_SEP_STR, content_basename);
                /* Process "saves/[content].vicerc" */
                if (!ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))

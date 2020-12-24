@@ -586,7 +586,7 @@ static int process_cmdline(const char* argv)
         /* ZIP + NIB vars, use the same temp directory for single NIBs */
         char zip_basename[RETRO_PATH_MAX] = {0};
         snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
-        snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+        path_remove_extension(zip_basename);
 
         char nib_input[RETRO_PATH_MAX] = {0};
         char nib_output[RETRO_PATH_MAX] = {0};
@@ -747,7 +747,7 @@ static int process_cmdline(const char* argv)
                     case CARTRIDGE_VIC20_MEGACART:
                         snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", argv);
                         snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", path_basename(cartmega_temp));
-                        snprintf(cartmega_temp, sizeof(cartmega_temp), "%s", path_remove_extension(cartmega_temp));
+                        path_remove_extension(cartmega_temp);
                         snprintf(cartmega_nvram, sizeof(cartmega_nvram), "%s%s%s%s",
                                  retro_save_directory, FSDEV_DIR_SEP_STR, cartmega_temp, ".nvr");
                         Add_Option("-mcnvramfile");
@@ -756,21 +756,21 @@ static int process_cmdline(const char* argv)
                         break;
                     case -1: /* Separate ROM combination shenanigans, Gamebase style */
                         snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", path_remove_extension(cart_2000));
+                        path_remove_extension(cart_2000);
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-2000", ""));
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-6000", ""));
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-a000", ""));
                         snprintf(cart_2000, sizeof(cart_2000), "%s%s%s", cart_2000, "-2000", ".prg");
 
                         snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", path_remove_extension(cart_6000));
+                        path_remove_extension(cart_6000);
                         snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-2000", ""));
                         snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-6000", ""));
                         snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-a000", ""));
                         snprintf(cart_6000, sizeof(cart_6000), "%s%s%s", cart_6000, "-6000", ".prg");
 
                         snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", path_remove_extension(cart_A000));
+                        path_remove_extension(cart_A000);
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-2000", ""));
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-6000", ""));
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-a000", ""));
@@ -813,28 +813,28 @@ static int process_cmdline(const char* argv)
                         }
 
                         snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", path_remove_extension(cart_2000));
+                        path_remove_extension(cart_2000);
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[4000]", "[2000]"));
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[6000]", "[2000]"));
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[A000]", "[2000]"));
                         snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_2000, ".crt");
 
                         snprintf(cart_4000, sizeof(cart_4000), "%s", argv);
-                        snprintf(cart_4000, sizeof(cart_4000), "%s", path_remove_extension(cart_4000));
+                        path_remove_extension(cart_4000);
                         snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[2000]", "[4000]"));
                         snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[6000]", "[4000]"));
                         snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[A000]", "[4000]"));
                         snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_4000, ".crt");
 
                         snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", path_remove_extension(cart_6000));
+                        path_remove_extension(cart_6000);
                         snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[2000]", "[6000]"));
                         snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[4000]", "[6000]"));
                         snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[A000]", "[6000]"));
                         snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_6000, ".crt");
 
                         snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", path_remove_extension(cart_A000));
+                        path_remove_extension(cart_A000);
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[2000]", "[A000]"));
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[4000]", "[A000]"));
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[6000]", "[A000]"));
@@ -882,19 +882,19 @@ static int process_cmdline(const char* argv)
                         }
 
                         snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", path_remove_extension(cart_2000));
+                        path_remove_extension(cart_2000);
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "$6000", "$2000"));
                         snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "$A000", "$2000"));
                         snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_2000, ".20");
 
                         snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", path_remove_extension(cart_6000));
+                        path_remove_extension(cart_6000);
                         snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "$2000", "$6000"));
                         snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "$A000", "$6000"));
                         snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_6000, ".60");
 
                         snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", path_remove_extension(cart_A000));
+                        path_remove_extension(cart_A000);
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "$2000", "$A000"));
                         snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "$6000", "$A000"));
                         snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_A000, ".a0");

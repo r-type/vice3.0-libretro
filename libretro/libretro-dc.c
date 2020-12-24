@@ -479,7 +479,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
       /* ZIP + NIB vars, use the same temp directory for single NIBs */
       char zip_basename[RETRO_PATH_MAX] = {0};
       snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path_replace));
-      snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+      path_remove_extension(zip_basename);
 
       char nib_input[RETRO_PATH_MAX] = {0};
       char nib_output[RETRO_PATH_MAX] = {0};
@@ -923,7 +923,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             /* ZIP + NIB vars, use the same temp directory for single NIBs */
             char zip_basename[RETRO_PATH_MAX] = {0};
             snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
-            snprintf(zip_basename, sizeof(zip_basename), "%s", path_remove_extension(zip_basename));
+            path_remove_extension(zip_basename);
 
             char nib_input[RETRO_PATH_MAX] = {0};
             char nib_output[RETRO_PATH_MAX] = {0};

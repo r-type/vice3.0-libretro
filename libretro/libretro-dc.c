@@ -406,7 +406,7 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
    return dc_add_file_int(dc, strdup(filename),
       string_is_empty(file_label) ? NULL : strdup(file_label),
       string_is_empty(disk_label) ? NULL : strdup(disk_label),
-      string_is_empty(program)   ? NULL : strdup(program));
+      string_is_empty(program)    ? NULL : strdup(program));
 }
 
 bool dc_remove_file(dc_storage* dc, int index)

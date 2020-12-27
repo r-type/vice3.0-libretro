@@ -3098,7 +3098,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_turbo_fire_button",
-         "RetroPad > Turbo Fire",
+         "RetroPad > Turbo Button",
          "Replaces the mapped button with turbo fire button.",
          {
             { "B", "RetroPad B" },

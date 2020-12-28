@@ -106,14 +106,15 @@ stages:
   - build-shared
   - build-static
 
-##############
-## vice_x64 ##
-##############
-
 ##############################################################################
 #################################### STAGES ##################################
 ##############################################################################
 #
+
+##############
+## vice_x64 ##
+##############
+
 ################################### DESKTOPS #################################
 # Windows 64-bit
 libretro-build-windows-x64:
@@ -193,57 +194,73 @@ libretro-build-vita:
 ## vice_x64sc ##
 ################
 
-# Desktop
-libretro-build-linux-x64-x64sc:
-  extends:
-    - .libretro-linux-x64-make-default
-    - .core-defs-x64sc
-
+################################### DESKTOPS #################################
+# Windows 64-bit
 libretro-build-windows-x64-x64sc:
   extends:
     - .libretro-windows-x64-mingw-make-default
     - .core-defs-x64sc
+    
+# Linux 64-bit
+libretro-build-linux-x64-x64sc:
+  extends:
+    - .libretro-linux-x64-make-default
+    - .core-defs-x64sc
+    
+# MacOS 64-bit
+libretro-build-osx-x64-x64sc:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs-x64sc
 
-# Android
+################################### CELLULAR #################################
+# Android ARMv7a
 android-armeabi-v7a-x64sc:
   extends:
     - .libretro-android-jni-armeabi-v7a
     - .core-defs-x64sc
 
+# Android ARMv8a
 android-arm64-v8a-x64sc:
   extends:
     - .libretro-android-jni-arm64-v8a
     - .core-defs-x64sc
 
+# Android 64-bit x86
 android-x86_64-x64sc:
   extends:
     - .libretro-android-jni-x86_64
     - .core-defs-x64sc
 
+# Android 32-bit x86
 android-x86-x64sc:
   extends:
     - .libretro-android-jni-x86
     - .core-defs-x64sc
 
-# Static
-libretro-build-libnx-aarch64-x64sc:
-  extends:
-    - .libretro-libnx-static-retroarch-master
-    - .core-defs-x64sc
-
-libretro-build-vita-x64sc:
-  extends:
-    - .libretro-vita-static-retroarch-master
-    - .core-defs-x64sc
-
+################################### CONSOLES #################################
+# Nintendo 3DS
 libretro-build-ctr-x64sc:
   extends:
     - .libretro-ctr-static-retroarch-master
     - .core-defs-x64sc
 
+# Nintendo Wii
 libretro-build-wii-x64sc:
   extends:
     - .libretro-wii-static-retroarch-master
+    - .core-defs-x64sc
+
+# Nintendo Switch
+libretro-build-libnx-aarch64-x64sc:
+  extends:
+    - .libretro-libnx-static-retroarch-master
+    - .core-defs-x64sc
+
+# PlayStation Vita
+libretro-build-vita-x64sc:
+  extends:
+    - .libretro-vita-static-retroarch-master
     - .core-defs-x64sc
 
 ###############

@@ -406,7 +406,7 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
    return dc_add_file_int(dc, strdup(filename),
       string_is_empty(file_label) ? NULL : strdup(file_label),
       string_is_empty(disk_label) ? NULL : strdup(disk_label),
-      string_is_empty(program)   ? NULL : strdup(program));
+      string_is_empty(program)    ? NULL : strdup(program));
 }
 
 bool dc_remove_file(dc_storage* dc, int index)
@@ -1132,6 +1132,7 @@ enum dc_image_type dc_get_image_type(const char* filename)
        strendswith(filename, "20")  ||
        strendswith(filename, "40")  ||
        strendswith(filename, "60")  ||
+       strendswith(filename, "70")  ||
        strendswith(filename, "a0")  ||
        strendswith(filename, "b0")  ||
        strendswith(filename, "crt") ||

@@ -131,7 +131,7 @@ M3U playlist supports disks, tapes, cartridges and programs.
 ## ZIP support
 
 ZIPs are extracted to a temporary directory in `saves`, bypassing the default frontend extraction.
-The temporary directory is removed on exit. ZIP is not repacked, which means saves and highscores are lost.
+The temporary directory is emptied but not removed on exit. ZIP is not repacked, which means saves and highscores are lost.
 
 This allows:
 

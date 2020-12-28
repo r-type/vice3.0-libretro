@@ -40,7 +40,7 @@ unsigned int opt_vkbd_theme = 0;
 libretro_graph_alpha_t opt_vkbd_alpha = GRAPH_ALPHA_75;
 
 /* Core vars */
-static bool autocommand = true;
+static bool autosys = true;
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char* autostartProgram = NULL;
@@ -370,8 +370,8 @@ static void log_disk_in_tray(bool display)
 /* ReSID 6581 init pop mute shenanigans */
 void sound_volume_counter_reset()
 {
-   resources_set_int("SoundVolume", 0);
-   sound_volume_counter = 3;
+    resources_set_int("SoundVolume", 0);
+    sound_volume_counter = 3;
 }
 
 #if defined(__XVIC__)
@@ -415,56 +415,56 @@ static int vic20_autodetect_cartridge_type(const char* argv)
             type = CARTRIDGE_VIC20_GENERIC;
             break;
         default: /* not a valid file */
+            /* M3U analyzing */
+            if (strcasestr(argv, ".m3u"))
+            {
+                fseek(fd, 0, SEEK_SET);
+                if (fgets(buf, sizeof(buf), fd) != NULL)
+                {
+                    buf[strcspn(buf, "\r\n")] = 0;
+                    argv = buf;
+                }
+            }
             break;
     }
+    fclose(fd);
 
     if (type > 0)
     {
         if (len == 0)
             type = -1;
-        else if ((addr == 0x6000 || addr == 0x7000) && (len <= 0x4000))
-            type = CARTRIDGE_VIC20_16KB_6000;
-        else if ((addr == 0xA000) && (len <= 0x2000))
-            type = CARTRIDGE_VIC20_8KB_A000;
-        else if ((addr == 0x2000 || addr == 0x3000) && (len <= 0x4000))
-            type = CARTRIDGE_VIC20_16KB_2000;
-        else if ((addr == 0xB000) && (len <= 0x1000))
-            type = CARTRIDGE_VIC20_4KB_B000;
-        else if ((addr == 0x4000 || addr == 0x5000) && (len <= 0x4000))
-            type = CARTRIDGE_VIC20_16KB_4000;
-        else if (len <= 0x2000)
-            type = CARTRIDGE_VIC20_8KB_A000;
-        else if (len <= 0x4000)
-            type = CARTRIDGE_VIC20_16KB_6000;
         else if (len == 0x200000 && addr == 0)
             type = CARTRIDGE_VIC20_MEGACART;
+        else if ((addr == 0x6000 || addr == 0x7000) && (len <= 0x4000))
+            type = CARTRIDGE_VIC20_16KB_6000;
+        else if ((addr == 0x4000 || addr == 0x5000) && (len <= 0x4000))
+            type = CARTRIDGE_VIC20_16KB_4000;
+        else if ((addr == 0x2000 || addr == 0x3000) && (len <= 0x4000))
+            type = CARTRIDGE_VIC20_16KB_2000;
+        else if ((addr == 0xA000) && (len <= 0x2000))
+            type = CARTRIDGE_VIC20_8KB_A000;
+        else if ((addr == 0xB000) && (len <= 0x1000))
+            type = CARTRIDGE_VIC20_4KB_B000;
+        else if (len <= 0x2000)
+            type = CARTRIDGE_VIC20_8KB_A000;
     }
+
+    if (strcasestr(argv, ".20"))
+        type = CARTRIDGE_VIC20_16KB_2000;
+    else if (strcasestr(argv, ".40"))
+        type = CARTRIDGE_VIC20_16KB_4000;
+    else if (strcasestr(argv, ".60"))
+        type = CARTRIDGE_VIC20_16KB_6000;
+    else if (strcasestr(argv, ".70"))
+        type = CARTRIDGE_VIC20_4KB_6000;
+    else if (strcasestr(argv, ".a0"))
+        type = CARTRIDGE_VIC20_8KB_A000;
+    else if (strcasestr(argv, ".b0"))
+        type = CARTRIDGE_VIC20_4KB_B000;
 
     /* Multipart ROM combinations (type < 0) */
     type = vic20_cart_is_multipart(type, argv);
 
-    /* M3U analyzing */
-    if (strcasestr(argv, ".m3u"))
-    {
-        fseek(fd, 0, SEEK_SET);
-        if (fgets(buf, sizeof(buf), fd) != NULL)
-        {
-            if (strcasestr(buf, ".20"))
-                type = CARTRIDGE_VIC20_16KB_2000;
-            else if (strcasestr(buf, ".40"))
-                type = CARTRIDGE_VIC20_16KB_4000;
-            else if (strcasestr(buf, ".60"))
-                type = CARTRIDGE_VIC20_16KB_6000;
-            else if (strcasestr(buf, ".a0"))
-                type = CARTRIDGE_VIC20_8KB_A000;
-            else if (strcasestr(buf, ".b0"))
-                type = CARTRIDGE_VIC20_4KB_B000;
-
-            type = vic20_cart_is_multipart(type, buf);
-        }
-    }
-
-    fclose(fd);
     return type;
 }
 
@@ -503,6 +503,45 @@ static void vic20_mem_force(const char* argv)
         }
     }
 }
+
+static void vic20_autosys_run(const char* full_path)
+{
+    if (!strcasestr(full_path, "(SYS ") && !strcasestr(full_path, "[SYS "))
+        return;
+
+    char command[20] = {0};
+    char tmp_path[RETRO_PATH_MAX] = {0};
+    snprintf(tmp_path, sizeof(tmp_path), "%s", path_basename(full_path));
+    char *token = strtok((char*)tmp_path, " ");
+    char *token_prev = token;
+    while (token != NULL)
+    {
+        token = strtok(NULL, " ");
+        if (strendswith(token_prev, "SYS"))
+        {
+            snprintf(command, sizeof(command), "%s", token);
+            token = NULL;
+        }
+        token_prev = token;
+    }
+
+    if (!string_is_empty(command))
+    {
+        if (strcasestr(full_path, "(SYS"))
+            token = strtok((char*)command, ")");
+        else if (strcasestr(full_path, "[SYS"))
+            token = strtok((char*)command, "]");
+
+        log_cb(RETRO_LOG_INFO, "Executing 'SYS %s'\n", command);
+        kbdbuf_feed("SYS ");
+        kbdbuf_feed(command);
+        kbdbuf_feed("\r");
+    }
+
+    token = NULL;
+    token_prev = NULL;
+}
+
 #endif
 
 static int process_cmdline(const char* argv)
@@ -695,10 +734,17 @@ static int process_cmdline(const char* argv)
             argv = core_opt.CartridgeFile;
 
         if (strendswith(argv, ".20"))
+        {
             Add_Option("-cart2");
+            /* For some unknown reason single cart at
+             * $2000 also has to be in $6000.. */
+            Add_Option(argv);
+            Add_Option("-cart6");
+        }
         else if (strendswith(argv, ".40"))
             Add_Option("-cart4");
-        else if (strendswith(argv, ".60"))
+        else if (strendswith(argv, ".60")
+              || strendswith(argv, ".70"))
             Add_Option("-cart6");
         else if (strendswith(argv, ".a0"))
             Add_Option("-cartA");
@@ -724,18 +770,50 @@ static int process_cmdline(const char* argv)
                 char cartmega_temp[RETRO_PATH_MAX] = {0};
 
                 int type = vic20_autodetect_cartridge_type(argv);
+
+                /* Need to examine the first playlist entry */
+                if (strcasestr(argv, ".m3u"))
+                {
+                    FILE *fd;
+                    char buf[RETRO_PATH_MAX] = {0};
+                    char basepath[RETRO_PATH_MAX] = {0};
+                    snprintf(basepath, sizeof(basepath), "%s", argv);
+                    path_basedir(basepath);
+
+                    fd = fopen(argv, MODE_READ);
+                    if (fgets(buf, sizeof(buf), fd) != NULL)
+                    {
+                        buf[strcspn(buf, "\r\n")] = 0;
+                        snprintf(basepath, sizeof(basepath), "%s%s", basepath, buf);
+                    }
+                    fclose(fd);
+
+                    argv = basepath;
+                }
+
                 switch (type)
                 {
                     case CARTRIDGE_VIC20_16KB_2000:
                         Add_Option("-cart2");
+                        Add_Option(argv);
+                        Add_Option("-cart6");
+                        break;
+                    case CARTRIDGE_VIC20_8KB_2000:
+                    case CARTRIDGE_VIC20_4KB_2000:
+                        Add_Option("-cart2");
                         break;
                     case CARTRIDGE_VIC20_16KB_4000:
+                    case CARTRIDGE_VIC20_8KB_4000:
+                    case CARTRIDGE_VIC20_4KB_4000:
                         Add_Option("-cart4");
                         break;
                     case CARTRIDGE_VIC20_16KB_6000:
+                    case CARTRIDGE_VIC20_8KB_6000:
+                    case CARTRIDGE_VIC20_4KB_6000:
                         Add_Option("-cart6");
                         break;
                     case CARTRIDGE_VIC20_8KB_A000:
+                    case CARTRIDGE_VIC20_4KB_A000:
                         Add_Option("-cartA");
                         break;
                     case CARTRIDGE_VIC20_4KB_B000:
@@ -754,155 +832,122 @@ static int process_cmdline(const char* argv)
                         Add_Option(cartmega_nvram);
                         Add_Option("-cartmega");
                         break;
-                    case -1: /* Separate ROM combination shenanigans, Gamebase style */
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
-                        path_remove_extension(cart_2000);
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-2000", ""));
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-6000", ""));
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "-a000", ""));
-                        snprintf(cart_2000, sizeof(cart_2000), "%s%s%s", cart_2000, "-2000", ".prg");
+                    /* Separate ROM combination shenanigans */
+                    case -1:
+                    case -2:
+                    case -3:
+                        switch (type)
+                        {
+                            case -1: /* Gamebase */
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
+                                path_remove_extension(cart_2000);
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "-2000", ""));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "-4000", ""));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "-6000", ""));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "-a000", ""));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s%s%s", cart_2000, "-2000", ".prg");
 
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
-                        path_remove_extension(cart_6000);
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-2000", ""));
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-6000", ""));
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "-a000", ""));
-                        snprintf(cart_6000, sizeof(cart_6000), "%s%s%s", cart_6000, "-6000", ".prg");
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", argv);
+                                path_remove_extension(cart_4000);
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "-2000", ""));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "-4000", ""));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "-6000", ""));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "-a000", ""));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s%s%s", cart_4000, "-4000", ".prg");
 
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
-                        path_remove_extension(cart_A000);
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-2000", ""));
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-6000", ""));
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "-a000", ""));
-                        snprintf(cart_A000, sizeof(cart_A000), "%s%s%s", cart_A000, "-a000", ".prg");
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
+                                path_remove_extension(cart_6000);
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "-2000", ""));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "-4000", ""));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "-6000", ""));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "-a000", ""));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s%s%s", cart_6000, "-6000", ".prg");
+
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
+                                path_remove_extension(cart_A000);
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "-2000", ""));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "-4000", ""));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "-6000", ""));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "-a000", ""));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s%s%s", cart_A000, "-a000", ".prg");
+                                break;
+
+                            case -2: /* TOSEC */
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
+                                path_remove_extension(cart_2000);
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "[4000]", "[2000]"));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "[6000]", "[2000]"));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "[A000]", "[2000]"));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_2000, ".crt");
+
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", argv);
+                                path_remove_extension(cart_4000);
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "[2000]", "[4000]"));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "[6000]", "[4000]"));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "[A000]", "[4000]"));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_4000, ".crt");
+
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
+                                path_remove_extension(cart_6000);
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "[2000]", "[6000]"));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "[4000]", "[6000]"));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "[A000]", "[6000]"));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_6000, ".crt");
+
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
+                                path_remove_extension(cart_A000);
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "[2000]", "[A000]"));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "[4000]", "[A000]"));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "[6000]", "[A000]"));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_A000, ".crt");
+                                break;
+
+                            case -3: /* No-Intro */
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
+                                path_remove_extension(cart_2000);
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "$4000", "$2000"));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "$6000", "$2000"));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring(cart_2000, "$A000", "$2000"));
+                                snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_2000, ".20");
+
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", argv);
+                                path_remove_extension(cart_4000);
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "$2000", "$4000"));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "$6000", "$4000"));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring(cart_4000, "$A000", "$4000"));
+                                snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_4000, ".40");
+
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
+                                path_remove_extension(cart_6000);
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "$2000", "$6000"));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "$4000", "$6000"));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring(cart_6000, "$A000", "$6000"));
+                                snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_6000, ".60");
+
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
+                                path_remove_extension(cart_A000);
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "$2000", "$A000"));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "$4000", "$A000"));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring(cart_A000, "$6000", "$A000"));
+                                snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_A000, ".a0");
+                                break;
+                        }
 
                         if (path_is_valid(cart_2000))
                         {
                             Add_Option("-cart2");
                             Add_Option(cart_2000);
-                        }
-                        if (path_is_valid(cart_6000))
-                        {
-                            Add_Option("-cart6");
-                            Add_Option(cart_6000);
-                        }
-                        if (path_is_valid(cart_A000))
-                        {
-                            Add_Option("-cartA");
-                            Add_Option(cart_A000);
-                        }
 
-                        argv = "";
-                        break;
-                    case -2: /* Separate ROM combination shenanigans, TOSEC style */
-                        /* Need to examine the first playlist entry */
-                        if (strcasestr(argv, ".m3u"))
-                        {
-                            FILE *fd;
-                            char buf[RETRO_PATH_MAX] = {0};
-                            char basepath[RETRO_PATH_MAX] = {0};
-                            snprintf(basepath, sizeof(basepath), "%s", argv);
-                            path_basedir(basepath);
-
-                            fd = fopen(argv, MODE_READ);
-                            if (fgets(buf, sizeof(buf), fd) != NULL)
-                                snprintf(basepath, sizeof(basepath), "%s%s", basepath, buf);
-                            fclose(fd);
-
-                            argv = basepath;
-                        }
-
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
-                        path_remove_extension(cart_2000);
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[4000]", "[2000]"));
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[6000]", "[2000]"));
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "[A000]", "[2000]"));
-                        snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_2000, ".crt");
-
-                        snprintf(cart_4000, sizeof(cart_4000), "%s", argv);
-                        path_remove_extension(cart_4000);
-                        snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[2000]", "[4000]"));
-                        snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[6000]", "[4000]"));
-                        snprintf(cart_4000, sizeof(cart_4000), "%s", string_replace_substring((const char*)cart_4000, "[A000]", "[4000]"));
-                        snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_4000, ".crt");
-
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
-                        path_remove_extension(cart_6000);
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[2000]", "[6000]"));
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[4000]", "[6000]"));
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "[A000]", "[6000]"));
-                        snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_6000, ".crt");
-
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
-                        path_remove_extension(cart_A000);
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[2000]", "[A000]"));
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[4000]", "[A000]"));
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "[6000]", "[A000]"));
-                        snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_A000, ".crt");
-
-                        if (path_is_valid(cart_2000))
-                        {
-                            Add_Option("-cart2");
-                            Add_Option(cart_2000);
+                            if (!path_is_valid(cart_6000))
+                            {
+                                Add_Option("-cart6");
+                                Add_Option(cart_2000);
+                            }
                         }
                         if (path_is_valid(cart_4000))
                         {
                             Add_Option("-cart4");
                             Add_Option(cart_4000);
-                        }
-                        if (path_is_valid(cart_6000))
-                        {
-                            Add_Option("-cart6");
-                            Add_Option(cart_6000);
-                        }
-                        if (path_is_valid(cart_A000))
-                        {
-                            Add_Option("-cartA");
-                            Add_Option(cart_A000);
-                        }
-
-                        argv = "";
-                        break;
-                    case -3: /* Separate ROM combination shenanigans, No-Intro style */
-                        /* Need to examine the first playlist entry */
-                        if (strcasestr(argv, ".m3u"))
-                        {
-                            FILE *fd;
-                            char buf[RETRO_PATH_MAX] = {0};
-                            char basepath[RETRO_PATH_MAX] = {0};
-                            snprintf(basepath, sizeof(basepath), "%s", argv);
-                            path_basedir(basepath);
-
-                            fd = fopen(argv, MODE_READ);
-                            if (fgets(buf, sizeof(buf), fd) != NULL)
-                                snprintf(basepath, sizeof(basepath), "%s%s", basepath, buf);
-                            fclose(fd);
-
-                            argv = basepath;
-                        }
-
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", argv);
-                        path_remove_extension(cart_2000);
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "$6000", "$2000"));
-                        snprintf(cart_2000, sizeof(cart_2000), "%s", string_replace_substring((const char*)cart_2000, "$A000", "$2000"));
-                        snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_2000, ".20");
-
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", argv);
-                        path_remove_extension(cart_6000);
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "$2000", "$6000"));
-                        snprintf(cart_6000, sizeof(cart_6000), "%s", string_replace_substring((const char*)cart_6000, "$A000", "$6000"));
-                        snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_6000, ".60");
-
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", argv);
-                        path_remove_extension(cart_A000);
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "$2000", "$A000"));
-                        snprintf(cart_A000, sizeof(cart_A000), "%s", string_replace_substring((const char*)cart_A000, "$6000", "$A000"));
-                        snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_A000, ".a0");
-
-                        if (path_is_valid(cart_2000))
-                        {
-                            Add_Option("-cart2");
-                            Add_Option(cart_2000);
                         }
                         if (path_is_valid(cart_6000))
                         {
@@ -3098,7 +3143,7 @@ void retro_set_environment(retro_environment_t cb)
       },
       {
          "vice_turbo_fire_button",
-         "RetroPad > Turbo Fire",
+         "RetroPad > Turbo Button",
          "Replaces the mapped button with turbo fire button.",
          {
             { "B", "RetroPad B" },
@@ -5978,42 +6023,10 @@ void retro_run(void)
 
 #if defined(__XVIC__)
       /* Autorun "SYS x" command */
-      if (autocommand)
+      if (autosys)
       {
-         autocommand = false;
-         if (strcasestr(full_path, "(SYS ") || strcasestr(full_path, "[SYS "))
-         {
-            char command[20] = {0};
-            char tmp_path[RETRO_PATH_MAX] = {0};
-            snprintf(tmp_path, sizeof(tmp_path), "%s", path_basename(full_path));
-            char *token = strtok((char*)tmp_path, " ");
-            char *token_prev = token;
-            while (token != NULL)
-            {
-                token = strtok(NULL, " ");
-                if (strcasestr(token_prev, "(SYS") || strcasestr(token_prev, "[SYS") )
-                {
-                   snprintf(command, sizeof(command), "%s", token);
-                   token = NULL;
-                }
-                token_prev = token;
-            }
-            free(token);
-            token = NULL;
-            free(token_prev);
-            token_prev = NULL;
-            path_remove_extension(command);
-            string_remove_all_chars(command, ')');
-            string_remove_all_chars(command, ']');
-
-            if (!string_is_empty(command))
-            {
-               log_cb(RETRO_LOG_INFO, "Executing 'SYS %s'\n", command);
-               kbdbuf_feed("SYS ");
-               kbdbuf_feed(command);
-               kbdbuf_feed("\r");
-            }
-         }
+         autosys = false;
+         vic20_autosys_run(full_path);
       }
 #endif
    }

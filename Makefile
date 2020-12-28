@@ -139,14 +139,13 @@ else ifeq ($(platform), osx)
    endif
    OSXVER = `sw_vers -productVersion | cut -d. -f 2`
    OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
+ifeq ($(OSX_LT_MAVERICKS),YES)
    fpic += -mmacosx-version-min=10.1
+else
+	fpic += -stdlib=libc++
+endif
    CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
    CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
-   ifndef ($(UNIVERSAL))
-      CFLAGS += $(ARCHFLAGS)
-      CXXFLAGS += $(ARCHFLAGS)
-      LDFLAGS += $(ARCHFLAGS)
-   endif
 
 # iOS
 else ifneq (,$(findstring ios,$(platform)))

@@ -1132,6 +1132,7 @@ enum dc_image_type dc_get_image_type(const char* filename)
        strendswith(filename, "20")  ||
        strendswith(filename, "40")  ||
        strendswith(filename, "60")  ||
+       strendswith(filename, "70")  ||
        strendswith(filename, "a0")  ||
        strendswith(filename, "b0")  ||
        strendswith(filename, "crt") ||

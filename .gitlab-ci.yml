@@ -87,7 +87,11 @@ include:
   # Nintendo Wii
   - project: 'libretro-infrastructure/ci-templates'
     file: '/wii-static.yml'
-    
+
+  # Nintendo WiiU
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/wiiu-static.yml'
+
   # Nintendo Switch
   - project: 'libretro-infrastructure/ci-templates'
     file: '/libnx-static.yml'
@@ -172,6 +176,12 @@ libretro-build-wii:
     - .libretro-wii-static-retroarch-master
     - .core-defs
 
+# Nintendo WiiU
+libretro-build-wiiu:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
+    - .core-defs
+
 # Nintendo Switch
 libretro-build-libnx-aarch64:
   extends:
@@ -251,6 +261,12 @@ libretro-build-wii-x64sc:
     - .libretro-wii-static-retroarch-master
     - .core-defs-x64sc
 
+# Nintendo WiiU
+libretro-build-wiiu-x64sc:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
+    - .core-defs-x64sc
+
 # Nintendo Switch
 libretro-build-libnx-aarch64-x64sc:
   extends:
@@ -319,6 +335,11 @@ libretro-build-wii-x128:
   extends:
     - .libretro-wii-static-retroarch-master
     - .core-defs-x128
+    
+libretro-build-wiiu-x128:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
+    - .core-defs-x128
 
 ################
 ## vice_xcbm2 ##
@@ -375,6 +396,11 @@ libretro-build-ctr-xcbm2:
 libretro-build-wii-xcbm2:
   extends:
     - .libretro-wii-static-retroarch-master
+    - .core-defs-xcbm2
+
+libretro-build-wiiu-xcbm2:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
     - .core-defs-xcbm2
 
 ##################
@@ -434,6 +460,11 @@ libretro-build-wii-xcbm5x0:
     - .libretro-wii-static-retroarch-master
     - .core-defs-xcbm5x0
 
+libretro-build-wiiu-xcbm5x0:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
+    - .core-defs-xcbm5x0
+
 ###############
 ## vice_xpet ##
 ###############
@@ -489,6 +520,11 @@ libretro-build-ctr-xpet:
 libretro-build-wii-xpet:
   extends:
     - .libretro-wii-static-retroarch-master
+    - .core-defs-xpet
+
+libretro-build-wiiu-xpet:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
     - .core-defs-xpet
 
 #################
@@ -548,6 +584,11 @@ libretro-build-wii-xplus4:
     - .libretro-wii-static-retroarch-master
     - .core-defs-xplus4
 
+libretro-build-wiiu-xplus4:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
+    - .core-defs-xplus4
+
 ##################
 ## vice_xscpu64 ##
 ##################
@@ -605,6 +646,11 @@ libretro-build-wii-xscpu64:
     - .libretro-wii-static-retroarch-master
     - .core-defs-xscpu64
 
+libretro-build-wiiu-xscpu64:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
+    - .core-defs-xscpu64
+
 ###############
 ## vice_xvic ##
 ###############
@@ -660,4 +706,9 @@ libretro-build-ctr-xvic:
 libretro-build-wii-xvic:
   extends:
     - .libretro-wii-static-retroarch-master
+    - .core-defs-xvic
+
+libretro-build-wiiu-xvic:
+  extends:
+    - .libretro-wiiu-static-retroarch-master
     - .core-defs-xvic

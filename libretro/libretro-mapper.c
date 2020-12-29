@@ -180,6 +180,10 @@ void emu_function(int function)
             zoom_mode_id = 0;
          else if (zoom_mode_id == 0)
             zoom_mode_id = opt_zoom_mode_id;
+         /* Statusbar notification */
+         snprintf(statusbar_text, 56, "%c Zoom Mode %-43s",
+               (' ' | 0x80), (zoom_mode_id) ? "ON" : "OFF");
+         imagename_timer = 50;
          break;
       case EMU_TURBO_FIRE:
          retro_turbo_fire = !retro_turbo_fire;
@@ -196,6 +200,10 @@ void emu_function(int function)
          break;
       case EMU_DATASETTE_HOTKEYS:
          datasette_hotkeys = !datasette_hotkeys;
+         /* Statusbar notification */
+         snprintf(statusbar_text, 56, "%c Datasette Hotkeys %-35s",
+               (' ' | 0x80), (datasette_hotkeys) ? "ON" : "OFF");
+         imagename_timer = 50;
          break;
 
       case EMU_DATASETTE_STOP:
@@ -779,14 +787,20 @@ void update_input(int disable_physical_cursor_keys)
                   emu_function(EMU_STATUSBAR);
                   break;
                case -4:
-                  emu_function(EMU_JOYPORT);
+                  if (retro_capslock)
+                     emu_function(EMU_ASPECT_RATIO);
+                  else
+                     emu_function(EMU_JOYPORT);
                   break;
-               case -5: /* sticky shift */
+               case -5:
+                  if (retro_capslock)
+                     emu_function(EMU_ZOOM_MODE);
+                  else
+                     emu_function(EMU_TURBO_FIRE);
+                  break;
+               case -10: /* ShiftLock */
                   retro_key_down(RETROK_CAPSLOCK);
                   retro_key_up(RETROK_CAPSLOCK);
-                  break;
-               case -20:
-                  emu_function(EMU_TURBO_FIRE);
                   break;
 
                case -11:

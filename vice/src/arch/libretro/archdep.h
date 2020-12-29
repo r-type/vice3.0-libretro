@@ -45,7 +45,7 @@ extern char retro_save_directory[512];
 #undef VICE_ARCHAPI_PRIVATE_API
 
 /* Default sound output mode */
-#define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_MONO
+#define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_STEREO
 
 /* Default sound fragment size */
 #define ARCHDEP_SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_VERY_SMALL

@@ -5909,13 +5909,16 @@ void retro_audio_batch_cb(const int16_t *data, size_t frames)
    audio_batch_cb(data, frames);
 }
 
-void retro_audio_render(signed short int *sound_buffer, int sndbufsize)
+void retro_audio_render(signed short int *samples, int frames)
 {
-   int x;
-#if 1
-   for (x=0; x<sndbufsize; x++) audio_cb(sound_buffer[x], sound_buffer[x]); /* Mono output */
+#if 0
+#if 0
+   for (int x=0; x<frames/2; x++) audio_cb(samples[x], samples[x]); /* Mono */
 #else
-   audio_batch_cb(sound_buffer, sndbufsize/2); /* Stereo output, fails with reSIDfp! */
+   for (int x=0; x<frames; x+=2) audio_cb(samples[x], samples[x+1]); /* Stereo */
+#endif
+#else
+   audio_batch_cb(samples, frames/2);
 #endif
 }
 

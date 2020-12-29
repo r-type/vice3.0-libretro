@@ -64,7 +64,7 @@
 /* Sound defaults.  */
 #ifdef __LIBRETRO__
 #define SOUND_SAMPLE_RATE 44100
-#define SOUND_CHANNELS_MAX 1
+#define SOUND_CHANNELS_MAX 2
 #define SOUND_BUFSIZE 2048 // 1024 will crash with 96kHz
 #define SOUND_SIDS_MAX 4
 #define SOUND_SAMPLE_BUFFER_SIZE 0
@@ -87,7 +87,7 @@
 #ifndef SOUND_SAMPLE_BUFFER_SIZE
 # define SOUND_SAMPLE_BUFFER_SIZE       100
 #endif
-#endif // __LIBRETRO__
+#endif /* __LIBRETRO__ */
 
 /* largest value in the UIs. also used by VSID as default */
 #define SOUND_SAMPLE_MAX_BUFFER_SIZE    350

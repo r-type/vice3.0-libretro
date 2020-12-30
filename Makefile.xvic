@@ -33,7 +33,7 @@ SOURCES_CXX += \
     $(EMU)/resid/dac.cc \
     $(EMU)/resid/envelope.cc \
     $(EMU)/resid/extfilt.cc \
-    $(EMU)/resid/filter.cc \
+    $(EMU)/resid/filter8580new.cc \
     $(EMU)/resid/pot.cc \
     $(EMU)/resid/sid.cc \
     $(EMU)/resid/version.cc \

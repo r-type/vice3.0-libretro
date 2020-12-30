@@ -382,10 +382,8 @@ int ui_init_finalize(void)
 
    /* SID */
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
-   if (core_opt.SidModel == 0xff)
-      resources_set_int("SidEngine", core_opt.SidEngine);
-   else
-      sid_set_engine_model(core_opt.SidEngine, core_opt.SidModel);
+   log_resources_set_int("SidEngine", core_opt.SidEngine);
+   log_resources_set_int("SidModel", core_opt.SidModel);
    log_resources_set_int("SidResidSampling", core_opt.SidResidSampling);
    log_resources_set_int("SidResidPassband", core_opt.SidResidPassband);
    log_resources_set_int("SidResidGain", core_opt.SidResidGain);

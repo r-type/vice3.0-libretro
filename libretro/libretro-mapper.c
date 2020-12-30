@@ -138,6 +138,8 @@ void emu_function(int function)
    {
       case EMU_VKBD:
          retro_vkbd = !retro_vkbd;
+         /* Release VKBD controllable joypads */
+         memset(joypad_bits, 0, 2*sizeof(joypad_bits[0]));
          break;
       case EMU_STATUSBAR:
          retro_statusbar = (retro_statusbar) ? 0 : 1;
@@ -247,7 +249,7 @@ void retro_key_down(int symkey)
          kbd_handle_keydown(RETROK_LSHIFT);
       retro_capslock = !retro_capslock;
    }
-   else if (!retro_vkbd)
+   else
       kbd_handle_keydown(symkey);
 }
 
@@ -265,6 +267,10 @@ void process_key(int disable_keys)
 
       if (state && !retro_key_state[i])
       {
+         /* Skip keydown if VKBD is active */
+         if (retro_vkbd)
+            continue;
+
          retro_key_state[i] = 1;
          retro_key_down(i);
       }

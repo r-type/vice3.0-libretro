@@ -242,7 +242,7 @@ void print_vkbd(unsigned short int *pixels)
    /* Extra color keys */
    int extra_keys[] =
    {
-      -3 /* STB */ , -4 /* JOY */, -20 /* TTF */
+      -3 /* STB */ , -4 /* JOY/ASR */, -5 /* TRF/ZOM */
    };
    int extra_keys_len = sizeof(extra_keys) / sizeof(extra_keys[0]);
 
@@ -311,7 +311,7 @@ void print_vkbd(unsigned short int *pixels)
          /* Sticky + CapsLock + pressed colors */
          if ( (vkey_sticky1 == vkeys[(y * VKBDX) + x + page].value
           ||   vkey_sticky2 == vkeys[(y * VKBDX) + x + page].value
-          ||(retro_capslock && vkeys[(y * VKBDX) + x + page].value == -5)
+          ||(retro_capslock && vkeys[(y * VKBDX) + x + page].value == -10)
           ||(vkflag[RETRO_DEVICE_ID_JOYPAD_START] && vkeys[(y * VKBDX) + x + page].value == RETROK_RETURN))
           && BKG_COLOR != BKG_COLOR_EXTRA && vkeys[(y * VKBDX) + x + page].value != -2)
          {

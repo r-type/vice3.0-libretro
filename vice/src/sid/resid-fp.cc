@@ -181,18 +181,17 @@ static void residfp_reset(sound_t *psid, CLOCK cpu_clk)
 
 /* nr can be safely ignored as output buffer is much larger than what we're ever going to use */
 /* interleave is unsupported as only mono output is supported by residfp */
-static int residfp_calculate_samples(sound_t *psid, short *pbuf, int /*nr*/,
-                                   int /*interleave*/, int *delta_t)
+static int residfp_calculate_samples(sound_t *psid, short *pbuf, int nr,
+                                   int interleave, int *delta_t)
 {
     int retval;
-
     if (psid->factor == 1000) {
-        retval = psid->sid->clock(*delta_t, pbuf);
+        retval = psid->sid->clock(*delta_t, pbuf, nr, interleave);
         *delta_t=0;
         return retval;
     }
     /* factor is always >= 1000 so buffer is always truncated and no temp buffer needed */
-    retval = psid->sid->clock(*delta_t, pbuf) * 1000 / psid->factor;
+    retval = psid->sid->clock(*delta_t, pbuf, nr * psid->factor / 1000, interleave) * 1000 / psid->factor;
     *delta_t=0;
     return retval;
 }

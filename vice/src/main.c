@@ -208,9 +208,9 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, "Git commit:%s", GIT_VERSION);
 #endif
     log_message(LOG_DEFAULT, "Build date: " __DATE__ " " __TIME__);
-    log_message(LOG_DEFAULT, "");
+    log_message(LOG_DEFAULT, "%s", "");
     log_message(LOG_DEFAULT, "Welcome to %s, the free portable %s Emulator.", program_name, machine_name);
-    log_message(LOG_DEFAULT, "");
+    log_message(LOG_DEFAULT, "%s", "");
     log_message(LOG_DEFAULT, "This is free software with ABSOLUTELY NO WARRANTY.");
     log_message(LOG_DEFAULT, LOG_HR);
 #else
@@ -219,7 +219,7 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, "*** VICE Version %s, rev %s ***", VERSION, VICE_SVN_REV_STRING);
 #else
     log_message(LOG_DEFAULT, "*** VICE Version %s ***", VERSION);
-#endif
+#endif /* __LIBRETRO__ */
     log_message(LOG_DEFAULT, " ");
     if (machine_class == VICE_MACHINE_VSID) {
         log_message(LOG_DEFAULT, "Welcome to %s, the free portable SID Player.",

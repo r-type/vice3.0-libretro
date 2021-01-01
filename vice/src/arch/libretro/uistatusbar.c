@@ -267,14 +267,12 @@ static void display_joyport(void)
 
 static int per = 0;
 static int fps = 0;
+static char fps_str[3] = {0};
 static int warp = 0;
 static int paused = 0;
 
 static void display_speed(void)
 {
-    char fps_str[3];
-    sprintf(fps_str, "%2d", fps);
-
     sprintf(&statusbar_text[STATUSBAR_SPEED_POS], "%2s", fps_str);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
@@ -339,8 +337,14 @@ void ui_display_speed(float percent, float framerate, int warp_flag)
     }
 
     fps = (int)(framerate + .5);
-    if (fps > 99) {
-        fps = 99;
+    if (fps > 999) {
+        fps /= 1000;
+        sprintf(fps_str, "%dK", fps);
+    } else if (fps > 99) {
+        fps /= 100;
+        sprintf(fps_str, "%dC", fps);
+    } else {
+        sprintf(fps_str, "%2d", fps);
     }
 
     warp = warp_flag;

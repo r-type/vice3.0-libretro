@@ -105,7 +105,7 @@ static retro_vkeys vkeys[VKBDX * VKBDY] =
    /* 55 */
    { {24} ,{24}  ,RETROK_LCTRL},
    { "R/S","R/S" ,RETROK_ESCAPE},
-   { "S/L","S/L" ,-5}, /* ShiftLock */
+   { "S/L","S/L" ,-10}, /* ShiftLock */
    { "LSH","LSH" ,RETROK_LSHIFT},
    { "RSH","RSH" ,RETROK_RSHIFT},
    { "RST","RST" ,RETROK_PAGEUP},
@@ -113,7 +113,7 @@ static retro_vkeys vkeys[VKBDX * VKBDY] =
    { "DEL","DEL" ,RETROK_BACKSPACE},
    { {30} ,{30}  ,RETROK_UP},
    { "RET","RET" ,RETROK_RETURN},
-   { "JOY","JOY" ,-4}, /* Switch joyport */
+   { "JOY","ASR" ,-4}, /* Switch joyport / Toggle aspect ratio */
 
    /* 66 */
    { {17} ,{17}  ,-2},  /* Reset */
@@ -126,7 +126,7 @@ static retro_vkeys vkeys[VKBDX * VKBDY] =
    { {27} ,{27}  ,RETROK_LEFT},
    { {28} ,{28}  ,RETROK_DOWN},
    { {29} ,{29}  ,RETROK_RIGHT},
-   { "TRF","TRF" ,-20}, /* Toggle turbo fire */
+   { "TRF","ZOM" ,-5}, /* Toggle turbo fire / Toggle zoom mode */
 };
 
 #endif /* LIBRETRO_VKBD_H */

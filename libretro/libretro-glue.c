@@ -2,6 +2,8 @@
 #include "encodings/utf.h"
 #include "streams/file_stream.h"
 
+extern char retro_temp_directory[RETRO_PATH_MAX];
+
 #include "archdep.h"
 
 /* Misc */
@@ -53,9 +55,10 @@ void remove_recurse(const char *path)
    }
 
    closedir(dir);
-#if 0
-   archdep_rmdir(path);
-#endif
+
+   /* Leave the root directory for RAM disk usage */
+   if (strcmp(retro_temp_directory, path))
+      archdep_rmdir(path);
 }
 
 void path_join(char* out, const char* basedir, const char* filename)

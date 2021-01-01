@@ -236,7 +236,7 @@ public:
      * @param buf audio output buffer
      * @return number of samples produced
      */
-    int clock(unsigned int cycles, short* buf);
+    int clock(unsigned int cycles, short* buf, int n, int interleave);
 
     /**
      * Clock SID forward with no audio production.
@@ -315,7 +315,7 @@ int SID::output() const
 
 
 RESID_INLINE
-int SID::clock(unsigned int cycles, short* buf)
+int SID::clock(unsigned int cycles, short* buf, int n, int interleave)
 {
     ageBusValue(cycles);
     int s = 0;
@@ -340,7 +340,7 @@ int SID::clock(unsigned int cycles, short* buf)
 
                 if (unlikely(resampler->input(output())))
                 {
-                    buf[s++] = resampler->getOutput();
+                    buf[s++*interleave] = resampler->getOutput();
                 }
             }
 

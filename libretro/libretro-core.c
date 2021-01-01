@@ -26,6 +26,7 @@
 #include "kbdbuf.h"
 #include "resources.h"
 #include "sid.h"
+#include "sid-resources.h"
 #if !defined(__XCBM5x0__)
 #include "userport_joystick.h"
 #endif
@@ -3998,12 +3999,7 @@ static void update_variables(void)
       else if (!strcmp(var.value, "ReSID-FP"))  sid_engine = SID_ENGINE_RESIDFP;
 
       if (retro_ui_finalized && core_opt.SidEngine != sid_engine)
-      {
-         if (core_opt.SidModel == 0xff)
-            resources_set_int("SidEngine", sid_engine);
-         else
-            sid_set_engine_model(sid_engine, core_opt.SidModel);
-      }
+         log_resources_set_int("SidEngine", sid_engine);
 
       core_opt.SidEngine = sid_engine;
    }
@@ -4012,15 +4008,30 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int sid_model = 0xff;
+      int sid_model = SID_MODEL_6581;
+      switch (core_opt.Model)
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+         case C64MODEL_C64C_PAL:
+         case C64MODEL_C64C_NTSC:
+         case C64MODEL_C64_GS:
+#elif defined(__X128__)
+         case C128MODEL_C128DCR_PAL:
+         case C128MODEL_C128DCR_NTSC:
+#else
+         case -1:
+#endif
+            sid_model = SID_MODEL_8580;
+            break;
+      }
 
-      if      (!strcmp(var.value, "6581"))   sid_model = 0;
-      else if (!strcmp(var.value, "8580"))   sid_model = 1;
+      if      (!strcmp(var.value, "6581"))   sid_model = SID_MODEL_6581;
+      else if (!strcmp(var.value, "8580"))   sid_model = SID_MODEL_8580;
       /* There is no digiboost for FastSID (and it's not needed either) */
-      else if (!strcmp(var.value, "8580RD")) sid_model = (!core_opt.SidEngine ? 1 : 2);
+      else if (!strcmp(var.value, "8580RD")) sid_model = (!core_opt.SidEngine ? SID_MODEL_8580 : SID_MODEL_8580D);
 
-      if (retro_ui_finalized && sid_model != 0xff)
-         sid_set_engine_model(core_opt.SidEngine, sid_model);
+      if (retro_ui_finalized && core_opt.SidModel != sid_model)
+         log_resources_set_int("SidModel", sid_model);
 
       core_opt.SidModel = sid_model;
    }
@@ -4054,10 +4065,10 @@ static void update_variables(void)
    {
       int val = 0;
 
-      if      (!strcmp(var.value, "fast"))            val = 0;
-      else if (!strcmp(var.value, "interpolation"))   val = 1;
-      else if (!strcmp(var.value, "resampling"))      val = 2;
-      else if (!strcmp(var.value, "fast resampling")) val = 3;
+      if      (!strcmp(var.value, "fast"))            val = SID_RESID_SAMPLING_FAST;
+      else if (!strcmp(var.value, "interpolation"))   val = SID_RESID_SAMPLING_INTERPOLATION;
+      else if (!strcmp(var.value, "resampling"))      val = SID_RESID_SAMPLING_RESAMPLING;
+      else if (!strcmp(var.value, "fast resampling")) val = SID_RESID_SAMPLING_FAST_RESAMPLING;
 
       if (retro_ui_finalized && core_opt.SidResidSampling != val)
          log_resources_set_int("SidResidSampling", val);
@@ -5909,13 +5920,16 @@ void retro_audio_batch_cb(const int16_t *data, size_t frames)
    audio_batch_cb(data, frames);
 }
 
-void retro_audio_render(signed short int *sound_buffer, int sndbufsize)
+void retro_audio_render(signed short int *samples, int frames)
 {
-   int x;
-#if 1
-   for (x=0; x<sndbufsize; x++) audio_cb(sound_buffer[x], sound_buffer[x]); /* Mono output */
+#if 0
+#if 0
+   for (int x=0; x<frames/2; x++) audio_cb(samples[x], samples[x]); /* Mono */
 #else
-   audio_batch_cb(sound_buffer, sndbufsize/2); /* Stereo output, fails with reSIDfp! */
+   for (int x=0; x<frames; x+=2) audio_cb(samples[x], samples[x+1]); /* Stereo */
+#endif
+#else
+   audio_batch_cb(samples, frames/2);
 #endif
 }
 

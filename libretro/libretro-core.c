@@ -6018,6 +6018,7 @@ void retro_run(void)
       /* this is only done once after just loading the core from scratch and starting it */
       runstate = RUNSTATE_RUNNING;
       reload_restart();
+      update_geometry(0);
 #ifdef RETRO_DEBUG
       log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
 #endif

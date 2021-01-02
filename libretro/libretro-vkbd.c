@@ -121,81 +121,39 @@ void print_vkbd(unsigned short int *pixels)
    int BKG_PADDING_Y_DEFAULT = -3;
 
 #if defined(__XVIC__)
+   XOFFSET  = 4;
+   YOFFSET  = 0;
+   XPADDING = 108;
+   YPADDING = 118;
+
    if (retro_region == RETRO_REGION_NTSC)
    {
-      XOFFSET  = 9;
-      YOFFSET  = -3;
-      XPADDING = 44;
-      YPADDING = 58;
-
-      if (zoom_mode_id == 3)
-      {
-         if (opt_statusbar & STATUSBAR_TOP)
-            YOFFSET = -2;
-         else
-            YOFFSET = -7;
-      }
-   }
-   else
-   {
-      XOFFSET  = 4;
-      YOFFSET  = -3;
-      XPADDING = 98;
-      YPADDING = 108;
-
-      if (zoom_mode_id == 3)
-      {
-         if (opt_statusbar & STATUSBAR_TOP)
-            YOFFSET = 2;
-         else
-            YOFFSET = -6;
-      }
+      XOFFSET  = 12;
+      YOFFSET  = -1;
+      XPADDING = 60;
+      YPADDING = 68;
    }
 #elif defined(__XPLUS4__)
+   XOFFSET  = 4;
+   YOFFSET  = -2;
+   XPADDING = 66;
+   YPADDING = 108;
+
    if (retro_region == RETRO_REGION_NTSC)
    {
-      XOFFSET  = 0;
-      YOFFSET  = -3;
-      XPADDING = 64;
-      YPADDING = 52;
-
-      if (zoom_mode_id == 3)
-      {
-         if (opt_statusbar & STATUSBAR_TOP)
-            YOFFSET = 1;
-         else
-            YOFFSET = -7;
-      }
-   }
-   else
-   {
-      XOFFSET  = 4;
-      YOFFSET  = -3;
-      XPADDING = 66;
-      YPADDING = 96;
-
-      if (zoom_mode_id == 3)
-      {
-         if (opt_statusbar & STATUSBAR_TOP)
-            YOFFSET = 1;
-         else
-            YOFFSET = -7;
-      }
+      YPADDING = 64;
    }
 #else
    XOFFSET  = 0;
    YOFFSET  = 1;
    XPADDING = 74;
-   YPADDING = 78;
+   YPADDING = 92;
 
-   if (retro_region != RETRO_REGION_NTSC)
+   if (retro_region == RETRO_REGION_NTSC)
    {
-      if (zoom_mode_id == 3)
-         YOFFSET = -3;
+      YOFFSET  = -1;
+      YPADDING = 72;
    }
-
-   if (opt_statusbar & STATUSBAR_TOP)
-      YOFFSET = 5;
 #endif
 
    int XSIDE = (retrow - XPADDING) / VKBDX;

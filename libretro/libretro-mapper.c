@@ -268,7 +268,7 @@ void process_key(int disable_keys)
       if (state && !retro_key_state[i])
       {
          /* Skip keydown if VKBD is active */
-         if (retro_vkbd)
+         if (retro_vkbd && i != RETROK_CAPSLOCK)
             continue;
 
          retro_key_state[i] = 1;

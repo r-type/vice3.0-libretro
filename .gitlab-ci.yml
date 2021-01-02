@@ -66,6 +66,10 @@ include:
   - project: 'libretro-infrastructure/ci-templates'
     file: '/windows-x64-mingw.yml'
     
+  # Windows 32-bit
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/windows-i686-mingw.yml'
+    
   # Linux 64-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-x64.yml'
@@ -124,6 +128,12 @@ stages:
 libretro-build-windows-x64:
   extends:
     - .libretro-windows-x64-mingw-make-default
+    - .core-defs
+    
+# Windows 32-bit
+libretro-build-windows-i686:
+  extends:
+    - .libretro-windows-i686-mingw-make-default
     - .core-defs
     
 # Linux 64-bit
@@ -209,6 +219,12 @@ libretro-build-vita:
 libretro-build-windows-x64-x64sc:
   extends:
     - .libretro-windows-x64-mingw-make-default
+    - .core-defs-x64sc
+    
+# Windows 32-bit
+libretro-build-windows-i686-x64sc:
+  extends:
+    - .libretro-windows-i686-mingw-make-default
     - .core-defs-x64sc
     
 # Linux 64-bit
@@ -346,14 +362,22 @@ libretro-build-wiiu-x128:
 ################
 
 # Desktop
-libretro-build-linux-x64-xcbm2:
-  extends:
-    - .libretro-linux-x64-make-default
-    - .core-defs-xcbm2
-
+# Windows 64-bit
 libretro-build-windows-x64-xcbm2:
   extends:
     - .libretro-windows-x64-mingw-make-default
+    - .core-defs-xcbm2
+    
+# Windows 32-bit
+libretro-build-windows-i686-xcbm2:
+  extends:
+    - .libretro-windows-i686-mingw-make-default
+    - .core-defs-xcbm2
+
+# Linux 64-bit
+libretro-build-linux-x64-xcbm2:
+  extends:
+    - .libretro-linux-x64-make-default
     - .core-defs-xcbm2
 
 # Android
@@ -408,14 +432,22 @@ libretro-build-wiiu-xcbm2:
 ##################
 
 # Desktop
-libretro-build-linux-x64-xcbm5x0:
-  extends:
-    - .libretro-linux-x64-make-default
-    - .core-defs-xcbm5x0
-
+# Windows 64-bit
 libretro-build-windows-x64-xcbm5x0:
   extends:
     - .libretro-windows-x64-mingw-make-default
+    - .core-defs-xcbm5x0
+    
+# Windows 32-bit
+libretro-build-windows-i686-xcbm5x0:
+  extends:
+    - .libretro-windows-i686-mingw-make-default
+    - .core-defs-xcbm5x0
+
+# Linux 64-bit
+libretro-build-linux-x64-xcbm5x0:
+  extends:
+    - .libretro-linux-x64-make-default
     - .core-defs-xcbm5x0
 
 # Android
@@ -470,14 +502,22 @@ libretro-build-wiiu-xcbm5x0:
 ###############
 
 # Desktop
-libretro-build-linux-x64-xpet:
-  extends:
-    - .libretro-linux-x64-make-default
-    - .core-defs-xpet
-
+# Windows 64-bit
 libretro-build-windows-x64-xpet:
   extends:
     - .libretro-windows-x64-mingw-make-default
+    - .core-defs-xpet
+    
+# Windows 32-bit
+libretro-build-windows-i686-xpet:
+  extends:
+    - .libretro-windows-i686-mingw-make-default
+    - .core-defs-xpet
+
+# Linux 64-bit
+libretro-build-linux-x64-xpet:
+  extends:
+    - .libretro-linux-x64-make-default
     - .core-defs-xpet
 
 # Android
@@ -532,14 +572,22 @@ libretro-build-wiiu-xpet:
 #################
 
 # Desktop
-libretro-build-linux-x64-xplus4:
-  extends:
-    - .libretro-linux-x64-make-default
-    - .core-defs-xplus4
-
+# Windows 64-bit
 libretro-build-windows-x64-xplus4:
   extends:
     - .libretro-windows-x64-mingw-make-default
+    - .core-defs-xplus4
+    
+# Windows 32-bit
+libretro-build-windows-i686-xplus4:
+  extends:
+    - .libretro-windows-i686-mingw-make-default
+    - .core-defs-xplus4
+
+# Linux 64-bit
+libretro-build-linux-x64-xplus4:
+  extends:
+    - .libretro-linux-x64-make-default
     - .core-defs-xplus4
 
 # Android
@@ -594,14 +642,22 @@ libretro-build-wiiu-xplus4:
 ##################
 
 # Desktop
-libretro-build-linux-x64-xscpu64:
-  extends:
-    - .libretro-linux-x64-make-default
-    - .core-defs-xscpu64
-
+# Windows 64-bit
 libretro-build-windows-x64-xscpu64:
   extends:
     - .libretro-windows-x64-mingw-make-default
+    - .core-defs-xscpu64
+    
+# Windows 32-bit
+libretro-build-windows-i686-xscpu64:
+  extends:
+    - .libretro-windows-i686-mingw-make-default
+    - .core-defs-xscpu64
+
+# Linux 64-bit
+libretro-build-linux-x64-xscpu64:
+  extends:
+    - .libretro-linux-x64-make-default
     - .core-defs-xscpu64
 
 # Android
@@ -656,14 +712,22 @@ libretro-build-wiiu-xscpu64:
 ###############
 
 # Desktop
-libretro-build-linux-x64-xvic:
-  extends:
-    - .libretro-linux-x64-make-default
-    - .core-defs-xvic
-
+# Windows 64-bit
 libretro-build-windows-x64-xvic:
   extends:
     - .libretro-windows-x64-mingw-make-default
+    - .core-defs-xvic
+    
+# Windows 32-bit
+libretro-build-windows-i686-xvic:
+  extends:
+    - .libretro-windows-i686-mingw-make-default
+    - .core-defs-xvic
+
+# Linux 64-bit
+libretro-build-linux-x64-xvic:
+  extends:
+    - .libretro-linux-x64-make-default
     - .core-defs-xvic
 
 # Android

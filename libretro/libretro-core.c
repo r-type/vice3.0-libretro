@@ -32,6 +32,7 @@
 #endif
 
 /* Main CPU loop */
+long retro_now = 0;
 int cpuloop = 1;
 
 /* VKBD */
@@ -1615,6 +1616,9 @@ void reload_restart(void)
 /* FPS counter + mapper tick */
 long GetTicks(void)
 {
+   if (!perf_cb.get_time_usec)
+      return retro_now;
+
    return perf_cb.get_time_usec();
 }
 
@@ -6051,6 +6055,8 @@ void retro_run(void)
    /* Main loop with Warp Mode maximizing without too much input lag */
    unsigned int frame_max = retro_warp_mode_enabled() ? retro_refresh : 1;
    unsigned int frame_time = 0;
+   retro_now += 1000000 / retro_refresh;
+
    for (int frame_count = 0; frame_count < frame_max; ++frame_count)
    {
       frame_time = GetTicks();
@@ -6058,7 +6064,7 @@ void retro_run(void)
          maincpu_mainloop_retro();
       cpuloop = 1;
 
-      if (frame_max > 1)
+      if (perf_cb.get_time_usec && frame_max > 1)
          frame_max = 1000000 / (retro_refresh / 5) / (GetTicks() - frame_time);
    }
 
@@ -6124,12 +6130,6 @@ bool retro_load_game(const struct retro_game_info *info)
    else
       /* Empty cmdline processing required for VIC-20 core option cartridges on startup */
       process_cmdline("");
-
-   if (!perf_cb.get_time_usec)
-   {
-      log_cb(RETRO_LOG_ERROR, "PERF_INTERFACE required!\n");
-      return false;
-   }
 
    pre_main();
 

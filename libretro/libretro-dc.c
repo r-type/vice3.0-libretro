@@ -349,6 +349,19 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* disk_lab
       return true;
    }
 
+   /* Determine if tape or disk fliplist from first entry */
+   if (dc->unit != -1 && !string_is_empty(dc->files[0]))
+   {
+      if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_TAPE)
+         dc->unit = 1;
+      else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_FLOPPY)
+         dc->unit = 8;
+      else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_MEM)
+         dc->unit = 0;
+      else
+         dc->unit = 8;
+   }
+
    return false;
 }
 
@@ -367,19 +380,6 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
    for (index = 0; index < dc->count; index++)
       if (!strcmp(dc->files[index], filename))
          return true;
-
-   /* Determine if tape or disk fliplist from first entry */
-   if (dc->unit != -1)
-   {
-      if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_TAPE)
-         dc->unit = 1;
-      else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_FLOPPY)
-         dc->unit = 8;
-      else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_MEM)
-         dc->unit = 0;
-      else
-         dc->unit = 8;
-   }
 
    /* Get 'name' - just the filename without extension
     * > It would be nice to make use of the image label
@@ -703,6 +703,9 @@ static bool dc_add_m3u_save_disk(
 bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
 {
    if (!dc)
+      return false;
+
+   if (dc->unit != 8)
       return false;
 
    if (file_check)

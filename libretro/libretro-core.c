@@ -152,11 +152,15 @@ extern bool turbo_fire_locked;
 extern unsigned int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
-#if defined(__XVIC__) || defined(__XPLUS4__) || defined(__XCBM2__) || defined(__XCBM5x0__)
+#if defined(__X64DTV__)
+const char *cartridge_current_filename(void) { return NULL; }
+#elif defined(__XVIC__) || defined(__XPLUS4__) || defined(__XCBM2__) || defined(__XCBM5x0__)
+const char *cartridge_current_filename(void) { return NULL; }
 void cartridge_trigger_freeze(void) {}
 #elif defined(__XPET__)
-void cartridge_detach_image(int type) {}
+const char *cartridge_current_filename(void) { return NULL; }
 void cartridge_trigger_freeze(void) {}
+void cartridge_detach_image(int type) {}
 #endif
 
 retro_input_state_t input_state_cb = NULL;
@@ -232,7 +236,6 @@ int PARAMCOUNT = 0;
 /* Display message on next retro_run */
 bool retro_message = false;
 char retro_message_msg[1024] = {0};
-static void log_disk_in_tray(bool display);
 extern void display_current_image(const char *image, bool inserted);
 
 extern int skel_main(int argc, char *argv[]);
@@ -337,36 +340,6 @@ static int retro_disk_get_image_unit()
         unit = 8;
 
     return unit;
-}
-
-/* If we display the message now, it wold be immediatelly overwritten
- * by "changed disk in drive", so queue it to display on next retro_run.
- * The side effect is that if disk is changed from menu, the message will be displayed
- * only after emulation is unpaused. */
-static void log_disk_in_tray(bool display)
-{
-    if (dc->index < dc->count)
-    {
-        int unit = retro_disk_get_image_unit();
-        size_t pos = 0;
-        const char* label;
-        /* Build message do display */
-        if (unit == 1)
-            snprintf(retro_message_msg, sizeof(retro_message_msg), "Tape: ");
-        else if (unit == 8)
-            snprintf(retro_message_msg, sizeof(retro_message_msg), "Drive %d: ", unit);
-        else
-            snprintf(retro_message_msg, sizeof(retro_message_msg), "Cart: ");
-        pos = strlen(retro_message_msg);
-        snprintf(retro_message_msg + pos, sizeof(retro_message_msg) - pos, "(%d/%d) %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
-        pos += strlen(retro_message_msg + pos);
-        label = dc->disk_labels[dc->index];
-        if (label && label[0])
-            snprintf(retro_message_msg + pos, sizeof(retro_message_msg) - pos, " (%s)", label);
-        log_cb(RETRO_LOG_INFO, "%s\n", retro_message_msg);
-        if (display)
-            retro_message = true;
-    }
 }
 
 /* ReSID 6581 init pop mute shenanigans */
@@ -1359,7 +1332,12 @@ void update_from_vice()
     /* If flip list is empty, get current tape or floppy image name and add to the list */
     if (dc->count == 0)
     {
-        if ((attachedImage = tape_get_file_name()) != NULL)
+        if ((attachedImage = cartridge_current_filename()) != NULL)
+        {
+            dc->unit = 0;
+            dc_add_file(dc, attachedImage, NULL, NULL, NULL);
+        }
+        else if ((attachedImage = tape_get_file_name()) != NULL)
         {
             dc->unit = 1;
             dc_add_file(dc, attachedImage, NULL, NULL, NULL);
@@ -1404,20 +1382,18 @@ void update_from_vice()
     if (dc->count > 0)
     {
         if (dc->unit == 1)
-            log_cb(RETRO_LOG_INFO, "Image list is active for tape\n");
+            log_cb(RETRO_LOG_INFO, "Tape image list has %d file(s)\n", dc->count);
         else if (dc->unit >= 8 && dc->unit <= 11)
-            log_cb(RETRO_LOG_INFO, "Image list is active for drive #%d\n", dc->unit);
+            log_cb(RETRO_LOG_INFO, "Drive #%d image list has %d file(s)\n", dc->unit, dc->count);
         else if (dc->unit == 0)
-            log_cb(RETRO_LOG_INFO, "Image list is active for cart\n");
-
-        log_cb(RETRO_LOG_INFO, "Image list has %d file(s)\n", dc->count);
+            log_cb(RETRO_LOG_INFO, "Cartridge image list has %d file(s)\n", dc->count);
 
         for(unsigned i = 0; i < dc->count; i++)
             log_cb(RETRO_LOG_DEBUG, "File %d: %s\n", i+1, dc->files[i]);
     }
 
     /* Scan for save disk 0, append if exists */
-    if (dc->count)
+    if (dc->count && dc->unit == 8)
     {
         bool file_check = dc_save_disk_toggle(dc, true, false);
         if (file_check)
@@ -5337,7 +5313,6 @@ bool retro_disk_set_image_index(unsigned index)
       if (index < dc->count && dc->files[index])
       {
          dc->index = index;
-         log_disk_in_tray(display_disk_name);
          display_current_image(dc->labels[dc->index], false);
          return true;
       }

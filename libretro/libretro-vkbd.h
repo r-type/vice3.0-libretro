@@ -100,7 +100,7 @@ static retro_vkeys vkeys[VKBDX * VKBDY] =
    { ":"  ,"["   ,RETROK_SEMICOLON},
    { ";"  ,"]"   ,RETROK_QUOTE},
    { "="  ,"="   ,RETROK_BACKSLASH},
-   { "STB","STB" ,-3}, /* Statusbar */
+   { "STB","SVD" ,-3}, /* Statusbar / Save disk */
 
    /* 55 */
    { {24} ,{24}  ,RETROK_LCTRL},

@@ -21,6 +21,25 @@
 
 #include <stdbool.h>
 
+#define COMMENT             '#'
+#define M3U_SAVEDISK        "#SAVEDISK:"
+#define M3U_SAVEDISK_LABEL  "Save Disk"
+#define M3U_PATH_DELIM      '|'
+
+#define M3U_SPECIAL_COMMAND "#COMMAND:"
+#define M3U_NONSTD_LABEL    "#LABEL:"
+#define M3U_EXTSTD_LABEL    "#EXTINF:"  /* Title should be following comma */
+#define VFL_UNIT_ENTRY      "UNIT "
+
+#define MAX_LABEL_LEN       27          /* Max of disk (27) and tape (24) */
+
+#define D64_NAME_POS        0x16590     /* Sector 18/0, offset 0x90 */
+#define D64_FULL_NAME_LEN   27          /* Including id, dos version and paddings */
+#define D64_NAME_LEN        16
+
+#define T64_NAME_POS        40
+#define T64_NAME_LEN        24
+
 /* See which looks best in most cases and tweak (or make configurable) */
 #define DISK_LABEL_MODE_ASCII              1 /* Convert to ascii - unshifted chars are lowercase */
 #define DISK_LABEL_MODE_UPPERCASE          2 /* All characters are always uppercase */
@@ -57,6 +76,7 @@ struct dc_storage
    int index;
    bool eject_state;
    bool replace;
+   unsigned index_prev;
 };
 
 typedef struct dc_storage dc_storage;
@@ -69,5 +89,6 @@ void dc_reset(dc_storage* dc);
 bool dc_replace_file(dc_storage* dc, int index, const char* filename);
 bool dc_remove_file(dc_storage* dc, int index);
 enum dc_image_type dc_get_image_type(const char* filename);
+bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select);
 
 #endif /* LIBRETRO_DC_H */

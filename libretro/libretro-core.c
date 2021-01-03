@@ -230,8 +230,8 @@ static const char* xargv_cmd[64];
 int PARAMCOUNT = 0;
 
 /* Display message on next retro_run */
-static char queued_msg[1024];
-static int show_queued_msg = 0;
+bool retro_message = false;
+char retro_message_msg[1024] = {0};
 static void log_disk_in_tray(bool display);
 extern void display_current_image(const char *image, bool inserted);
 
@@ -352,20 +352,20 @@ static void log_disk_in_tray(bool display)
         const char* label;
         /* Build message do display */
         if (unit == 1)
-            snprintf(queued_msg, sizeof(queued_msg), "Tape: ");
+            snprintf(retro_message_msg, sizeof(retro_message_msg), "Tape: ");
         else if (unit == 8)
-            snprintf(queued_msg, sizeof(queued_msg), "Drive %d: ", unit);
+            snprintf(retro_message_msg, sizeof(retro_message_msg), "Drive %d: ", unit);
         else
-            snprintf(queued_msg, sizeof(queued_msg), "Cart: ");
-        pos = strlen(queued_msg);
-        snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "(%d/%d) %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
-        pos += strlen(queued_msg + pos);
+            snprintf(retro_message_msg, sizeof(retro_message_msg), "Cart: ");
+        pos = strlen(retro_message_msg);
+        snprintf(retro_message_msg + pos, sizeof(retro_message_msg) - pos, "(%d/%d) %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
+        pos += strlen(retro_message_msg + pos);
         label = dc->disk_labels[dc->index];
         if (label && label[0])
-            snprintf(queued_msg + pos, sizeof(queued_msg) - pos, " (%s)", label);
-        log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
+            snprintf(retro_message_msg + pos, sizeof(retro_message_msg) - pos, " (%s)", label);
+        log_cb(RETRO_LOG_INFO, "%s\n", retro_message_msg);
         if (display)
-            show_queued_msg = 250;
+            retro_message = true;
     }
 }
 
@@ -1414,6 +1414,14 @@ void update_from_vice()
 
         for(unsigned i = 0; i < dc->count; i++)
             log_cb(RETRO_LOG_DEBUG, "File %d: %s\n", i+1, dc->files[i]);
+    }
+
+    /* Scan for save disk 0, append if exists */
+    if (dc->count)
+    {
+        bool file_check = dc_save_disk_toggle(dc, true, false);
+        if (file_check)
+            dc_save_disk_toggle(dc, false, false);
     }
 
     /* If flip list is not empty, but there is no image attached to drive, attach the first one from list.
@@ -5231,25 +5239,9 @@ void emu_reset(int type)
    }
 }
 
-static bool retro_disk_set_eject_state(bool ejected);
-
-void retro_reset(void)
-{
-   /* Reset DC index to first entry */
-   if (dc)
-   {
-      dc->index = 0;
-      retro_disk_set_eject_state(true);
-      retro_disk_set_eject_state(false);
-   }
-
-   /* Trigger autostart-reset in retro_run() */
-   request_restart = true;
-}
-
 /*****************************************************************************/
 /* Disk Control */
-static bool retro_disk_set_eject_state(bool ejected)
+bool retro_disk_set_eject_state(bool ejected)
 {
    if (dc)
    {
@@ -5459,6 +5451,20 @@ static struct retro_disk_control_ext_callback disk_interface_ext = {
 };
 
 /*****************************************************************************/
+
+void retro_reset(void)
+{
+   /* Reset DC index to first entry */
+   if (dc)
+   {
+      dc->index = 0;
+      retro_disk_set_eject_state(true);
+      retro_disk_set_eject_state(false);
+   }
+
+   /* Trigger autostart-reset in retro_run() */
+   request_restart = true;
+}
 
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 {
@@ -6004,13 +6010,13 @@ void retro_run(void)
    }
 #endif
 
-   if (show_queued_msg != 0)
+   if (retro_message)
    {
-      struct retro_message rmsg;
-      rmsg.msg = queued_msg;
-      rmsg.frames = show_queued_msg;
-      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &rmsg);
-      show_queued_msg = 0;
+      struct retro_message msg;
+      msg.msg = retro_message_msg;
+      msg.frames = 500;
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+      retro_message = false;
    }
 
    if (runstate == RUNSTATE_FIRST_START)

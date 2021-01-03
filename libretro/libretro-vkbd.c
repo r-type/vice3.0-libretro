@@ -162,12 +162,12 @@ void print_vkbd(unsigned short int *pixels)
    int XBASEKEY = (XPADDING > 0) ? (XPADDING / 2) : 0;
    int YBASEKEY = (YPADDING > 0) ? (YPADDING / 2) : 0;
 
-   int XBASETEXT = ((XPADDING > 0) ? (XPADDING / 2) : 0) + (XSIDE / 2);
+   int XBASETEXT = XBASEKEY + (XSIDE / 2);
    int YBASETEXT = YBASEKEY + (YSIDE / 2);
 
    /* Coordinates */
-   vkbd_x_min = XBASEKEY + XKEYSPACING;
-   vkbd_x_max = -XBASEKEY + retrow - XKEYSPACING;
+   vkbd_x_min = XOFFSET + XBASEKEY + XKEYSPACING;
+   vkbd_x_max = XOFFSET - XBASEKEY - XKEYSPACING + retrow;
    vkbd_y_min = YOFFSET + YBASEKEY + YKEYSPACING;
    vkbd_y_max = YOFFSET + YBASEKEY + (YSIDE * VKBDY);
 
@@ -250,16 +250,16 @@ void print_vkbd(unsigned short int *pixels)
          }
 
          /* Key centering */
-         BKG_PADDING_X     = BKG_PADDING_X_DEFAULT;
-         BKG_PADDING_Y     = BKG_PADDING_Y_DEFAULT;
+         BKG_PADDING_X = BKG_PADDING_X_DEFAULT;
+         BKG_PADDING_Y = BKG_PADDING_Y_DEFAULT;
          if (!shifted && strlen(vkeys[(y * VKBDX) + x + page].normal) > 1)
             BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].normal));
          else if (shifted && strlen(vkeys[(y * VKBDX) + x + page].shift) > 1)
             BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].shift));
 
          /* Key positions */
-         XKEY  = XBASEKEY + (x * XSIDE) + XOFFSET;
-         XTEXT = XBASETEXT + BKG_PADDING_X + (x * XSIDE) + XOFFSET;
+         XKEY  = XOFFSET + XBASEKEY + (x * XSIDE);
+         XTEXT = XOFFSET + XBASETEXT + BKG_PADDING_X + (x * XSIDE);
          YKEY  = YOFFSET + YBASEKEY + (y * YSIDE);
          YTEXT = YOFFSET + YBASETEXT + BKG_PADDING_Y + (y * YSIDE);
 
@@ -342,8 +342,8 @@ void print_vkbd(unsigned short int *pixels)
       BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift));
 
    /* Selected key position */
-   XKEY  = XBASEKEY + (vkey_pos_x * XSIDE) + XOFFSET;
-   XTEXT = XBASETEXT + BKG_PADDING_X + (vkey_pos_x * XSIDE) + XOFFSET;
+   XKEY  = XOFFSET + XBASEKEY + (vkey_pos_x * XSIDE);
+   XTEXT = XOFFSET + XBASETEXT + BKG_PADDING_X + (vkey_pos_x * XSIDE);
    YKEY  = YOFFSET + YBASEKEY + (vkey_pos_y * YSIDE);
    YTEXT = YOFFSET + YBASETEXT + BKG_PADDING_Y + (vkey_pos_y * YSIDE);
 

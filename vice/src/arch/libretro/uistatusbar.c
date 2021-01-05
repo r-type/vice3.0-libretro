@@ -339,9 +339,11 @@ void ui_display_speed(float percent, float framerate, int warp_flag)
     fps = (int)(framerate + .5);
     if (fps > 999) {
         fps /= 1000;
+        fps = (fps > 9) ? 9 : fps;
         sprintf(fps_str, "%dK", fps);
     } else if (fps > 99) {
         fps /= 100;
+        fps = (fps > 9) ? 9 : fps;
         sprintf(fps_str, "%dC", fps);
     } else {
         sprintf(fps_str, "%2d", fps);

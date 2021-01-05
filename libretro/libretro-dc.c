@@ -40,25 +40,6 @@ int tape_deinstall(void)
 #include <stdlib.h>
 #include <string.h>
 
-#define COMMENT             '#'
-#define M3U_SAVEDISK        "#SAVEDISK:"
-#define M3U_SAVEDISK_LABEL  "Save Disk"
-#define M3U_PATH_DELIM      '|'
-
-#define M3U_SPECIAL_COMMAND "#COMMAND:"
-#define M3U_NONSTD_LABEL    "#LABEL:"
-#define M3U_EXTSTD_LABEL    "#EXTINF:"  /* Title should be following comma */
-#define VFL_UNIT_ENTRY      "UNIT "
-
-#define MAX_LABEL_LEN       27          /* Max of disk (27) and tape (24) */
-
-#define D64_NAME_POS        0x16590     /* Sector 18/0, offset 0x90 */
-#define D64_FULL_NAME_LEN   27          /* Including id, dos version and paddings */
-#define D64_NAME_LEN        16
-
-#define T64_NAME_POS        40
-#define T64_NAME_LEN        24
-
 #undef  DISK_LABEL_RELAXED              /* Use label even if it doesn't look sane (mostly for testing) */
 #undef  DISK_LABEL_FORBID_SHIFTED       /* Reject label if has shifted chars */
 
@@ -67,6 +48,8 @@ static const char flip_file_header[] = "# Vice fliplist file";
 extern char retro_save_directory[RETRO_PATH_MAX];
 extern char retro_temp_directory[RETRO_PATH_MAX];
 extern bool retro_disk_set_image_index(unsigned index);
+extern bool retro_disk_set_eject_state(bool ejected);
+extern char full_path[RETRO_PATH_MAX];
 extern int runstate;
 
 extern retro_log_printf_t log_cb;
@@ -366,20 +349,8 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* disk_lab
       return true;
    }
 
-   return false;
-}
-
-bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const char* disk_label, const char* program)
-{
-   /* Verify */
-   if (dc == NULL)
-      return false;
-
-   if (!filename || (*filename == '\0'))
-      return false;
-
    /* Determine if tape or disk fliplist from first entry */
-   if (dc->unit != -1)
+   if (dc->unit != -1 && !string_is_empty(dc->files[0]))
    {
       if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_TAPE)
          dc->unit = 1;
@@ -390,6 +361,25 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
       else
          dc->unit = 8;
    }
+
+   return false;
+}
+
+bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const char* disk_label, const char* program)
+{
+   unsigned index = 0;
+
+   /* Verify */
+   if (dc == NULL)
+      return false;
+
+   if (!filename || (*filename == '\0'))
+      return false;
+
+   /* Dupecheck */
+   for (index = 0; index < dc->count; index++)
+      if (!strcmp(dc->files[index], filename))
+         return true;
 
    /* Get 'name' - just the filename without extension
     * > It would be nice to make use of the image label
@@ -608,7 +598,8 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
 static bool dc_add_m3u_save_disk(
       dc_storage* dc,
       const char* m3u_file, const char* save_dir,
-      const char* disk_name, unsigned int index)
+      const char* disk_name, unsigned int index,
+      bool file_check)
 {
    bool save_disk_exists                     = false;
    const char *m3u_file_name                 = NULL;
@@ -635,7 +626,8 @@ static bool dc_add_m3u_save_disk(
 
    /* Get m3u file name without extension */
    snprintf(m3u_file_name_no_ext, sizeof(m3u_file_name_no_ext),
-         "%s", path_remove_extension((char*)m3u_file_name));
+         "%s", m3u_file_name);
+   path_remove_extension(m3u_file_name_no_ext);
 
    if (*m3u_file_name_no_ext == '\0')
       return false;
@@ -653,6 +645,9 @@ static bool dc_add_m3u_save_disk(
     * it differs from 'disk_name'. This is quite
     * fiddly, however - perhaps it can be added later... */
    save_disk_exists = path_is_valid(save_disk_path);
+
+   if (file_check)
+      return save_disk_exists;
 
    /* ...if not, create a new one */
    if (!save_disk_exists)
@@ -681,11 +676,13 @@ static bool dc_add_m3u_save_disk(
          snprintf(volume_name, sizeof(volume_name), "%s %u",
                M3U_SAVEDISK_LABEL, index);
 
-      snprintf(format_name, sizeof(format_name), "%s", string_to_lower(volume_name));
+      snprintf(format_name, sizeof(format_name), "%s",
+            string_to_lower(volume_name));
       charset_petconvstring((uint8_t*)format_name, 0);
 
       /* Create save disk */
-      save_disk_exists = !vdrive_internal_create_format_disk_image(save_disk_path, format_name, DISK_IMAGE_TYPE_D64);
+      save_disk_exists = !vdrive_internal_create_format_disk_image(
+            save_disk_path, format_name, DISK_IMAGE_TYPE_D64);
    }
 
    /* If save disk exists/was created, add it to the list */
@@ -701,6 +698,57 @@ static bool dc_add_m3u_save_disk(
    }
 
    return false;
+}
+
+bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
+{
+   if (!dc)
+      return false;
+
+   if (dc->unit != 8)
+      return false;
+
+   if (file_check)
+      return dc_add_m3u_save_disk(dc, full_path, retro_save_directory, NULL, 0, true);
+
+   dc_add_m3u_save_disk(dc, full_path, retro_save_directory, NULL, 0, false);
+   if (select)
+   {
+      unsigned save_disk_index = 0;
+      unsigned index = 0;
+      char save_disk_label[64] = {0};
+
+      snprintf(save_disk_label, 64, "%s %u",
+            M3U_SAVEDISK_LABEL, 0);
+
+      /* Scan for save disk index */
+      for (index = 0; index < dc->count; index++)
+         if (!strcmp(dc->labels[index], save_disk_label))
+            save_disk_index = index;
+
+      /* Remember previous index */
+      if (dc->index != save_disk_index)
+         dc->index_prev = dc->index;
+
+      /* Switch index */
+      if (save_disk_index == dc->index)
+         dc->index = dc->index_prev;
+      else
+         dc->index = save_disk_index;
+
+      /* Cycle disk tray */
+      retro_disk_set_eject_state(true);
+      retro_disk_set_eject_state(false);
+
+      /* Widget notification */
+      snprintf(retro_message_msg, sizeof(retro_message_msg),
+               "%d/%d - %s",
+               dc->index+1, dc->count, path_basename(dc->labels[dc->index]));
+      retro_message = true;
+   }
+   else
+      log_cb(RETRO_LOG_INFO, "Save Disk 0 appended\n");
+   return true;
 }
 
 void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const char* save_dir)
@@ -828,7 +876,8 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
          /* Add save disk, creating it if necessary */
          if (dc_add_m3u_save_disk(
                dc, list_file, save_dir,
-               disk_name, save_disk_index))
+               disk_name, save_disk_index,
+               false))
                save_disk_index++;
 
          /* Clean up */

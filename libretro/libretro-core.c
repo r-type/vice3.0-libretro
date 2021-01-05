@@ -152,11 +152,15 @@ extern bool turbo_fire_locked;
 extern unsigned int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
-#if defined(__XVIC__) || defined(__XPLUS4__) || defined(__XCBM2__) || defined(__XCBM5x0__)
+#if defined(__X64DTV__)
+const char *cartridge_current_filename(void) { return NULL; }
+#elif defined(__XVIC__) || defined(__XPLUS4__) || defined(__XCBM2__) || defined(__XCBM5x0__)
+const char *cartridge_current_filename(void) { return NULL; }
 void cartridge_trigger_freeze(void) {}
 #elif defined(__XPET__)
-void cartridge_detach_image(int type) {}
+const char *cartridge_current_filename(void) { return NULL; }
 void cartridge_trigger_freeze(void) {}
+void cartridge_detach_image(int type) {}
 #endif
 
 retro_input_state_t input_state_cb = NULL;
@@ -230,9 +234,8 @@ static const char* xargv_cmd[64];
 int PARAMCOUNT = 0;
 
 /* Display message on next retro_run */
-static char queued_msg[1024];
-static int show_queued_msg = 0;
-static void log_disk_in_tray(bool display);
+bool retro_message = false;
+char retro_message_msg[1024] = {0};
 extern void display_current_image(const char *image, bool inserted);
 
 extern int skel_main(int argc, char *argv[]);
@@ -337,36 +340,6 @@ static int retro_disk_get_image_unit()
         unit = 8;
 
     return unit;
-}
-
-/* If we display the message now, it wold be immediatelly overwritten
- * by "changed disk in drive", so queue it to display on next retro_run.
- * The side effect is that if disk is changed from menu, the message will be displayed
- * only after emulation is unpaused. */
-static void log_disk_in_tray(bool display)
-{
-    if (dc->index < dc->count)
-    {
-        int unit = retro_disk_get_image_unit();
-        size_t pos = 0;
-        const char* label;
-        /* Build message do display */
-        if (unit == 1)
-            snprintf(queued_msg, sizeof(queued_msg), "Tape: ");
-        else if (unit == 8)
-            snprintf(queued_msg, sizeof(queued_msg), "Drive %d: ", unit);
-        else
-            snprintf(queued_msg, sizeof(queued_msg), "Cart: ");
-        pos = strlen(queued_msg);
-        snprintf(queued_msg + pos, sizeof(queued_msg) - pos, "(%d/%d) %s", dc->index + 1, dc->count, path_basename(dc->files[dc->index]));
-        pos += strlen(queued_msg + pos);
-        label = dc->disk_labels[dc->index];
-        if (label && label[0])
-            snprintf(queued_msg + pos, sizeof(queued_msg) - pos, " (%s)", label);
-        log_cb(RETRO_LOG_INFO, "%s\n", queued_msg);
-        if (display)
-            show_queued_msg = 250;
-    }
 }
 
 /* ReSID 6581 init pop mute shenanigans */
@@ -1359,7 +1332,12 @@ void update_from_vice()
     /* If flip list is empty, get current tape or floppy image name and add to the list */
     if (dc->count == 0)
     {
-        if ((attachedImage = tape_get_file_name()) != NULL)
+        if ((attachedImage = cartridge_current_filename()) != NULL)
+        {
+            dc->unit = 0;
+            dc_add_file(dc, attachedImage, NULL, NULL, NULL);
+        }
+        else if ((attachedImage = tape_get_file_name()) != NULL)
         {
             dc->unit = 1;
             dc_add_file(dc, attachedImage, NULL, NULL, NULL);
@@ -1404,16 +1382,22 @@ void update_from_vice()
     if (dc->count > 0)
     {
         if (dc->unit == 1)
-            log_cb(RETRO_LOG_INFO, "Image list is active for tape\n");
+            log_cb(RETRO_LOG_INFO, "Tape image list has %d file(s)\n", dc->count);
         else if (dc->unit >= 8 && dc->unit <= 11)
-            log_cb(RETRO_LOG_INFO, "Image list is active for drive #%d\n", dc->unit);
+            log_cb(RETRO_LOG_INFO, "Drive #%d image list has %d file(s)\n", dc->unit, dc->count);
         else if (dc->unit == 0)
-            log_cb(RETRO_LOG_INFO, "Image list is active for cart\n");
-
-        log_cb(RETRO_LOG_INFO, "Image list has %d file(s)\n", dc->count);
+            log_cb(RETRO_LOG_INFO, "Cartridge image list has %d file(s)\n", dc->count);
 
         for(unsigned i = 0; i < dc->count; i++)
             log_cb(RETRO_LOG_DEBUG, "File %d: %s\n", i+1, dc->files[i]);
+    }
+
+    /* Scan for save disk 0, append if exists */
+    if (dc->count && dc->unit == 8)
+    {
+        bool file_check = dc_save_disk_toggle(dc, true, false);
+        if (file_check)
+            dc_save_disk_toggle(dc, false, false);
     }
 
     /* If flip list is not empty, but there is no image attached to drive, attach the first one from list.
@@ -5231,25 +5215,9 @@ void emu_reset(int type)
    }
 }
 
-static bool retro_disk_set_eject_state(bool ejected);
-
-void retro_reset(void)
-{
-   /* Reset DC index to first entry */
-   if (dc)
-   {
-      dc->index = 0;
-      retro_disk_set_eject_state(true);
-      retro_disk_set_eject_state(false);
-   }
-
-   /* Trigger autostart-reset in retro_run() */
-   request_restart = true;
-}
-
 /*****************************************************************************/
 /* Disk Control */
-static bool retro_disk_set_eject_state(bool ejected)
+bool retro_disk_set_eject_state(bool ejected)
 {
    if (dc)
    {
@@ -5345,7 +5313,6 @@ bool retro_disk_set_image_index(unsigned index)
       if (index < dc->count && dc->files[index])
       {
          dc->index = index;
-         log_disk_in_tray(display_disk_name);
          display_current_image(dc->labels[dc->index], false);
          return true;
       }
@@ -5459,6 +5426,20 @@ static struct retro_disk_control_ext_callback disk_interface_ext = {
 };
 
 /*****************************************************************************/
+
+void retro_reset(void)
+{
+   /* Reset DC index to first entry */
+   if (dc)
+   {
+      dc->index = 0;
+      retro_disk_set_eject_state(true);
+      retro_disk_set_eject_state(false);
+   }
+
+   /* Trigger autostart-reset in retro_run() */
+   request_restart = true;
+}
 
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 {
@@ -6004,13 +5985,13 @@ void retro_run(void)
    }
 #endif
 
-   if (show_queued_msg != 0)
+   if (retro_message)
    {
-      struct retro_message rmsg;
-      rmsg.msg = queued_msg;
-      rmsg.frames = show_queued_msg;
-      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &rmsg);
-      show_queued_msg = 0;
+      struct retro_message msg;
+      msg.msg = retro_message_msg;
+      msg.frames = 500;
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+      retro_message = false;
    }
 
    if (runstate == RUNSTATE_FIRST_START)

@@ -69,6 +69,7 @@ extern unsigned int retro_devices[RETRO_DEVICES];
 static unsigned retro_key_state[RETROK_LAST] = {0};
 static int16_t joypad_bits[RETRO_DEVICES];
 extern bool libretro_supports_bitmasks;
+extern dc_storage *dc;
 
 /* Core options */
 extern unsigned int opt_retropad_options;
@@ -102,6 +103,7 @@ enum EMU_FUNCTIONS
    EMU_STATUSBAR,
    EMU_JOYPORT,
    EMU_RESET,
+   EMU_SAVE_DISK,
    EMU_ASPECT_RATIO,
    EMU_ZOOM_MODE,
    EMU_TURBO_FIRE,
@@ -195,6 +197,9 @@ void emu_function(int function)
          snprintf(statusbar_text, 56, "%c Turbo Fire %-42s",
                (' ' | 0x80), (retro_turbo_fire) ? "ON" : "OFF");
          imagename_timer = 50;
+         break;
+      case EMU_SAVE_DISK:
+         dc_save_disk_toggle(dc, false, true);
          break;
       case EMU_WARP_MODE:
          retro_warpmode = (retro_warpmode) ? 0 : 1;
@@ -790,7 +795,10 @@ void update_input(int disable_physical_cursor_keys)
                   emu_function(EMU_RESET);
                   break;
                case -3:
-                  emu_function(EMU_STATUSBAR);
+                  if (retro_capslock)
+                     emu_function(EMU_SAVE_DISK);
+                  else
+                     emu_function(EMU_STATUSBAR);
                   break;
                case -4:
                   if (retro_capslock)

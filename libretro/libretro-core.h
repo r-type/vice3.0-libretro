@@ -169,6 +169,9 @@ extern unsigned int opt_statusbar;
 extern unsigned int cur_port;
 extern unsigned int retro_region;
 
+extern bool retro_message;
+extern char retro_message_msg[1024];
+
 enum
 {
    RUNSTATE_FIRST_START = 0,

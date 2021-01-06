@@ -38,7 +38,7 @@ endif
 # Unix
 ifeq ($(platform), unix)
    TARGET := $(TARGET_NAME)_libretro.so
-   LDFLAGS += -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T
+   LDFLAGS += -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--gc-sections
    fpic = -fPIC
 
 # CrossPI
@@ -62,7 +62,7 @@ else ifeq ($(platform), crosspi)
 else ifeq ($(platform), classic_armv7_a7)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
-   LDFLAGS := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T  -Wl,--no-undefined
+   LDFLAGS := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--no-undefined
    CFLAGS += -DARM -Ofast \
 	-flto=4 -fwhole-program -fuse-linker-plugin \
 	-fdata-sections -ffunction-sections -Wl,--gc-sections \
@@ -89,7 +89,7 @@ else ifeq ($(platform), classic_armv7_a7)
 else ifeq ($(platform), classic_armv8_a35)
    TARGET := $(TARGET_NAME)_libretro.so
    fpic := -fPIC
-   LDFLAGS := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T  -Wl,--no-undefined
+   LDFLAGS := -shared -Wl,--version-script=$(CORE_DIR)/libretro/link.T -Wl,--no-undefined
    CFLAGS += -DARM -Ofast \
 	-flto=4 -fwhole-program -fuse-linker-plugin \
 	-fdata-sections -ffunction-sections -Wl,--gc-sections \
@@ -343,7 +343,7 @@ else ifeq ($(platform), wincross64)
    AR = x86_64-w64-mingw32-ar
    CC = x86_64-w64-mingw32-gcc
    CXX = x86_64-w64-mingw32-g++
-   CFLAGS += -D__WIN32__ -DHAVE_SNPRINTF -DHAVE_VSNPRINTF -D__USE_MINGW_ANSI_STDIO=1 -DHAVE_NETWORK
+   CFLAGS += -D__WIN32__ -DHAVE_SNPRINTF -DHAVE_VSNPRINTF -D__USE_MINGW_ANSI_STDIO=1
    TARGET := $(TARGET_NAME)_libretro.dll
    LDFLAGS += --shared -static-libgcc -static-libstdc++ -Wl,--version-script=$(CORE_DIR)/libretro/link.T -L/usr/x86_64-w64-mingw32/lib
    LDFLAGS += -lws2_32 -luser32 -lwinmm -ladvapi32 -lshlwapi -lwsock32 -lws2_32 -lpsapi -liphlpapi -lshell32 -luserenv -lmingw32 -shared -lgcc -lm -lmingw32

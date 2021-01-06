@@ -3264,7 +3264,7 @@ void retro_set_environment(retro_environment_t cb)
                   /* Append "Keyboard " for keyboard keys */
                   if (retro_keys[j + hotkeys_skipped + 1].id > 0)
                   {
-                     char key_label[25] = {0};
+                     char key_label[10+25] = {0};
                      sprintf(key_label, "Keyboard %s", retro_keys[j + hotkeys_skipped + 1].label);
                      core_options[i].values[j].label = strdup(key_label);
                   }
@@ -3283,7 +3283,7 @@ void retro_set_environment(retro_environment_t cb)
                /* Append "Keyboard " for keyboard keys */
                if (retro_keys[j].id > 0)
                {
-                  char key_label[25] = {0};
+                  char key_label[10+25] = {0};
                   sprintf(key_label, "Keyboard %s", retro_keys[j].label);
                   core_options[i].values[j].label = strdup(key_label);
                }
@@ -5551,10 +5551,13 @@ void retro_deinit(void)
    LibretroGraphFree();
 
    /* 'Reset' troublesome static variables */
+   libretro_supports_bitmasks = false;
    pix_bytes_initialized = false;
    cur_port_locked = false;
    opt_aspect_ratio_locked = false;
-   libretro_supports_bitmasks = false;
+   request_model_set = -1;
+   request_model_prev = -1;
+   opt_model_auto = 1;
 }
 
 unsigned retro_api_version(void)
@@ -5998,6 +6001,7 @@ void retro_run(void)
    {
       /* this is only done once after just loading the core from scratch and starting it */
       runstate = RUNSTATE_RUNNING;
+      pre_main();
       reload_restart();
       update_geometry(0);
 #ifdef RETRO_DEBUG
@@ -6010,10 +6014,8 @@ void retro_run(void)
       /* Load content was called while core was already running, just do a reset with autostart */
       runstate = RUNSTATE_RUNNING;
       reload_restart();
-      /* After retro_load_game, get_system_av_info is always called by the frontend */
-      /* resetting the aspect to 4/3 etc. So we inform the frontend of the actual */
-      /* current aspect ratio and screen size again here */
-      update_geometry(0);
+      /* Autostart reset */
+      request_restart = true;
    }
    else if (runstate == RUNSTATE_RUNNING)
    {
@@ -6112,8 +6114,6 @@ bool retro_load_game(const struct retro_game_info *info)
    else
       /* Empty cmdline processing required for VIC-20 core option cartridges on startup */
       process_cmdline("");
-
-   pre_main();
 
 #if defined(__XPET__) || defined(__XCBM2__) || defined(__XVIC__)
    /* Joyport limit has to apply always */

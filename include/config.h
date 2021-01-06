@@ -19,7 +19,6 @@
 
    #define AC_APPLE_UNIVERSAL_BUILD
    #define HAVE_TIME_T_IN_TIME_H 1
-
 #endif
 
 #ifdef __linux__ /* android falls under this too */
@@ -31,13 +30,13 @@
 #define HAVE_SOCKET 1
 #define HAVE_SOCKLEN_T 1
 #define HAVE_IN_ADDR_T 1
-
 #endif
 
 #if defined(N3DS)
    #error "This platform is not currently supported."
-
 #endif
+
+#undef HAVE_NETWORK
 
 #define USE_EMBEDDED 1
 

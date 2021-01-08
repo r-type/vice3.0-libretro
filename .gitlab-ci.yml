@@ -73,7 +73,11 @@ include:
   # Linux 64-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/linux-x64.yml'
-    
+
+  # Linux 32-bit
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/linux-i686.yml'
+
   # MacOS 64-bit
   - project: 'libretro-infrastructure/ci-templates'
     file: '/osx-x64.yml'
@@ -300,11 +304,7 @@ libretro-build-vita-x64sc:
 ###############
 
 # Desktop
-libretro-build-linux-x64-x128:
-  extends:
-    - .libretro-linux-x64-make-default
-    - .core-defs-x128
-
+# Windows 64-bit
 libretro-build-windows-x64-x128:
   extends:
     - .libretro-windows-x64-mingw-make-default
@@ -314,6 +314,24 @@ libretro-build-windows-x64-x128:
 libretro-build-windows-i686-x128:
   extends:
     - .libretro-windows-i686-mingw-make-default
+    - .core-defs-x128
+    
+# Linux 64-bit
+libretro-build-linux-x64-x128:
+  extends:
+    - .libretro-linux-x64-make-default
+    - .core-defs-x128
+
+# Linux 32-bit
+libretro-build-linux-i686-x128:
+  extends:
+    - .libretro-linux-i686-make-default
+    - .core-defs-x128
+
+# MacOS 64-bit
+libretro-build-osx-x128:
+  extends:
+    - .libretro-osx-x64-make-default
     - .core-defs-x128
 
 # Android

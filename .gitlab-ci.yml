@@ -145,7 +145,13 @@ libretro-build-linux-x64:
   extends:
     - .libretro-linux-x64-make-default
     - .core-defs
-    
+
+# Linux 32-bit
+libretro-build-linux-i686:
+  extends:
+    - .libretro-linux-i686-make-default
+    - .core-defs
+
 # MacOS 64-bit
 libretro-build-osx-x64:
   extends:
@@ -236,7 +242,13 @@ libretro-build-linux-x64-x64sc:
   extends:
     - .libretro-linux-x64-make-default
     - .core-defs-x64sc
-    
+
+# Linux 32-bit
+libretro-build-linux-i686-x64sc:
+  extends:
+    - .libretro-linux-i686-make-default
+    - .core-defs-x64sc
+
 # MacOS 64-bit
 libretro-build-osx-x64-x64sc:
   extends:
@@ -404,6 +416,12 @@ libretro-build-linux-x64-xcbm2:
     - .libretro-linux-x64-make-default
     - .core-defs-xcbm2
 
+# Linux 32-bit
+libretro-build-linux-i686-xcbm2:
+  extends:
+    - .libretro-linux-i686-make-default
+    - .core-defs-xcbm2
+
 # Android
 android-armeabi-v7a-xcbm2:
   extends:
@@ -472,6 +490,12 @@ libretro-build-windows-i686-xcbm5x0:
 libretro-build-linux-x64-xcbm5x0:
   extends:
     - .libretro-linux-x64-make-default
+    - .core-defs-xcbm5x0
+
+# Linux 32-bit
+libretro-build-linux-i686-xcbm5x0:
+  extends:
+    - .libretro-linux-i686-make-default
     - .core-defs-xcbm5x0
 
 # Android
@@ -544,6 +568,12 @@ libretro-build-linux-x64-xpet:
     - .libretro-linux-x64-make-default
     - .core-defs-xpet
 
+# Linux 32-bit
+libretro-build-linux-i686-xpet:
+  extends:
+    - .libretro-linux-i686-make-default
+    - .core-defs-xpet
+
 # Android
 android-armeabi-v7a-xpet:
   extends:
@@ -612,6 +642,12 @@ libretro-build-windows-i686-xplus4:
 libretro-build-linux-x64-xplus4:
   extends:
     - .libretro-linux-x64-make-default
+    - .core-defs-xplus4
+
+# Linux 32-bit
+libretro-build-linux-i686-xplus4:
+  extends:
+    - .libretro-linux-i686-make-default
     - .core-defs-xplus4
 
 # Android
@@ -684,6 +720,12 @@ libretro-build-linux-x64-xscpu64:
     - .libretro-linux-x64-make-default
     - .core-defs-xscpu64
 
+# Linux 32-bit
+libretro-build-linux-i686-xscpu64:
+  extends:
+    - .libretro-linux-i686-make-default
+    - .core-defs-xscpu64
+
 # Android
 android-armeabi-v7a-xscpu64:
   extends:
@@ -752,6 +794,12 @@ libretro-build-windows-i686-xvic:
 libretro-build-linux-x64-xvic:
   extends:
     - .libretro-linux-x64-make-default
+    - .core-defs-xvic
+
+# Linux 32-bit
+libretro-build-linux-i686-xvic:
+  extends:
+    - .libretro-linux-i686-make-default
     - .core-defs-xvic
 
 # Android

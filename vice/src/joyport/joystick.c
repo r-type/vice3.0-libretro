@@ -215,7 +215,13 @@ void joystick_register_delay(unsigned int delay)
 /*-----------------------------------------------------------------------*/
 static void joystick_process_latch(void)
 {
+#ifdef __LIBRETRO__
+    /* Random delay removed in order to get next frame response in "joystick.prg"
+     * and reliable button presses in "The Detective Game" */
+    CLOCK delay = machine_get_cycles_per_frame() / 4;
+#else
     CLOCK delay = lib_unsigned_rand(1, (unsigned int)machine_get_cycles_per_frame());
+#endif
 
     if (network_connected()) {
         network_event_record(EVENT_JOYSTICK_DELAY, (void *)&delay, sizeof(delay));

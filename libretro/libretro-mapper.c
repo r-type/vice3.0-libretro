@@ -1054,7 +1054,7 @@ void retro_poll_event()
       if (retro_devices[retro_port] == RETRO_DEVICE_VICE_JOYSTICK || retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
       {
          int vice_port = cur_port;
-         BYTE j = 0;
+         uint8_t joy_value = 0;
 
          if (retro_port == 1) /* Second joypad controls other player */
             vice_port = (cur_port == 2) ? 1 : 2;
@@ -1072,7 +1072,7 @@ void retro_poll_event()
          if (opt_joyport_type == 2)
             continue;
 
-         j = joystick_value[vice_port];
+         joy_value = get_joystick_value(vice_port);
 
          /* Up */
          if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP))
@@ -1091,9 +1091,9 @@ void retro_poll_event()
                )
             )
          )
-            j |= (!retro_vkbd) ? 0x01 : j;
+            joy_value |= (!retro_vkbd) ? 0x01 : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))
-            j &= ~0x01;
+            joy_value &= ~0x01;
 
          /* Down */
          if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN))
@@ -1112,9 +1112,9 @@ void retro_poll_event()
                )
             )
          )
-            j |= (!retro_vkbd) ? 0x02 : j;
+            joy_value |= (!retro_vkbd) ? 0x02 : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))
-            j &= ~0x02;
+            joy_value &= ~0x02;
 
          /* Left */
          if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))
@@ -1133,9 +1133,9 @@ void retro_poll_event()
                )
             )
          )
-            j |= (!retro_vkbd) ? 0x04 : j;
+            joy_value |= (!retro_vkbd) ? 0x04 : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)))
-            j &= ~0x04;
+            joy_value &= ~0x04;
 
          /* Right */
          if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))
@@ -1154,9 +1154,9 @@ void retro_poll_event()
                )
             )
          )
-            j |= (!retro_vkbd) ? 0x08 : j;
+            joy_value |= (!retro_vkbd) ? 0x08 : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-            j &= ~0x08;
+            joy_value &= ~0x08;
 
          /* Fire button */
          int fire_button = RETRO_DEVICE_ID_JOYPAD_B;
@@ -1183,9 +1183,9 @@ void retro_poll_event()
                )
             )
          )
-            j |= (!retro_vkbd) ? 0x10 : j;
+            joy_value |= (!retro_vkbd) ? 0x10 : joy_value;
          else
-            j &= ~0x10;
+            joy_value &= ~0x10;
 
          /* Jump button */
          int jump_button = -1;
@@ -1207,8 +1207,8 @@ void retro_poll_event()
 
          if (jump_button > -1 && (joypad_bits[retro_port] & (1 << jump_button)))
          {
-            j |= (!retro_vkbd) ? 0x01 : j;
-            j &= ~0x02;
+            joy_value |= (!retro_vkbd) ? 0x01 : joy_value;
+            joy_value &= ~0x02;
          }
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP))
          && (opt_keyrah_keypad && vice_port < 3
@@ -1223,7 +1223,7 @@ void retro_poll_event()
                )
             )
          )
-            j &= ~0x01;
+            joy_value &= ~0x01;
 
          /* Turbo fire */
          if (retro_devices[retro_port] == RETRO_DEVICE_JOYPAD
@@ -1240,14 +1240,14 @@ void retro_poll_event()
                      turbo_toggle[vice_port]++;
 
                   if (turbo_toggle[vice_port] > (turbo_pulse / 2))
-                     j &= ~0x10;
+                     joy_value &= ~0x10;
                   else
-                     j |= (!retro_vkbd) ? 0x10 : j;
+                     joy_value |= (!retro_vkbd) ? 0x10 : joy_value;
                }
                else
                {
                   turbo_state[vice_port] = 1;
-                  j |= (!retro_vkbd) ? 0x10 : j;
+                  joy_value |= (!retro_vkbd) ? 0x10 : joy_value;
                }
             }
             else
@@ -1257,11 +1257,11 @@ void retro_poll_event()
             }
          }
 
-         joystick_value[vice_port] = j;
+         joystick_set_value_absolute(vice_port, joy_value);
 
 #if 0
          if (vice_port == 2)
-            printf("Joy %d: Button %d, %2d %d %d\n", vice_port, turbo_fire_button, j, turbo_state[vice_port], turbo_toggle[vice_port]);
+            printf("Joy %d: Button %d, %2d %d %d\n", vice_port, turbo_fire_button, joystick_value, turbo_state[vice_port], turbo_toggle[vice_port]);
 #endif
       }
    }

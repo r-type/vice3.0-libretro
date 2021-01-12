@@ -1960,7 +1960,23 @@ void retro_set_environment(retro_environment_t cb)
          },
          "C64 PAL auto"
       },
-#if !defined(__XSCPU64__)
+#if defined(__XSCPU64__)
+      {
+         "vice_supercpu_simm_size",
+         "System > SuperCPU SIMM Size",
+         "Changing while running resets the system!",
+         {
+            { "0", "disabled" },
+            { "1", "1024kB" },
+            { "2", "2048kB" },
+            { "4", "4096kB" },
+            { "8", "8192kB" },
+            { "16", "16384kB" },
+            { NULL, NULL },
+         },
+         "16"
+      },
+#else
       {
          "vice_ram_expansion_unit",
          "System > RAM Expansion Unit",
@@ -1979,9 +1995,20 @@ void retro_set_environment(retro_environment_t cb)
          },
          "none"
       },
-#endif
+#endif /* __XSCPU64__ */
 #endif
 #if defined(__XSCPU64__)
+      {
+         "vice_supercpu_speed_switch",
+         "System > SuperCPU Speed Switch",
+         "",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
       {
          "vice_supercpu_kernal",
          "System > SuperCPU Kernal",
@@ -3980,7 +4007,22 @@ static void update_variables(void)
       core_opt.Model = model;
    }
 
-#if !defined(__XSCPU64__)
+#if defined(__XSCPU64__)
+   var.key = "vice_supercpu_simm_size";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int simmsize = atoi(var.value);
+
+      if (retro_ui_finalized && core_opt.SIMMSize != simmsize)
+      {
+         log_resources_set_int("SIMMSize", simmsize);
+         request_restart = true;
+      }
+
+      core_opt.SIMMSize = simmsize;
+   }
+#else
    var.key = "vice_ram_expansion_unit";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3993,14 +4035,15 @@ static void update_variables(void)
       if (retro_ui_finalized && core_opt.REUsize != reusize)
       {
          if (!reusize)
-            resources_set_int("REU", 0);
+            log_resources_set_int("REU", 0);
          else
          {
-            resources_set_int("REUsize", reusize);
-            resources_set_int("REU", 1);
+            log_resources_set_int("REUsize", reusize);
+            log_resources_set_int("REU", 1);
          }
          request_restart = true;
       }
+
       core_opt.REUsize = reusize;
    }
 #endif
@@ -4727,6 +4770,19 @@ static void update_variables(void)
    }
 
 #if defined(__XSCPU64__)
+   var.key = "vice_supercpu_speed_switch";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int speedswitch = 0;
+      if (!strcmp(var.value, "enabled")) speedswitch = 1;
+
+      if (retro_ui_finalized && core_opt.SpeedSwitch != speedswitch)
+         log_resources_set_int("SpeedSwitch", speedswitch);
+
+      core_opt.SpeedSwitch = speedswitch;
+   }
+
    var.key = "vice_supercpu_kernal";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)

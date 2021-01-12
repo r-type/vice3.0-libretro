@@ -222,6 +222,9 @@ struct libretro_core_options
    int Go64Mode;
 #elif defined(__X64__) || defined(__X64SC__)
    int REUsize;
+#elif defined(__XSCPU64__)
+   int SIMMSize;
+   int SpeedSwitch;
 #elif defined(__XVIC__)
    int VIC20Memory;
 #endif

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <dirent.h>
+#include <sys/stat.h>
 
 #include "libretro-glue.h"
 #include "libretro-dc.h"

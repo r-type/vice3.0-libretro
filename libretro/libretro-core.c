@@ -700,6 +700,39 @@ static int process_cmdline(const char* argv)
             opt_jiffydos_allow = 0;
         else
             opt_jiffydos_allow = 1;
+
+        /* REU image check */
+        if (path_is_valid(argv))
+        {
+            char reu_path[RETRO_PATH_MAX] = {0};
+            char reu_base[RETRO_PATH_MAX] = {0};
+            char reu_name[RETRO_PATH_MAX] = {0};
+
+            snprintf(reu_base, sizeof(reu_base), "%s", argv);
+            path_basedir(reu_base);
+
+            snprintf(reu_name, sizeof(reu_name), "%s", argv);
+            snprintf(reu_name, sizeof(reu_name), "%s", path_basename(reu_name));
+            path_remove_extension(reu_name);
+
+            snprintf(reu_path, sizeof(reu_path), "%s%s%s",
+                     reu_base, reu_name, ".reu");
+
+            if (path_is_valid(reu_path))
+            {
+                char reu_size[6] = {0};
+                struct stat reu_stat;
+                stat(reu_path, &reu_stat);
+                snprintf(reu_size, sizeof(reu_size), "%u", reu_stat.st_size / 1024);
+
+                Add_Option("-reu");
+                Add_Option("-reusize");
+                Add_Option(reu_size);
+                Add_Option("+reuimagerw");
+                Add_Option("-reuimage");
+                Add_Option(reu_path);
+            }
+        }
 #endif
 
 #if defined(__XVIC__)

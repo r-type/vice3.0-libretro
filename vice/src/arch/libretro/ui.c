@@ -455,6 +455,9 @@ int ui_init_finalize(void)
    }
    else
       log_resources_set_int("REU", 0);
+#elif defined(__XSCPU64__)
+   log_resources_set_int("SIMMSize", core_opt.SIMMSize);
+   log_resources_set_int("SpeedSwitch", core_opt.SpeedSwitch);
 #endif
 
 #if !defined(__XPET__)

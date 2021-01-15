@@ -222,7 +222,7 @@ static void display_joyport(void)
     /* Memory */
     unsigned memory = 0;
 #if defined(__XSCPU64__)
-    memory = 16384;
+    memory = core_opt.SIMMSize * 1024;
 #else
     memory = core_opt.REUsize;
 #endif

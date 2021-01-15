@@ -242,28 +242,22 @@ static char* get_label(const char* filename)
 
 /* Search for image file relative to M3U
  * Allocates returned string */
-static char* m3u_search_file(const char* basedir, const char* dskName)
+static char* m3u_search_file(const char* basedir, const char* filename)
 {
-   /* If basedir was provided and path is relative, search relative to M3U file location */
-   if (basedir != NULL && !path_is_absolute(dskName))
-   {
-      /* Join basedir and dskName */
-      char* dskPath = path_join_dup(basedir, dskName);
-
-      /* Verify if this item is a relative filename (append it to the m3u path) */
-      if (path_is_valid(dskPath))
-      {
-         /* Return */
-         return dskPath;
-      }
-      free(dskPath);
-   }
-
    /* Verify if this item is an absolute pathname (or the file is in working dir) */
-   if (path_is_valid(dskName))
+   if (path_is_valid(filename))
+      return strdup(filename);
+
+   /* If basedir was provided and path is relative, search relative to M3U file location */
+   if (basedir != NULL && !path_is_absolute(filename))
    {
-      /* Copy and return */
-      return strdup(dskName);
+      char* filepath = path_join_dup(basedir, filename);
+
+      /* Verify if this item is a relative filename */
+      if (path_is_valid(filepath))
+         return filepath;
+
+      free(filepath);
    }
 
    /* File not found */

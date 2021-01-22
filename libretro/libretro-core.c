@@ -61,9 +61,6 @@ unsigned int retro_region = 0;
 static double retro_refresh = 0;
 static unsigned int prev_sound_sample_rate = 0;
 
-extern void retro_poll_event();
-extern int mapper_keys[RETRO_MAPPER_LAST];
-
 bool retro_ui_finalized = false;
 #ifdef RETRO_DEBUG
 bool prev_ui_finalized = false;
@@ -5604,6 +5601,9 @@ void retro_init(void)
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
       libretro_supports_bitmasks = true;
+
+   static struct retro_keyboard_callback keyboard_callback = {retro_keyboard_event};
+   environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard_callback);
 
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))

@@ -40,6 +40,10 @@
 #define MOUSE_SLOWER                    -5
 #define MOUSE_FASTER                    -6
 
+extern int mapper_keys[RETRO_MAPPER_LAST];
+extern void retro_poll_event();
+extern void retro_keyboard_event(bool, unsigned, uint32_t, uint16_t);
+
 typedef struct
 {
    int id;

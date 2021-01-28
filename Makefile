@@ -142,10 +142,16 @@ else ifeq ($(platform), osx)
 ifeq ($(OSX_LT_MAVERICKS),YES)
    fpic += -mmacosx-version-min=10.1
 else
-	fpic += -stdlib=libc++
+   fpic += -stdlib=libc++
 endif
    CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
    CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
+   ifeq ($(CROSS_COMPILE),1)
+	TARGET_RULE   = -target $(LIBRETRO_APPLE_PLATFORM) -isysroot $(LIBRETRO_APPLE_ISYSROOT)
+	CFLAGS     += $(TARGET_RULE)
+	CXXFLAGS   += $(TARGET_RULE)
+	LDFLAGS    += $(TARGET_RULE)
+   endif
 
 # iOS
 else ifneq (,$(findstring ios,$(platform)))

@@ -82,6 +82,10 @@ include:
   - project: 'libretro-infrastructure/ci-templates'
     file: '/osx-x64.yml'
 
+  # MacOS ARM 64-bit
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/osx-arm64.yml'
+
   ################################## CELLULAR ################################
   # Android
   - project: 'libretro-infrastructure/ci-templates'
@@ -156,6 +160,12 @@ libretro-build-linux-i686:
 libretro-build-osx-x64:
   extends:
     - .libretro-osx-x64-make-default
+    - .core-defs
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64:
+  extends:
+    - .libretro-osx-arm64-make-default
     - .core-defs
     
 ################################### CELLULAR #################################
@@ -255,6 +265,12 @@ libretro-build-osx-x64-x64sc:
     - .libretro-osx-x64-make-default
     - .core-defs-x64sc
 
+# MacOS ARM 64-bit
+libretro-build-osx-arm64-x64sc:
+  extends:
+    - .libretro-osx-arm64-make-default
+    - .core-defs-x64sc
+
 ################################### CELLULAR #################################
 # Android ARMv7a
 android-armeabi-v7a-x64sc:
@@ -341,9 +357,15 @@ libretro-build-linux-i686-x128:
     - .core-defs-x128
 
 # MacOS 64-bit
-libretro-build-osx-x128:
+libretro-build-osx-x64-x128:
   extends:
     - .libretro-osx-x64-make-default
+    - .core-defs-x128
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64-x128:
+  extends:
+    - .libretro-osx-arm64-make-default
     - .core-defs-x128
 
 # Android
@@ -422,6 +444,18 @@ libretro-build-linux-i686-xcbm2:
     - .libretro-linux-i686-make-default
     - .core-defs-xcbm2
 
+# MacOS 64-bit
+libretro-build-osx-x64-xcbm2:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs-xcbm2
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64-xcbm2:
+  extends:
+    - .libretro-osx-arm64-make-default
+    - .core-defs-xcbm2
+
 # Android
 android-armeabi-v7a-xcbm2:
   extends:
@@ -496,6 +530,18 @@ libretro-build-linux-x64-xcbm5x0:
 libretro-build-linux-i686-xcbm5x0:
   extends:
     - .libretro-linux-i686-make-default
+    - .core-defs-xcbm5x0
+
+# MacOS 64-bit
+libretro-build-osx-x64-xcbm5x0:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs-xcbm5x0
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64-xcbm5x0:
+  extends:
+    - .libretro-osx-arm64-make-default
     - .core-defs-xcbm5x0
 
 # Android
@@ -574,6 +620,18 @@ libretro-build-linux-i686-xpet:
     - .libretro-linux-i686-make-default
     - .core-defs-xpet
 
+# MacOS 64-bit
+libretro-build-osx-x64-xpet:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs-xpet
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64-xpet:
+  extends:
+    - .libretro-osx-arm64-make-default
+    - .core-defs-xpet
+
 # Android
 android-armeabi-v7a-xpet:
   extends:
@@ -648,6 +706,18 @@ libretro-build-linux-x64-xplus4:
 libretro-build-linux-i686-xplus4:
   extends:
     - .libretro-linux-i686-make-default
+    - .core-defs-xplus4
+
+# MacOS 64-bit
+libretro-build-osx-x64-xplus4:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs-xplus4
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64-xplus4:
+  extends:
+    - .libretro-osx-arm64-make-default
     - .core-defs-xplus4
 
 # Android
@@ -726,6 +796,18 @@ libretro-build-linux-i686-xscpu64:
     - .libretro-linux-i686-make-default
     - .core-defs-xscpu64
 
+# MacOS 64-bit
+libretro-build-osx-x64-xscpu64:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs-xscpu64
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64-xscpu64:
+  extends:
+    - .libretro-osx-arm64-make-default
+    - .core-defs-xscpu64
+
 # Android
 android-armeabi-v7a-xscpu64:
   extends:
@@ -800,6 +882,18 @@ libretro-build-linux-x64-xvic:
 libretro-build-linux-i686-xvic:
   extends:
     - .libretro-linux-i686-make-default
+    - .core-defs-xvic
+
+# MacOS 64-bit
+libretro-build-osx-x64-xvic:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs-xvic
+
+# MacOS ARM 64-bit
+libretro-build-osx-arm64-xvic:
+  extends:
+    - .libretro-osx-arm64-make-default
     - .core-defs-xvic
 
 # Android

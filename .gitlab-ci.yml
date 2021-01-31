@@ -90,6 +90,10 @@ include:
   # Android
   - project: 'libretro-infrastructure/ci-templates'
     file: '/android-jni.yml'
+
+  # iOS 9
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/ios9.yml'
   
   ################################## CONSOLES ################################
   # Nintendo 3DS
@@ -191,6 +195,12 @@ android-x86_64:
 android-x86:
   extends:
     - .libretro-android-jni-x86
+    - .core-defs
+
+# iOS 9
+libretro-build-ios-9:
+  extends:
+    - .libretro-ios9-make-default
     - .core-defs
     
 ################################### CONSOLES #################################
@@ -296,6 +306,12 @@ android-x86-x64sc:
     - .libretro-android-jni-x86
     - .core-defs-x64sc
 
+# iOS 9
+libretro-build-ios-9-x64sc:
+  extends:
+    - .libretro-ios9-make-default
+    - .core-defs-x64sc
+
 ################################### CONSOLES #################################
 # Nintendo 3DS
 libretro-build-ctr-x64sc:
@@ -389,6 +405,12 @@ android-x86-x128:
     - .libretro-android-jni-x86
     - .core-defs-x128
 
+# iOS 9
+libretro-build-ios-9-x128:
+  extends:
+    - .libretro-ios9-make-default
+    - .core-defs-x128
+
 # Static
 libretro-build-libnx-aarch64-x128:
   extends:
@@ -475,6 +497,12 @@ android-x86_64-xcbm2:
 android-x86-xcbm2:
   extends:
     - .libretro-android-jni-x86
+    - .core-defs-xcbm2
+
+# iOS 9
+libretro-build-ios-9-xcbm2:
+  extends:
+    - .libretro-ios9-make-default
     - .core-defs-xcbm2
 
 # Static
@@ -565,6 +593,12 @@ android-x86-xcbm5x0:
     - .libretro-android-jni-x86
     - .core-defs-xcbm5x0
 
+# iOS 9
+libretro-build-ios-9-xcbm5x0:
+  extends:
+    - .libretro-ios9-make-default
+    - .core-defs-xcbm5x0
+
 # Static
 libretro-build-libnx-aarch64-xcbm5x0:
   extends:
@@ -651,6 +685,12 @@ android-x86_64-xpet:
 android-x86-xpet:
   extends:
     - .libretro-android-jni-x86
+    - .core-defs-xpet
+
+# iOS 9
+libretro-build-ios-9-xpet:
+  extends:
+    - .libretro-ios9-make-default
     - .core-defs-xpet
 
 # Static
@@ -741,6 +781,12 @@ android-x86-xplus4:
     - .libretro-android-jni-x86
     - .core-defs-xplus4
 
+# iOS 9
+libretro-build-ios-9-xplus4:
+  extends:
+    - .libretro-ios9-make-default
+    - .core-defs-xplus4
+
 # Static
 libretro-build-libnx-aarch64-xplus4:
   extends:
@@ -829,6 +875,12 @@ android-x86-xscpu64:
     - .libretro-android-jni-x86
     - .core-defs-xscpu64
 
+# iOS 9
+libretro-build-ios-9-xscpu64:
+  extends:
+    - .libretro-ios9-make-default
+    - .core-defs-xscpu64
+
 # Static
 libretro-build-libnx-aarch64-xscpu64:
   extends:
@@ -915,6 +967,12 @@ android-x86_64-xvic:
 android-x86-xvic:
   extends:
     - .libretro-android-jni-x86
+    - .core-defs-xvic
+
+# iOS 9
+libretro-build-ios-9-xvic:
+  extends:
+    - .libretro-ios9-make-default
     - .core-defs-xvic
 
 # Static

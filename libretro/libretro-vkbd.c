@@ -37,8 +37,8 @@ void print_vkbd(unsigned short int *pixels)
 {
    int x, y;
    bool shifted;
-   int page              = 0;
-   uint16_t *pix         = &pixels[0];
+   int page                          = 0;
+   uint16_t *pix                     = &pixels[0];
 
    int XKEY                          = 0;
    int YKEY                          = 0;
@@ -67,7 +67,10 @@ void print_vkbd(unsigned short int *pixels)
    int FONT_COLOR                    = 0;
    int FONT_COLOR_NORMAL             = 0;
    int FONT_COLOR_SEL                = 0;
-   libretro_graph_alpha_t FONT_ALPHA = 0;
+
+   unsigned COLOR_BLACK              = RGB(  5,   5,   5);
+   unsigned COLOR_GRAY               = RGB(125, 125, 125);
+   unsigned COLOR_WHITE              = RGB(250, 250, 250);
 
    switch (opt_vkbd_theme)
    {
@@ -79,8 +82,8 @@ void print_vkbd(unsigned short int *pixels)
          BKG_COLOR_EXTRA2  = RGB( 89,  79,  78);
          BKG_COLOR_SEL     = RGB(160, 160, 160);
          BKG_COLOR_ACTIVE  = RGB( 48,  44,  45);
-         FONT_COLOR_NORMAL = RGB(250, 250, 250);
-         FONT_COLOR_SEL    = RGB( 10,  10,  10);
+         FONT_COLOR_NORMAL = COLOR_WHITE;
+         FONT_COLOR_SEL    = COLOR_BLACK;
          break;
       
       case 1: /* C64C */
@@ -90,8 +93,8 @@ void print_vkbd(unsigned short int *pixels)
          BKG_COLOR_EXTRA2  = RGB(109,  99,  98);
          BKG_COLOR_SEL     = RGB( 60,  60,  60);
          BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
-         FONT_COLOR_NORMAL = RGB( 10,  10,  10);
-         FONT_COLOR_SEL    = RGB(250, 250, 250);
+         FONT_COLOR_NORMAL = COLOR_BLACK;
+         FONT_COLOR_SEL    = COLOR_WHITE;
          break;
       
       case 2: /* Dark */
@@ -101,8 +104,8 @@ void print_vkbd(unsigned short int *pixels)
          BKG_COLOR_EXTRA2  = RGB( 50,  50,  50);
          BKG_COLOR_SEL     = RGB(140, 140, 140);
          BKG_COLOR_ACTIVE  = RGB( 16,  16,  16);
-         FONT_COLOR_NORMAL = RGB(250, 250, 250);
-         FONT_COLOR_SEL    = RGB( 10,  10,  10);
+         FONT_COLOR_NORMAL = COLOR_WHITE;
+         FONT_COLOR_SEL    = COLOR_BLACK;
          break;
       
       case 3: /* Light */
@@ -112,8 +115,8 @@ void print_vkbd(unsigned short int *pixels)
          BKG_COLOR_EXTRA2  = RGB(190, 190, 190);
          BKG_COLOR_SEL     = RGB( 60,  60,  60);
          BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
-         FONT_COLOR_NORMAL = RGB( 10,  10,  10);
-         FONT_COLOR_SEL    = RGB(250, 250, 250);
+         FONT_COLOR_NORMAL = COLOR_BLACK;
+         FONT_COLOR_SEL    = COLOR_WHITE;
          break;
    }
 
@@ -172,20 +175,7 @@ void print_vkbd(unsigned short int *pixels)
    vkbd_y_max = YOFFSET + YBASEKEY + (YSIDE * VKBDY);
 
    /* Opacity */
-   BKG_ALPHA = (retro_vkbd_transparent) ? ALPHA : GRAPH_ALPHA_100;
-   switch (BKG_ALPHA)
-   {
-      case GRAPH_ALPHA_0:
-      case GRAPH_ALPHA_25:
-      case GRAPH_ALPHA_50:
-         FONT_ALPHA = GRAPH_ALPHA_50;
-         break;
-      case GRAPH_ALPHA_75:
-      case GRAPH_ALPHA_100:
-      default:
-         FONT_ALPHA = GRAPH_ALPHA_25;
-         break;
-   }
+   BKG_ALPHA  = (retro_vkbd_transparent) ? ALPHA : GRAPH_ALPHA_100;
 
    /* Alternate color keys */
    int alt_keys[] =
@@ -224,6 +214,10 @@ void print_vkbd(unsigned short int *pixels)
    {
       for (y = 0; y < VKBDY; y++)
       {
+         /* Skip selected key */
+         if (((vkey_pos_y * VKBDX) + vkey_pos_x + page) == ((y * VKBDX) + x + page))
+            continue;
+
          /* Default key color */
          BKG_COLOR = BKG_COLOR_NORMAL;
          BKG_ALPHA = (retro_vkbd_transparent) ? ALPHA : GRAPH_ALPHA_100;
@@ -298,38 +292,44 @@ void print_vkbd(unsigned short int *pixels)
                           BKG_COLOR, BKG_ALPHA);
          else
             DrawFBoxBmp(pix,
-                        XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
-                        BKG_COLOR, BKG_ALPHA);
+                          XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
+                          BKG_COLOR, BKG_ALPHA);
 
          /* Key text shadow */
-         if (pix_bytes == 4)
-            Draw_text32((uint32_t *)pix,
-                        (FONT_COLOR_SEL == RGB(250, 250, 250) ? XTEXT+FONT_WIDTH : XTEXT-FONT_WIDTH),
-                        (FONT_COLOR_SEL == RGB(250, 250, 250) ? YTEXT+FONT_WIDTH : YTEXT-FONT_WIDTH),
-                        (FONT_COLOR_SEL == RGB(250, 250, 250) ? RGB(100, 100, 100) : RGB(50, 50, 50)),
-                        BKG_COLOR, FONT_ALPHA, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-                        (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
-         else
-            Draw_text(pix,
-                      (FONT_COLOR_SEL == RGB(250, 250, 250) ? XTEXT+FONT_WIDTH : XTEXT-FONT_WIDTH),
-                      (FONT_COLOR_SEL == RGB(250, 250, 250) ? YTEXT+FONT_WIDTH : YTEXT-FONT_WIDTH),
-                      (FONT_COLOR_SEL == RGB(250, 250, 250) ? RGB(100, 100, 100) : RGB(50, 50, 50)),
-                      BKG_COLOR, FONT_ALPHA, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-                      (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+         for (int sx = -1; sx < 2; sx++)
+         {
+            for (int sy = -1; sy < 2; sy++)
+            {
+               if (sx == 0 && sy == 0)
+                  continue;
+               if (pix_bytes == 4)
+                  Draw_text32((uint32_t *)pix,
+                              XTEXT+(sx*FONT_WIDTH),
+                              YTEXT+(sy*FONT_HEIGHT),
+                              BKG_COLOR,
+                              (FONT_COLOR == COLOR_WHITE ? COLOR_BLACK : COLOR_GRAY),
+                              GRAPH_ALPHA_75+(-sx-sy), false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                              (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+               else
+                  Draw_text(pix,
+                              XTEXT+(sx*FONT_WIDTH),
+                              YTEXT+(sy*FONT_HEIGHT),
+                              BKG_COLOR,
+                              (FONT_COLOR == COLOR_WHITE ? COLOR_BLACK : COLOR_GRAY),
+                              GRAPH_ALPHA_75+(-sx-sy), false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                              (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+            }
+         }
 
          /* Key text */
          if (pix_bytes == 4)
-         {
             Draw_text32((uint32_t *)pix,
                         XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, GRAPH_ALPHA_100, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
                         (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
-         }
          else
-         {
             Draw_text(pix,
-                      XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, GRAPH_ALPHA_100, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-                      (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
-         }
+                        XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, GRAPH_ALPHA_100, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                        (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
       }
    }
 
@@ -367,24 +367,20 @@ void print_vkbd(unsigned short int *pixels)
                     BKG_COLOR_SEL, BKG_ALPHA);
    else
       DrawFBoxBmp(pix,
-                  XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
-                  BKG_COLOR_SEL, BKG_ALPHA);
+                    XKEY+XKEYSPACING, YKEY+YKEYSPACING, XSIDE-XKEYSPACING, YSIDE-YKEYSPACING,
+                    BKG_COLOR_SEL, BKG_ALPHA);
 
    /* Selected key text */
    if (pix_bytes == 4)
-   {
       Draw_text32((uint32_t *)pix,
                   XTEXT, YTEXT, FONT_COLOR, 0, GRAPH_ALPHA_100, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
                   (!shifted) ? vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal
                              : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
-   }
    else
-   {
       Draw_text(pix,
-                XTEXT, YTEXT, FONT_COLOR, 0, GRAPH_ALPHA_100, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-                (!shifted) ? vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal
-                           : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
-   }
+                  XTEXT, YTEXT, FONT_COLOR, 0, GRAPH_ALPHA_100, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                  (!shifted) ? vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal
+                             : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
 
 #ifdef POINTER_DEBUG
    if (pix_bytes == 4)
@@ -393,8 +389,8 @@ void print_vkbd(unsigned short int *pixels)
                      RGB888(255, 0, 255));
    else
       DrawHlineBmp(retro_bmp,
-                   pointer_x, pointer_y, 1, 1,
-                   RGB565(255, 0, 255));
+                     pointer_x, pointer_y, 1, 1,
+                     RGB565(255, 0, 255));
 #endif
 }
 

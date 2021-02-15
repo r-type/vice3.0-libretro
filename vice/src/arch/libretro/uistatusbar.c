@@ -641,12 +641,12 @@ void uistatusbar_draw(void)
             color_brown, color_brownd;
     color_black  = 0;
     color_white  = RGB(255, 255, 255);
-    color_red    = RGB(187,   0,   0);
-    color_greenb = RGB(  0, 187,   0);
+    color_red    = RGB(204,   0,   0);
+    color_greenb = RGB(  0, 204,   0);
     color_green  = RGB(  0,  85,   0);
     color_greend = RGB(  0,  34,   0);
-    color_brown  = RGB(109,  99,  98);
-    color_brownd = RGB( 69,  59,  58);
+    color_brown  = RGB(143, 140, 129);
+    color_brownd = RGB( 89,  79,  78);
     color_f      = color_white;
     color_b      = color_black;
 

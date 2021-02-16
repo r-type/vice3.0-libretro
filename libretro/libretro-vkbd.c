@@ -69,13 +69,42 @@ void print_vkbd(unsigned short int *pixels)
    int FONT_COLOR_SEL                = 0;
 
    unsigned COLOR_BLACK              = RGB(  5,   5,   5);
-   unsigned COLOR_GRAY               = RGB(125, 125, 125);
+   unsigned COLOR_GRAYBLACK          = RGB( 25,  25,  25);
+   unsigned COLOR_GRAYWHITE          = RGB(125, 125, 125);
    unsigned COLOR_WHITE              = RGB(250, 250, 250);
 
-   switch (opt_vkbd_theme)
+   unsigned theme                    = opt_vkbd_theme;
+   if (!theme)
+   {
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+      unsigned model = core_opt.Model;
+      if (request_model_set > -1 && request_model_set != model)
+         model = request_model_set;
+
+      switch (model)
+      {
+         case C64MODEL_C64C_PAL:
+         case C64MODEL_C64C_NTSC:
+         case C64MODEL_C64_GS:
+            theme = 2;
+            break;
+         default:
+            theme = 1;
+            break;
+      }
+#elif defined(__XVIC__)
+      theme = 1;
+#elif defined(__XPLUS4__) || defined(__X128__)
+      theme = 2;
+#else
+      theme = 3;
+#endif
+   }
+
+   switch (theme)
    {
       default:
-      case 0: /* C64 */
+      case 1: /* C64 brown */
          BKG_COLOR_NORMAL  = RGB( 68,  59,  58);
          BKG_COLOR_ALT     = RGB(123, 127, 130);
          BKG_COLOR_EXTRA   = RGB(143, 140, 129);
@@ -86,7 +115,7 @@ void print_vkbd(unsigned short int *pixels)
          FONT_COLOR_SEL    = COLOR_BLACK;
          break;
       
-      case 1: /* C64C */
+      case 2: /* C64C beige */
          BKG_COLOR_NORMAL  = RGB(216, 209, 201);
          BKG_COLOR_ALT     = RGB(159, 154, 150);
          BKG_COLOR_EXTRA   = RGB(143, 140, 129);
@@ -97,7 +126,7 @@ void print_vkbd(unsigned short int *pixels)
          FONT_COLOR_SEL    = COLOR_WHITE;
          break;
       
-      case 2: /* Dark */
+      case 3: /* Dark */
          BKG_COLOR_NORMAL  = RGB( 32,  32,  32);
          BKG_COLOR_ALT     = RGB( 70,  70,  70);
          BKG_COLOR_EXTRA   = RGB( 14,  14,  14);
@@ -108,7 +137,7 @@ void print_vkbd(unsigned short int *pixels)
          FONT_COLOR_SEL    = COLOR_BLACK;
          break;
       
-      case 3: /* Light */
+      case 4: /* Light */
          BKG_COLOR_NORMAL  = RGB(210, 210, 210);
          BKG_COLOR_ALT     = RGB(180, 180, 180);
          BKG_COLOR_EXTRA   = RGB(150, 150, 150);
@@ -307,7 +336,7 @@ void print_vkbd(unsigned short int *pixels)
                               XTEXT+(sx*FONT_WIDTH),
                               YTEXT+(sy*FONT_HEIGHT),
                               BKG_COLOR,
-                              (FONT_COLOR == COLOR_WHITE ? COLOR_BLACK : COLOR_GRAY),
+                              (FONT_COLOR == COLOR_WHITE ? COLOR_GRAYBLACK : COLOR_GRAYWHITE),
                               GRAPH_ALPHA_75+(-sx-sy), false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
                               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
                else
@@ -315,7 +344,7 @@ void print_vkbd(unsigned short int *pixels)
                               XTEXT+(sx*FONT_WIDTH),
                               YTEXT+(sy*FONT_HEIGHT),
                               BKG_COLOR,
-                              (FONT_COLOR == COLOR_WHITE ? COLOR_BLACK : COLOR_GRAY),
+                              (FONT_COLOR == COLOR_WHITE ? COLOR_GRAYBLACK : COLOR_GRAYWHITE),
                               GRAPH_ALPHA_75+(-sx-sy), false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
                               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
             }

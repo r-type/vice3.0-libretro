@@ -49,7 +49,6 @@ extern unsigned int opt_joyport_type;
 extern unsigned int opt_autoloadwarp;
 extern unsigned int retro_warpmode;
 extern int retro_warp_mode_enabled();
-extern int request_model_set;
 extern int RGB(int r, int g, int b);
 
 /* ----------------------------------------------------------------- */
@@ -187,8 +186,7 @@ static void display_joyport(void)
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
     /* Model */
-    unsigned model = 0;
-    model = core_opt.Model;
+    unsigned model = core_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
 
@@ -232,8 +230,7 @@ static void display_joyport(void)
     sprintf(&statusbar_text[STATUSBAR_MODEL_POS-9-zoomed_centering], "%7s", tmpstr);
 #elif defined(__XVIC__)
     /* Model */
-    unsigned model = 0;
-    model = core_opt.Model;
+    unsigned model = core_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
 

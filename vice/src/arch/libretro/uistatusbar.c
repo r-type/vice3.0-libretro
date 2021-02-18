@@ -49,7 +49,6 @@ extern unsigned int opt_joyport_type;
 extern unsigned int opt_autoloadwarp;
 extern unsigned int retro_warpmode;
 extern int retro_warp_mode_enabled();
-extern int request_model_set;
 extern int RGB(int r, int g, int b);
 
 /* ----------------------------------------------------------------- */
@@ -187,8 +186,7 @@ static void display_joyport(void)
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
     /* Model */
-    unsigned model = 0;
-    model = core_opt.Model;
+    unsigned model = core_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
 
@@ -232,8 +230,7 @@ static void display_joyport(void)
     sprintf(&statusbar_text[STATUSBAR_MODEL_POS-9-zoomed_centering], "%7s", tmpstr);
 #elif defined(__XVIC__)
     /* Model */
-    unsigned model = 0;
-    model = core_opt.Model;
+    unsigned model = core_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
 
@@ -641,12 +638,12 @@ void uistatusbar_draw(void)
             color_brown, color_brownd;
     color_black  = 0;
     color_white  = RGB(255, 255, 255);
-    color_red    = RGB(187,   0,   0);
-    color_greenb = RGB(  0, 187,   0);
+    color_red    = RGB(204,   0,   0);
+    color_greenb = RGB(  0, 204,   0);
     color_green  = RGB(  0,  85,   0);
     color_greend = RGB(  0,  34,   0);
-    color_brown  = RGB(109,  99,  98);
-    color_brownd = RGB( 69,  59,  58);
+    color_brown  = RGB(143, 140, 129);
+    color_brownd = RGB( 89,  79,  78);
     color_f      = color_white;
     color_b      = color_black;
 

@@ -2289,19 +2289,14 @@ void retro_set_environment(retro_environment_t cb)
          "Video > Virtual KBD Theme",
          "By default, the keyboard comes up with RetroPad Select.",
          {
-            { "0", "C64" },
-            { "2", "Dark" },
-            { "1", "C64C" },
-            { "3", "Light" },
+            { "auto", "Automatic"},
+            { "brown", "Brown" },
+            { "beige", "Beige" },
+            { "dark", "Dark" },
+            { "light", "Light" },
             { NULL, NULL },
          },
-#if defined(__XPET__)
-         "2"
-#elif defined(__XPLUS4__) || defined(__X128__)
-         "1"
-#else
-         "0"
-#endif
+         "auto"
       },
       {
          "vice_vkbd_transparency",
@@ -4703,7 +4698,11 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      opt_vkbd_theme = atoi(var.value);
+      if      (!strcmp(var.value, "auto"))  opt_vkbd_theme = 0;
+      else if (!strcmp(var.value, "brown")) opt_vkbd_theme = 1;
+      else if (!strcmp(var.value, "beige")) opt_vkbd_theme = 2;
+      else if (!strcmp(var.value, "dark"))  opt_vkbd_theme = 3;
+      else if (!strcmp(var.value, "light")) opt_vkbd_theme = 4;
    }
 
    var.key = "vice_vkbd_transparency";

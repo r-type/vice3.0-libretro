@@ -2289,11 +2289,16 @@ void retro_set_environment(retro_environment_t cb)
          "Video > Virtual KBD Theme",
          "By default, the keyboard comes up with RetroPad Select.",
          {
-            { "auto", "Automatic"},
-            { "brown", "Brown" },
-            { "beige", "Beige" },
-            { "dark", "Dark" },
-            { "light", "Light" },
+            { "auto", "Automatic (shadow)" },
+            { "auto_outline", "Automatic (outline)" },
+            { "brown", "Brown (shadow)" },
+            { "brown_outline", "Brown (outline)" },
+            { "beige", "Beige (shadow)" },
+            { "beige_outline", "Beige (outline)" },
+            { "dark", "Dark (shadow)" },
+            { "dark_outline", "Dark (outline)" },
+            { "light", "Light (shadow)" },
+            { "light_outline", "Light (outline)" },
             { NULL, NULL },
          },
          "auto"
@@ -4698,11 +4703,13 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if      (!strcmp(var.value, "auto"))  opt_vkbd_theme = 0;
-      else if (!strcmp(var.value, "brown")) opt_vkbd_theme = 1;
-      else if (!strcmp(var.value, "beige")) opt_vkbd_theme = 2;
-      else if (!strcmp(var.value, "dark"))  opt_vkbd_theme = 3;
-      else if (!strcmp(var.value, "light")) opt_vkbd_theme = 4;
+      if      (strstr(var.value, "auto"))    opt_vkbd_theme = 0;
+      else if (strstr(var.value, "brown"))   opt_vkbd_theme = 1;
+      else if (strstr(var.value, "beige"))   opt_vkbd_theme = 2;
+      else if (strstr(var.value, "dark"))    opt_vkbd_theme = 3;
+      else if (strstr(var.value, "light"))   opt_vkbd_theme = 4;
+
+      if      (strstr(var.value, "outline")) opt_vkbd_theme |= 0x80;
    }
 
    var.key = "vice_vkbd_transparency";

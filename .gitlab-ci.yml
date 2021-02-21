@@ -162,12 +162,16 @@ libretro-build-linux-i686:
 
 # MacOS 64-bit
 libretro-build-osx-x64:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs
@@ -199,6 +203,8 @@ android-x86:
 
 # iOS 9
 libretro-build-ios-9:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs
@@ -271,12 +277,16 @@ libretro-build-linux-i686-x64sc:
 
 # MacOS 64-bit
 libretro-build-osx-x64-x64sc:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs-x64sc
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64-x64sc:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs-x64sc
@@ -308,6 +318,8 @@ android-x86-x64sc:
 
 # iOS 9
 libretro-build-ios-9-x64sc:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs-x64sc
@@ -374,12 +386,16 @@ libretro-build-linux-i686-x128:
 
 # MacOS 64-bit
 libretro-build-osx-x64-x128:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs-x128
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64-x128:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs-x128
@@ -407,6 +423,8 @@ android-x86-x128:
 
 # iOS 9
 libretro-build-ios-9-x128:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs-x128
@@ -468,12 +486,16 @@ libretro-build-linux-i686-xcbm2:
 
 # MacOS 64-bit
 libretro-build-osx-x64-xcbm2:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs-xcbm2
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64-xcbm2:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs-xcbm2
@@ -501,6 +523,8 @@ android-x86-xcbm2:
 
 # iOS 9
 libretro-build-ios-9-xcbm2:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs-xcbm2
@@ -562,12 +586,16 @@ libretro-build-linux-i686-xcbm5x0:
 
 # MacOS 64-bit
 libretro-build-osx-x64-xcbm5x0:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs-xcbm5x0
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64-xcbm5x0:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs-xcbm5x0
@@ -595,6 +623,8 @@ android-x86-xcbm5x0:
 
 # iOS 9
 libretro-build-ios-9-xcbm5x0:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs-xcbm5x0
@@ -656,12 +686,16 @@ libretro-build-linux-i686-xpet:
 
 # MacOS 64-bit
 libretro-build-osx-x64-xpet:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs-xpet
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64-xpet:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs-xpet
@@ -689,6 +723,8 @@ android-x86-xpet:
 
 # iOS 9
 libretro-build-ios-9-xpet:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs-xpet
@@ -750,12 +786,16 @@ libretro-build-linux-i686-xplus4:
 
 # MacOS 64-bit
 libretro-build-osx-x64-xplus4:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs-xplus4
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64-xplus4:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs-xplus4
@@ -783,6 +823,8 @@ android-x86-xplus4:
 
 # iOS 9
 libretro-build-ios-9-xplus4:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs-xplus4
@@ -844,12 +886,16 @@ libretro-build-linux-i686-xscpu64:
 
 # MacOS 64-bit
 libretro-build-osx-x64-xscpu64:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs-xscpu64
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64-xscpu64:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs-xscpu64
@@ -877,6 +923,8 @@ android-x86-xscpu64:
 
 # iOS 9
 libretro-build-ios-9-xscpu64:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs-xscpu64
@@ -938,12 +986,16 @@ libretro-build-linux-i686-xvic:
 
 # MacOS 64-bit
 libretro-build-osx-x64-xvic:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-x64-make-default
     - .core-defs-xvic
 
 # MacOS ARM 64-bit
 libretro-build-osx-arm64-xvic:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs-xvic
@@ -971,6 +1023,8 @@ android-x86-xvic:
 
 # iOS 9
 libretro-build-ios-9-xvic:
+  tags:
+    - macosx-packaging
   extends:
     - .libretro-ios9-make-default
     - .core-defs-xvic

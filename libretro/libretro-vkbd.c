@@ -124,11 +124,11 @@ void print_vkbd(unsigned short int *pixels)
          break;
       
       case 2: /* C64C beige */
-         BKG_COLOR_NORMAL  = RGB(216, 209, 201);
-         BKG_COLOR_ALT     = RGB(159, 154, 150);
-         BKG_COLOR_EXTRA   = RGB(143, 140, 129);
-         BKG_COLOR_EXTRA2  = RGB(109,  99,  98);
-         BKG_COLOR_SEL     = RGB( 60,  60,  60);
+         BKG_COLOR_NORMAL  = RGB(208, 208, 202);
+         BKG_COLOR_ALT     = RGB(154, 154, 150);
+         BKG_COLOR_EXTRA   = RGB(132, 132, 132);
+         BKG_COLOR_EXTRA2  = RGB( 89,  79,  78);
+         BKG_COLOR_SEL     = RGB( 40,  40,  40);
          BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
          FONT_COLOR_NORMAL = COLOR_BLACK;
          FONT_COLOR_SEL    = COLOR_WHITE;
@@ -146,11 +146,11 @@ void print_vkbd(unsigned short int *pixels)
          break;
       
       case 4: /* Light */
-         BKG_COLOR_NORMAL  = RGB(210, 210, 210);
-         BKG_COLOR_ALT     = RGB(180, 180, 180);
-         BKG_COLOR_EXTRA   = RGB(150, 150, 150);
-         BKG_COLOR_EXTRA2  = RGB(190, 190, 190);
-         BKG_COLOR_SEL     = RGB( 60,  60,  60);
+         BKG_COLOR_NORMAL  = RGB(200, 204, 206);
+         BKG_COLOR_ALT     = RGB(160, 160, 160);
+         BKG_COLOR_EXTRA   = RGB(132, 132, 132);
+         BKG_COLOR_EXTRA2  = RGB(180, 180, 180);
+         BKG_COLOR_SEL     = RGB( 40,  40,  40);
          BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
          FONT_COLOR_NORMAL = COLOR_BLACK;
          FONT_COLOR_SEL    = COLOR_WHITE;
@@ -368,7 +368,7 @@ void print_vkbd(unsigned short int *pixels)
                            YTEXT+1,
                            BKG_COLOR,
                            (FONT_COLOR == COLOR_WHITE ? COLOR_GRAYBLACK : COLOR_GRAYWHITE),
-                           GRAPH_ALPHA_75, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                           GRAPH_ALPHA_75-1, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
                            (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
             else
                Draw_text(pix,
@@ -376,7 +376,7 @@ void print_vkbd(unsigned short int *pixels)
                            YTEXT+1,
                            BKG_COLOR,
                            (FONT_COLOR == COLOR_WHITE ? COLOR_GRAYBLACK : COLOR_GRAYWHITE),
-                           GRAPH_ALPHA_75, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
+                           GRAPH_ALPHA_75-1, false, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
                            (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
          }
 

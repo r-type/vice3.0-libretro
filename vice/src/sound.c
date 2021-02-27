@@ -1661,9 +1661,9 @@ void sound_set_warp_mode(int value)
     warp_mode_enabled = value;
 
 #ifdef __LIBRETRO__
-    if (core_opt.SidEngine != SID_ENGINE_FASTSID)
+    if (vice_opt.SidEngine != SID_ENGINE_FASTSID)
     {
-        resources_set_int("SidEngine", (value) ? SID_ENGINE_FASTSID : core_opt.SidEngine);
+        resources_set_int("SidEngine", (value) ? SID_ENGINE_FASTSID : vice_opt.SidEngine);
         /* 6581 init pop muting */
         if (!value)
             sound_volume_counter_reset();

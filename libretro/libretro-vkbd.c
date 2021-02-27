@@ -85,7 +85,7 @@ void print_vkbd(unsigned short int *pixels)
    if (!theme)
    {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-      unsigned model = core_opt.Model;
+      unsigned model = vice_opt.Model;
       if (request_model_set > -1 && request_model_set != model)
          model = request_model_set;
 

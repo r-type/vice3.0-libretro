@@ -188,7 +188,7 @@ extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
 extern void reload_restart(void);
 
 /* VICE options */
-struct libretro_core_options
+struct vice_core_options
 {
    int Model;
    int UserportJoyType;
@@ -231,7 +231,7 @@ struct libretro_core_options
 #endif
 };
 
-extern struct libretro_core_options core_opt;
+extern struct vice_core_options vice_opt;
 
 /* VICE includes */
 #if defined(__X64__) || defined(__X64SC__)

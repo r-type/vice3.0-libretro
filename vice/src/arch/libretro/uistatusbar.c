@@ -163,7 +163,7 @@ static void display_joyport(void)
        sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 #endif
 
-    if (core_opt.UserportJoyType != -1)
+    if (vice_opt.UserportJoyType != -1)
     {
         sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3], 0));
         sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4], 0));
@@ -186,7 +186,7 @@ static void display_joyport(void)
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
     /* Model */
-    unsigned model = core_opt.Model;
+    unsigned model = vice_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
 
@@ -220,9 +220,9 @@ static void display_joyport(void)
     /* Memory */
     unsigned memory = 0;
 #if defined(__XSCPU64__)
-    memory = core_opt.SIMMSize * 1024;
+    memory = vice_opt.SIMMSize * 1024;
 #else
-    memory = core_opt.REUsize;
+    memory = vice_opt.REUsize;
 #endif
 
     tmpstr[0] = '\0';
@@ -230,7 +230,7 @@ static void display_joyport(void)
     sprintf(&statusbar_text[STATUSBAR_MODEL_POS-9-zoomed_centering], "%7s", tmpstr);
 #elif defined(__XVIC__)
     /* Model */
-    unsigned model = core_opt.Model;
+    unsigned model = vice_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
 
@@ -247,8 +247,8 @@ static void display_joyport(void)
 
     /* Memory */
     unsigned memory = 0;
-    memory = (vic20mem_forced > -1) ? vic20mem_forced : core_opt.VIC20Memory;
-    if (!memory && core_opt.Model == VIC20MODEL_VIC21)
+    memory = (vic20mem_forced > -1) ? vic20mem_forced : vice_opt.VIC20Memory;
+    if (!memory && vice_opt.Model == VIC20MODEL_VIC21)
         memory = 3;
 
     tmpstr[0] = '\0';

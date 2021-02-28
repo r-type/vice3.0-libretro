@@ -86,7 +86,7 @@ static bool pix_bytes_initialized = false;
 unsigned short int retro_bmp[RETRO_BMP_SIZE] = {0};
 
 /* Core options */
-struct libretro_core_options core_opt;
+struct vice_core_options vice_opt;
 
 #if defined(__XVIC__)
 int vic20mem_forced = -1;
@@ -218,8 +218,6 @@ int loadcmdfile(const char *argv)
    }
    return res;
 }
-
-#include <ctype.h>
 
 /* Args for experimental_cmdline */
 static char ARGUV[64][1024];
@@ -544,7 +542,7 @@ static int process_cmdline(const char* argv)
         if (loadcmdfile(argv))
         {
             log_cb(RETRO_LOG_INFO, "Starting game from command line '%s'\n", argv);
-            core_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
+            vice_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
         }
         else
         {
@@ -720,7 +718,7 @@ static int process_cmdline(const char* argv)
                 char reu_size[6] = {0};
                 struct stat reu_stat;
                 stat(reu_path, &reu_stat);
-                snprintf(reu_size, sizeof(reu_size), "%u", reu_stat.st_size / 1024);
+                snprintf(reu_size, sizeof(reu_size), "%u", (unsigned)reu_stat.st_size / 1024);
 
                 Add_Option("-reu");
                 Add_Option("-reusize");
@@ -735,8 +733,8 @@ static int process_cmdline(const char* argv)
 #if defined(__XVIC__)
         /* Pretend to launch cartridge if using core option cartridge while launching
          * without content, because XVIC does not care about CartridgeFile resource */
-        if (string_is_empty(argv) && !string_is_empty(core_opt.CartridgeFile))
-            argv = core_opt.CartridgeFile;
+        if (string_is_empty(argv) && !string_is_empty(vice_opt.CartridgeFile))
+            argv = vice_opt.CartridgeFile;
 
         if (strendswith(argv, ".20"))
         {
@@ -1028,7 +1026,7 @@ static int process_cmdline(const char* argv)
             {
                 /* Re-parse command line from M3U #COMMAND: */
                 log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", dc->command);
-                core_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
+                vice_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
                 parse_cmdline(dc->command);
                 /* Reset parameters list for VICE */
                 PARAMCOUNT = 0;
@@ -1183,7 +1181,7 @@ static void autodetect_drivetype(int unit)
                 case DISK_IMAGE_TYPE_G71:
                 case DISK_IMAGE_TYPE_D64:
                 case DISK_IMAGE_TYPE_D71:
-                    resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
+                    resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
                     break;
                 default:
                     resources_set_int("DriveSoundEmulationVolume", 0);
@@ -1324,7 +1322,7 @@ void update_from_vice()
         {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_NTSC;
-            if (core_opt.Model == C64MODEL_C64C_PAL)
+            if (vice_opt.Model == C64MODEL_C64C_PAL)
                 request_model_set = C64MODEL_C64C_NTSC;
 #elif defined(__XVIC__)
             request_model_set = VIC20MODEL_VIC20_NTSC;
@@ -1341,7 +1339,7 @@ void update_from_vice()
         {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_PAL;
-            if (core_opt.Model == C64MODEL_C64C_NTSC)
+            if (vice_opt.Model == C64MODEL_C64C_NTSC)
                 request_model_set = C64MODEL_C64C_PAL;
 #elif defined(__XVIC__)
             request_model_set = VIC20MODEL_VIC20_PAL;
@@ -1657,7 +1655,7 @@ static void retro_led_interface(void)
    unsigned int led_state[3] = {0};
 
    led_state[0] = (request_restart) ? 0 : 1;
-   led_state[1] = (core_opt.DriveTrueEmulation) ? vice_led_state[1] : 0;
+   led_state[1] = (vice_opt.DriveTrueEmulation) ? vice_led_state[1] : 0;
    led_state[2] = vice_led_state[2];
 
    for (unsigned l = 0; l < sizeof(led_state)/sizeof(led_state[0]); l++)
@@ -3507,7 +3505,7 @@ static void update_variables(void)
          snprintf(cart_full, sizeof(cart_full), "%s%s%s%s%s",
                retro_system_data_directory, FSDEV_DIR_SEP_STR, machine_name, FSDEV_DIR_SEP_STR, var.value);
 
-      if (retro_ui_finalized && strcmp(core_opt.CartridgeFile, cart_full))
+      if (retro_ui_finalized && strcmp(vice_opt.CartridgeFile, cart_full))
       {
          if (!strcmp(cart_full, ""))
             cartridge_detach_image(-1);
@@ -3522,7 +3520,7 @@ static void update_variables(void)
          request_restart = true;
       }
 
-      sprintf(core_opt.CartridgeFile, "%s", cart_full);
+      sprintf(vice_opt.CartridgeFile, "%s", cart_full);
    }
 #endif
 
@@ -3540,13 +3538,13 @@ static void update_variables(void)
 
       if (retro_ui_finalized)
       {
-         if (core_opt.AutostartWarp != autostartwarp)
+         if (vice_opt.AutostartWarp != autostartwarp)
             log_resources_set_int("AutostartWarp", autostartwarp);
 
          noautostart = !opt_autostart;
       }
 
-      core_opt.AutostartWarp = autostartwarp;
+      vice_opt.AutostartWarp = autostartwarp;
    }
 
    var.key = "vice_autoloadwarp";
@@ -3559,9 +3557,9 @@ static void update_variables(void)
       else                                     opt_autoloadwarp = AUTOLOADWARP_DISK | AUTOLOADWARP_TAPE;
 
       /* Silently restore sounds when autoloadwarp is disabled and DSE is enabled */
-      if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation &&
+      if (retro_ui_finalized && vice_opt.DriveSoundEmulation && vice_opt.DriveTrueEmulation &&
           !(opt_autoloadwarp & AUTOLOADWARP_DISK))
-         resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
+         resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
    }
 
    var.key = "vice_floppy_write_protection";
@@ -3573,10 +3571,10 @@ static void update_variables(void)
       if (!strcmp(var.value, "disabled")) readonly = 0;
       else                                readonly = 1;
 
-      if (retro_ui_finalized && core_opt.AttachDevice8Readonly != readonly)
+      if (retro_ui_finalized && vice_opt.AttachDevice8Readonly != readonly)
          log_resources_set_int("AttachDevice8Readonly", readonly);
 
-      core_opt.AttachDevice8Readonly = readonly;
+      vice_opt.AttachDevice8Readonly = readonly;
    }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
@@ -3589,10 +3587,10 @@ static void update_variables(void)
       if (!strcmp(var.value, "disabled")) writecrt = 1;
       else                                writecrt = 0;
 
-      if (retro_ui_finalized && core_opt.EasyFlashWriteCRT != writecrt)
+      if (retro_ui_finalized && vice_opt.EasyFlashWriteCRT != writecrt)
          log_resources_set_int("EasyFlashWriteCRT", writecrt);
 
-      core_opt.EasyFlashWriteCRT = writecrt;
+      vice_opt.EasyFlashWriteCRT = writecrt;
    }
 #endif
 
@@ -3624,14 +3622,14 @@ static void update_variables(void)
    {
       if (retro_ui_finalized)
       {
-         if (!strcmp(var.value, "disabled") && core_opt.VirtualDevices)
+         if (!strcmp(var.value, "disabled") && vice_opt.VirtualDevices)
             log_resources_set_int("VirtualDevices", 0);
-         else if (!strcmp(var.value, "enabled") && !core_opt.VirtualDevices)
+         else if (!strcmp(var.value, "enabled") && !vice_opt.VirtualDevices)
             log_resources_set_int("VirtualDevices", 1);
       }
 
-      if (!strcmp(var.value, "disabled")) core_opt.VirtualDevices = 0;
-      else                                core_opt.VirtualDevices = 1;
+      if (!strcmp(var.value, "disabled")) vice_opt.VirtualDevices = 0;
+      else                                vice_opt.VirtualDevices = 1;
    }
 
    var.key = "vice_drive_true_emulation";
@@ -3640,26 +3638,26 @@ static void update_variables(void)
    {
       if (retro_ui_finalized)
       {
-         if (!strcmp(var.value, "disabled") && core_opt.DriveTrueEmulation)
+         if (!strcmp(var.value, "disabled") && vice_opt.DriveTrueEmulation)
             log_resources_set_int("DriveTrueEmulation", 0);
-         else if (!strcmp(var.value, "enabled") && !core_opt.DriveTrueEmulation)
+         else if (!strcmp(var.value, "enabled") && !vice_opt.DriveTrueEmulation)
             log_resources_set_int("DriveTrueEmulation", 1);
       }
 
-      if (!strcmp(var.value, "disabled")) core_opt.DriveTrueEmulation = 0;
-      else                                core_opt.DriveTrueEmulation = 1;
+      if (!strcmp(var.value, "disabled")) vice_opt.DriveTrueEmulation = 0;
+      else                                vice_opt.DriveTrueEmulation = 1;
 
       /* Silently restore sounds when TDE and DSE is enabled */
-      if (retro_ui_finalized && core_opt.DriveSoundEmulation && core_opt.DriveTrueEmulation)
-         resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
+      if (retro_ui_finalized && vice_opt.DriveSoundEmulation && vice_opt.DriveTrueEmulation)
+         resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
 
       /* Forcefully enable Virtual Device Traps if TDE is disabled,
        * otherwise floppy access does not work at all */
-      if (!core_opt.DriveTrueEmulation && !core_opt.VirtualDevices)
+      if (!vice_opt.DriveTrueEmulation && !vice_opt.VirtualDevices)
       {
-         core_opt.VirtualDevices = 1;
+         vice_opt.VirtualDevices = 1;
          if (retro_ui_finalized)
-            log_resources_set_int("VirtualDevices", core_opt.VirtualDevices);
+            log_resources_set_int("VirtualDevices", vice_opt.VirtualDevices);
       }
    }
 
@@ -3669,7 +3667,7 @@ static void update_variables(void)
    {
       int val = atoi(var.value) * 20;
 
-      if (retro_ui_finalized && core_opt.DriveSoundEmulation != val)
+      if (retro_ui_finalized && vice_opt.DriveSoundEmulation != val)
       {
          if (!strcmp(var.value, "disabled"))
          {
@@ -3683,13 +3681,13 @@ static void update_variables(void)
          }
       }
 
-      core_opt.DriveSoundEmulation = val;
+      vice_opt.DriveSoundEmulation = val;
 
       /* Silently mute sounds without TDE,
        * because motor sound will not stop if TDE is changed during motor spinning
        * and also with autoloadwarping, because warping is muted anyway */
-      if (retro_ui_finalized && core_opt.DriveSoundEmulation &&
-          (!core_opt.DriveTrueEmulation || opt_autoloadwarp & AUTOLOADWARP_DISK))
+      if (retro_ui_finalized && vice_opt.DriveSoundEmulation &&
+          (!vice_opt.DriveTrueEmulation || opt_autoloadwarp & AUTOLOADWARP_DISK))
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
@@ -3704,7 +3702,7 @@ static void update_variables(void)
       if (!strcmp(var.value, "disabled")) audioleak = 0;
       else                                audioleak = 1;
 
-      if (retro_ui_finalized && core_opt.AudioLeak != audioleak)
+      if (retro_ui_finalized && vice_opt.AudioLeak != audioleak)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIAudioLeak", audioleak);
 #elif defined(__XVIC__)
@@ -3712,7 +3710,7 @@ static void update_variables(void)
 #elif defined(__XPLUS4__)
          log_resources_set_int("TEDAudioLeak", audioleak);
 #endif
-      core_opt.AudioLeak = audioleak;
+      vice_opt.AudioLeak = audioleak;
    }
 #endif
 
@@ -3720,7 +3718,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      core_opt.SoundSampleRate = atoi(var.value);
+      vice_opt.SoundSampleRate = atoi(var.value);
    }
 
 #if defined(__XVIC__)
@@ -3739,15 +3737,15 @@ static void update_variables(void)
       else if (!strcmp(var.value, "VIC20 NTSC"))      model = VIC20MODEL_VIC20_NTSC;
       else if (!strcmp(var.value, "VIC21"))           model = VIC20MODEL_VIC21;
 
-      if (retro_ui_finalized && core_opt.Model != model)
+      if (retro_ui_finalized && vice_opt.Model != model)
       {
          vic20model_set(model);
          request_model_prev = -1;
          /* Memory expansion needs to be reseted to get updated */
-         core_opt.VIC20Memory = 0xff;
+         vice_opt.VIC20Memory = 0xff;
       }
 
-      core_opt.Model = model;
+      vice_opt.Model = model;
    }
 
    var.key = "vice_vic20_memory_expansions";
@@ -3764,10 +3762,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "35kB")) vic20mem = 5;
 
       /* Super VIC uses memory blocks 1+2 by default */
-      if (!vic20mem && core_opt.Model == VIC20MODEL_VIC21)
+      if (!vic20mem && vice_opt.Model == VIC20MODEL_VIC21)
          vic20mem = 3;
 
-      if (retro_ui_finalized && core_opt.VIC20Memory != vic20mem)
+      if (retro_ui_finalized && vice_opt.VIC20Memory != vic20mem)
       {
          unsigned int vic_blocks = 0;
          switch (vic20mem)
@@ -3804,7 +3802,7 @@ static void update_variables(void)
          request_restart = true;
       }
 
-      core_opt.VIC20Memory = vic20mem;
+      vice_opt.VIC20Memory = vic20mem;
    }
 #elif defined(__XPLUS4__)
    var.key = "vice_plus4_model";
@@ -3820,10 +3818,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "V364 NTSC"))  model = PLUS4MODEL_V364_NTSC;
       else if (!strcmp(var.value, "232 NTSC"))   model = PLUS4MODEL_232_NTSC;
 
-      if (retro_ui_finalized && core_opt.Model != model)
+      if (retro_ui_finalized && vice_opt.Model != model)
          plus4model_set(model);
 
-      core_opt.Model = model;
+      vice_opt.Model = model;
    }
 #elif defined(__X128__)
    var.key = "vice_c128_model";
@@ -3837,10 +3835,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "C128 DCR PAL"))  model = C128MODEL_C128DCR_PAL;
       else if (!strcmp(var.value, "C128 DCR NTSC")) model = C128MODEL_C128DCR_NTSC;
 
-      if (retro_ui_finalized && core_opt.Model != model)
+      if (retro_ui_finalized && vice_opt.Model != model)
          c128model_set(model);
 
-      core_opt.Model = model;
+      vice_opt.Model = model;
    }
 
    var.key = "vice_c128_video_output";
@@ -3852,10 +3850,10 @@ static void update_variables(void)
       if      (!strcmp(var.value, "VICII")) c128columnkey = 1;
       else if (!strcmp(var.value, "VDC"))   c128columnkey = 0;
 
-      if (retro_ui_finalized && core_opt.C128ColumnKey != c128columnkey)
+      if (retro_ui_finalized && vice_opt.C128ColumnKey != c128columnkey)
          log_resources_set_int("C128ColumnKey", c128columnkey);
 
-      core_opt.C128ColumnKey = c128columnkey;
+      vice_opt.C128ColumnKey = c128columnkey;
    }
 
    var.key = "vice_c128_go64";
@@ -3870,18 +3868,18 @@ static void update_variables(void)
       /* Force VIC-II with GO64 */
       if (c128go64)
       {
-         core_opt.C128ColumnKey = 1;
+         vice_opt.C128ColumnKey = 1;
          if (retro_ui_finalized)
             log_resources_set_int("C128ColumnKey", 1);
       }
 
-      if (retro_ui_finalized && core_opt.Go64Mode != c128go64)
+      if (retro_ui_finalized && vice_opt.Go64Mode != c128go64)
       {
          log_resources_set_int("Go64Mode", c128go64);
          /* Skip reset for now, because going into 64 mode while running produces VDC related endless garbage, but typing GO64 works?! */
          /*machine_trigger_reset(MACHINE_RESET_MODE_HARD);*/
       }
-      core_opt.Go64Mode = c128go64;
+      vice_opt.Go64Mode = c128go64;
    }
 #elif defined(__XPET__)
    var.key = "vice_pet_model";
@@ -3903,13 +3901,13 @@ static void update_variables(void)
       else if (!strcmp(var.value, "8296"))     model = PETMODEL_8296;
       else if (!strcmp(var.value, "SUPERPET")) model = PETMODEL_SUPERPET;
       
-      if (retro_ui_finalized && core_opt.Model != model)
+      if (retro_ui_finalized && vice_opt.Model != model)
       {
          petmodel_set(model);
          /* Keyboard layout refresh required. All models below 8032 except B models use graphics layout, others use business. */
          keyboard_init();
       }
-      core_opt.Model = model;
+      vice_opt.Model = model;
    }
 #elif defined(__XCBM2__)
    var.key = "vice_cbm2_model";
@@ -3928,10 +3926,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "720 NTSC"))     model = CBM2MODEL_720_NTSC;
       else if (!strcmp(var.value, "720PLUS NTSC")) model = CBM2MODEL_720PLUS_NTSC;
 
-      if (retro_ui_finalized && core_opt.Model != model)
+      if (retro_ui_finalized && vice_opt.Model != model)
          cbm2model_set(model);
 
-      core_opt.Model = model;
+      vice_opt.Model = model;
    }
 #elif defined(__XCBM5x0__)
    var.key = "vice_cbm5x0_model";
@@ -3943,10 +3941,10 @@ static void update_variables(void)
       if      (!strcmp(var.value, "510 PAL"))  model = CBM2MODEL_510_PAL;
       else if (!strcmp(var.value, "510 NTSC")) model = CBM2MODEL_510_NTSC;
 
-      if (retro_ui_finalized && core_opt.Model != model)
+      if (retro_ui_finalized && vice_opt.Model != model)
          cbm2model_set(model);
 
-      core_opt.Model = model;
+      vice_opt.Model = model;
    }
 #elif defined(__X64DTV__)
    var.key = "vice_c64dtv_model";
@@ -3961,10 +3959,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "DTV3 NTSC"))   model = DTVMODEL_V3_NTSC;
       else if (!strcmp(var.value, "HUMMER NTSC")) model = DTVMODEL_HUMMER_NTSC;
 
-      if (retro_ui_finalized && core_opt.Model != model)
+      if (retro_ui_finalized && vice_opt.Model != model)
          dtvmodel_set(model);
 
-      core_opt.Model = model;
+      vice_opt.Model = model;
    }
 #else
    var.key = "vice_c64_model";
@@ -3994,14 +3992,14 @@ static void update_variables(void)
       else if (!strcmp(var.value, "C64 OLD PAL"))    model = C64MODEL_C64_OLD_PAL;
       else if (!strcmp(var.value, "C64 OLD NTSC"))   model = C64MODEL_C64_OLD_NTSC;
 
-      if (retro_ui_finalized && core_opt.Model != model)
+      if (retro_ui_finalized && vice_opt.Model != model)
       {
          c64model_set(model);
          request_model_prev = -1;
          reload_restart();
       }
 
-      core_opt.Model = model;
+      vice_opt.Model = model;
    }
 
 #if defined(__XSCPU64__)
@@ -4011,13 +4009,13 @@ static void update_variables(void)
    {
       int simmsize = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.SIMMSize != simmsize)
+      if (retro_ui_finalized && vice_opt.SIMMSize != simmsize)
       {
          log_resources_set_int("SIMMSize", simmsize);
          request_restart = true;
       }
 
-      core_opt.SIMMSize = simmsize;
+      vice_opt.SIMMSize = simmsize;
    }
 #else
    var.key = "vice_ram_expansion_unit";
@@ -4029,7 +4027,7 @@ static void update_variables(void)
       if (strcmp(var.value, "none"))
          reusize = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.REUsize != reusize)
+      if (retro_ui_finalized && vice_opt.REUsize != reusize)
       {
          if (!reusize)
             log_resources_set_int("REU", 0);
@@ -4041,7 +4039,7 @@ static void update_variables(void)
          request_restart = true;
       }
 
-      core_opt.REUsize = reusize;
+      vice_opt.REUsize = reusize;
    }
 #endif
 #endif
@@ -4059,10 +4057,10 @@ static void update_variables(void)
 #endif
       else if (!strcmp(var.value, "ReSID-FP"))  sid_engine = SID_ENGINE_RESIDFP;
 
-      if (retro_ui_finalized && core_opt.SidEngine != sid_engine)
+      if (retro_ui_finalized && vice_opt.SidEngine != sid_engine)
          log_resources_set_int("SidEngine", sid_engine);
 
-      core_opt.SidEngine = sid_engine;
+      vice_opt.SidEngine = sid_engine;
    }
 
    var.key = "vice_sid_model";
@@ -4070,7 +4068,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int sid_model = SID_MODEL_6581;
-      switch (core_opt.Model)
+      switch (vice_opt.Model)
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
          case C64MODEL_C64C_PAL:
@@ -4089,12 +4087,12 @@ static void update_variables(void)
       if      (!strcmp(var.value, "6581"))   sid_model = SID_MODEL_6581;
       else if (!strcmp(var.value, "8580"))   sid_model = SID_MODEL_8580;
       /* There is no digiboost for FastSID (and it's not needed either) */
-      else if (!strcmp(var.value, "8580RD")) sid_model = (!core_opt.SidEngine ? SID_MODEL_8580 : SID_MODEL_8580D);
+      else if (!strcmp(var.value, "8580RD")) sid_model = (!vice_opt.SidEngine ? SID_MODEL_8580 : SID_MODEL_8580D);
 
-      if (retro_ui_finalized && core_opt.SidModel != sid_model)
+      if (retro_ui_finalized && vice_opt.SidModel != sid_model)
          log_resources_set_int("SidModel", sid_model);
 
-      core_opt.SidModel = sid_model;
+      vice_opt.SidModel = sid_model;
    }
 
    var.key = "vice_sid_extra";
@@ -4105,19 +4103,19 @@ static void update_variables(void)
       if (strcmp(var.value, "disabled"))
          sid_extra = strtol(var.value, NULL, 16);
 
-      if (retro_ui_finalized && core_opt.SidExtra != sid_extra)
+      if (retro_ui_finalized && vice_opt.SidExtra != sid_extra)
       {
          if (!sid_extra)
             log_resources_set_int("SidStereo", 0);
          else
          {
             log_resources_set_int("SidStereoAddressStart", sid_extra);
-            if (!core_opt.SidExtra)
+            if (!vice_opt.SidExtra)
                log_resources_set_int("SidStereo", 1);
          }
       }
 
-      core_opt.SidExtra = sid_extra;
+      vice_opt.SidExtra = sid_extra;
    }
 
    var.key = "vice_resid_sampling";
@@ -4131,10 +4129,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "resampling"))      val = SID_RESID_SAMPLING_RESAMPLING;
       else if (!strcmp(var.value, "fast resampling")) val = SID_RESID_SAMPLING_FAST_RESAMPLING;
 
-      if (retro_ui_finalized && core_opt.SidResidSampling != val)
+      if (retro_ui_finalized && vice_opt.SidResidSampling != val)
          log_resources_set_int("SidResidSampling", val);
 
-      core_opt.SidResidSampling = val;
+      vice_opt.SidResidSampling = val;
    }
 
    var.key = "vice_resid_passband";
@@ -4143,13 +4141,13 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.SidResidPassband != val)
+      if (retro_ui_finalized && vice_opt.SidResidPassband != val)
       {
          log_resources_set_int("SidResidPassband", val);
          log_resources_set_int("SidResid8580Passband", val);
       }
 
-      core_opt.SidResidPassband = val;
+      vice_opt.SidResidPassband = val;
    }
 
    var.key = "vice_resid_gain";
@@ -4158,13 +4156,13 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.SidResidGain != val)
+      if (retro_ui_finalized && vice_opt.SidResidGain != val)
       {
          log_resources_set_int("SidResidGain", val);
          log_resources_set_int("SidResid8580Gain", val);
       }
 
-      core_opt.SidResidGain = val;
+      vice_opt.SidResidGain = val;
    }
 
    var.key = "vice_resid_filterbias";
@@ -4173,10 +4171,10 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.SidResidFilterBias != val)
+      if (retro_ui_finalized && vice_opt.SidResidFilterBias != val)
          log_resources_set_int("SidResidFilterBias", val);
 
-      core_opt.SidResidFilterBias = val;
+      vice_opt.SidResidFilterBias = val;
    }
 
    var.key = "vice_resid_8580filterbias";
@@ -4186,10 +4184,10 @@ static void update_variables(void)
    {
       int val = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.SidResid8580FilterBias != val)
+      if (retro_ui_finalized && vice_opt.SidResid8580FilterBias != val)
          log_resources_set_int("SidResid8580FilterBias", val);
 
-      core_opt.SidResid8580FilterBias = val;
+      vice_opt.SidResid8580FilterBias = val;
    }
 #endif
 
@@ -4200,19 +4198,19 @@ static void update_variables(void)
    {
       int sfx_chip = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.SFXSoundExpanderChip != sfx_chip)
+      if (retro_ui_finalized && vice_opt.SFXSoundExpanderChip != sfx_chip)
       {
          if (!sfx_chip)
             log_resources_set_int("SFXSoundExpander", 0);
          else
          {
             log_resources_set_int("SFXSoundExpanderChip", sfx_chip);
-            if (!core_opt.SFXSoundExpanderChip)
+            if (!vice_opt.SFXSoundExpanderChip)
                log_resources_set_int("SFXSoundExpander", 1);
          }
       }
 
-      core_opt.SFXSoundExpanderChip = sfx_chip;
+      vice_opt.SFXSoundExpanderChip = sfx_chip;
    }
 #endif
 
@@ -4228,7 +4226,7 @@ static void update_variables(void)
       else if (!strcmp(var.value, "manual"))  zoom_mode_id = 4;
 
 #if defined(__X128__)
-      if (!core_opt.C128ColumnKey)
+      if (!vice_opt.C128ColumnKey)
          zoom_mode_id = 0;
 #endif
 
@@ -4329,7 +4327,7 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
+      if (retro_ui_finalized && strcmp(var.value, vice_opt.ExternalPalette))
       {
          if (!strcmp(var.value, "default"))
             log_resources_set_int("VICExternalPalette", 0);
@@ -4340,14 +4338,14 @@ static void update_variables(void)
          }
       }
 
-      sprintf(core_opt.ExternalPalette, "%s", var.value);
+      sprintf(vice_opt.ExternalPalette, "%s", var.value);
    }
 #elif defined(__XPLUS4__)
    var.key = "vice_plus4_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
+      if (retro_ui_finalized && strcmp(var.value, vice_opt.ExternalPalette))
       {
          if (!strcmp(var.value, "default"))
             log_resources_set_int("TEDExternalPalette", 0);
@@ -4358,14 +4356,14 @@ static void update_variables(void)
          }
       }
 
-      sprintf(core_opt.ExternalPalette, "%s", var.value);
+      sprintf(vice_opt.ExternalPalette, "%s", var.value);
    }
 #elif defined(__XPET__)
    var.key = "vice_pet_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
+      if (retro_ui_finalized && strcmp(var.value, vice_opt.ExternalPalette))
       {
          if (!strcmp(var.value, "default"))
             log_resources_set_int("CrtcExternalPalette", 0);
@@ -4376,14 +4374,14 @@ static void update_variables(void)
          }
       }
 
-      sprintf(core_opt.ExternalPalette, "%s", var.value);
+      sprintf(vice_opt.ExternalPalette, "%s", var.value);
    }
 #elif defined(__XCBM2__)
    var.key = "vice_cbm2_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
+      if (retro_ui_finalized && strcmp(var.value, vice_opt.ExternalPalette))
       {
          if (!strcmp(var.value, "default"))
             log_resources_set_int("CrtcExternalPalette", 0);
@@ -4394,14 +4392,14 @@ static void update_variables(void)
          }
       }
 
-      sprintf(core_opt.ExternalPalette, "%s", var.value);
+      sprintf(vice_opt.ExternalPalette, "%s", var.value);
    }
 #else
    var.key = "vice_external_palette";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if (retro_ui_finalized && strcmp(var.value, core_opt.ExternalPalette))
+      if (retro_ui_finalized && strcmp(var.value, vice_opt.ExternalPalette))
       {
          if (!strcmp(var.value, "default"))
             log_resources_set_int("VICIIExternalPalette", 0);
@@ -4412,7 +4410,7 @@ static void update_variables(void)
          }
       }
 
-      sprintf(core_opt.ExternalPalette, "%s", var.value);
+      sprintf(vice_opt.ExternalPalette, "%s", var.value);
    }
 #endif
 
@@ -4429,7 +4427,7 @@ static void update_variables(void)
    {
       int color_gamma = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.ColorGamma != color_gamma)
+      if (retro_ui_finalized && vice_opt.ColorGamma != color_gamma)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorGamma", color_gamma);
 #elif defined(__XVIC__)
@@ -4438,7 +4436,7 @@ static void update_variables(void)
          log_resources_set_int("TEDColorGamma", color_gamma);
 #endif
 
-      core_opt.ColorGamma = color_gamma;
+      vice_opt.ColorGamma = color_gamma;
    }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -4453,7 +4451,7 @@ static void update_variables(void)
    {
       int color_tint = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.ColorTint != color_tint)
+      if (retro_ui_finalized && vice_opt.ColorTint != color_tint)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorTint", color_tint);
 #elif defined(__XVIC__)
@@ -4462,7 +4460,7 @@ static void update_variables(void)
          log_resources_set_int("TEDColorTint", color_tint);
 #endif
 
-      core_opt.ColorTint = color_tint;
+      vice_opt.ColorTint = color_tint;
    }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -4477,7 +4475,7 @@ static void update_variables(void)
    {
       int color_saturation = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.ColorSaturation != color_saturation)
+      if (retro_ui_finalized && vice_opt.ColorSaturation != color_saturation)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorSaturation", color_saturation);
 #elif defined(__XVIC__)
@@ -4486,7 +4484,7 @@ static void update_variables(void)
          log_resources_set_int("TEDColorSaturation", color_saturation);
 #endif
 
-      core_opt.ColorSaturation = color_saturation;
+      vice_opt.ColorSaturation = color_saturation;
    }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -4501,7 +4499,7 @@ static void update_variables(void)
    {
       int color_contrast = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.ColorContrast != color_contrast)
+      if (retro_ui_finalized && vice_opt.ColorContrast != color_contrast)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorContrast", color_contrast);
 #elif defined(__XVIC__)
@@ -4510,7 +4508,7 @@ static void update_variables(void)
          log_resources_set_int("TEDColorContrast", color_contrast);
 #endif
 
-      core_opt.ColorContrast = color_contrast;
+      vice_opt.ColorContrast = color_contrast;
    }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -4525,7 +4523,7 @@ static void update_variables(void)
    {
       int color_brightness = atoi(var.value);
 
-      if (retro_ui_finalized && core_opt.ColorBrightness != color_brightness)
+      if (retro_ui_finalized && vice_opt.ColorBrightness != color_brightness)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          log_resources_set_int("VICIIColorBrightness", color_brightness);
 #elif defined(__XVIC__)
@@ -4534,7 +4532,7 @@ static void update_variables(void)
          log_resources_set_int("TEDColorBrightness", color_brightness);
 #endif
 
-      core_opt.ColorBrightness = color_brightness;
+      vice_opt.ColorBrightness = color_brightness;
    }
 #endif
 
@@ -4554,7 +4552,7 @@ static void update_variables(void)
       else if (!strcmp(var.value, "Kingsoft")) userportjoytype = USERPORT_JOYSTICK_KINGSOFT;
       else if (!strcmp(var.value, "Starbyte")) userportjoytype = USERPORT_JOYSTICK_STARBYTE;
 
-      if (retro_ui_finalized && core_opt.UserportJoyType != userportjoytype)
+      if (retro_ui_finalized && vice_opt.UserportJoyType != userportjoytype)
       {
          if (userportjoytype == -1)
             log_resources_set_int("UserportJoy", 0);
@@ -4565,7 +4563,7 @@ static void update_variables(void)
          }
       }
 
-      core_opt.UserportJoyType = userportjoytype;
+      vice_opt.UserportJoyType = userportjoytype;
    }
 #endif
 
@@ -4780,10 +4778,10 @@ static void update_variables(void)
       int speedswitch = 0;
       if (!strcmp(var.value, "enabled")) speedswitch = 1;
 
-      if (retro_ui_finalized && core_opt.SpeedSwitch != speedswitch)
+      if (retro_ui_finalized && vice_opt.SpeedSwitch != speedswitch)
          log_resources_set_int("SpeedSwitch", speedswitch);
 
-      core_opt.SpeedSwitch = speedswitch;
+      vice_opt.SpeedSwitch = speedswitch;
    }
 
    var.key = "vice_supercpu_kernal";
@@ -4808,7 +4806,7 @@ static void update_variables(void)
       else                                opt_jiffydos = 1;
 
       /* Forcefully disable JiffyDOS if TDE is disabled */
-      if (!core_opt.DriveTrueEmulation)
+      if (!vice_opt.DriveTrueEmulation)
          opt_jiffydos = 0;
 
       if (!opt_jiffydos_allow)
@@ -5715,7 +5713,7 @@ double retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixe
       }
       ar = ((double)width / (double)height) * par;
 #if defined(__X128__)
-      if (core_opt.C128ColumnKey == 0)
+      if (vice_opt.C128ColumnKey == 0)
          ar = ((double)width / (double)height) / (double)2.0;
 #endif
 #elif defined(__XVIC__)
@@ -5955,8 +5953,8 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->geometry.base_width   = retrow;
    info->geometry.base_height  = retroh;
    info->geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
-   info->timing.sample_rate    = core_opt.SoundSampleRate;
-   prev_sound_sample_rate      = core_opt.SoundSampleRate;
+   info->timing.sample_rate    = vice_opt.SoundSampleRate;
+   prev_sound_sample_rate      = vice_opt.SoundSampleRate;
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__)
    retro_refresh = (retro_region == RETRO_REGION_PAL) ? C64_PAL_RFSH_PER_SEC : C64_NTSC_RFSH_PER_SEC;
@@ -6059,9 +6057,9 @@ void retro_run(void)
 #endif
 
       /* Update samplerate if changed by core option */
-      if (prev_sound_sample_rate != core_opt.SoundSampleRate)
+      if (prev_sound_sample_rate != vice_opt.SoundSampleRate)
       {
-         prev_sound_sample_rate = core_opt.SoundSampleRate;
+         prev_sound_sample_rate = vice_opt.SoundSampleRate;
 
          /* Ensure audio rendering is reinitialized on next use. */
          sound_close();

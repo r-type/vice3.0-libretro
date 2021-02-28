@@ -192,85 +192,85 @@ int ui_init_finalize(void)
 
    /* Video */
 #if defined(__XVIC__)
-   if (!strcmp(core_opt.ExternalPalette, "default"))
+   if (!strcmp(vice_opt.ExternalPalette, "default"))
       log_resources_set_int("VICExternalPalette", 0);
    else
    {
-      log_resources_set_string("VICPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_string("VICPaletteFile", vice_opt.ExternalPalette);
       log_resources_set_int("VICExternalPalette", 1);
    }
 #elif defined(__XPLUS4__)
-   if (!strcmp(core_opt.ExternalPalette, "default"))
+   if (!strcmp(vice_opt.ExternalPalette, "default"))
       log_resources_set_int("TEDExternalPalette", 0);
    else
    {
-      log_resources_set_string("TEDPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_string("TEDPaletteFile", vice_opt.ExternalPalette);
       log_resources_set_int("TEDExternalPalette", 1);
    }
 #elif defined(__XPET__)
-   if (!strcmp(core_opt.ExternalPalette, "default"))
+   if (!strcmp(vice_opt.ExternalPalette, "default"))
       log_resources_set_int("CrtcExternalPalette", 0);
    else
    {
-      log_resources_set_string("CrtcPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_string("CrtcPaletteFile", vice_opt.ExternalPalette);
       log_resources_set_int("CrtcExternalPalette", 1);
    }
 #elif defined(__XCBM2__)
-   if (!strcmp(core_opt.ExternalPalette, "default"))
+   if (!strcmp(vice_opt.ExternalPalette, "default"))
       log_resources_set_int("CrtcExternalPalette", 0);
    else
    {
-      log_resources_set_string("CrtcPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_string("CrtcPaletteFile", vice_opt.ExternalPalette);
       log_resources_set_int("CrtcExternalPalette", 1);
    }
 #else
-   if (!strcmp(core_opt.ExternalPalette, "default"))
+   if (!strcmp(vice_opt.ExternalPalette, "default"))
       log_resources_set_int("VICIIExternalPalette", 0);
    else
    {
-      log_resources_set_string("VICIIPaletteFile", core_opt.ExternalPalette);
+      log_resources_set_string("VICIIPaletteFile", vice_opt.ExternalPalette);
       log_resources_set_int("VICIIExternalPalette", 1);
    }
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-   log_resources_set_int("VICIIColorGamma", core_opt.ColorGamma);
-   log_resources_set_int("VICIIColorTint", core_opt.ColorTint);
-   log_resources_set_int("VICIIColorSaturation", core_opt.ColorSaturation);
-   log_resources_set_int("VICIIColorContrast", core_opt.ColorContrast);
-   log_resources_set_int("VICIIColorBrightness", core_opt.ColorBrightness);
+   log_resources_set_int("VICIIColorGamma", vice_opt.ColorGamma);
+   log_resources_set_int("VICIIColorTint", vice_opt.ColorTint);
+   log_resources_set_int("VICIIColorSaturation", vice_opt.ColorSaturation);
+   log_resources_set_int("VICIIColorContrast", vice_opt.ColorContrast);
+   log_resources_set_int("VICIIColorBrightness", vice_opt.ColorBrightness);
 #elif defined(__XVIC__)
-   log_resources_set_int("VICColorGamma", core_opt.ColorGamma);
-   log_resources_set_int("VICColorTint", core_opt.ColorTint);
-   log_resources_set_int("VICColorSaturation", core_opt.ColorSaturation);
-   log_resources_set_int("VICColorContrast", core_opt.ColorContrast);
-   log_resources_set_int("VICColorBrightness", core_opt.ColorBrightness);
+   log_resources_set_int("VICColorGamma", vice_opt.ColorGamma);
+   log_resources_set_int("VICColorTint", vice_opt.ColorTint);
+   log_resources_set_int("VICColorSaturation", vice_opt.ColorSaturation);
+   log_resources_set_int("VICColorContrast", vice_opt.ColorContrast);
+   log_resources_set_int("VICColorBrightness", vice_opt.ColorBrightness);
 #elif defined(__XPLUS4__)
-   log_resources_set_int("TEDColorGamma", core_opt.ColorGamma);
-   log_resources_set_int("TEDColorTint", core_opt.ColorTint);
-   log_resources_set_int("TEDColorSaturation", core_opt.ColorSaturation);
-   log_resources_set_int("TEDColorContrast", core_opt.ColorContrast);
-   log_resources_set_int("TEDColorBrightness", core_opt.ColorBrightness);
+   log_resources_set_int("TEDColorGamma", vice_opt.ColorGamma);
+   log_resources_set_int("TEDColorTint", vice_opt.ColorTint);
+   log_resources_set_int("TEDColorSaturation", vice_opt.ColorSaturation);
+   log_resources_set_int("TEDColorContrast", vice_opt.ColorContrast);
+   log_resources_set_int("TEDColorBrightness", vice_opt.ColorBrightness);
 #endif
 
    /* Input */
 #if !defined(__XCBM5x0__)
-   if (core_opt.UserportJoyType == -1)
+   if (vice_opt.UserportJoyType == -1)
       log_resources_set_int("UserportJoy", 0);
    else
    {
-      log_resources_set_int("UserportJoyType", core_opt.UserportJoyType);
+      log_resources_set_int("UserportJoyType", vice_opt.UserportJoyType);
       log_resources_set_int("UserportJoy", 1);
    }
 #endif
 
    /* Media */
-   log_resources_set_int("AutostartWarp", core_opt.AutostartWarp);
-   log_resources_set_int("DriveTrueEmulation", core_opt.DriveTrueEmulation);
-   log_resources_set_int("VirtualDevices", core_opt.VirtualDevices);
-   log_resources_set_int("AttachDevice8Readonly", core_opt.AttachDevice8Readonly);
+   log_resources_set_int("AutostartWarp", vice_opt.AutostartWarp);
+   log_resources_set_int("DriveTrueEmulation", vice_opt.DriveTrueEmulation);
+   log_resources_set_int("VirtualDevices", vice_opt.VirtualDevices);
+   log_resources_set_int("AttachDevice8Readonly", vice_opt.AttachDevice8Readonly);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-   log_resources_set_int("EasyFlashWriteCRT", core_opt.EasyFlashWriteCRT);
+   log_resources_set_int("EasyFlashWriteCRT", vice_opt.EasyFlashWriteCRT);
 #endif
 
    /* ROM */
@@ -334,26 +334,26 @@ int ui_init_finalize(void)
 
    /* Model */
 #if defined(__XPET__)
-   petmodel_set(core_opt.Model);
+   petmodel_set(vice_opt.Model);
    keyboard_init();
 #elif defined(__XCBM2__) || defined(__XCBM5x0__)
-   cbm2model_set(core_opt.Model);
+   cbm2model_set(vice_opt.Model);
 #elif defined(__XVIC__)
-   vic20model_set(core_opt.Model);
+   vic20model_set(vice_opt.Model);
 #elif defined(__XPLUS4__)
-   plus4model_set(core_opt.Model);
+   plus4model_set(vice_opt.Model);
 #elif defined(__X128__)
-   c128model_set(core_opt.Model);
+   c128model_set(vice_opt.Model);
 #elif defined(__X64DTV__)
-   dtvmodel_set(core_opt.Model);
+   dtvmodel_set(vice_opt.Model);
 #else
-   c64model_set(core_opt.Model);
+   c64model_set(vice_opt.Model);
 #endif
 
    /* Audio */
-   if (core_opt.DriveSoundEmulation)
+   if (vice_opt.DriveSoundEmulation)
    {
-      log_resources_set_int("DriveSoundEmulationVolume", core_opt.DriveSoundEmulation);
+      log_resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
       log_resources_set_int("DriveSoundEmulation", 1);
    }
    else
@@ -363,17 +363,17 @@ int ui_init_finalize(void)
       log_resources_set_int("DriveSoundEmulationVolume", 0);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)
-   log_resources_set_int("VICIIAudioLeak", core_opt.AudioLeak);
+   log_resources_set_int("VICIIAudioLeak", vice_opt.AudioLeak);
 #elif defined(__XVIC__)
-   log_resources_set_int("VICAudioLeak", core_opt.AudioLeak);
+   log_resources_set_int("VICAudioLeak", vice_opt.AudioLeak);
 #elif defined(__XPLUS4__)
-   log_resources_set_int("TEDAudioLeak", core_opt.AudioLeak);
+   log_resources_set_int("TEDAudioLeak", vice_opt.AudioLeak);
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-   if (core_opt.SFXSoundExpanderChip)
+   if (vice_opt.SFXSoundExpanderChip)
    {
-      log_resources_set_int("SFXSoundExpanderChip", core_opt.SFXSoundExpanderChip);
+      log_resources_set_int("SFXSoundExpanderChip", vice_opt.SFXSoundExpanderChip);
       log_resources_set_int("SFXSoundExpander", 1);
    }
    else
@@ -382,19 +382,19 @@ int ui_init_finalize(void)
 
    /* SID */
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
-   log_resources_set_int("SidEngine", core_opt.SidEngine);
-   log_resources_set_int("SidModel", core_opt.SidModel);
-   log_resources_set_int("SidResidSampling", core_opt.SidResidSampling);
-   log_resources_set_int("SidResidPassband", core_opt.SidResidPassband);
-   log_resources_set_int("SidResidGain", core_opt.SidResidGain);
-   log_resources_set_int("SidResidFilterBias", core_opt.SidResidFilterBias);
-   log_resources_set_int("SidResid8580Passband", core_opt.SidResidPassband);
-   log_resources_set_int("SidResid8580Gain", core_opt.SidResidGain);
-   log_resources_set_int("SidResid8580FilterBias", core_opt.SidResid8580FilterBias);
+   log_resources_set_int("SidEngine", vice_opt.SidEngine);
+   log_resources_set_int("SidModel", vice_opt.SidModel);
+   log_resources_set_int("SidResidSampling", vice_opt.SidResidSampling);
+   log_resources_set_int("SidResidPassband", vice_opt.SidResidPassband);
+   log_resources_set_int("SidResidGain", vice_opt.SidResidGain);
+   log_resources_set_int("SidResidFilterBias", vice_opt.SidResidFilterBias);
+   log_resources_set_int("SidResid8580Passband", vice_opt.SidResidPassband);
+   log_resources_set_int("SidResid8580Gain", vice_opt.SidResidGain);
+   log_resources_set_int("SidResid8580FilterBias", vice_opt.SidResid8580FilterBias);
 
-   if (core_opt.SidExtra)
+   if (vice_opt.SidExtra)
    {
-      log_resources_set_int("SidStereoAddressStart", core_opt.SidExtra);
+      log_resources_set_int("SidStereoAddressStart", vice_opt.SidExtra);
       log_resources_set_int("SidStereo", 1);
    }
    else
@@ -403,16 +403,16 @@ int ui_init_finalize(void)
 
    /* Misc model specific */
 #if defined(__X128__)
-   log_resources_set_int("Go64Mode", core_opt.Go64Mode);
-   log_resources_set_int("C128ColumnKey", core_opt.C128ColumnKey);
+   log_resources_set_int("Go64Mode", vice_opt.Go64Mode);
+   log_resources_set_int("C128ColumnKey", vice_opt.C128ColumnKey);
 #elif defined(__XVIC__)
    log_resources_set_int("MegaCartNvRAMWriteBack", 1);
 
    unsigned int vic20mem = 0;
-   vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : core_opt.VIC20Memory;
+   vic20mem = (vic20mem_forced > -1) ? vic20mem_forced : vice_opt.VIC20Memory;
 
    /* Super VIC uses memory blocks 1+2 by default */
-   if (!vic20mem && core_opt.Model == VIC20MODEL_VIC21)
+   if (!vic20mem && vice_opt.Model == VIC20MODEL_VIC21)
       vic20mem = 3;
 
    unsigned int vic_blocks = 0;
@@ -448,22 +448,22 @@ int ui_init_finalize(void)
    log_resources_set_int("RAMBlock3", (vic_blocks & VIC_BLK3) ? 1 : 0);
    log_resources_set_int("RAMBlock5", (vic_blocks & VIC_BLK5) ? 1 : 0);
 #elif defined(__X64__) || defined(__X64SC__)
-   if (core_opt.REUsize)
+   if (vice_opt.REUsize)
    {
-      log_resources_set_int("REUsize", core_opt.REUsize);
+      log_resources_set_int("REUsize", vice_opt.REUsize);
       log_resources_set_int("REU", 1);
    }
    else
       log_resources_set_int("REU", 0);
 #elif defined(__XSCPU64__)
-   log_resources_set_int("SIMMSize", core_opt.SIMMSize);
-   log_resources_set_int("SpeedSwitch", core_opt.SpeedSwitch);
+   log_resources_set_int("SIMMSize", vice_opt.SIMMSize);
+   log_resources_set_int("SpeedSwitch", vice_opt.SpeedSwitch);
 #endif
 
 #if !defined(__XPET__)
    /* Cartridge */
-   if (strcmp(core_opt.CartridgeFile, ""))
-      log_resources_set_string("CartridgeFile", core_opt.CartridgeFile);
+   if (strcmp(vice_opt.CartridgeFile, ""))
+      log_resources_set_string("CartridgeFile", vice_opt.CartridgeFile);
 #endif
 
    retro_ui_finalized = true;

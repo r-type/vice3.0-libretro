@@ -3,17 +3,16 @@
  *
  */
 
-#include "vice.h"
-
 #include <stdio.h>
 
+#include "vice.h"
 #include "sound.h"
 
 #include "libretro-core.h"
 
 static int retro_sound_init(const char *param, int *speed, int *fragsize, int *fragnr, int *channels)
 {
-    *speed = core_opt.SoundSampleRate;
+    *speed = vice_opt.SoundSampleRate;
 #if 0
     printf("speed:%d fragsize:%d fragnr:%d channels:%d\n", *speed, *fragsize, *fragnr, *channels);
 #endif

@@ -238,7 +238,7 @@ void maincpu_resync_limits(void) {
 }
 
 #ifdef __LIBRETRO__
-void maincpu_mainloop_retro(void)
+void maincpu_mainloop(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at
        least, on gcc 2.7.2.x).  */
@@ -274,10 +274,12 @@ static    uint8_t *bank_base;
 static    int bank_start = 0;
 static    int bank_limit = 0;
 static    uint8_t bank_bank = 0;
+static    unsigned retro_mainloop = 0;
 
-static int first1=0;
-if(first1==0){
-    first1++;
+if (!retro_mainloop)
+{
+    retro_mainloop = 1;
+
     o_bank_base = &bank_base;
     o_bank_start = &bank_start;
     o_bank_limit = &bank_limit;
@@ -358,7 +360,8 @@ if(first1==0){
 #endif
     }
 }
-#endif
+
+#else /* __LIBRETRO__ */
 
 void maincpu_mainloop(void)
 {
@@ -477,6 +480,7 @@ void maincpu_mainloop(void)
     }
 }
 
+#endif /* __LIBRETRO__ */
 /* ------------------------------------------------------------------------- */
 
 void maincpu_set_pc(int pc) {

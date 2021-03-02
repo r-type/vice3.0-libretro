@@ -154,13 +154,13 @@ extern int vkbd_y_max;
 #define AUTOLOADWARP_TAPE 0x02
 
 /* Variables */
-extern int cpuloop;
-extern int retroXS;
-extern int retroYS;
-extern int retroXS_offset;
-extern int retroYS_offset;
-extern int retrow;
-extern int retroh;
+extern unsigned int retro_renderloop;
+extern unsigned int retroXS;
+extern unsigned int retroYS;
+extern unsigned int retroXS_offset;
+extern unsigned int retroYS_offset;
+extern unsigned int retrow;
+extern unsigned int retroh;
 extern unsigned int zoomed_width;
 extern unsigned int zoomed_height;
 extern unsigned int zoomed_XS_offset;
@@ -182,8 +182,7 @@ enum
 };
 
 /* Functions */
-extern void maincpu_mainloop_retro(void);
-extern long GetTicks(void);
+extern long retro_ticks(void);
 extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
 extern void reload_restart(void);
 

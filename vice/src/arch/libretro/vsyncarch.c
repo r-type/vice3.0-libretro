@@ -74,7 +74,7 @@ unsigned long vsyncarch_frequency(void)
 unsigned long vsyncarch_gettime(void)
 {
     /* Microseconds resolution. */
-    return GetTicks();
+    return retro_ticks();
 }
 
 void vsyncarch_init(void)
@@ -109,7 +109,7 @@ void vsyncarch_presync(void)
         uistatusbar_draw();
     }
 
-    cpuloop = 0;
+    retro_renderloop = 0;
 }
 
 void_hook_t vsync_set_event_dispatcher(void_hook_t hook)

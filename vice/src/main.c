@@ -290,11 +290,10 @@ int main_program(int argc, char **argv)
 
     /* Let's go...  */
     log_message(LOG_DEFAULT, "Main CPU: starting at ($FFFC).");
-#ifdef __LIBRETRO__
-    maincpu_mainloop_retro();
-#else
+
     maincpu_mainloop();
 
+#ifndef __LIBRETRO__
     log_error(LOG_DEFAULT, "perkele!");
 #endif
 

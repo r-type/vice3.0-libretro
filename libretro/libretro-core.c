@@ -7,6 +7,7 @@
 #include "archdep.h"
 #include "mem.h"
 #include "machine.h"
+#include "maincpu.h"
 #include "snapshot.h"
 #include "autostart.h"
 #include "drive.h"
@@ -33,7 +34,7 @@
 
 /* Main CPU loop */
 long retro_now = 0;
-int cpuloop = 1;
+unsigned retro_renderloop = 1;
 
 /* VKBD */
 extern bool retro_vkbd;
@@ -70,16 +71,16 @@ extern uint8_t mem_ram[];
 extern int g_mem_ram_size;
 
 /* Core geometry */
-int retroXS = 0;
-int retroYS = 0;
-int retroXS_offset = 0;
-int retroYS_offset = 0;
-int defaultw = WINDOW_WIDTH;
-int defaulth = WINDOW_HEIGHT;
-int retrow = WINDOW_WIDTH;
-int retroh = WINDOW_HEIGHT;
-int lastw = 0;
-int lasth = 0;
+unsigned int retroXS = 0;
+unsigned int retroYS = 0;
+unsigned int retroXS_offset = 0;
+unsigned int retroYS_offset = 0;
+unsigned int defaultw = WINDOW_WIDTH;
+unsigned int defaulth = WINDOW_HEIGHT;
+unsigned int retrow = WINDOW_WIDTH;
+unsigned int retroh = WINDOW_HEIGHT;
+unsigned int lastw = 0;
+unsigned int lasth = 0;
 
 unsigned int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
@@ -1626,7 +1627,7 @@ void reload_restart(void)
 }
 
 /* FPS counter + mapper tick */
-long GetTicks(void)
+long retro_ticks(void)
 {
    if (!perf_cb.get_time_usec)
       return retro_now;
@@ -6136,13 +6137,13 @@ void retro_run(void)
 
    for (int frame_count = 0; frame_count < frame_max; ++frame_count)
    {
-      frame_time = GetTicks();
-      while (cpuloop)
-         maincpu_mainloop_retro();
-      cpuloop = 1;
+      frame_time = retro_ticks();
+      while (retro_renderloop)
+         maincpu_mainloop();
+      retro_renderloop = 1;
 
       if (perf_cb.get_time_usec && frame_max > 1)
-         frame_max = 1000000 / (retro_refresh / 5) / (GetTicks() - frame_time);
+         frame_max = 1000000 / (retro_refresh / 5) / (retro_ticks() - frame_time);
    }
 
    /* LED interface */
@@ -6340,7 +6341,7 @@ size_t retro_serialize_size(void)
       interrupt_maincpu_trigger_trap(save_trap, (void *)&success);
       save_trap_happened = 0;
       while (!save_trap_happened)
-         maincpu_mainloop_retro();
+         maincpu_mainloop();
       if (snapshot_stream != NULL)
       {
          if (success)
@@ -6368,7 +6369,7 @@ bool retro_serialize(void *data_, size_t size)
       interrupt_maincpu_trigger_trap(save_trap, (void *)&success);
       save_trap_happened = 0;
       while (!save_trap_happened)
-         maincpu_mainloop_retro();
+         maincpu_mainloop();
       if (snapshot_stream != NULL)
       {
          snapshot_fclose(snapshot_stream);
@@ -6392,7 +6393,7 @@ bool retro_unserialize(const void *data_, size_t size)
       interrupt_maincpu_trigger_trap(load_trap, (void *)&success);
       load_trap_happened = 0;
       while (!load_trap_happened)
-         maincpu_mainloop_retro();
+         maincpu_mainloop();
       if (snapshot_stream != NULL)
       {
          snapshot_fclose(snapshot_stream);

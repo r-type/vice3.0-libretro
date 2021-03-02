@@ -804,7 +804,7 @@ static enum compression_type try_uncompress(const char *name,
 }
 
 /* ------------------------------------------------------------------------- */
-
+#ifndef __LIBRETRO__
 /* Compression.  */
 
 /* Compress `src' into `dest' using gzip.  */
@@ -1000,7 +1000,7 @@ static int zfile_compress(const char *src, const char *dest,
     }
     return retval;
 }
-
+#endif /* __LIBRETRO__ */
 /* ------------------------------------------------------------------------ */
 
 /* Here we have the actual fopen and fclose wrappers.
@@ -1098,13 +1098,14 @@ static int handle_close(zfile_t *ptr)
             ptr->orig_name, ptr->write_mode));
 
     if (ptr->tmp_name) {
+#ifndef __LIBRETRO__
         /* Recompress into the original file.  */
         if (ptr->orig_name
             && ptr->write_mode
             && zfile_compress(ptr->tmp_name, ptr->orig_name, ptr->type)) {
             return -1;
         }
-
+#endif
         /* Remove temporary file.  */
         if (ioutil_remove(ptr->tmp_name) < 0) {
             log_error(zlog, "Cannot unlink `%s': %s", ptr->tmp_name, strerror(errno));

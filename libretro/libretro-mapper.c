@@ -318,7 +318,7 @@ void update_input(unsigned disable_keys)
    static int jbt[2][24] = {0};
    static int kbt[EMU_FUNCTION_COUNT] = {0};
     
-   now = GetTicks() / 1000;
+   now = retro_ticks() / 1000;
 
    if (vkey_sticky && last_vkey_pressed != -1 && last_vkey_pressed > 0)
    {
@@ -1313,7 +1313,7 @@ void retro_poll_event()
       static long dpadmouse_press[2] = {0};
       static int dpadmouse_pressed[2] = {0};
       static long now = 0;
-      now = GetTicks();
+      now = retro_ticks();
 
       int retro_mouse_x[2] = {0}, retro_mouse_y[2] = {0};
       unsigned int retro_mouse_l[2] = {0}, retro_mouse_r[2] = {0}, retro_mouse_m[2] = {0};

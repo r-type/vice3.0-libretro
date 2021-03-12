@@ -21,6 +21,11 @@
 #define RGB888(r, g, b) (((r * 255 / 31) << 16) | ((g * 255 / 31) << 8) | (b * 255 / 31))
 #define ARGB888(a, r, g, b) ((a << 24) | (r << 16) | (g << 8) | b)
 
+#define COLOR_BLACK_16        RGB565(  5,   5,   5)
+#define COLOR_WHITE_16        RGB565(250, 250, 250)
+#define COLOR_BLACK_32  ARGB888(255,   5,   5,   5)
+#define COLOR_WHITE_32  ARGB888(255, 250, 250, 250)
+
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif

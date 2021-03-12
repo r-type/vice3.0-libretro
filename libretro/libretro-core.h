@@ -33,14 +33,6 @@
 /* File helpers functions */
 #define RETRO_PATH_MAX              512
 
-#ifdef _WIN32
-#define RETRO_PATH_SEPARATOR        "\\"
-/* Windows also support the unix path separator */
-#define RETRO_PATH_SEPARATOR_ALT    "/"
-#else
-#define RETRO_PATH_SEPARATOR        "/"
-#endif
-
 /* Log */
 #if defined(__ANDROID__) || defined(ANDROID)
 #include <android/log.h>

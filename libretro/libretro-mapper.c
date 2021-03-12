@@ -48,6 +48,8 @@ int vkbd_y_max = 0;
 /* Mouse speed multipliers */
 #define MOUSE_SPEED_SLOW 5
 #define MOUSE_SPEED_FAST 2
+/* Mouse D-Pad acceleration */
+#define MOUSE_DPAD_ACCEL
 
 /* Core flags */
 int mapper_keys[RETRO_MAPPER_LAST] = {0};
@@ -1310,10 +1312,11 @@ void retro_poll_event()
       int retro_j = 0;
       static float mouse_multiplier[2] = {1};
       static int dpadmouse_speed[2] = {0};
-      static long dpadmouse_press[2] = {0};
       static int dpadmouse_pressed[2] = {0};
+#ifdef MOUSE_DPAD_ACCEL
       static long now = 0;
-      now = retro_ticks();
+      now = retro_ticks() / 1000;
+#endif
 
       int retro_mouse_x[2] = {0}, retro_mouse_y[2] = {0};
       unsigned int retro_mouse_l[2] = {0}, retro_mouse_r[2] = {0}, retro_mouse_m[2] = {0};
@@ -1367,24 +1370,29 @@ void retro_poll_event()
          {
             /* Digital mouse speed modifiers */
             if (!dpadmouse_pressed[retro_j])
+#ifdef MOUSE_DPAD_ACCEL
+               dpadmouse_speed[retro_j] = opt_dpadmouse_speed - 2;
+#else
                dpadmouse_speed[retro_j] = opt_dpadmouse_speed;
+#endif
 
             if (mouse_speed[retro_j] & MOUSE_SPEED_FASTER)
-               dpadmouse_speed[retro_j] = dpadmouse_speed[retro_j] + 4;
+               dpadmouse_speed[retro_j] = dpadmouse_speed[retro_j] + 3;
             if (mouse_speed[retro_j] & MOUSE_SPEED_SLOWER)
-               dpadmouse_speed[retro_j] = dpadmouse_speed[retro_j] - 3;
+               dpadmouse_speed[retro_j] = dpadmouse_speed[retro_j] - 4;
 
+#ifdef MOUSE_DPAD_ACCEL
             /* Digital mouse acceleration */
-            if (dpadmouse_pressed[retro_j])
-               if (now - dpadmouse_press[retro_j] > 500 * 200)
-               {
-                  dpadmouse_speed[retro_j]++;
-                  dpadmouse_press[retro_j] = now;
-               }
+            if (dpadmouse_pressed[retro_j] && (now - dpadmouse_pressed[retro_j] > 300))
+            {
+               dpadmouse_speed[retro_j]++;
+               dpadmouse_pressed[retro_j] = now;
+            }
+#endif
 
             /* Digital mouse speed limits */
-            if (dpadmouse_speed[retro_j] < 4) dpadmouse_speed[retro_j] = 4;
-            if (dpadmouse_speed[retro_j] > 20) dpadmouse_speed[retro_j] = 20;
+            if (dpadmouse_speed[retro_j] < 2) dpadmouse_speed[retro_j] = 2;
+            if (dpadmouse_speed[retro_j] > 14) dpadmouse_speed[retro_j] = 14;
          }
 
          if (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))
@@ -1408,20 +1416,16 @@ void retro_poll_event()
                retro_mouse_y[j] -= dpadmouse_speed[0];
          }
 
+#ifdef MOUSE_DPAD_ACCEL
          for (retro_j = 0; retro_j < 2; retro_j++)
          {
             /* Acceleration timestamps */
-            if ((retro_mouse_x[j] != 0 || retro_mouse_y[j] != 0) && dpadmouse_pressed[retro_j] == 0)
-            {
-               dpadmouse_press[retro_j] = now;
-               dpadmouse_pressed[retro_j] = 1;
-            }
-            else if ((retro_mouse_x[j] == 0 && retro_mouse_y[j] == 0) && dpadmouse_pressed[retro_j] == 1)
-            {
-               dpadmouse_press[retro_j] = 0;
+            if ((retro_mouse_x[j] != 0 || retro_mouse_y[j] != 0) && !dpadmouse_pressed[retro_j])
+               dpadmouse_pressed[retro_j] = now;
+            else if ((retro_mouse_x[j] == 0 && retro_mouse_y[j] == 0) && dpadmouse_pressed[retro_j])
                dpadmouse_pressed[retro_j] = 0;
-            }
          }
+#endif
       }
 
       /* Left analog movement */
@@ -1450,14 +1454,14 @@ void retro_poll_event()
 
       if (abs(analog_left[0]) > 0)
       {
-         retro_mouse_x[j] = analog_left[0] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier[0]);
+         retro_mouse_x[j] = analog_left[0] * 10 * (opt_analogmouse_speed * opt_analogmouse_speed * 0.7) / (32768 / mouse_multiplier[0]);
          if (retro_mouse_x[j] == 0 && abs(analog_left[0]) > analog_deadzone)
             retro_mouse_x[j] = (analog_left[0] > 0) ? 1 : -1;
       }
 
       if (abs(analog_left[1]) > 0)
       {
-         retro_mouse_y[j] = analog_left[1] * 15 * opt_analogmouse_speed / (32768 / mouse_multiplier[(opt_joyport_type == 2) ? 1 : 0]);
+         retro_mouse_y[j] = analog_left[1] * 10 * (opt_analogmouse_speed * opt_analogmouse_speed * 0.7) / (32768 / mouse_multiplier[(opt_joyport_type == 2) ? 1 : 0]);
          if (retro_mouse_y[j] == 0 && abs(analog_left[1]) > analog_deadzone)
             retro_mouse_y[j] = (analog_left[1] > 0) ? 1 : -1;
       }

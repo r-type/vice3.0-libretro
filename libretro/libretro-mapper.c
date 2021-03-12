@@ -66,6 +66,7 @@ extern unsigned char statusbar_text[64];
 unsigned int retro_warpmode = 0;
 extern bool retro_vkbd;
 extern bool retro_vkbd_transparent;
+extern short int retro_vkbd_ready;
 extern unsigned int retro_devices[RETRO_DEVICES];
 
 static unsigned retro_key_state[RETROK_LAST] = {0};
@@ -143,6 +144,8 @@ void emu_function(int function)
    {
       case EMU_VKBD:
          retro_vkbd = !retro_vkbd;
+         /* Reset VKBD input readiness */
+         retro_vkbd_ready = -2;
          /* Release VKBD controllable joypads */
          memset(joypad_bits, 0, 2*sizeof(joypad_bits[0]));
          break;
@@ -620,6 +623,15 @@ void update_input(unsigned disable_keys)
    /* Virtual keyboard for ports 1 & 2 */
    if (retro_vkbd)
    {
+      /* Wait for all inputs to be released */
+      if (retro_vkbd_ready < 1)
+      {
+         if ((retro_vkbd_ready == 0 && !joypad_bits[0] && !joypad_bits[1]) ||
+              retro_vkbd_ready < 0)
+            retro_vkbd_ready++;
+         return;
+      }
+
       if (!vkflag[RETRO_DEVICE_ID_JOYPAD_B]) /* Allow directions when key is not pressed */
       {
          if (!vkflag[RETRO_DEVICE_ID_JOYPAD_UP] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) ||

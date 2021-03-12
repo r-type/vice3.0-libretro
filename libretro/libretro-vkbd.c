@@ -4,6 +4,7 @@
 
 bool retro_vkbd = false;
 bool retro_vkbd_transparent = true;
+short int retro_vkbd_ready = 0;
 extern bool retro_capslock;
 extern int vkflag[10];
 extern unsigned int opt_vkbd_theme;

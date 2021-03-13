@@ -88,7 +88,7 @@ void mouse_button_middle(int pressed)
 
 void mouse_button(int bnumber, int state)
 {
-	switch (bnumber) {
+    switch (bnumber) {
         case 0:
             mouse_button_left(state);
             break;
@@ -115,9 +115,24 @@ int mousedrv_get_y(void)
 
 void mouse_move(int x, int y)
 {
-    mouse_x = mouse_x + (int)(x * (float)opt_mouse_speed / 200);
-    mouse_y = mouse_y - (int)(y * (float)opt_mouse_speed / 200);
-    mouse_timestamp = vsyncarch_gettime();
+#if 0
+    printf("x:%3d y:%3d, mx:%5d my:%5d\n", x, y, mouse_x, mouse_y);
+#endif
+    int x_new = (x * (float)opt_mouse_speed) / 100.0f;
+    int y_new = (y * (float)opt_mouse_speed) / 100.0f;
+
+    if (abs(x_new) < 1 && x != 0)
+        x_new = (x < 0) ? -1 : 1;
+    if (abs(y_new) < 1 && y != 0)
+        y_new = (y < 0) ? -1 : 1;
+
+    mouse_x += x_new;
+    mouse_y -= y_new;
+
+    mouse_timestamp = vsyncarch_gettime() * 100;
+#if 0
+    printf("             mx:%5d my:%5d, x_new:%4d y_new:%4d, ts:%d\n", mouse_x, mouse_y, x_new, y_new, mouse_timestamp);
+#endif
 }
 
 unsigned long mousedrv_get_timestamp(void)

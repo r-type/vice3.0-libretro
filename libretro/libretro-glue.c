@@ -63,17 +63,17 @@ void remove_recurse(const char *path)
 
 void path_join(char* out, const char* basedir, const char* filename)
 {
-	snprintf(out, RETRO_PATH_MAX, "%s%s%s", basedir, RETRO_PATH_SEPARATOR, filename);
+	snprintf(out, RETRO_PATH_MAX, "%s%s%s", basedir, FSDEV_DIR_SEP_STR, filename);
 }
 
 char* path_join_dup(const char* basedir, const char* filename)
 {
     size_t dirlen = strlen(basedir);
-    size_t seplen = strlen(RETRO_PATH_SEPARATOR);
+    size_t seplen = strlen(FSDEV_DIR_SEP_STR);
     size_t filelen = strlen(filename);
     char* result = (char*)malloc(dirlen + seplen + filelen + 1);
     strcpy(result, basedir);
-    strcpy(result + dirlen, RETRO_PATH_SEPARATOR);
+    strcpy(result + dirlen, FSDEV_DIR_SEP_STR);
     strcpy(result + dirlen + seplen, filename);
     return result;
 }

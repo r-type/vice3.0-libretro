@@ -5990,31 +5990,28 @@ void retro_set_audio_sample(retro_audio_sample_t cb)
    audio_cb = cb;
 }
 
-void retro_audio_cb(short l, short r)
-{
-   audio_cb(l, r);
-}
-
 void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb)
 {
    audio_batch_cb = cb;
 }
 
-void retro_audio_batch_cb(const int16_t *data, size_t frames)
-{
-   audio_batch_cb(data, frames);
-}
-
-void retro_audio_render(signed short int *samples, int frames)
-{
-#if 0
-#if 0
-   for (int x=0; x<frames/2; x++) audio_cb(samples[x], samples[x]); /* Mono */
-#else
-   for (int x=0; x<frames; x+=2) audio_cb(samples[x], samples[x+1]); /* Stereo */
+#define RETRO_AUDIO_BATCH
+#ifdef __SWITCH__
+#undef RETRO_AUDIO_BATCH
 #endif
+
+void retro_audio_render(const int16_t *data, size_t frames)
+{
+   if ((frames < 1) || !runstate)
+      return;
+#if ARCHDEP_SOUND_OUTPUT_MODE == SOUND_OUTPUT_STEREO
+#ifdef RETRO_AUDIO_BATCH
+   audio_batch_cb(data, frames/2);
 #else
-   audio_batch_cb(samples, frames/2);
+   for (int x = 0; x < frames; x += 2) audio_cb(data[x], data[x+1]);
+#endif
+#elif ARCHDEP_SOUND_OUTPUT_MODE == SOUND_OUTPUT_MONO
+   for (int x = 0; x < frames; x++) audio_cb(data[x], data[x]);
 #endif
 }
 

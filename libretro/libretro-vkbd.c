@@ -4,6 +4,7 @@
 
 bool retro_vkbd = false;
 bool retro_vkbd_transparent = true;
+short int retro_vkbd_ready = 0;
 extern bool retro_capslock;
 extern int vkflag[10];
 extern unsigned int opt_vkbd_theme;
@@ -69,8 +70,8 @@ void print_vkbd(void)
    int FONT_COLOR_NORMAL             = 0;
    int FONT_COLOR_SEL                = 0;
 
-   unsigned COLOR_BLACK              = RGB(  5,   5,   5);
-   unsigned COLOR_WHITE              = RGB(250, 250, 250);
+   unsigned COLOR_BLACK              = (pix_bytes == 4) ? COLOR_BLACK_32 : COLOR_BLACK_16;
+   unsigned COLOR_WHITE              = (pix_bytes == 4) ? COLOR_WHITE_32 : COLOR_WHITE_16;
 
    unsigned theme                    = opt_vkbd_theme;
    if (theme & 0x80)
@@ -324,7 +325,7 @@ void print_vkbd(void)
                    BKG_COLOR, BKG_ALPHA);
 
          /* Key text */
-         draw_text(XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, GRAPH_ALPHA_100,
+         draw_text(XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, GRAPH_ALPHA_25,
                    (text_outline) ? GRAPH_BG_OUTLINE : GRAPH_BG_SHADOW, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
                    (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
       }

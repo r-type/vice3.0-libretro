@@ -182,7 +182,6 @@ enum
 
 /* Functions */
 extern long retro_ticks(void);
-extern void retro_audio_render(signed short int *sound_buffer, int sndbufsize);
 extern void reload_restart(void);
 
 /* VICE options */

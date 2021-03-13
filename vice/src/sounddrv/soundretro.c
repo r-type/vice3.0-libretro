@@ -9,6 +9,7 @@
 #include "sound.h"
 
 #include "libretro-core.h"
+extern void retro_audio_render(const int16_t *data, size_t frames);
 
 static int retro_sound_init(const char *param, int *speed, int *fragsize, int *fragnr, int *channels)
 {

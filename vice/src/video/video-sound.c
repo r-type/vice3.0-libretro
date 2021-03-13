@@ -43,7 +43,13 @@
 #include "video-sound.h"
 #include "video.h"
 
+#ifdef __LIBRETRO__
+extern unsigned int opt_audio_leak_volume;
+#define TOTAL_VOLUME            (1.50f * opt_audio_leak_volume)
+#else
 #define TOTAL_VOLUME            (1.50f)
+#endif // __LIBRETRO__
+
 #define NOISE_VOLUME            (0.15f * TOTAL_VOLUME)
 #define LUMALINES_VOLUME        (1.00f * TOTAL_VOLUME)
 
@@ -59,7 +65,7 @@ static const signed char noise_sample[] = {
 
 STATIC_PROTOTYPE sound_chip_t video_sound;
 
-static WORD video_sound_offset;
+static uint16_t video_sound_offset;
 static int cycles_per_sec = 1000000;
 static int sample_rate = 22050;
 static int numchips = 1;
@@ -77,7 +83,7 @@ typedef struct {
 } videosound_t;
 static videosound_t chip[2];
 
-static int video_sound_machine_calculate_samples(sound_t **psid, SWORD *pbuf, int nr, int soc, int scc, int *delta_t)
+static int video_sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr, int soc, int scc, int *delta_t)
 {
     int i, num;
     int smpval1, smpval2;
@@ -141,11 +147,11 @@ static int video_sound_machine_channels(void)
     return 1;
 }
 
-static void video_sound_machine_store(sound_t *psid, WORD addr, BYTE val)
+static void video_sound_machine_store(sound_t *psid, uint16_t addr, uint8_t val)
 {
 }
 
-static BYTE video_sound_machine_read(sound_t *psid, WORD addr)
+static uint8_t video_sound_machine_read(sound_t *psid, uint16_t addr)
 {
     return 0;
 }
@@ -189,15 +195,15 @@ static inline int check_enabled(void)
     return 0;
 }
 
-void video_sound_update(video_render_config_t *config, const BYTE *src,
+void video_sound_update(video_render_config_t *config, const uint8_t *src,
                         unsigned int width, unsigned int height,
                         unsigned int xs, unsigned int ys,
                         unsigned int pitchs, viewport_t *viewport)
 {
-    const SDWORD *c1 = config->color_tables.ytablel;
-    const SDWORD *c2 = config->color_tables.ytableh;
+    const int32_t *c1 = config->color_tables.ytablel;
+    const int32_t *c2 = config->color_tables.ytableh;
     unsigned int x, y;
-    const BYTE *tmpsrc;
+    const uint8_t *tmpsrc;
     float lum;
     int chipnum = get_chip_num(config);
 

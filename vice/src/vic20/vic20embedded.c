@@ -43,6 +43,7 @@
 
 #include "vic_mike_ntsc_vpl.h"
 #include "vic_mike_pal_vpl.h"
+#include "vic_colodore_vic_vpl.h"
 #include "vic_vice_vpl.h"
 
 static embedded_t vic20files[] = {
@@ -55,6 +56,7 @@ static embedded_t vic20files[] = {
 static embedded_palette_t palette_files[] = {
     { "mike-ntsc", "mike-ntsc.vpl", 16, vic_mike_ntsc_vpl },
     { "mike-pal", "mike-pal.vpl", 16, vic_mike_pal_vpl },
+    { "colodore_vic", "colodore_vic.vpl", 16, vic_colodore_vic_vpl },
     { "vice", "vice.vpl", 16, vic_vice_vpl },
     EMBEDDED_PALETTE_LIST_END
 };
@@ -108,6 +110,9 @@ int embedded_palette_load(const char *fname, palette_t *p)
                 p->entries[j].blue = entries[(j * 4) + 2];
                 p->entries[j].dither = entries[(j * 4) + 3];
             }
+#ifdef __LIBRETRO__
+            return 0;
+#endif
         }
         i++;
     }

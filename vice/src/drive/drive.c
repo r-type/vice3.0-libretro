@@ -89,7 +89,7 @@ static int drive_led_color[DRIVE_NUM];
 
 /* ------------------------------------------------------------------------- */
 
-void drive_set_disk_memory(BYTE *id, unsigned int track, unsigned int sector,
+void drive_set_disk_memory(uint8_t *id, unsigned int track, unsigned int sector,
                            struct drive_context_s *drv)
 {
     drive_t *drive;
@@ -112,7 +112,7 @@ void drive_set_disk_memory(BYTE *id, unsigned int track, unsigned int sector,
     }
 }
 
-void drive_set_last_read(unsigned int track, unsigned int sector, BYTE *buffer,
+void drive_set_last_read(unsigned int track, unsigned int sector, uint8_t *buffer,
                          struct drive_context_s *drv)
 {
     drive_t *drive;
@@ -381,7 +381,7 @@ int drive_set_disk_drive_type(unsigned int type, struct drive_context_s *drv)
 int drive_get_disk_drive_type(int dnr)
 {
     if (dnr >= 0 && dnr < DRIVE_NUM) {
-	return drive_context[dnr]->drive->type;
+        return drive_context[dnr]->drive->type;
     }
 
     return DRIVE_TYPE_NONE;
@@ -547,7 +547,7 @@ void drive_reset(void)
 /* Move the head to half track `num'.  */
 void drive_set_half_track(int num, int side, drive_t *dptr)
 {
-	int tmp;
+    int tmp;
     if ((dptr->type == DRIVE_TYPE_1540
          || dptr->type == DRIVE_TYPE_1541
          || dptr->type == DRIVE_TYPE_1541II
@@ -671,7 +671,10 @@ void drive_gcr_data_writeback_all(void)
 {
     drive_t *drive;
     unsigned int i;
-
+#ifdef __LIBRETRO__
+    if(!drive_context[0])
+        return;
+#endif
     for (i = 0; i < DRIVE_NUM; i++) {
         drive = drive_context[i]->drive;
         drive_gcr_data_writeback(drive);
@@ -741,6 +744,18 @@ static void drive_led_update(drive_t *drive, drive_t *drive0)
     }
 }
 
+#ifdef __LIBRETRO__
+#include <stdbool.h>
+#include "libretro-core.h"
+extern unsigned int opt_autoloadwarp;
+extern unsigned int retro_warpmode;
+extern int retro_warp_mode_enabled();
+extern bool retro_disk_get_eject_state();
+static int warpmode_counter_ledon = 0;
+static int warpmode_counter_ledoff = 0;
+static int drive_half_track_prev = 0;
+#endif
+
 /* Update the status bar in the UI.  */
 void drive_update_ui_status(void)
 {
@@ -772,6 +787,52 @@ void drive_update_ui_status(void)
                                        dual ? 0 : 8,
                                        drive->current_half_track + (drive->side * DRIVE_HALFTRACKS_1571));
             }
+#ifdef __LIBRETRO__
+            if (opt_autoloadwarp & AUTOLOADWARP_DISK && !retro_warpmode && !retro_disk_get_eject_state())
+            {
+                int warp = -1;
+                int drive_half_track = drive->current_half_track;
+                int drive_led_status = drive->led_status;
+
+                if ((drive_half_track != drive_half_track_prev) && !retro_warp_mode_enabled())
+                {
+                    warpmode_counter_ledon = 0;
+                    warpmode_counter_ledoff = 0;
+                    warp = 1;
+                }
+                else if ((drive_half_track == drive_half_track_prev && drive->led_status) && retro_warp_mode_enabled())
+                {
+                    warpmode_counter_ledon++;
+                    warpmode_counter_ledoff = 0;
+                    if (warpmode_counter_ledon > 998)
+                        warp = 2;
+                }
+                else if ((drive_half_track == drive_half_track_prev && !drive->led_status) && retro_warp_mode_enabled())
+                {
+                    warpmode_counter_ledon = 0;
+                    warpmode_counter_ledoff++;
+                    if (warpmode_counter_ledoff > 23)
+                        warp = 0;
+                }
+                else
+                {
+                    warpmode_counter_ledon = 0;
+                    warpmode_counter_ledoff = 0;
+                    warp = -2;
+                }
+
+                if (warp > -1)
+                {
+                    resources_set_int("WarpMode", (warp > 1) ? 0 : warp);
+#if 0
+                    printf("Disk Warp:%2d track:%3d prev:%3d led:%d timer:%3d,%3d\n",
+                            warp, drive_half_track, drive_half_track_prev, drive_led_status,
+                            warpmode_counter_ledoff, warpmode_counter_ledon);
+#endif
+                }
+                drive_half_track_prev = drive_half_track;
+            }
+#endif
         }
     }
 }

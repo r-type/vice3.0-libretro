@@ -48,6 +48,8 @@ extern const char machine_name[];
 #define VICE_MACHINE_C64SC     9
 #define VICE_MACHINE_VSID      10
 #define VICE_MACHINE_SCPU64    11
+#define VICE_MACHINE_C1541     12
+#define VICE_MACHINE_PETCAT    13
 
 /* Sync factors (changed to positive 2016-11-07, BW)  */
 #define MACHINE_SYNC_PAL     1
@@ -133,6 +135,15 @@ extern void machine_set_cycles_per_frame(long cpf);
 /* Get current line and cycle. */
 extern void machine_get_line_cycle(unsigned int *line, unsigned int *cycle, int *half_cycle);
 
+struct snapshot_stream_s;
+
+/* Write a snapshot to stream (file or memory).  */
+extern int machine_write_snapshot_to_stream(struct snapshot_stream_s *stream, int save_roms, int save_disks,
+                                   int event_mode);
+
+/* Read a snapshot from stream (file or memory).  */
+extern int machine_read_snapshot_from_stream(struct snapshot_stream_s *stream, int event_mode);
+
 /* Write a snapshot.  */
 extern int machine_write_snapshot(const char *name, int save_roms,
                                   int save_disks, int even_mode);
@@ -152,6 +163,9 @@ extern int machine_sid2_check_range(unsigned int sid2_adr);
 
 /* Check the base address for the third sid chip.  */
 extern int machine_sid3_check_range(unsigned int sid3_adr);
+
+/* Check the base address for the fourth sid chip.  */
+extern int machine_sid4_check_range(unsigned int sid4_adr);
 
 /* Change the timing parameters of the maching (for example PAL/NTSC).  */
 extern void machine_change_timing(int timeval, int border_mode);
@@ -188,8 +202,8 @@ extern int machine_romset_file_save(const char *filename);
 extern char *machine_romset_file_list(void);
 extern int machine_romset_archive_item_create(const char *romset_name);
 
-extern BYTE machine_tape_type_default(void);
-extern BYTE machine_tape_behaviour(void);
+extern uint8_t machine_tape_type_default(void);
+extern uint8_t machine_tape_behaviour(void);
 
 /* Check if address is in RAM (for autostart) */
 extern int machine_addr_in_ram(unsigned int addr);

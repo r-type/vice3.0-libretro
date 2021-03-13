@@ -42,6 +42,8 @@
 #include "vicii_c64hq_vpl.h"
 #include "vicii_c64s_vpl.h"
 #include "vicii_ccs64_vpl.h"
+#include "vicii_cjam_vpl.h"
+#include "vicii_colodore_vpl.h"
 #include "vicii_community_colors_vpl.h"
 #include "vicii_deekay_vpl.h"
 #include "vicii_frodo_vpl.h"
@@ -55,10 +57,34 @@
 #include "vicii_rgb_vpl.h"
 #include "vicii_vice_vpl.h"
 
+#ifdef __LIBRETRO__
+#include "c64gskernal.h"
+#include "c64edkernal.h"
+#include "c64sxkernal.h"
+#include "c64jpkernal.h"
+#include "c64jpchrgen.h"
+#ifdef __XSCPU64__
+#include "scpu64mem.h"
+#include "scpu64kernal.h"
+#endif
+#endif
+
 static embedded_t c64files[] = {
     { "basic", C64_BASIC_ROM_SIZE, C64_BASIC_ROM_SIZE, C64_BASIC_ROM_SIZE, NULL },
     { "kernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, NULL },
     { "chargen", C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, NULL },
+#ifdef __LIBRETRO__
+    { "gskernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_gskernal64_rom },
+    { "edkernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_edkernal64_rom },
+    { "sxkernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_sxkernal64_rom },
+    { "jpkernal", C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, C64_KERNAL_ROM_SIZE, c64memrom_jpkernal64_rom },
+    { "jpchrgen", C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, C64_CHARGEN_ROM_SIZE, mem_jpchrgen_rom },
+#ifdef __XSCPU64__
+    { "scpu64", SCPU64_SCPU64_ROM_MINSIZE, SCPU64_SCPU64_ROM_MAXSIZE, SCPU64_SCPU64_ROM_MAXSIZE, scpu64rom_scpu64_rom },
+    { "chargen", SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE, mem_chargen_rom },
+    { "jpchrgen", SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE, mem_jpchrgen_rom },
+#endif
+#endif
     EMBEDDED_LIST_END
 };
 
@@ -66,6 +92,8 @@ static embedded_palette_t palette_files[] = {
     { "c64hq", "c64hq.vpl", 16, vicii_c64hq_vpl },
     { "c64s", "c64s.vpl", 16, vicii_c64s_vpl  },
     { "ccs64", "ccs64.vpl", 16, vicii_ccs64_vpl },
+    { "cjam", "cjam.vpl", 16, vicii_cjam_vpl },
+    { "colodore", "colodore.vpl", 16, vicii_colodore_vpl },
     { "community-colors", "community-colors.vpl", 16, vicii_community_colors_vpl },
     { "deekay", "deekay.vpl", 16, vicii_deekay_vpl },
     { "frodo", "frodo.vpl", 16, vicii_frodo_vpl },

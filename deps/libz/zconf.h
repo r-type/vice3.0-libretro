@@ -1,5 +1,5 @@
 /* zconf.h -- configuration of the zlib compression library
- * Copyright (C) 1995-2013 Jean-loup Gailly.
+ * Copyright (C) 1995-2012 Jean-loup Gailly.
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
@@ -21,7 +21,6 @@
 #  define _dist_code            z__dist_code
 #  define _length_code          z__length_code
 #  define _tr_align             z__tr_align
-#  define _tr_flush_bits        z__tr_flush_bits
 #  define _tr_flush_block       z__tr_flush_block
 #  define _tr_init              z__tr_init
 #  define _tr_stored_block      z__tr_stored_block
@@ -78,7 +77,6 @@
 #      define gzopen_w              z_gzopen_w
 #    endif
 #    define gzprintf              z_gzprintf
-#    define gzvprintf             z_gzvprintf
 #    define gzputc                z_gzputc
 #    define gzputs                z_gzputs
 #    define gzread                z_gzread
@@ -105,7 +103,6 @@
 #  define inflateReset          z_inflateReset
 #  define inflateReset2         z_inflateReset2
 #  define inflateSetDictionary  z_inflateSetDictionary
-#  define inflateGetDictionary  z_inflateGetDictionary
 #  define inflateSync           z_inflateSync
 #  define inflateSyncPoint      z_inflateSyncPoint
 #  define inflateUndermine      z_inflateUndermine
@@ -309,6 +306,15 @@
    /* If building or using zlib as a DLL, define ZLIB_DLL.
     * This is not mandatory, but it offers a little performance increase.
     */
+#  ifdef ZLIB_DLL
+#    if defined(WIN32) && (!defined(__BORLANDC__) || (__BORLANDC__ >= 0x500))
+#      ifdef ZLIB_INTERNAL
+#        define ZEXTERN extern __declspec(dllexport)
+#      else
+#        define ZEXTERN extern __declspec(dllimport)
+#      endif
+#    endif
+#  endif  /* ZLIB_DLL */
    /* If building or using zlib with the WINAPI/WINAPIV calling convention,
     * define ZLIB_WINAPI.
     * Caution: the standard ZLIB1.DLL is NOT compiled using ZLIB_WINAPI.
@@ -320,7 +326,35 @@
 #    include <windows.h>
      /* No need for _export, use ZLIB.DEF instead. */
      /* For complete Windows compatibility, use WINAPI, not __stdcall. */
+#    define ZEXPORT WINAPI
+#    ifdef WIN32
+#      define ZEXPORTVA WINAPIV
+#    else
+#      define ZEXPORTVA FAR CDECL
+#    endif
 #  endif
+#endif
+
+#if defined (__BEOS__)
+#  ifdef ZLIB_DLL
+#    ifdef ZLIB_INTERNAL
+#      define ZEXPORT   __declspec(dllexport)
+#      define ZEXPORTVA __declspec(dllexport)
+#    else
+#      define ZEXPORT   __declspec(dllimport)
+#      define ZEXPORTVA __declspec(dllimport)
+#    endif
+#  endif
+#endif
+
+#ifndef ZEXTERN
+#  define ZEXTERN extern
+#endif
+#ifndef ZEXPORT
+#  define ZEXPORT
+#endif
+#ifndef ZEXPORTVA
+#  define ZEXPORTVA
 #endif
 
 #ifndef FAR
@@ -354,14 +388,20 @@ typedef uLong FAR uLongf;
    typedef Byte       *voidp;
 #endif
 
+/* ./configure may #define Z_U4 here */
+
 #if !defined(Z_U4) && !defined(Z_SOLO) && defined(STDC)
 #  include <limits.h>
 #  if (UINT_MAX == 0xffffffffUL)
 #    define Z_U4 unsigned
-#  elif (ULONG_MAX == 0xffffffffUL)
-#    define Z_U4 unsigned long
-#  elif (USHRT_MAX == 0xffffffffUL)
-#    define Z_U4 unsigned short
+#  else
+#    if (ULONG_MAX == 0xffffffffUL)
+#      define Z_U4 unsigned long
+#    else
+#      if (USHRT_MAX == 0xffffffffUL)
+#        define Z_U4 unsigned short
+#      endif
+#    endif
 #  endif
 #endif
 
@@ -385,16 +425,8 @@ typedef uLong FAR uLongf;
 #  endif
 #endif
 
-#if defined(STDC) || defined(Z_HAVE_STDARG_H)
-#  ifndef Z_SOLO
-#    include <stdarg.h>         /* for va_list */
-#  endif
-#endif
-
 #ifdef _WIN32
-#  ifndef Z_SOLO
-#    include <stddef.h>         /* for wchar_t */
-#  endif
+#  include <stddef.h>           /* for wchar_t */
 #endif
 
 /* a little trick to accommodate both "#define _LARGEFILE64_SOURCE" and
@@ -403,7 +435,7 @@ typedef uLong FAR uLongf;
  * both "#undef _LARGEFILE64_SOURCE" and "#define _LARGEFILE64_SOURCE 0" as
  * equivalently requesting no 64-bit operations
  */
-#if defined(_LARGEFILE64_SOURCE) && -_LARGEFILE64_SOURCE - -1 == 1
+#if defined(LARGEFILE64_SOURCE) && -_LARGEFILE64_SOURCE - -1 == 1
 #  undef _LARGEFILE64_SOURCE
 #endif
 
@@ -411,7 +443,7 @@ typedef uLong FAR uLongf;
 #  define Z_HAVE_UNISTD_H
 #endif
 #ifndef Z_SOLO
-#  if defined(Z_HAVE_UNISTD_H) || defined(_LARGEFILE64_SOURCE)
+#  if defined(Z_HAVE_UNISTD_H) || defined(LARGEFILE64_SOURCE)
 #    include <unistd.h>         /* for SEEK_*, off_t, and _LFS64_LARGEFILE */
 #    ifdef VMS
 #      include <unixio.h>       /* for off_t */

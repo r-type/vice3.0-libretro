@@ -43,12 +43,24 @@
 #include "ted_yape_ntsc_vpl.h"
 #include "ted_colodore_ted_vpl.h"
 
+#ifdef __LIBRETRO__
+#include "plus4kernal005.h"
+#include "plus4kernal232.h"
+#include "plus4kernal364.h"
+#include "plus4c2lo364.h"
+#endif
 
 static embedded_t plus4files[] = {
     { "basic", PLUS4_BASIC_ROM_SIZE, PLUS4_BASIC_ROM_SIZE, PLUS4_BASIC_ROM_SIZE, NULL },
     { "kernal", PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, NULL },
     { "3plus1lo", PLUS4_BASIC_ROM_SIZE, PLUS4_BASIC_ROM_SIZE, PLUS4_BASIC_ROM_SIZE, NULL },
     { "3plus1hi", PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, NULL },
+#ifdef __LIBRETRO__
+    { "kernal.005", PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, plus4memrom_kernal005_rom },
+    { "kernal.232", PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, plus4memrom_kernal232_rom },
+    { "kernal.364", PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, plus4memrom_kernal364_rom },
+    { "c2lo.364", PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, PLUS4_KERNAL_ROM_SIZE, plus4memrom_c2lo364_rom },
+#endif
     EMBEDDED_LIST_END
 };
 

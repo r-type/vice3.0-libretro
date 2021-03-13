@@ -27,6 +27,8 @@
 #define VICE_MOUSEDRV_H
 
 #include "types.h"
+#include "mouse.h"
+
 extern int mousedrv_resources_init(mouse_func_t *funcs);
 extern int mousedrv_cmdline_options_init(void);
 extern void mousedrv_init(void);

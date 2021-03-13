@@ -34,14 +34,8 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#ifndef __WIN32__
-#include <pwd.h>
-#endif
 #include <sys/stat.h>
 #include <sys/types.h>
-#ifndef __WIN32__
-#include <sys/wait.h>
-#endif
 #include <unistd.h>
 
 #ifdef HAVE_VFORK_H
@@ -50,6 +44,14 @@
 
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
+#endif
+
+#if defined(PSP) || defined(VITA) || defined(__PSL1GHT__)
+#include <sys/time.h>
+#endif
+
+#if defined(VITA)
+#include <psp2/io/stat.h>
 #endif
 
 #include "archdep.h"
@@ -62,16 +64,12 @@
 #include "util.h"
 #include "keyboard.h"
 
-#define LIBRETROHACK 1
-#ifdef LIBRETROHACK
-//FIXME remove me!
-BYTE plus4tcbm_outputa[2], plus4tcbm_outputb[2], plus4tcbm_outputc[2];
-BYTE tpid_outputa[2], tpid_outputb[2], tpid_outputc[2];
-/* 8502 cycle stretch indicator */
-int maincpu_stretch;
-/* 8502 memory refresh alarm */
- CLOCK c128cpu_memory_refresh_clk;
-#endif
+#include "../shared/archdep_atexit.c"
+#include "../shared/archdep_extra_title_text.c"
+
+#include "libretro-core.h"
+extern unsigned int opt_read_vicerc;
+extern char full_path[RETRO_PATH_MAX];
 
 static char *argv0 = NULL;
 static char *boot_path = NULL;
@@ -79,7 +77,26 @@ static char *boot_path = NULL;
 /* alternate storage of preferences */
 const char *archdep_pref_path = NULL; /* NULL -> use home_path + ".vice" */
 
-static FILE *log_file = NULL;
+#include <stddef.h>
+
+#if defined(VITA) || defined(__SWITCH__)
+char* getcwd( char* buf, size_t size )
+{
+  if (size > strlen(retro_system_data_directory) && buf)
+  {
+    strcpy(buf, retro_system_data_directory);
+    return buf;
+  }
+
+  return NULL;
+}
+
+int chdir( const char* path)
+{
+  return 0;
+}
+#endif
+
 int joystick_arch_cmdline_options_init(void)
 {
         return 1;
@@ -98,14 +115,28 @@ int kbd_arch_get_host_mapping(void)
 
 #include <time.h>
 
+#ifdef __PS3__
+#include <pthread_types.h>
+
+#ifndef __PSL1GHT__
+#define sysGetCurrentTime sys_time_get_current_time
+int gettimeofday(struct timeval* x, int unused)
+{
+    sys_time_sec_t s;
+    sys_time_nsec_t ns;
+    int ret = sysGetCurrentTime(&s, &ns);
+
+    x->tv_sec = s;
+    x->tv_usec = ns / 1000;
+
+    return ret;
+}
+#endif
+
+#endif
+
 int archdep_rtc_get_centisecond(void)
 {
-    struct timespec dtm;
-    int status;
-
-    if ((status = clock_gettime(CLOCK_REALTIME, &dtm)) == 0) {
-        return dtm.tv_nsec / 10000L;
-    }
     return 0;
 }
 
@@ -113,24 +144,21 @@ int archdep_init(int *argc, char **argv)
 {
     argv0 = lib_stralloc(argv[0]);
 
-#ifdef RETRO_DEBUG
-#if defined(__ANDROID__) || defined(ANDROID)
-    log_file = fopen("/mnt/sdcard/vicelog.txt", "w");
-#else
-    log_file = fopen("./vicelog.txt", "w");
-#endif
-#endif
+    archdep_pref_path = archdep_boot_path();
 
-#if defined(__WIN32__)
-//FIXME
-	archdep_pref_path = archdep_boot_path();
-#endif
     return 0;
 }
 
 char *archdep_default_rtc_file_name(void)
 {
-    return "~/rtcfile";
+    if (archdep_pref_path == NULL) {
+        const char *home;
+
+        home = archdep_home_path();
+        return util_concat(home, "/.vice/vice.rtc", NULL);
+    } else {
+        return util_concat(archdep_pref_path, "/vice.rtc", NULL);
+    }
 }
 
 int archdep_rename(const char *oldpath, const char *newpath)
@@ -138,14 +166,14 @@ int archdep_rename(const char *oldpath, const char *newpath)
     return rename(oldpath, newpath);
 }
 
-char *archdep_program_name(void)
+const char *archdep_program_name(void)
 {
     static char *program_name = NULL;
 
     if (program_name == NULL) {
         char *p;
 #if defined(__WIN32__) 
-  p = strrchr(argv0, '\\');
+        p = strrchr(argv0, '\\');
 #else
         p = strrchr(argv0, '/');
 #endif
@@ -160,48 +188,12 @@ char *archdep_program_name(void)
 
 const char *archdep_boot_path(void)
 {  
-#ifdef LIBRETROHACK
-//FIXME
-#if defined(__ANDROID__) || defined(ANDROID)
- return "/mnt/sdcard";
-#else
-printf("bootp:(%s)\n",retro_system_data_directory);
- return retro_system_data_directory;
-#endif
-#endif
-
-    if (boot_path == NULL) {
-
-        boot_path = findpath(argv0, getenv("PATH"), IOUTIL_ACCESS_X_OK);
-
-        /* Remove the program name.  */
-        *strrchr(boot_path, '/') = '\0';
-    }
-
-    return boot_path;
+    return retro_system_data_directory;
 }
 
 const char *archdep_home_path(void)
 {
-#if defined(__ANDROID__) || defined(ANDROID)
-    return "/mnt/sdcard";
-#elif defined(__WIN32__) || defined(GEKKO)
-return retro_system_data_directory;
-#else
-    char *home;
-
-    home = getenv("HOME");
-    if (home == NULL) {
-        struct passwd *pwd;
-
-        pwd = getpwuid(getuid());
-        if ((pwd == NULL) || ((home = pwd->pw_dir) == NULL)) {
-            /* give up */
-            home = ".";
-        }
-    }
-
-#endif
+    return retro_system_data_directory;
 }
 
 char *archdep_default_autostart_disk_image_file_name(void)
@@ -258,8 +250,7 @@ char *archdep_default_sysfile_pathlist(const char *emu_id)
                                    NULL);
         lib_free(default_path_temp);
 #elif defined(__WIN32__) 
-  
-       default_path = util_concat( home_path, "\\", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
+        default_path = util_concat(home_path, "\\", emu_id, ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                    home_path, "\\DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                    home_path, "\\PRINTER", NULL);
 
@@ -297,12 +288,39 @@ char *archdep_make_backup_filename(const char *fname)
 char *archdep_default_resource_file_name(void)
 {
     if(archdep_pref_path==NULL) {
-      const char *home;
-      
-      home = archdep_home_path();
-      return util_concat(home, "/.vice/vicerc", NULL);
+        const char *home;
+        home = archdep_home_path();
+        return util_concat(home, "/.vice/vicerc", NULL);
     } else {
-      return util_concat(archdep_pref_path, "/vicerc", NULL);
+        if (opt_read_vicerc)
+        {
+            char content_vicerc[RETRO_PATH_MAX]   = {0};
+            char content_basename[RETRO_PATH_MAX] = {0};
+            if (!string_is_empty(full_path))
+            {
+               snprintf(content_basename, sizeof(content_basename), "%s", path_basename(full_path));
+               path_remove_extension(content_basename);
+               snprintf(content_vicerc, sizeof(content_vicerc), "%s%s%s.vicerc", SAVEDIR, FSDEV_DIR_SEP_STR, content_basename);
+               /* Process "saves/[content].vicerc" */
+               if (!ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
+                  return util_concat(content_vicerc, NULL);
+               else
+                  log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
+            }
+            /* Process "saves/vicerc" */
+            snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", SAVEDIR, FSDEV_DIR_SEP_STR);
+            if (!ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
+               return util_concat(content_vicerc, NULL);
+            else
+               log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
+            /* Process "system/vice/vicerc" */
+            snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", archdep_pref_path, FSDEV_DIR_SEP_STR);
+            if (ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
+               log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
+            return util_concat(archdep_pref_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
+        }
+        else
+            return NULL;
     }
 }
 
@@ -331,11 +349,13 @@ char *archdep_default_save_resource_file_name(void)
       viceuserdir = archdep_pref_path;
     }
 
-    if (access(viceuserdir, F_OK)) {
+    if (ioutil_access(viceuserdir, IOUTIL_ACCESS_F_OK)) {
 #if defined(__WIN32__)
         mkdir(viceuserdir);
+#elif defined(VITA)
+        sceIoMkdir(viceuserdir, 0777);
 #else
-        mkdir(viceuserdir, 0700);
+        mkdir(viceuserdir, 0755);
 #endif
     }
 
@@ -350,7 +370,7 @@ char *archdep_default_save_resource_file_name(void)
 
 FILE *archdep_open_default_log_file(void)
 {
-    return (log_file) ? log_file : NULL;
+    return NULL;
 }
 
 int archdep_num_text_lines(void)
@@ -376,17 +396,29 @@ int archdep_num_text_columns(void)
 }
 
 int archdep_default_logger(const char *level_string, const char *txt) {
-    if (fputs(level_string, stdout) == EOF
-        || fprintf(stdout, "%s", txt)  < 0
-        || fputc ('\n', stdout) == EOF)
-        return -1;
     return 0;
 }
 
 int archdep_path_is_relative(const char *path)
 {
 #ifdef __WIN32__
-  return !((isalpha(path[0]) && path[1] == ':') || path[0] == '/' || path[0] == '\\');
+    return !((isalpha(path[0]) && path[1] == ':') || path[0] == '/' || path[0] == '\\');
+#elif defined(VITA) || defined(__SWITCH__) || defined(WIIU) || defined(_3DS)
+    if (path == NULL)
+        return 0;
+    if (*path == '/')
+        return 0;
+    /* Vita might also use "ux0:" or "uma0:" for absolute paths
+     * Switch might also use "sdmc:" for absolute paths
+     * WIIU and 3DS might also use "sd:" for absolute paths */
+    for (int i = 0; i <= 4; i++)
+    {
+        if (path[i] == '\0')
+          return 1;
+        if (path[i] == ':')
+          return 0;
+    }
+    return 1;
 #else
     if (path == NULL)
         return 0;
@@ -400,6 +432,9 @@ int archdep_spawn(const char *name, char **argv,
 #ifndef HAVE_VFORK
     return -1;
 #else
+#ifndef __WIN32__
+#include <sys/wait.h>
+#endif
     pid_t child_pid;
     int child_status;
     char *stdout_redir = NULL;
@@ -459,12 +494,17 @@ int archdep_expand_path(char **return_path, const char *orig_name)
     return 0;
 }
 
+char archdep_startup_error[4096];
+
 void archdep_startup_log_error(const char *format, ...)
 {
     va_list ap;
 
+    char *begin=archdep_startup_error+strlen(archdep_startup_error);
+    char *end=archdep_startup_error+sizeof(archdep_startup_error);
+
     va_start(ap, format);
-    vfprintf(stderr, format, ap);
+    begin+=vsnprintf(begin, end-begin, format, ap);
 }
 
 char *archdep_filename_parameter(const char *name)
@@ -481,7 +521,6 @@ char *archdep_quote_parameter(const char *name)
 
 char *archdep_tmpnam(void)
 {
-
 #ifdef HAVE_MKSTEMP
     char *tmpName;
     const char mkstempTemplate[] = "/vice.XXXXXX";
@@ -506,12 +545,10 @@ char *archdep_tmpnam(void)
 #else
     return lib_stralloc(tmpnam(NULL));
 #endif
-
 }
 
 FILE *archdep_mkstemp_fd(char **filename, const char *mode)
- {
-
+{
 #if defined HAVE_MKSTEMP
     char *tmp;
     const char template[] = "/vice.XXXXXX";
@@ -519,7 +556,11 @@ FILE *archdep_mkstemp_fd(char **filename, const char *mode)
     FILE *fd;
     char *tmpdir;
 
+#if defined(__WIN32__)
+    tmpdir = getenv("TMP");
+#else
     tmpdir = getenv("TMPDIR");
+#endif
 
     if (tmpdir != NULL ) 
         tmp = util_concat(tmpdir, template, NULL);
@@ -545,6 +586,7 @@ FILE *archdep_mkstemp_fd(char **filename, const char *mode)
     return fd;
 #else
     char *tmp;
+    FILE *fd;
 
     tmp = tmpnam(NULL);
 
@@ -580,11 +622,32 @@ int archdep_file_set_gzip(const char *name)
 
 int archdep_mkdir(const char *pathname, int mode)
 {
-#if defined(__WIN32__)
-       return mkdir(pathname);
+    if (!mode)
+#if defined(VITA) || defined(PSP) || defined(PS2)
+        mode = 0777;
+#elif defined(__QNX__)
+        mode = 0777;
 #else
-     return mkdir(pathname, (mode_t)mode);
+        mode = 0755;
 #endif
+
+#if defined(__WIN32__)
+    return mkdir(pathname);
+#elif defined(VITA)
+    return sceIoMkdir(pathname, mode);
+#else
+    return mkdir(pathname, (mode_t)mode);
+#endif
+}
+
+int archdep_rmdir(const char *pathname)
+{
+#ifdef VITA
+    sceIoRmdir(pathname);
+#else
+    rmdir(pathname);
+#endif
+    return 0;
 }
 
 int archdep_stat(const char *file_name, unsigned int *len, unsigned int *isdir)
@@ -630,31 +693,11 @@ void archdep_shutdown(void)
 {
     log_message(LOG_DEFAULT, "\nExiting...");
 
-#ifdef RETRO_DEBUG
-    if (log_file) fclose(log_file);
-#endif
     lib_free(argv0);
     lib_free(boot_path);
-
 }
 
-signed long kbd_arch_keyname_to_keynum(char *keyname) {
-	return (signed long)atoi(keyname);
-}
-
-const char *kbd_arch_keynum_to_keyname(signed long keynum) {
-	static char keyname[20];
-
-	memset(keyname, 0, 20);
-	sprintf(keyname, "%li", keynum);
-	return keyname;
-}
-
-void kbd_arch_init()
-{
-  keyboard_clear_keymatrix();
-}
-
+#if 0
 int archdep_network_init(void)
 {
     return 0;
@@ -664,10 +707,16 @@ void archdep_network_shutdown(void)
 {
 }
 
+void archdep_vice_exit(int excode)
+{
+    exit(excode);
+}
+#endif
+
 char *archdep_get_runtime_os(void)
 {
 #ifndef __WIN32__
-     return "*nix";
+    return "*nix";
 #else
     return "win*";
 #endif
@@ -677,4 +726,3 @@ char *archdep_get_runtime_cpu(void)
 {
     return "Unknown CPU";
 }
-

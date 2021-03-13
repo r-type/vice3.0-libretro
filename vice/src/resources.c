@@ -350,47 +350,11 @@ static void resources_free(void)
     }
 }
 
+
+/** \brief  Shutown resources
+ */
 void resources_shutdown(void)
 {
-#ifdef VICE_DEBUG_RESOURCES
-    int i;
-
-    printf("VICE_DEBUG_RESOURCES: dumping resources: name, type\n");
-    for (i = 0; i < num_resources; i++) {
-        resource_ram_t *res = resources + i;
-
-        printf("RES\t%s\t", res->name);
-        switch (res->type) {
-            case RES_INTEGER:
-                printf("integer");
-                /* attempting to access default/current values of some
-                 * resources fails, such as `VICIIFullscreenDevice` which is
-                 * a resource constructed in the UI code */
-#if 0
-                if (res->value_ptr != NULL && res->factory_value != NULL) {
-                    printf("\t%d\t%d",
-                            vice_ptr_to_int(res->factory_value),
-                            vice_ptr_to_int(*(res->value_ptr)));
-                }
-#endif
-                break;
-            case RES_STRING:
-                printf("string");
-#if 0
-                if (res->value_ptr != NULL && res->factory_value != NULL) {
-                    printf("\t%s\t%s",
-                            (char *)(res->factory_value),
-                            *(char **)res->value_ptr);
-                }
-#endif
-                break;
-            default:
-                printf("???\t???\t???");
-        }
-        putchar('\n');
-
-    }
-#endif
     resources_free();
 
     lib_free(resources);
@@ -446,7 +410,7 @@ static void resource_create_event_data(char **event_data, int *data_size,
     name_size = (int)strlen(name) + 1;
 
     if (r->type == RES_INTEGER) {
-        *data_size = name_size + sizeof(DWORD);
+        *data_size = name_size + sizeof(uint32_t);
     } else {
         *data_size = name_size + (int)strlen((char *)value) + 1;
     }
@@ -455,7 +419,7 @@ static void resource_create_event_data(char **event_data, int *data_size,
     strcpy(*event_data, name);
 
     if (r->type == RES_INTEGER) {
-        *(DWORD *)(*event_data + name_size) = vice_ptr_to_uint(value);
+        *(uint32_t *)(*event_data + name_size) = vice_ptr_to_uint(value);
     } else {
         strcpy(*event_data + name_size, (char *)value);
     }
@@ -636,7 +600,7 @@ void resources_set_value_event(void *data, int size)
     valueptr = name + strlen(name) + 1;
     r = lookup(name);
     if (r->type == RES_INTEGER) {
-        resources_set_value_internal(r, (resource_value_t) uint_to_void_ptr(*(DWORD*)valueptr));
+        resources_set_value_internal(r, (resource_value_t) uint_to_void_ptr(*(uint32_t *)valueptr));
     } else {
         resources_set_value_internal(r, (resource_value_t)valueptr);
     }
@@ -1199,7 +1163,84 @@ int resources_load(const char *fname)
     return err ? RESERR_FILE_INVALID : 0;
 }
 
+#ifdef __LIBRETRO__
+#include "cmdline.h"
+extern cmdline_option_ram_t *options;
+static char* disabled_resources[] =
+{
+    /* Core options */
+    "Mouse", "AutostartPrgMode", "AutostartDelayRandom", "VirtualDevices", "CrtcFilter", "CrtcStretchVertical",
+    "VICExternalPalette", "VICPaletteFile", "TEDExternalPalette", "TEDPaletteFile",
+    "CrtcExternalPalette", "CrtcPaletteFile", "VICIIExternalPalette", "VICIIPaletteFile",
+    "VICColorGamma", "VICColorSaturation", "VICColorContrast", "VICColorBrightness", "VICColorTint",
+    "TEDColorGamma", "TEDColorSaturation", "TEDColorContrast", "TEDColorBrightness", "TEDColorTint",
+    "VICIIColorGamma", "VICIIColorSaturation", "VICIIColorContrast", "VICIIColorBrightness", "VICIIColorTint",
+    "AutostartWarp", "AttachDevice8Readonly", "EasyFlashWriteCRT", "UserportJoy", "UserportJoyType",
+    "DriveTrueEmulation", "DriveSoundEmulation", "DriveSoundEmulationVolume",
+    "VICIIAudioLeak", "VICAudioLeak", "TEDAudioLeak", "SidStereo", "SidStereoAddressStart",
+    "SidEngine", "SidModel", "SidResidSampling", "SidResidPassband", "SidResidGain", "SidResidFilterBias",
+    "SidResid8580Passband", "SidResid8580Gain", "SidResid8580FilterBias", "SFXSoundExpander", "SFXSoundExpanderChip",
+    "Go64Mode", "C128ColumnKey", "RAMBlock0", "RAMBlock1", "RAMBlock2", "RAMBlock3", "RAMBlock5", "REU", "REUsize",
+    "Drive8Type", "WarpMode", "KeymapSymFile", "KeymapPosFile", "KeymapIndex",
 
+    /* Frontend resources */
+    "SDLStatusbar", "ExitScreenshotName", "ExitScreenshotName1", "RefreshRate", "SoundRecordDeviceName", "SoundRecordDeviceArg",
+    "SoundDeviceName", "Sound", "SoundSampleRate", "SoundBufferSize", "SoundFragmentSize", "SoundDeviceArg",
+    "SoundSuspendTime", "SoundSpeedAdjustment", "SoundVolume", "SoundOutput", "MachineVideoStandard",
+    "VICIIVideoCache", "VICIIDoubleScan", "VICIIHwScale", "VICIIDoubleSize", "VICIIBorderMode",
+    "VICIIPALScanLineShade", "VICIIPALBlur", "VICIIPALOddLinePhase", "VICIIPALOddLineOffset", "VICIIFilter",
+    "EventSnapshotDir", "EventStartSnapshot", "EventEndSnapshot", "EventStartMode", "EventImageInclude",
+
+    /* Stubbed resources */
+    "DebugCartEnable", "CPMCart", "MonitorServerAddress", "MonitorServer"
+};
+static int disabled_resources_num;
+static char *resources_get_description(const char *name)
+{
+    for (int i = 0; i < num_resources; i++)
+    {
+        if (options[i].resource_name == NULL)
+            continue;
+        if (!strcmp(options[i].resource_name, name))
+            return (char *)options[i].description;
+    }
+    return "No description";
+}
+
+static char *string_resource_item(int num, const char *delim)
+{
+    /* Skip core optionized & frontend resources */
+    for (int d = 0; d < disabled_resources_num; d++)
+    {
+        if (!strcmp(resources[num].name, disabled_resources[d]))
+            return NULL;
+    }
+
+    char *line = NULL;
+    resource_value_t v;
+
+    switch (resources[num].type) {
+        case RES_INTEGER:
+            v = (resource_value_t) uint_to_void_ptr(*(int *)resources[num].value_ptr);
+            line = lib_msprintf("%s=%d ### %s%s", resources[num].name, vice_ptr_to_int(v), resources_get_description(resources[num].name), delim);
+            break;
+        case RES_STRING:
+            v = *resources[num].value_ptr;
+            if ((char *)v != NULL) {
+                line = lib_msprintf("%s=\"%s\" ### %s%s", resources[num].name, (char *)v,
+                                    resources_get_description(resources[num].name), delim);
+            } else {
+                line = lib_msprintf("%s= ### %s%s", resources[num].name, resources_get_description(resources[num].name), delim);
+            }
+            break;
+        default:
+            log_error(LOG_DEFAULT, "Unknown value type for resource `%s'.",
+                      resources[num].name);
+            break;
+    }
+    return line;
+}
+#else
 static char *string_resource_item(int num, const char *delim)
 {
     char *line = NULL;
@@ -1226,6 +1267,7 @@ static char *string_resource_item(int num, const char *delim)
     }
     return line;
 }
+#endif
 
 /* Write the resource specification for resource number `num' to file
    descriptor `f'.  */
@@ -1288,7 +1330,7 @@ int resources_save(const char *fname)
     if (fname == NULL) {
         if (vice_config_file == NULL) {
             /* get default filename. this also creates the .vice directory if not present */
-            default_name = archdep_default_save_resource_file_name();
+            default_name = archdep_default_resource_file_name();
         } else {
             default_name = lib_stralloc(vice_config_file);
         }
@@ -1412,7 +1454,12 @@ int resources_dump(const char *fname)
     FILE *out_file;
     unsigned int i;
 
+#ifdef __LIBRETRO__
+    disabled_resources_num = sizeof(disabled_resources) / sizeof(disabled_resources[0]);
+    log_message(LOG_DEFAULT, "Dumping resources to file `%s'.", fname);
+#else
     log_message(LOG_DEFAULT, "Dumping %d resources to file `%s'.", num_resources, fname);
+#endif
 
     out_file = fopen(fname, MODE_WRITE_TEXT);
     if (!out_file) {

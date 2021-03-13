@@ -26,6 +26,9 @@
 
 #include "sid.h"
 #include <math.h>
+#ifdef __PS3__
+#include "PS3_include.h"
+#endif
 
 #ifndef round
 #define round(x) (x>=0.0?floor(x+0.5):ceil(x-0.5))
@@ -949,7 +952,7 @@ int SID::clock_resample(cycle_count& delta_t, short* buf, int n, int interleave)
     // Linear interpolation.
     // fir_offset_rmd is equal for all samples, it can thus be factorized out:
     // sum(v1 + rmd*(v2 - v1)) = sum(v1) + rmd*(sum(v2) - sum(v1))
-    int v = v1 + (fir_offset_rmd*(v2 - v1) >> FIXP_SHIFT);
+    int v = v1 + int((unsigned(fir_offset_rmd)*unsigned(v2 - v1)) >> FIXP_SHIFT);
 
     v >>= FIR_SHIFT;
 

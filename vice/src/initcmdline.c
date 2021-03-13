@@ -46,9 +46,9 @@
 #include "maincpu.h"
 #include "resources.h"
 #include "tape.h"
-#include "translate.h"
 #include "util.h"
 #include "vicefeatures.h"
+#include "monitor.h"
 
 #ifdef DEBUG_CMDLINE
 #define DBG(x)  printf x
@@ -65,6 +65,13 @@ int cmdline_get_autostart_mode(void)
 {
     return autostart_mode;
 }
+
+#ifdef __LIBRETRO__
+const char* cmdline_get_autostart_string(void)
+{
+    return autostart_string;
+}
+#endif /* __LIBRETRO__ */
 
 static void cmdline_free_autostart_string(void)
 {
@@ -98,7 +105,7 @@ static int cmdline_help(const char *param, void *extra_param)
     cmdline_show_help(NULL);
 #ifndef __LIBRETRO__
 //FIXME
-    exit(0);
+    archdep_vice_exit(0);
 #endif
     return 0;   /* OSF1 cc complains */
 }
@@ -114,7 +121,7 @@ static int cmdline_features(const char *param, void *extra_param)
     }
 #ifndef __LIBRETRO__
 //FIXME
-    exit(0);
+    archdep_vice_exit(0);
 #endif
     return 0;   /* OSF1 cc complains */
 }
@@ -197,121 +204,72 @@ static int cmdline_attach(const char *param, void *extra_param)
     return 0;
 }
 
-static const cmdline_option_t common_cmdline_options[] = {
-    { "-help", CALL_FUNCTION, 0,
+static const cmdline_option_t common_cmdline_options[] =
+{
+    { "-help", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       cmdline_help, NULL, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SHOW_COMMAND_LINE_OPTIONS,
-      NULL, NULL },
-    { "-?", CALL_FUNCTION, 0,
+      NULL, "Show a list of the available options and exit normally" },
+    { "-?", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       cmdline_help, NULL, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SHOW_COMMAND_LINE_OPTIONS,
-      NULL, NULL },
-    { "-h", CALL_FUNCTION, 0,
+      NULL, "Show a list of the available options and exit normally" },
+    { "-h", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       cmdline_help, NULL, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SHOW_COMMAND_LINE_OPTIONS,
-      NULL, NULL },
-    { "-features", CALL_FUNCTION, 0,
+      NULL, "Show a list of the available options and exit normally" },
+    { "-features", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       cmdline_features, NULL, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SHOW_COMPILETIME_FEATURES,
-      NULL, NULL },
-    { "-default", CALL_FUNCTION, 0,
+      NULL, "Show a list of the available compile-time options and their configuration." },
+    { "-default", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       cmdline_default, NULL, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_RESTORE_DEFAULT_SETTINGS,
-      NULL, NULL },
-    { "-config", CALL_FUNCTION, 1,
+      NULL, "Restore default settings" },
+    { "-config", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_config, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_FILE, IDCLS_SPECIFY_CONFIG_FILE,
-      NULL, NULL },
-    { "-dumpconfig", CALL_FUNCTION, 1,
+      "<filename>", "Specify config file" },
+    { "-dumpconfig", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_dumpconfig, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_FILE, IDCLS_SPECIFY_DUMPCONFIG_FILE,
-      NULL, NULL },
-    { "-chdir", CALL_FUNCTION, 1,
+      "<filename>", "Dump all resources to specified config file" },
+    { "-chdir", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_chdir, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDGS_P_DIRECTORY, IDGS_MON_CD_DESCRIPTION,
-      NULL, NULL },
-    { "-limitcycles", CALL_FUNCTION, 1,
+      "Directory", "Change current working directory." },
+    { "-limitcycles", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_limitcycles, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_LIMIT_CYCLES,
-      NULL, NULL },
-#if (!defined  __OS2__ && !defined __BEOS__)
-    { "-console", CALL_FUNCTION, 0,
+      "<value>", "Specify number of cycles to run before quitting with an error." },
+    { "-console", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       cmdline_console, NULL, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_CONSOLE_MODE,
-      NULL, NULL },
-    { "-core", SET_RESOURCE, 0,
+      NULL, "Console mode (for music playback)" },
+    { "-core", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "DoCoreDump", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ALLOW_CORE_DUMPS,
-      NULL, NULL },
-    { "+core", SET_RESOURCE, 0,
+      NULL, "Allow production of core dumps" },
+    { "+core", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "DoCoreDump", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DONT_ALLOW_CORE_DUMPS,
-      NULL, NULL },
-#else
-    { "-debug", SET_RESOURCE, 0,
-      NULL, NULL, "DoCoreDump", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DONT_CALL_EXCEPTION_HANDLER,
-      NULL, NULL },
-    { "+debug", SET_RESOURCE, 0,
-      NULL, NULL, "DoCoreDump", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_CALL_EXCEPTION_HANDLER,
-      NULL, NULL },
-#endif
+      NULL, "Do not produce core dumps" },
     CMDLINE_LIST_END
 };
 
 /* These are the command-line options for the initialization sequence.  */
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-autostart", CALL_FUNCTION, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-autostart", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_autostart, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_ATTACH_AND_AUTOSTART,
-      NULL, NULL },
-    { "-autoload", CALL_FUNCTION, 1,
+      "<Name>", "Attach and autostart tape/disk image <name>" },
+    { "-autoload", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_autoload, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_ATTACH_AND_AUTOLOAD,
-      NULL, NULL },
-    { "-1", CALL_FUNCTION, 1,
+      "<Name>", "Attach and autoload tape/disk image <name>" },
+    { "-1", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)1, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_ATTACH_AS_TAPE,
-      NULL, NULL },
-    { "-8", CALL_FUNCTION, 1,
+      "<Name>", "Attach <name> as a tape image" },
+    { "-8", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)8, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_ATTACH_AS_DISK_8,
-      NULL, NULL },
-    { "-9", CALL_FUNCTION, 1,
+      "<Name>", "Attach <name> as a disk image in drive #8" },
+    { "-9", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)9, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_ATTACH_AS_DISK_9,
-      NULL, NULL },
-    { "-10", CALL_FUNCTION, 1,
+      "<Name>", "Attach <name> as a disk image in drive #9" },
+    { "-10", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)10, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_ATTACH_AS_DISK_10,
-      NULL, NULL },
-    { "-11", CALL_FUNCTION, 1,
+      "<Name>", "Attach <name> as a disk image in drive #10" },
+    { "-11", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)11, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_ATTACH_AS_DISK_11,
-      NULL, NULL },
+      "<Name>", "Attach <name> as a disk image in drive #11" },
     CMDLINE_LIST_END
 };
 
@@ -327,9 +285,9 @@ int initcmdline_init(void)
             return -1;
         }
     }
+
 #ifndef __LIBRETRO__
-//FIXME libco
-    atexit(cmdline_free_startup_images);
+    archdep_vice_atexit(cmdline_free_startup_images);
 #endif
     return 0;
 }
@@ -422,5 +380,38 @@ void initcmdline_check_attach(void)
         }
     }
 
+#ifndef __LIBRETRO__
+    /* Keep autostart string for libretro-core */
     cmdline_free_autostart_string();
+#endif /* __LIBRETRO__ */
 }
+
+#ifdef __LIBRETRO__
+int initcmdline_cleanup()
+{
+    cmdline_free_autostart_string();
+
+    /* Detach all tapes and disks from previous content */
+    tape_image_detach(1);
+    file_system_detach_disk(-1);
+
+    /* Detach cartridge and reset default name */
+    if (resources_query_type("CartridgeFile") == RES_STRING) {
+        resources_set_string("CartridgeFile", "");
+    }
+
+    /* Reset resources to defaults */
+    resources_set_defaults();
+    resources_load(NULL);
+}
+
+int initcmdline_restart(int argc, char **argv)
+{
+    if (initcmdline_check_args(argc, argv) == -1) {
+        return -1;
+    }
+
+    initcmdline_check_attach();
+    return 0;
+}
+#endif /* __LIBRETRO__ */

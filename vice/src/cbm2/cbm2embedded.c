@@ -113,6 +113,9 @@ int embedded_palette_load(const char *fname, palette_t *p)
                 p->entries[j].blue = entries[(j * 4) + 2];
                 p->entries[j].dither = entries[(j * 4) + 3];
             }
+#ifdef __LIBRETRO__
+            return 0;
+#endif
         }
         i++;
     }

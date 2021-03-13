@@ -39,13 +39,14 @@
 #include "output-text.h"
 #include "output.h"
 #include "resources.h"
-#include "translate.h"
 #include "types.h"
 #include "util.h"
 
 /* TODO: configure check that matches what arch/unix/coproc.c does... */
 #if defined(HAVE_FORK)
-#  if !defined(MINIX_SUPPORT) && !defined(OPENSTEP_COMPILE) && !defined(RHAPSODY_COMPILE) && !defined(NEXTSTEP_COMPILE) && !defined(BEOS_COMPILE) && !defined(__MSDOS__) && !defined(__ANDROID__)
+#  if !defined(OPENSTEP_COMPILE) && !defined(RHAPSODY_COMPILE) \
+    && !defined(NEXTSTEP_COMPILE) && !defined(BEOS_COMPILE) \
+    && !defined(__ANDROID__)
 #    include <unistd.h>
 #    define COPROC_SUPPORT        1
 #    include "coproc.h"
@@ -73,6 +74,11 @@ static int set_printer_device(int prn_dev, void *param)
 }
 
 static const resource_string_t resources_string[] = {
+#ifdef __LIBRETRO__
+    { "PrinterTextDevice1", ARCHDEP_PRINTER_DEFAULT,
+      RES_EVENT_NO, NULL,
+      &PrinterDev[0], set_printer_device_name, (void *)0 },
+#else
     { "PrinterTextDevice1", ARCHDEP_PRINTER_DEFAULT_DEV1,
       RES_EVENT_NO, NULL,
       &PrinterDev[0], set_printer_device_name, (void *)0 },
@@ -82,6 +88,7 @@ static const resource_string_t resources_string[] = {
     { "PrinterTextDevice3", ARCHDEP_PRINTER_DEFAULT_DEV3,
       RES_EVENT_NO, NULL,
       &PrinterDev[2], set_printer_device_name, (void *)2 },
+#endif
     RESOURCE_STRING_LIST_END
 };
 
@@ -103,46 +110,32 @@ static const resource_int_t resources_int_userport[] = {
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-prtxtdev1", SET_RESOURCE, 1,
+    { "-prtxtdev1", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterTextDevice1", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_TEXT_DEVICE_DUMP_NAME,
-      NULL, NULL },
-    { "-prtxtdev2", SET_RESOURCE, 1,
+      "<Name>", "Specify name of printer text device or dump file" },
+    { "-prtxtdev2", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterTextDevice2", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_TEXT_DEVICE_DUMP_NAME,
-      NULL, NULL },
-    { "-prtxtdev3", SET_RESOURCE, 1,
+      "<Name>", "Specify name of printer text device or dump file" },
+    { "-prtxtdev3", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterTextDevice3", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_TEXT_DEVICE_DUMP_NAME,
-      NULL, NULL },
-    { "-pr4txtdev", SET_RESOURCE, 1,
+      "<Name>", "Specify name of printer text device or dump file" },
+    { "-pr4txtdev", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer4TextDevice", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SPECIFY_TEXT_DEVICE_4,
-      "<0-2>", NULL },
-    { "-pr5txtdev", SET_RESOURCE, 1,
+      "<0-2>", "Specify printer text output device for printer #4" },
+    { "-pr5txtdev", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer5TextDevice", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SPECIFY_TEXT_DEVICE_5,
-      "<0-2>", NULL },
-    { "-pr6txtdev", SET_RESOURCE, 1,
+      "<0-2>", "Specify printer text output device for printer #5" },
+    { "-pr6txtdev", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer6TextDevice", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SPECIFY_TEXT_DEVICE_6,
-      "<0-2>", NULL },
+      "<0-2>", "Specify printer text output device for printer #6" },
     CMDLINE_LIST_END
 };
 
 static const cmdline_option_t cmdline_options_userport[] =
 {
-    { "-prusertxtdev", SET_RESOURCE, 1,
+    { "-prusertxtdev", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterUserportTextDevice", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SPECIFY_TEXT_USERPORT,
-      "<0-2>", NULL },
+      "<0-2>", "Specify printer text output device for userport printer" },
     CMDLINE_LIST_END
 };
 
@@ -163,7 +156,7 @@ int output_text_init_cmdline_options(void)
 /*
  * TODO: only do this on systems which support it.
  */
-FILE *fopen_or_pipe(char *name)
+static FILE *fopen_or_pipe(char *name)
 {
     if (name[0] == '|') {
 #if COPROC_SUPPORT
@@ -179,7 +172,13 @@ FILE *fopen_or_pipe(char *name)
         return NULL;
 #endif
     } else {
+#ifdef __LIBRETRO__
+        char *path;
+        path = util_concat(SAVEDIR, FSDEV_DIR_SEP_STR, name, NULL);
+        return fopen(path, MODE_APPEND);
+#else
         return fopen(name, MODE_APPEND);
+#endif
     }
 }
 
@@ -218,7 +217,7 @@ static void output_text_close(unsigned int prnr)
     output_fd[printer_device[prnr]] = NULL;
 }
 
-static int output_text_putc(unsigned int prnr, BYTE b)
+static int output_text_putc(unsigned int prnr, uint8_t b)
 {
     if (output_fd[printer_device[prnr]] == NULL) {
         return -1;
@@ -228,12 +227,12 @@ static int output_text_putc(unsigned int prnr, BYTE b)
     return 0;
 }
 
-static int output_text_getc(unsigned int prnr, BYTE *b)
+static int output_text_getc(unsigned int prnr, uint8_t *b)
 {
     if (output_fd[printer_device[prnr]] == NULL) {
         return -1;
     }
-    *b = fgetc(output_fd[printer_device[prnr]]);
+    *b = (uint8_t)fgetc(output_fd[printer_device[prnr]]);
     return 0;
 }
 

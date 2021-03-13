@@ -38,13 +38,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "videoarch.h"
+
 #include "lib.h"
 #include "log.h"
 #include "machine.h"
 #include "resources.h"
 #include "video-color.h"
 #include "video.h"
-#include "videoarch.h"
 #include "viewport.h"
 #include "util.h"
 
@@ -98,6 +99,8 @@ typedef struct video_resource_chip_mode_s video_resource_chip_mode_t;
 
 static int set_double_size_enabled(int value, void *param)
 {
+    // Don't allow double size mode - it won't work
+#ifndef __LIBRETRO__
     cap_render_t *cap_render;
     video_canvas_t *canvas = (video_canvas_t *)param;
     int old_scalex, old_scaley;
@@ -148,6 +151,7 @@ static int set_double_size_enabled(int value, void *param)
     }
 
     canvas->videoconfig->double_size_enabled = val;
+#endif
     return 0;
 }
 
@@ -192,7 +196,9 @@ static int set_hwscale_enabled(int val, void *param)
         && !hwscale_possible)
 #endif
     {
+#ifndef __LIBRETRO__
         log_message(LOG_DEFAULT, "HW scale not available, forcing to disabled");
+#endif
         return 0;
     }
 
@@ -269,9 +275,15 @@ static const char *vname_chip_rendermode[] = { "Filter", NULL };
 
 static resource_int_t resources_chip_rendermode[] =
 {
+#ifdef __LIBRETRO__
+    { NULL, VIDEO_FILTER_NONE, RES_EVENT_NO, NULL,
+      NULL, set_chip_rendermode, NULL },
+    RESOURCE_INT_LIST_END
+#else
     { NULL, VIDEO_FILTER_CRT, RES_EVENT_NO, NULL,
       NULL, set_chip_rendermode, NULL },
     RESOURCE_INT_LIST_END
+#endif
 };
 
 static int set_fullscreen_enabled(int value, void *param)
@@ -661,7 +673,7 @@ int video_resources_chip_init(const char *chipname,
                               video_chip_cap_t *video_chip_cap)
 {
     unsigned int i;
-    
+
     DBG(("video_resources_chip_init (%s) (canvas:%p) (cap:%p)", chipname, *canvas, video_chip_cap));
 
     video_render_initconfig((*canvas)->videoconfig);

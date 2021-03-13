@@ -29,10 +29,26 @@
 #ifndef _ARCHDEP_H
 #define _ARCHDEP_H
 
+extern char retro_system_data_directory[512];
+#define LIBDIR retro_system_data_directory
+
+extern char retro_save_directory[512];
+#define SAVEDIR retro_save_directory
+
+#define ARCHDEP_PRINTER_DEFAULT "vice_printer.txt"
+#if 0
+#define RETRO_DEBUG 1
+#endif
+
+#define VICE_ARCHAPI_PRIVATE_API
 #include "archapi.h"
+#undef VICE_ARCHAPI_PRIVATE_API
+
 /* Default sound output mode */
-#define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_SYSTEM
-#define ARCHDEP_SOCKET_ERROR errno
+#define ARCHDEP_SOUND_OUTPUT_MODE SOUND_OUTPUT_STEREO
+
+/* Default sound fragment size */
+#define ARCHDEP_SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_VERY_SMALL
 
 #if defined(__WIN32__) 
 /* Filesystem dependant operators.  */
@@ -84,9 +100,9 @@
 #define archdep_signals_init(x)
 #define archdep_signals_pipe_set()
 #define archdep_signals_pipe_unset()
-#define ARCHDEP_SOUND_FRAGMENT_SIZE SOUND_FRAGMENT_MEDIUM
 
 #else
+
 /* Filesystem dependant operators.  */
 #define FSDEVICE_DEFAULT_DIR   "."
 #define FSDEV_DIR_SEP_STR      "/"
@@ -132,11 +148,13 @@
 #define ARCHDEP_LINE_DELIMITER "\n"
 
 /* Ethernet default device */
-#define ARCHDEP_ETHERNET_DEFAULT_DEVICE "eth0"
+#define ARCHDEP_ETHERNET_DEFAULT_DEVICE ""
+#define archdep_signals_init(x)
+#define archdep_signals_pipe_set()
+#define archdep_signals_pipe_unset()
 
-/* Default sound fragment size */
-#define ARCHDEP_SOUND_FRAGMENT_SIZE 1
 #endif
+
 /* Video chip scaling.  */
 #define ARCHDEP_VICII_DSIZE   1
 #define ARCHDEP_VICII_DSCAN   1
@@ -161,37 +179,25 @@
 #define ARCHDEP_CRTC_DBUF  0
 #define ARCHDEP_TED_DBUF   0
 
+#define ARCHDEP_SOCKET_ERROR errno
 
 /* No key symcode.  */
 #define ARCHDEP_KEYBOARD_SYM_NONE 0
 /* Keyword to use for a static prototype */
 #define STATIC_PROTOTYPE static
-extern int sound_init_psp_device();
-extern const char *archdep_home_path(void);
 
 /* set this path to customize the preference storage */ 
 extern const char *archdep_pref_path;
+extern const char *archdep_home_path(void);
 
 /* Define the default system directory (where the ROMs are).  */
 #ifndef __LIBRETRO__
-
 #ifdef __NetBSD__
 #define LIBDIR          PREFIX "/share/vice"
 #else
 #define LIBDIR          PREFIX "./vice"
 #endif
-
-#else
-extern  char retro_system_data_directory[512];
-#define RETRO_DEBUG 1
-
-#if defined(ANDROID) || defined(__ANDROID__)
-#define LIBDIR "/mnt/sdcard/data"
-#else
-#define LIBDIR retro_system_data_directory
-#endif
-
-#endif //__LIBRETRO__
+#endif /*__LIBRETRO__ */
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 #define DOCDIR          PREFIX "/share/doc/vice"
@@ -201,4 +207,4 @@ extern  char retro_system_data_directory[512];
 
 #define VICEUSERDIR     ".vice"
 
-#endif
+#endif /*_ARCHDEP_H */

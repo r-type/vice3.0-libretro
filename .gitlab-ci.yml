@@ -91,7 +91,11 @@ include:
   - project: 'libretro-infrastructure/ci-templates'
     file: '/android-jni.yml'
 
-  # iOS 9
+  # iOS
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/ios-arm64.yml'
+
+  # iOS (armv7)
   - project: 'libretro-infrastructure/ci-templates'
     file: '/ios9.yml'
   
@@ -119,6 +123,12 @@ include:
   # OpenDingux
   - project: 'libretro-infrastructure/ci-templates'
     file: '/dingux-mips32.yml'
+
+  # tvOS (AppleTV)
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/tvos-arm64.yml'
+
+  #################################### MISC ##################################
 
 # Stages for building
 stages:
@@ -201,12 +211,28 @@ android-x86:
     - .libretro-android-jni-x86
     - .core-defs
 
-# iOS 9
+# iOS
+libretro-build-ios-arm64:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs
+
+# iOS (armv7) [iOS 9 and up]
 libretro-build-ios-9:
   tags:
     - macosx-packaging
   extends:
     - .libretro-ios9-make-default
+    - .core-defs
+
+# tvOS
+libretro-build-tvos-arm64:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
     - .core-defs
     
 ################################### CONSOLES #################################
@@ -316,12 +342,28 @@ android-x86-x64sc:
     - .libretro-android-jni-x86
     - .core-defs-x64sc
 
-# iOS 9
+# iOS
+libretro-build-ios-arm64-x64sc:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-x64sc
+
+# iOS (armv7) [iOS 9 and up]
 libretro-build-ios-9-x64sc:
   tags:
     - macosx-packaging
   extends:
     - .libretro-ios9-make-default
+    - .core-defs-x64sc
+
+# tvOS
+libretro-build-tvos-arm64-x64sc:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
     - .core-defs-x64sc
 
 ################################### CONSOLES #################################
@@ -421,12 +463,28 @@ android-x86-x128:
     - .libretro-android-jni-x86
     - .core-defs-x128
 
-# iOS 9
+# iOS
+libretro-build-ios-arm64-x128:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-x128
+
+# iOS (armv7) [iOS 9 and up]
 libretro-build-ios-9-x128:
   tags:
     - macosx-packaging
   extends:
     - .libretro-ios9-make-default
+    - .core-defs-x128
+
+# tvOS
+libretro-build-tvos-arm64-x128:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
     - .core-defs-x128
 
 # Static
@@ -521,12 +579,28 @@ android-x86-xcbm2:
     - .libretro-android-jni-x86
     - .core-defs-xcbm2
 
-# iOS 9
+# iOS
+libretro-build-ios-arm64-xcbm2:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-xcbm2
+
+# iOS (armv7) [iOS 9 and up]
 libretro-build-ios-9-xcbm2:
   tags:
     - macosx-packaging
   extends:
     - .libretro-ios9-make-default
+    - .core-defs-xcbm2
+
+# tvOS
+libretro-build-tvos-arm64-xcbm2:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
     - .core-defs-xcbm2
 
 # Static
@@ -629,6 +703,30 @@ libretro-build-ios-9-xcbm5x0:
     - .libretro-ios9-make-default
     - .core-defs-xcbm5x0
 
+# iOS
+libretro-build-ios-arm64-xcbm5x0:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-xcbm5x0
+
+# iOS (armv7) [iOS 9 and up]
+libretro-build-ios-9-xcbm5x0:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios9-make-default
+    - .core-defs-xcbm5x0
+
+# tvOS
+libretro-build-tvos-arm64-xcbm5x0:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
+    - .core-defs-xcbm5x0
+
 # Static
 libretro-build-libnx-aarch64-xcbm5x0:
   extends:
@@ -721,12 +819,28 @@ android-x86-xpet:
     - .libretro-android-jni-x86
     - .core-defs-xpet
 
-# iOS 9
+# iOS
+libretro-build-ios-arm64-xpet:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-xpet
+
+# iOS (armv7) [iOS 9 and up]
 libretro-build-ios-9-xpet:
   tags:
     - macosx-packaging
   extends:
     - .libretro-ios9-make-default
+    - .core-defs-xpet
+
+# tvOS
+libretro-build-tvos-arm64-xpet:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
     - .core-defs-xpet
 
 # Static
@@ -821,12 +935,28 @@ android-x86-xplus4:
     - .libretro-android-jni-x86
     - .core-defs-xplus4
 
-# iOS 9
+# iOS
+libretro-build-ios-arm64-xplus4:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-xplus4
+
+# iOS (armv7) [iOS 9 and up]
 libretro-build-ios-9-xplus4:
   tags:
     - macosx-packaging
   extends:
     - .libretro-ios9-make-default
+    - .core-defs-xplus4
+
+# tvOS
+libretro-build-tvos-arm64-xplus4:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
     - .core-defs-xplus4
 
 # Static
@@ -929,6 +1059,30 @@ libretro-build-ios-9-xscpu64:
     - .libretro-ios9-make-default
     - .core-defs-xscpu64
 
+# iOS
+libretro-build-ios-arm64-xscpu64:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-xscpu64
+
+# iOS (armv7) [iOS 9 and up]
+libretro-build-ios-9-xscpu64:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios9-make-default
+    - .core-defs-xscpu64
+
+# tvOS
+libretro-build-tvos-arm64-xscpu64:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
+    - .core-defs-xscpu64
+
 # Static
 libretro-build-libnx-aarch64-xscpu64:
   extends:
@@ -1021,12 +1175,28 @@ android-x86-xvic:
     - .libretro-android-jni-x86
     - .core-defs-xvic
 
-# iOS 9
+# iOS
+libretro-build-ios-arm64-xvic:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-ios-arm64-make-default
+    - .core-defs-xvic
+
+# iOS (armv7) [iOS 9 and up]
 libretro-build-ios-9-xvic:
   tags:
     - macosx-packaging
   extends:
     - .libretro-ios9-make-default
+    - .core-defs-xvic
+
+# tvOS
+libretro-build-tvos-arm64-xvic:
+  tags:
+    - macosx-packaging
+  extends:
+    - .libretro-tvos-arm64-make-default
     - .core-defs-xvic
 
 # Static

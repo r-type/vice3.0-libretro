@@ -31,6 +31,13 @@ ifeq ($(shell uname -a),)
    system_platform = win
 else ifneq ($(findstring Darwin,$(shell uname -a)),)
    system_platform = osx
+   arch = intel
+   ifeq ($(shell uname -p),powerpc)
+	arch = ppc
+   endif
+   ifeq ($(shell uname -p),arm)
+	arch = arm
+   endif
 else ifneq ($(findstring MINGW,$(shell uname -a)),)
    system_platform = win
 endif
@@ -134,16 +141,18 @@ else ifeq ($(platform), osx)
    TARGET := $(TARGET_NAME)_libretro.dylib
    LDFLAGS += -dynamiclib
    fpic = -fPIC
+   MINVERSION :=
    ifeq ($(arch),ppc)
       COMMONFLAGS += -DBLARGG_BIG_ENDIAN=1 -D__ppc__
    endif
    OSXVER = `sw_vers -productVersion | cut -d. -f 2`
    OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
 ifeq ($(OSX_LT_MAVERICKS),YES)
-   fpic += -mmacosx-version-min=10.1
+   MINVERSION = -mmacosx-version-min=10.1
 else
    fpic += -stdlib=libc++
 endif
+   fpic += $(MINVERSION)
    CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
    CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
    ifeq ($(CROSS_COMPILE),1)
@@ -157,6 +166,7 @@ endif
 else ifneq (,$(findstring ios,$(platform)))
    TARGET := $(TARGET_NAME)_libretro_ios.dylib
    COMMONFLAGS += -DHAVE_POSIX_MEMALIGN=1 -marm
+   MINVERSION :=
    fpic = -fPIC
    LDFLAGS += -dynamiclib
    ifeq ($(IOSSDK),)
@@ -175,9 +185,9 @@ else ifneq (,$(findstring ios,$(platform)))
    OSXVER = `sw_vers -productVersion | cut -d. -f 2`
    OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
    ifeq ($(OSX_LT_MAVERICKS),"YES")
-      CC += -miphoneos-version-min=5.0
-      COMMONFLAGS += -miphoneos-version-min=5.0
+      MINVERSION = -miphoneos-version-min=5.0
    endif
+   COMMONFLAGS += $(MINVERSION)
 
 else ifeq ($(platform), tvos-arm64)
    TARGET := $(TARGET_NAME)_libretro_tvos.dylib
@@ -187,9 +197,11 @@ else ifeq ($(platform), tvos-arm64)
    ifeq ($(IOSSDK),)
       IOSSDK := $(shell xcodebuild -version -sdk appletvos Path)
    endif
-   COMMONFLAGS += -DIOS
-   CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
-   CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
+   COMMONFLAGS += -DIOS -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
+   CFLAGS   += $(COMMONFLAGS)
+   CXXFLAGS += $(COMMONFLAGS)
+   CC = clang -arch arm64 -isysroot $(IOSSDK)
+   CXX = clang++ -arch arm64 -isysroot $(IOSSDK)
 
 else ifeq ($(platform), theos_ios)
    DEPLOYMENT_IOSVERSION = 5.0

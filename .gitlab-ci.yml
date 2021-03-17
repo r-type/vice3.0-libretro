@@ -220,7 +220,7 @@ libretro-build-ios-arm64:
     - .core-defs
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9:
+libretro-build-ios9:
   tags:
     - macosx-packaging
   extends:
@@ -351,7 +351,7 @@ libretro-build-ios-arm64-x64sc:
     - .core-defs-x64sc
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9-x64sc:
+libretro-build-ios9-x64sc:
   tags:
     - macosx-packaging
   extends:
@@ -472,7 +472,7 @@ libretro-build-ios-arm64-x128:
     - .core-defs-x128
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9-x128:
+libretro-build-ios9-x128:
   tags:
     - macosx-packaging
   extends:
@@ -588,7 +588,7 @@ libretro-build-ios-arm64-xcbm2:
     - .core-defs-xcbm2
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9-xcbm2:
+libretro-build-ios9-xcbm2:
   tags:
     - macosx-packaging
   extends:
@@ -696,7 +696,7 @@ android-x86-xcbm5x0:
     - .core-defs-xcbm5x0
 
 # iOS 9
-libretro-build-ios-9-xcbm5x0:
+libretro-build-ios9-xcbm5x0:
   tags:
     - macosx-packaging
   extends:
@@ -712,7 +712,7 @@ libretro-build-ios-arm64-xcbm5x0:
     - .core-defs-xcbm5x0
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9-xcbm5x0:
+libretro-build-ios9-xcbm5x0:
   tags:
     - macosx-packaging
   extends:
@@ -828,7 +828,7 @@ libretro-build-ios-arm64-xpet:
     - .core-defs-xpet
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9-xpet:
+libretro-build-ios9-xpet:
   tags:
     - macosx-packaging
   extends:
@@ -944,7 +944,7 @@ libretro-build-ios-arm64-xplus4:
     - .core-defs-xplus4
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9-xplus4:
+libretro-build-ios9-xplus4:
   tags:
     - macosx-packaging
   extends:
@@ -1052,7 +1052,7 @@ android-x86-xscpu64:
     - .core-defs-xscpu64
 
 # iOS 9
-libretro-build-ios-9-xscpu64:
+libretro-build-ios9-xscpu64:
   tags:
     - macosx-packaging
   extends:
@@ -1068,7 +1068,7 @@ libretro-build-ios-arm64-xscpu64:
     - .core-defs-xscpu64
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9-xscpu64:
+libretro-build-ios9-xscpu64:
   tags:
     - macosx-packaging
   extends:
@@ -1184,7 +1184,7 @@ libretro-build-ios-arm64-xvic:
     - .core-defs-xvic
 
 # iOS (armv7) [iOS 9 and up]
-libretro-build-ios-9-xvic:
+libretro-build-ios9-xvic:
   tags:
     - macosx-packaging
   extends:

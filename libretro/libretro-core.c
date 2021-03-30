@@ -1851,7 +1851,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c128_go64",
          "System > GO64",
-         "Starts in C64 compatibility mode.\nFull restart required.",
+         "Start in C64 compatibility mode.\nFull restart required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2121,7 +2121,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_floppy_write_protection",
          "Media > Floppy Write Protection",
-         "Makes device 8 read only.",
+         "Set device 8 read only.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2133,7 +2133,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_easyflash_write_protection",
          "Media > EasyFlash Write Protection",
-         "Makes EasyFlash cartridges read only.",
+         "Set EasyFlash cartridges read only.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2145,7 +2145,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_work_disk",
          "Media > Global Work Disk",
-         "Global disk in device 8 is only inserted when the core is started without content.",
+         "Global disk in device 8 is only inserted when core is started without content.",
          {
             { "disabled", NULL },
             { "8_d64", "D64 - 664 blocks, 170kB - Device 8" },
@@ -2161,7 +2161,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_video_options_display",
          "Show Video Options",
-         "Shows/hides video related options.\nCore options page refresh required.",
+         "Page refresh by menu toggle required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2186,7 +2186,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode",
          "Video > Zoom Mode",
-         "Crops the borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
+         "Crop borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
          {
             { "none", "disabled" },
             { "small", "Small" },
@@ -2200,7 +2200,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode_crop",
          "Video > Zoom Mode Crop",
-         "Use 'Horizontal + Vertical' & 'Maximum' to remove borders completely. Ignored with 'Manual' zoom.",
+         "'Horizontal + Vertical' & 'Maximum' removes borders completely. Ignored with 'Manual' zoom.",
          {
             { "both", "Horizontal + Vertical" },
             { "horizontal", "Horizontal" },
@@ -2495,7 +2495,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_audio_options_display",
          "Show Audio Options",
-         "Shows/hides audio related options.\nCore options page refresh required.",
+         "Page refresh by menu toggle required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2582,7 +2582,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sid_model",
          "Audio > SID Model",
-         "The original C64 uses '6581', C64C uses '8580'.",
+         "C64 has '6581', C64C has '8580'.",
          {
             { "default", "Default" },
             { "6581", NULL },
@@ -2849,7 +2849,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_userport_joytype",
          "Input > Userport Joystick Adapter",
-         "Essential when 2 joysticks are not enough, for example IK+ Gold with 3 players.",
+         "Required for more than 2 joysticks, for example IK+ Gold with 3 players.",
          {
             { "disabled", NULL },
             { "CGA", "Protovision / Classical Games" },
@@ -2914,7 +2914,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_datasette_hotkeys",
          "Input > Datasette Hotkeys",
-         "Toggles all Datasette hotkeys.",
+         "Toggle all Datasette hotkeys.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2925,7 +2925,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapping_options_display",
          "Show Mapping Options",
-         "Shows/hides hotkey & RetroPad mapping options.\nCore options page refresh required.",
+         "Page refresh by menu toggle required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -3119,28 +3119,28 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_lu",
          "RetroPad > Left Analog > Up",
-         "Mapping for left analog stick up.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_ld",
          "RetroPad > Left Analog > Down",
-         "Mapping for left analog stick down.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_ll",
          "RetroPad > Left Analog > Left",
-         "Mapping for left analog stick left.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_lr",
          "RetroPad > Left Analog > Right",
-         "Mapping for left analog stick right.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
@@ -3148,28 +3148,28 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_ru",
          "RetroPad > Right Analog > Up",
-         "Mapping for right analog stick up.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rd",
          "RetroPad > Right Analog > Down",
-         "Mapping for right analog stick down.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rl",
          "RetroPad > Right Analog > Left",
-         "Mapping for right analog stick left.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rr",
          "RetroPad > Right Analog > Right",
-         "Mapping for right analog stick right.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
@@ -3189,7 +3189,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_turbo_fire_button",
          "RetroPad > Turbo Button",
-         "Replaces the mapped button with turbo fire button.",
+         "Replace the mapped button with turbo fire button.",
          {
             { "B", "RetroPad B" },
             { "A", "RetroPad A" },
@@ -3255,7 +3255,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_retropad_options",
          "RetroPad > Face Button Options",
-         "Rotates face buttons clockwise and/or makes 2nd fire press up.",
+         "Rotate face buttons clockwise and/or makes 2nd fire press up.",
          {
             { "disabled", "B = Fire" },
             { "jump", "B = Fire, A = Up" },
@@ -5996,9 +5996,6 @@ void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb)
 }
 
 #define RETRO_AUDIO_BATCH
-#ifdef __SWITCH__
-#undef RETRO_AUDIO_BATCH
-#endif
 
 void retro_audio_render(const int16_t *data, size_t frames)
 {

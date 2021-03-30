@@ -49,6 +49,7 @@ static char* autostartString = NULL;
 static char* autostartProgram = NULL;
 char full_path[RETRO_PATH_MAX] = {0};
 static char* core_options_legacy_strings = NULL;
+static struct vice_cart_info vice_carts[RETRO_NUM_CORE_OPTION_VALUES_MAX] = {0};
 
 static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
@@ -1732,10 +1733,29 @@ void retro_set_paths(void)
       archdep_mkdir(retro_system_data_directory, 0);
 }
 
+static void free_vice_carts(void)
+{
+   size_t i;
+   for (i = 0; i < RETRO_NUM_CORE_OPTION_VALUES_MAX; i++)
+   {
+      if (vice_carts[i].value)
+      {
+         free(vice_carts[i].value);
+         vice_carts[i].value = NULL;
+      }
+      if (vice_carts[i].label)
+      {
+         free(vice_carts[i].label);
+         vice_carts[i].label = NULL;
+      }
+   }
+}
+
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
    retro_set_paths();
+   free_vice_carts();
 
    /* Controller ports */
    static const struct retro_controller_description p1_controllers[] = {
@@ -3316,16 +3336,7 @@ void retro_set_environment(retro_environment_t cb)
                else
                {
                   core_options[i].values[j].value = retro_keys[j + hotkeys_skipped + 1].value;
-
-                  /* Append "Keyboard " for keyboard keys */
-                  if (retro_keys[j + hotkeys_skipped + 1].id > 0)
-                  {
-                     char key_label[10+25] = {0};
-                     sprintf(key_label, "Keyboard %s", retro_keys[j + hotkeys_skipped + 1].label);
-                     core_options[i].values[j].label = strdup(key_label);
-                  }
-                  else
-                     core_options[i].values[j].label = retro_keys[j + hotkeys_skipped + 1].label;
+                  core_options[i].values[j].label = retro_keys[j + hotkeys_skipped + 1].label;
                }
                ++j;
             }
@@ -3335,17 +3346,7 @@ void retro_set_environment(retro_environment_t cb)
             while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
             {
                core_options[i].values[j].value = retro_keys[j].value;
-
-               /* Append "Keyboard " for keyboard keys */
-               if (retro_keys[j].id > 0)
-               {
-                  char key_label[10+25] = {0};
-                  sprintf(key_label, "Keyboard %s", retro_keys[j].label);
-                  core_options[i].values[j].label = strdup(key_label);
-               }
-               else
-                  core_options[i].values[j].label = retro_keys[j].label;
-
+               core_options[i].values[j].label = retro_keys[j].label;
                ++j;
             }
          }
@@ -3372,22 +3373,28 @@ void retro_set_environment(retro_environment_t cb)
             cart_dir = opendir(machine_directory);
             while ((cart_dirp = readdir(cart_dir)) != NULL && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
             {
-                /* Blacklisted */
-                if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
-                    !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
-                    continue;
+               /* Blacklisted */
+               if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
+                   !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
+                  continue;
 
-                if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
-                {
-                    char cart_value[RETRO_PATH_MAX] = {0};
-                    char cart_label[50] = {0};
-                    snprintf(cart_value, sizeof(cart_value), "%s", cart_dirp->d_name);
-                    snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
+               if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
+               {
+                  char cart_value[RETRO_PATH_MAX] = {0};
+                  char cart_label[50] = {0};
+                  snprintf(cart_value, sizeof(cart_value), "%s", cart_dirp->d_name);
+                  snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
 
-                    core_options[i].values[j].value = strdup(cart_value);
-                    core_options[i].values[j].label = strdup(cart_label);
-                    ++j;
-                }
+                  vice_carts[j].value = strdup(cart_value);
+                  vice_carts[j].label = strdup(cart_label);
+
+                  core_options[i].values[j].value = vice_carts[j].value;
+                  core_options[i].values[j].label = vice_carts[j].label;
+                  ++j;
+               }
+
+               vice_carts[j].value = NULL;
+               vice_carts[j].label = NULL;
             }
             closedir(cart_dir);
          }
@@ -5639,6 +5646,9 @@ void retro_deinit(void)
    /* Clean legacy strings */
    if (core_options_legacy_strings)
       free(core_options_legacy_strings);
+
+   /* Clean dynamic cartridge info */
+   free_vice_carts();
 
    /* Clean ZIP temp */
    if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))

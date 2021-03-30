@@ -230,6 +230,13 @@ struct vice_core_options
 
 extern struct vice_core_options vice_opt;
 
+/* Dynamic cartridge core option info */
+struct vice_cart_info
+{
+   char *value;
+   char *label;
+};
+
 /* VICE includes */
 #if defined(__X64__) || defined(__X64SC__)
 #include "c64.h"

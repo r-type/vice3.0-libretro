@@ -3089,7 +3089,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_x",
          "RetroPad > X",
-         "",
+         "VKBD: Press 'Space'. Remapping to non-keyboard keys overrides VKBD function!",
          {{ NULL, NULL }},
          "RETROK_SPACE"
       },

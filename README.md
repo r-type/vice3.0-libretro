@@ -33,6 +33,7 @@ Supported platforms: Linux, Windows, Apple, Android, emscripten, Switch, Vita
 | B / Enter       | Keypress                |
 | A               | Toggle transparency     |
 | Y               | Toggle ShiftLock        |
+| X               | Press Space             |
 | Start           | Press Return            |
 
 Long press for sticky keys. Stickying the third key will replace the second.

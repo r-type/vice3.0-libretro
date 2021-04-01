@@ -49,6 +49,7 @@ static char* autostartString = NULL;
 static char* autostartProgram = NULL;
 char full_path[RETRO_PATH_MAX] = {0};
 static char* core_options_legacy_strings = NULL;
+static char* vice_carts_info = NULL;
 static struct vice_cart_info vice_carts[RETRO_NUM_CORE_OPTION_VALUES_MAX] = {0};
 
 static snapshot_stream_t* snapshot_stream = NULL;
@@ -1324,7 +1325,7 @@ void update_from_vice()
         {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_NTSC;
-            if (vice_opt.Model == C64MODEL_C64C_PAL)
+            if (vice_opt.Model == C64MODEL_C64C_PAL || vice_opt.Model == C64MODEL_C64C_NTSC)
                 request_model_set = C64MODEL_C64C_NTSC;
 #elif defined(__XVIC__)
             request_model_set = VIC20MODEL_VIC20_NTSC;
@@ -1341,7 +1342,7 @@ void update_from_vice()
         {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_PAL;
-            if (vice_opt.Model == C64MODEL_C64C_NTSC)
+            if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
                 request_model_set = C64MODEL_C64C_PAL;
 #elif defined(__XVIC__)
             request_model_set = VIC20MODEL_VIC20_PAL;
@@ -1749,6 +1750,9 @@ static void free_vice_carts(void)
          vice_carts[i].label = NULL;
       }
    }
+
+   free(vice_carts_info);
+   vice_carts_info = NULL;
 }
 
 void retro_set_environment(retro_environment_t cb)
@@ -3405,7 +3409,8 @@ void retro_set_environment(retro_environment_t cb)
          /* Info sublabel */
          char info[100] = {0};
          snprintf(info, sizeof(info), "Cartridge images go in 'system/vice/%s'.\nChanging while running resets the system!", machine_name);
-         core_options[i].info = strdup(info);
+         vice_carts_info = strdup(info);
+         core_options[i].info = vice_carts_info;
       }
       ++i;
    }
@@ -5639,7 +5644,10 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-   /* Clean the disk control context */
+   /* VICE shutdown */
+   machine_shutdown();
+
+   /* Clean Disc Control context */
    if (dc)
       dc_free(dc);
 
@@ -6241,7 +6249,9 @@ void retro_unload_game(void)
       file_system_detach_disk(9);
    tape_image_detach(1);
    cartridge_detach_image(-1);
+   file_system_detach_disk_shutdown();
    dc_reset(dc);
+
    free(autostartString);
    autostartString = NULL;
    free(autostartProgram);

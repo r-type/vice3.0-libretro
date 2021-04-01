@@ -691,7 +691,9 @@ int archdep_file_is_chardev(const char *name)
 
 void archdep_shutdown(void)
 {
+#if 0
     log_message(LOG_DEFAULT, "\nExiting...");
+#endif
 
     lib_free(argv0);
     lib_free(boot_path);

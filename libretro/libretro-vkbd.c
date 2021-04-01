@@ -11,6 +11,8 @@ extern unsigned int opt_vkbd_theme;
 extern libretro_graph_alpha_t opt_vkbd_alpha;
 extern unsigned int zoom_mode_id;
 
+extern int tape_control;
+
 int RGB(int r, int g, int b)
 {
    if (pix_bytes == 4) 
@@ -21,7 +23,7 @@ int RGB(int r, int g, int b)
 
 static int BKG_PADDING(int len)
 {
-   static int font_width = 6;
+   unsigned font_width = 6;
    switch (len)
    {
       case 2:
@@ -60,7 +62,7 @@ void print_vkbd(void)
    int BKG_COLOR_NORMAL              = 0;
    int BKG_COLOR_ALT                 = 0;
    int BKG_COLOR_EXTRA               = 0;
-   int BKG_COLOR_EXTRA2              = 0;
+   int BKG_COLOR_TAPE                = 0;
    int BKG_COLOR_SEL                 = 0;
    int BKG_COLOR_ACTIVE              = 0;
    int FONT_MAX                      = 3;
@@ -114,7 +116,7 @@ void print_vkbd(void)
          BKG_COLOR_NORMAL  = RGB( 68,  59,  58);
          BKG_COLOR_ALT     = RGB(123, 127, 130);
          BKG_COLOR_EXTRA   = RGB(143, 140, 129);
-         BKG_COLOR_EXTRA2  = RGB( 89,  79,  78);
+         BKG_COLOR_TAPE    = RGB( 89,  79,  78);
          BKG_COLOR_SEL     = RGB(160, 160, 160);
          BKG_COLOR_ACTIVE  = RGB( 48,  44,  45);
          FONT_COLOR_NORMAL = COLOR_WHITE;
@@ -125,7 +127,7 @@ void print_vkbd(void)
          BKG_COLOR_NORMAL  = RGB(208, 208, 202);
          BKG_COLOR_ALT     = RGB(154, 154, 150);
          BKG_COLOR_EXTRA   = RGB(132, 132, 132);
-         BKG_COLOR_EXTRA2  = RGB( 89,  79,  78);
+         BKG_COLOR_TAPE    = RGB( 89,  79,  78);
          BKG_COLOR_SEL     = RGB( 40,  40,  40);
          BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
          FONT_COLOR_NORMAL = COLOR_BLACK;
@@ -136,7 +138,7 @@ void print_vkbd(void)
          BKG_COLOR_NORMAL  = RGB( 32,  32,  32);
          BKG_COLOR_ALT     = RGB( 70,  70,  70);
          BKG_COLOR_EXTRA   = RGB( 14,  14,  14);
-         BKG_COLOR_EXTRA2  = RGB( 50,  50,  50);
+         BKG_COLOR_TAPE    = RGB( 50,  50,  50);
          BKG_COLOR_SEL     = RGB(140, 140, 140);
          BKG_COLOR_ACTIVE  = RGB( 16,  16,  16);
          FONT_COLOR_NORMAL = COLOR_WHITE;
@@ -147,7 +149,7 @@ void print_vkbd(void)
          BKG_COLOR_NORMAL  = RGB(200, 204, 206);
          BKG_COLOR_ALT     = RGB(160, 160, 160);
          BKG_COLOR_EXTRA   = RGB(132, 132, 132);
-         BKG_COLOR_EXTRA2  = RGB(180, 180, 180);
+         BKG_COLOR_TAPE    = RGB(180, 180, 180);
          BKG_COLOR_SEL     = RGB( 40,  40,  40);
          BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
          FONT_COLOR_NORMAL = COLOR_BLACK;
@@ -275,7 +277,7 @@ void print_vkbd(void)
             /* Datasette key color */
             for (int datasette_key = 0; datasette_key < datasette_keys_len; ++datasette_key)
                 if (datasette_keys[datasette_key] == vkeys[(y * VKBDX) + x + page].value)
-                    BKG_COLOR = BKG_COLOR_EXTRA2;
+                    BKG_COLOR = BKG_COLOR_TAPE;
          }
 
          /* Key centering */
@@ -300,7 +302,10 @@ void print_vkbd(void)
           ||   vkey_sticky2 == vkeys[(y * VKBDX) + x + page].value
           ||(retro_capslock && vkeys[(y * VKBDX) + x + page].value == -10)
           ||(vkflag[RETRO_DEVICE_ID_JOYPAD_START] && vkeys[(y * VKBDX) + x + page].value == RETROK_RETURN)
-          ||(vkflag[RETRO_DEVICE_ID_JOYPAD_X]     && vkeys[(y * VKBDX) + x + page].value == RETROK_SPACE))
+          ||(vkflag[RETRO_DEVICE_ID_JOYPAD_X]     && vkeys[(y * VKBDX) + x + page].value == RETROK_SPACE)
+          ||(tape_control == 1 && vkeys[(y * VKBDX) + x + page].value == -12)  /* Datasette Play */
+          ||(tape_control == 2 && vkeys[(y * VKBDX) + x + page].value == -13)  /* Datasette FWD */
+          ||(tape_control == 3 && vkeys[(y * VKBDX) + x + page].value == -14)) /* Datasette RWD */
           && BKG_COLOR != BKG_COLOR_EXTRA && vkeys[(y * VKBDX) + x + page].value != -2)
          {
             FONT_COLOR = FONT_COLOR_NORMAL;

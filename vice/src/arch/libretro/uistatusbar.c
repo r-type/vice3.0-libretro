@@ -459,7 +459,7 @@ void ui_display_drive_current_image(unsigned int drive_number, const char *image
 static int tape_counter = 0;
 static int tape_enabled = 0;
 static int tape_motor = 0;
-static int tape_control = 0;
+int tape_control = 0;
 
 static void display_tape(void)
 {
@@ -469,18 +469,18 @@ static void display_tape(void)
         return;
 
     if (tape_enabled)
-        vice_led_state[2] = (tape_control && tape_motor) ? 1 : 0;
+        vice_led_state[2] = (tape_control == 1 && tape_motor) ? 1 : 0;
 
     if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || retro_warp_mode_enabled()) && !retro_warpmode)
     {
-        if (tape_control && tape_motor && !retro_warp_mode_enabled())
+        if (tape_control == 1 && tape_motor && !retro_warp_mode_enabled())
         {
             resources_set_int("WarpMode", 1);
 #if 0
             printf("Tape Warp ON\n");
 #endif
         }
-        else if ((!tape_control || !tape_motor) && retro_warp_mode_enabled() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
+        else if ((tape_control != 1 || !tape_motor) && retro_warp_mode_enabled() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
         {
             resources_set_int("WarpMode", 0);
 #if 0

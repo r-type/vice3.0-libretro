@@ -49,6 +49,8 @@ static char* autostartString = NULL;
 static char* autostartProgram = NULL;
 char full_path[RETRO_PATH_MAX] = {0};
 static char* core_options_legacy_strings = NULL;
+static char* vice_carts_info = NULL;
+static struct vice_cart_info vice_carts[RETRO_NUM_CORE_OPTION_VALUES_MAX] = {0};
 
 static snapshot_stream_t* snapshot_stream = NULL;
 static int load_trap_happened = 0;
@@ -1323,7 +1325,7 @@ void update_from_vice()
         {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_NTSC;
-            if (vice_opt.Model == C64MODEL_C64C_PAL)
+            if (vice_opt.Model == C64MODEL_C64C_PAL || vice_opt.Model == C64MODEL_C64C_NTSC)
                 request_model_set = C64MODEL_C64C_NTSC;
 #elif defined(__XVIC__)
             request_model_set = VIC20MODEL_VIC20_NTSC;
@@ -1340,7 +1342,7 @@ void update_from_vice()
         {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
             request_model_set = C64MODEL_C64_PAL;
-            if (vice_opt.Model == C64MODEL_C64C_NTSC)
+            if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
                 request_model_set = C64MODEL_C64C_PAL;
 #elif defined(__XVIC__)
             request_model_set = VIC20MODEL_VIC20_PAL;
@@ -1732,10 +1734,32 @@ void retro_set_paths(void)
       archdep_mkdir(retro_system_data_directory, 0);
 }
 
+static void free_vice_carts(void)
+{
+   size_t i;
+   for (i = 0; i < RETRO_NUM_CORE_OPTION_VALUES_MAX; i++)
+   {
+      if (vice_carts[i].value)
+      {
+         free(vice_carts[i].value);
+         vice_carts[i].value = NULL;
+      }
+      if (vice_carts[i].label)
+      {
+         free(vice_carts[i].label);
+         vice_carts[i].label = NULL;
+      }
+   }
+
+   free(vice_carts_info);
+   vice_carts_info = NULL;
+}
+
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
    retro_set_paths();
+   free_vice_carts();
 
    /* Controller ports */
    static const struct retro_controller_description p1_controllers[] = {
@@ -1851,7 +1875,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c128_go64",
          "System > GO64",
-         "Starts in C64 compatibility mode.\nFull restart required.",
+         "Start in C64 compatibility mode.\nFull restart required.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2121,7 +2145,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_floppy_write_protection",
          "Media > Floppy Write Protection",
-         "Makes device 8 read only.",
+         "Set device 8 read only.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2133,7 +2157,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_easyflash_write_protection",
          "Media > EasyFlash Write Protection",
-         "Makes EasyFlash cartridges read only.",
+         "Set EasyFlash cartridges read only.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2145,7 +2169,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_work_disk",
          "Media > Global Work Disk",
-         "Global disk in device 8 is only inserted when the core is started without content.",
+         "Global disk in device 8 is only inserted when core is started without content.",
          {
             { "disabled", NULL },
             { "8_d64", "D64 - 664 blocks, 170kB - Device 8" },
@@ -2161,7 +2185,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_video_options_display",
          "Show Video Options",
-         "Shows/hides video related options.\nCore options page refresh required.",
+         "Page refresh by menu toggle required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2186,7 +2210,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode",
          "Video > Zoom Mode",
-         "Crops the borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
+         "Crop borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
          {
             { "none", "disabled" },
             { "small", "Small" },
@@ -2200,7 +2224,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_zoom_mode_crop",
          "Video > Zoom Mode Crop",
-         "Use 'Horizontal + Vertical' & 'Maximum' to remove borders completely. Ignored with 'Manual' zoom.",
+         "'Horizontal + Vertical' & 'Maximum' removes borders completely. Ignored with 'Manual' zoom.",
          {
             { "both", "Horizontal + Vertical" },
             { "horizontal", "Horizontal" },
@@ -2495,7 +2519,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_audio_options_display",
          "Show Audio Options",
-         "Shows/hides audio related options.\nCore options page refresh required.",
+         "Page refresh by menu toggle required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2582,7 +2606,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sid_model",
          "Audio > SID Model",
-         "The original C64 uses '6581', C64C uses '8580'.",
+         "C64 has '6581', C64C has '8580'.",
          {
             { "default", "Default" },
             { "6581", NULL },
@@ -2849,7 +2873,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_userport_joytype",
          "Input > Userport Joystick Adapter",
-         "Essential when 2 joysticks are not enough, for example IK+ Gold with 3 players.",
+         "Required for more than 2 joysticks, for example IK+ Gold with 3 players.",
          {
             { "disabled", NULL },
             { "CGA", "Protovision / Classical Games" },
@@ -2914,7 +2938,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_datasette_hotkeys",
          "Input > Datasette Hotkeys",
-         "Toggles all Datasette hotkeys.",
+         "Toggle all Datasette hotkeys.",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2925,7 +2949,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapping_options_display",
          "Show Mapping Options",
-         "Shows/hides hotkey & RetroPad mapping options.\nCore options page refresh required.",
+         "Page refresh by menu toggle required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -3069,7 +3093,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_x",
          "RetroPad > X",
-         "",
+         "VKBD: Press 'Space'. Remapping to non-keyboard keys overrides VKBD function!",
          {{ NULL, NULL }},
          "RETROK_SPACE"
       },
@@ -3119,28 +3143,28 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_lu",
          "RetroPad > Left Analog > Up",
-         "Mapping for left analog stick up.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_ld",
          "RetroPad > Left Analog > Down",
-         "Mapping for left analog stick down.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_ll",
          "RetroPad > Left Analog > Left",
-         "Mapping for left analog stick left.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_lr",
          "RetroPad > Left Analog > Right",
-         "Mapping for left analog stick right.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
@@ -3148,28 +3172,28 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_mapper_ru",
          "RetroPad > Right Analog > Up",
-         "Mapping for right analog stick up.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rd",
          "RetroPad > Right Analog > Down",
-         "Mapping for right analog stick down.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rl",
          "RetroPad > Right Analog > Left",
-         "Mapping for right analog stick left.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
       {
          "vice_mapper_rr",
          "RetroPad > Right Analog > Right",
-         "Mapping for right analog stick right.",
+         "",
          {{ NULL, NULL }},
          "---"
       },
@@ -3189,7 +3213,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_turbo_fire_button",
          "RetroPad > Turbo Button",
-         "Replaces the mapped button with turbo fire button.",
+         "Replace the mapped button with turbo fire button.",
          {
             { "B", "RetroPad B" },
             { "A", "RetroPad A" },
@@ -3255,7 +3279,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_retropad_options",
          "RetroPad > Face Button Options",
-         "Rotates face buttons clockwise and/or makes 2nd fire press up.",
+         "Rotate face buttons clockwise and/or makes 2nd fire press up.",
          {
             { "disabled", "B = Fire" },
             { "jump", "B = Fire, A = Up" },
@@ -3316,16 +3340,7 @@ void retro_set_environment(retro_environment_t cb)
                else
                {
                   core_options[i].values[j].value = retro_keys[j + hotkeys_skipped + 1].value;
-
-                  /* Append "Keyboard " for keyboard keys */
-                  if (retro_keys[j + hotkeys_skipped + 1].id > 0)
-                  {
-                     char key_label[10+25] = {0};
-                     sprintf(key_label, "Keyboard %s", retro_keys[j + hotkeys_skipped + 1].label);
-                     core_options[i].values[j].label = strdup(key_label);
-                  }
-                  else
-                     core_options[i].values[j].label = retro_keys[j + hotkeys_skipped + 1].label;
+                  core_options[i].values[j].label = retro_keys[j + hotkeys_skipped + 1].label;
                }
                ++j;
             }
@@ -3335,17 +3350,7 @@ void retro_set_environment(retro_environment_t cb)
             while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
             {
                core_options[i].values[j].value = retro_keys[j].value;
-
-               /* Append "Keyboard " for keyboard keys */
-               if (retro_keys[j].id > 0)
-               {
-                  char key_label[10+25] = {0};
-                  sprintf(key_label, "Keyboard %s", retro_keys[j].label);
-                  core_options[i].values[j].label = strdup(key_label);
-               }
-               else
-                  core_options[i].values[j].label = retro_keys[j].label;
-
+               core_options[i].values[j].label = retro_keys[j].label;
                ++j;
             }
          }
@@ -3372,22 +3377,28 @@ void retro_set_environment(retro_environment_t cb)
             cart_dir = opendir(machine_directory);
             while ((cart_dirp = readdir(cart_dir)) != NULL && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
             {
-                /* Blacklisted */
-                if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
-                    !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
-                    continue;
+               /* Blacklisted */
+               if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
+                   !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
+                  continue;
 
-                if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
-                {
-                    char cart_value[RETRO_PATH_MAX] = {0};
-                    char cart_label[50] = {0};
-                    snprintf(cart_value, sizeof(cart_value), "%s", cart_dirp->d_name);
-                    snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
+               if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
+               {
+                  char cart_value[RETRO_PATH_MAX] = {0};
+                  char cart_label[50] = {0};
+                  snprintf(cart_value, sizeof(cart_value), "%s", cart_dirp->d_name);
+                  snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
 
-                    core_options[i].values[j].value = strdup(cart_value);
-                    core_options[i].values[j].label = strdup(cart_label);
-                    ++j;
-                }
+                  vice_carts[j].value = strdup(cart_value);
+                  vice_carts[j].label = strdup(cart_label);
+
+                  core_options[i].values[j].value = vice_carts[j].value;
+                  core_options[i].values[j].label = vice_carts[j].label;
+                  ++j;
+               }
+
+               vice_carts[j].value = NULL;
+               vice_carts[j].label = NULL;
             }
             closedir(cart_dir);
          }
@@ -3398,7 +3409,8 @@ void retro_set_environment(retro_environment_t cb)
          /* Info sublabel */
          char info[100] = {0};
          snprintf(info, sizeof(info), "Cartridge images go in 'system/vice/%s'.\nChanging while running resets the system!", machine_name);
-         core_options[i].info = strdup(info);
+         vice_carts_info = strdup(info);
+         core_options[i].info = vice_carts_info;
       }
       ++i;
    }
@@ -5632,13 +5644,19 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-   /* Clean the disk control context */
+   /* VICE shutdown */
+   machine_shutdown();
+
+   /* Clean Disc Control context */
    if (dc)
       dc_free(dc);
 
    /* Clean legacy strings */
    if (core_options_legacy_strings)
       free(core_options_legacy_strings);
+
+   /* Clean dynamic cartridge info */
+   free_vice_carts();
 
    /* Clean ZIP temp */
    if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))
@@ -5996,9 +6014,6 @@ void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb)
 }
 
 #define RETRO_AUDIO_BATCH
-#ifdef __SWITCH__
-#undef RETRO_AUDIO_BATCH
-#endif
 
 void retro_audio_render(const int16_t *data, size_t frames)
 {
@@ -6234,7 +6249,9 @@ void retro_unload_game(void)
       file_system_detach_disk(9);
    tape_image_detach(1);
    cartridge_detach_image(-1);
+   file_system_detach_disk_shutdown();
    dc_reset(dc);
+
    free(autostartString);
    autostartString = NULL;
    free(autostartProgram);

@@ -249,15 +249,14 @@ static char* m3u_search_file(const char* basedir, const char* filename)
       return strdup(filename);
 
    /* If basedir was provided and path is relative, search relative to M3U file location */
-   if (basedir != NULL && !path_is_absolute(filename))
+   else if (basedir != NULL && !path_is_absolute(filename))
    {
-      char* filepath = path_join_dup(basedir, filename);
+      char filepath[RETRO_PATH_MAX] = {0};
+      path_join(filepath, basedir, filename);
 
       /* Verify if this item is a relative filename */
       if (path_is_valid(filepath))
-         return filepath;
-
-      free(filepath);
+         return strdup(filepath);
    }
 
    /* File not found */
@@ -792,6 +791,9 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
    /* Disk control interface 'name' for the following file */
    char* image_name = NULL;
 
+   /* M3U path for the following file */
+   char* filename = NULL;
+
    while ((dc->count <= DC_MAX_SIZE) && (fgets(buffer, sizeof(buffer), fp) != NULL))
    {
       char* string = trimwhitespace(buffer);
@@ -940,7 +942,6 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
          }
 
          /* Search the file (absolute, relative to m3u) */
-         char* filename = NULL;
          if ((filename = m3u_search_file(basedir, file_name)) != NULL)
          {
             /* If image name is missing, use filename without extension */
@@ -956,6 +957,9 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
 
                image_name = strdup(tmp);
             }
+
+            if (!label)
+               label = get_label(filename);
 
             if (!file_label[0] && !label_set)
                snprintf(file_label, sizeof(file_label), "%s", image_name);
@@ -1032,23 +1036,14 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             if (path_is_valid(full_path))
                dc_add_file(dc, full_path,
                      file_label,
-                     label ? label : get_label(filename),
+                     label,
                      image_prg);
-            label = NULL;
-            image_name = NULL;
-            filename = NULL;
-         }
-         else
-         {
-            log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found in dir '%s'\n", file_name, list_file, basedir);
-            /* Throw away the label and image name */
-            free(label);
-            label = NULL;
-            free(image_name);
-            image_name = NULL;
+
             free(filename);
             filename = NULL;
          }
+         else
+            log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found in dir '%s'\n", file_name, list_file, basedir);
       }
    }
 
@@ -1072,9 +1067,27 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
       }
    }
 
-   free(basedir);
-   free(label);
-   free(image_name);
+   /* Throw away the label and image name */
+   if (label)
+   {
+      free(label);
+      label = NULL;
+   }
+   if (image_name)
+   {
+      free(image_name);
+      image_name = NULL;
+   }
+   if (filename)
+   {
+      free(filename);
+      filename = NULL;
+   }
+   if (basedir)
+   {
+      free(basedir);
+      basedir = NULL;
+   }
 
    /* Close the file */
    fclose(fp);

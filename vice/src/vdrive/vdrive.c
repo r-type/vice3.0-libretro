@@ -152,6 +152,9 @@ void vdrive_device_shutdown(vdrive_t *vdrive)
             p = &(vdrive->buffers[i]);
             vdrive_free_buffer(p);
             lib_free(p->buffer);
+#ifdef __LIBRETRO__
+            p->buffer = NULL;
+#endif
         }
     }
 }

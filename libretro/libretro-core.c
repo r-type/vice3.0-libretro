@@ -2110,7 +2110,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
-         "Toggles warp mode during disk and/or tape access. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
+         "Toggle warp mode during disk and/or tape access. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2212,14 +2212,14 @@ void retro_set_environment(retro_environment_t cb)
          "Video > Zoom Mode",
          "Crop borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
          {
-            { "none", "disabled" },
+            { "disabled", NULL },
             { "small", "Small" },
             { "medium", "Medium" },
             { "maximum", "Maximum" },
             { "manual", "Manual" },
             { NULL, NULL },
          },
-         "none"
+         "disabled"
       },
       {
          "vice_zoom_mode_crop",
@@ -3279,7 +3279,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_retropad_options",
          "RetroPad > Face Button Options",
-         "Rotate face buttons clockwise and/or makes 2nd fire press up.",
+         "Rotate face buttons clockwise and/or make 2nd fire press up.",
          {
             { "disabled", "B = Fire" },
             { "jump", "B = Fire, A = Up" },
@@ -4232,11 +4232,11 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if      (!strcmp(var.value, "none"))    zoom_mode_id = 0;
-      else if (!strcmp(var.value, "small"))   zoom_mode_id = 1;
-      else if (!strcmp(var.value, "medium"))  zoom_mode_id = 2;
-      else if (!strcmp(var.value, "maximum")) zoom_mode_id = 3;
-      else if (!strcmp(var.value, "manual"))  zoom_mode_id = 4;
+      if      (!strcmp(var.value, "disabled")) zoom_mode_id = 0;
+      else if (!strcmp(var.value, "small"))    zoom_mode_id = 1;
+      else if (!strcmp(var.value, "medium"))   zoom_mode_id = 2;
+      else if (!strcmp(var.value, "maximum"))  zoom_mode_id = 3;
+      else if (!strcmp(var.value, "manual"))   zoom_mode_id = 4;
 
 #if defined(__X128__)
       if (!vice_opt.C128ColumnKey)

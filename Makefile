@@ -378,7 +378,7 @@ endif
 ifeq ($(DEBUG), 1)
    COMMONFLAGS += -O0 -g
 else
-   COMMONFLAGS += -O3 -DNDEBUG -Wno-format
+   COMMONFLAGS += -O3 -DNDEBUG -Wno-format -Wno-format-security
    LDFLAGS     += -s
 endif
 

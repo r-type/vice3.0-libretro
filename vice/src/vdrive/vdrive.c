@@ -131,6 +131,14 @@ int vdrive_device_setup(vdrive_t *vdrive, unsigned int unit)
     /* init buffers */
     for (i = 0; i < 15; i++) {
         vdrive->buffers[i].mode = BUFFER_NOT_IN_USE;
+#ifdef __LIBRETRO__
+        /* if buffer has been allocated previously,
+         * ensure it is freed before resetting the
+         * pointer to NULL */
+        if (vdrive->buffers[i].buffer) {
+            lib_free(vdrive->buffers[i].buffer);
+        }
+#endif
         vdrive->buffers[i].buffer = NULL;
     }
 

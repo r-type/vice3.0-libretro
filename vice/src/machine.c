@@ -399,6 +399,8 @@ void machine_shutdown(void)
     machine_resources_shutdown();
     machine_common_resources_shutdown();
 
+    vsync_shutdown();
+
     sysfile_resources_shutdown();
     zfile_shutdown();
     ui_resources_shutdown();

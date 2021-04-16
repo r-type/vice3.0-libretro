@@ -58,25 +58,23 @@ void usb_joystick(void);
 #define JOYDEV_ANALOG_3  7
 #define JOYDEV_ANALOG_4  8
 #define JOYDEV_ANALOG_5  9
-#define JOYDEV_DIGITAL_0 10
-#define JOYDEV_DIGITAL_1 11
-#define JOYDEV_USB_0     12
-#define JOYDEV_USB_1     13
+#define JOYDEV_ANALOG_6  10
+#define JOYDEV_ANALOG_7  11
+#define JOYDEV_DIGITAL_0 12
+#define JOYDEV_DIGITAL_1 13
+#define JOYDEV_USB_0     14
+#define JOYDEV_USB_1     15
 
 #define JOYDEV_DEFAULT   JOYDEV_NUMPAD
 
-#ifdef HAS_JOYSTICK
-#  ifdef HAS_USB_JOYSTICK
-#    define JOYDEV_MAX          JOYDEV_USB_1
-#  else
-#    ifdef HAS_DIGITAL_JOYSTICK
-#      define JOYDEV_MAX        JOYDEV_DIGITAL_1
-#    else
-#      define JOYDEV_MAX        JOYDEV_ANALOG_5
-#    endif
-#  endif
+#ifdef HAS_USB_JOYSTICK
+#  define JOYDEV_MAX          JOYDEV_USB_1
 #else
-#  define JOYDEV_MAX            JOYDEV_KEYSET2
+#  ifdef HAS_DIGITAL_JOYSTICK
+#    define JOYDEV_MAX        JOYDEV_DIGITAL_1
+#  else
+#    define JOYDEV_MAX        JOYDEV_ANALOG_7
+#  endif
 #endif
 
 void joystick_ui_reset_device_list(void);

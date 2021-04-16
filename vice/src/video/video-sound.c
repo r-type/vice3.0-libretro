@@ -48,7 +48,7 @@ extern unsigned int opt_audio_leak_volume;
 #define TOTAL_VOLUME            (1.50f * opt_audio_leak_volume)
 #else
 #define TOTAL_VOLUME            (1.50f)
-#endif // __LIBRETRO__
+#endif /* __LIBRETRO__ */
 
 #define NOISE_VOLUME            (0.15f * TOTAL_VOLUME)
 #define LUMALINES_VOLUME        (1.00f * TOTAL_VOLUME)
@@ -63,7 +63,7 @@ static const signed char noise_sample[] = {
     2, 1, 1, 1, 3, 2, 1, 1, 2, 1, 1, 1, 3, 2, 1, 1
 };
 
-STATIC_PROTOTYPE sound_chip_t video_sound;
+static sound_chip_t video_sound;
 
 static uint16_t video_sound_offset;
 static int cycles_per_sec = 1000000;
@@ -133,10 +133,6 @@ static int video_sound_machine_init(sound_t *psid, int speed, int cycles)
     return 1;
 }
 
-static void video_sound_reset(sound_t *psid, CLOCK cpu_clk)
-{
-}
-
 static int video_sound_machine_cycle_based(void)
 {
     return 0;
@@ -147,26 +143,18 @@ static int video_sound_machine_channels(void)
     return 1;
 }
 
-static void video_sound_machine_store(sound_t *psid, uint16_t addr, uint8_t val)
-{
-}
-
-static uint8_t video_sound_machine_read(sound_t *psid, uint16_t addr)
-{
-    return 0;
-}
-
+/* Video sound interference 'device' */
 static sound_chip_t video_sound = {
-    NULL, /* no open */
-    video_sound_machine_init,
-    NULL, /* no close */
-    video_sound_machine_calculate_samples,
-    video_sound_machine_store,
-    video_sound_machine_read,
-    video_sound_reset,
-    video_sound_machine_cycle_based,
-    video_sound_machine_channels,
-    0 /* chip enabled */
+    NULL,                                  /* NO sound chip open function */ 
+    video_sound_machine_init,              /* sound chip init function */
+    NULL,                                  /* NO sound chip close function */
+    video_sound_machine_calculate_samples, /* sound chip calculate samples function */
+    NULL,                                  /* NO sound chip store function */
+    NULL,                                  /* NO sound chip read function */
+    NULL,                                  /* NO sound chip reset function */
+    video_sound_machine_cycle_based,       /* sound chip 'is_cycle_based()' function, chip is NOT cycle based */
+    video_sound_machine_channels,          /* sound chip 'get_amount_of_channels()' function, sound chip has 1 channel */
+    0                                      /* sound chip enabled flag, toggled upon device (de-)activation */
 };
 
 /*

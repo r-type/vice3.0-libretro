@@ -271,7 +271,9 @@ int charset_petscii_to_ucs(uint8_t c)
     }
 }
 
-int charset_ucs_to_utf8(uint8_t *out, int code, int len)
+
+/* FIXME: `len` should be size_t */
+int charset_ucs_to_utf8(uint8_t *out, int code, size_t len)
 {
     if (code >= 0x00 && code <= 0x7f) {
         if (len >= 1) {
@@ -300,7 +302,7 @@ int charset_ucs_to_utf8(uint8_t *out, int code, int len)
         }
         return 4;
     }
-    log_error(LOG_DEFAULT, "Out-of-range code point U+%04x.", code);
+    log_error(LOG_DEFAULT, "Out-of-range code point U+%04x.", (unsigned int)code);
     return 0;
 }
 
@@ -308,9 +310,11 @@ int charset_ucs_to_utf8(uint8_t *out, int code, int len)
    return it in a malloc'd buffer. */
 uint8_t *charset_petconv_stralloc(uint8_t *in, int conv)
 {
-    uint8_t *s = in, *d;
+    uint8_t *s = in;
+    uint8_t *d;
     uint8_t *buf;
-    int len, ch;
+    int ch;
+    size_t len;
 
     len = strlen((const char *)in);
     buf = lib_malloc(len + 1);
@@ -340,13 +344,12 @@ uint8_t *charset_petconv_stralloc(uint8_t *in, int conv)
             while (1) {
                 while (*s) {
                     int code = charset_petscii_to_ucs(*s);
-
-                    d += charset_ucs_to_utf8(d, code, len - (int)(d - buf));
+                    d += charset_ucs_to_utf8(d, code, len - (d - buf));
                     s++;
                 }
-                if ((int)(d - buf) > len) {
+                if (d - buf > len) {
                     /* UTF-8 form is longer than the PETSCII form. */
-                    len = (int)(d - buf);
+                    len = d - buf;
                     buf = lib_realloc(buf, len + 1);
                     d = buf;
                     s = in;
@@ -399,7 +402,7 @@ char * charset_hexstring_to_byte(char *source, char *destination)
 
 char *charset_replace_hexcodes(char *source)
 {
-    char * destination = lib_stralloc(source ? source : "");
+    char * destination = lib_strdup(source ? source : "");
 
     if (destination) {
         char * pread = destination;

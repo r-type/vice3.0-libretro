@@ -106,7 +106,7 @@ static void output_graphics_line_data(screenshot_t *screenshot, uint8_t *data,
             }
             break;
         default:
-            log_error(LOG_ERR, "Invalid mode %i.", mode);
+            log_error(LOG_ERR, "Invalid mode %u.", mode);
     }
 }
 
@@ -268,6 +268,9 @@ void output_graphics_shutdown(void)
     for (i = 0; i < 3; i++) {
         lib_free(output_gfx[i].filename);
         lib_free(output_gfx[i].line);
+        
+        output_gfx[i].filename = NULL;
+        output_gfx[i].line = NULL;
     }
 }
 

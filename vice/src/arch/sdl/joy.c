@@ -135,13 +135,19 @@ typedef struct sdljoystick_mapping_s sdljoystick_mapping_t;
 
 struct sdljoystick_s {
     SDL_Joystick *joyptr;
-    const char *name;
+    char *name;
     int input_max[NUM_INPUT_TYPES];
     sdljoystick_mapping_t *input[NUM_INPUT_TYPES];
 };
 typedef struct sdljoystick_s sdljoystick_t;
 
 static sdljoystick_t *sdljoystick = NULL;
+
+/** \brief  Temporary copy of the default joymap file name
+ *
+ * Avoids silly casting away of const
+ */
+static char *joymap_factory = NULL;
 
 #endif /* HAVE_SDL_NUMJOYSTICKS */
 
@@ -221,6 +227,8 @@ static const cmdline_option_t cmdline_options[] =
 };
 #endif
 
+
+#if 0
 static const cmdline_option_t joydev1cmdline_options[] =
 {
     { "-joydev1", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
@@ -260,6 +268,7 @@ static const cmdline_option_t joydev5cmdline_options[] =
       JOYDEV_RANGE_TEXT, JOYDEV_DESCRIPTION_5 },
     CMDLINE_LIST_END
 };
+#endif
 
 int joy_arch_resources_init(void)
 {
@@ -269,7 +278,8 @@ int joy_arch_resources_init(void)
     }
 
 #ifdef HAVE_SDL_NUMJOYSTICKS
-    resources_string[0].factory_value = archdep_default_joymap_file_name();
+    joymap_factory = archdep_default_joymap_file_name();
+    resources_string[0].factory_value = joymap_factory;
 
     if (resources_register_string(resources_string) < 0) {
         return -1;
@@ -285,10 +295,14 @@ int joy_arch_resources_init(void)
 void joy_arch_resources_shutdown(void)
 {
 #ifdef HAVE_SDL_NUMJOYSTICKS
-    lib_free(resources_string[0].factory_value);
-    resources_string[0].factory_value = NULL;
-    lib_free(joymap_file);
-    joymap_file = NULL;
+    if (joymap_factory) {
+        lib_free(joymap_factory);
+        joymap_factory = NULL;
+    }
+    if (joymap_file) {
+        lib_free(joymap_file);
+        joymap_file = NULL;
+    }
 #endif
 }
 
@@ -303,7 +317,7 @@ int joy_arch_cmdline_options_init(void)
     if (sdlkbd_init_cmdline() < 0) {
         return -1;
     }
-
+#if 0
     if (joyport_get_port_name(JOYPORT_1)) {
         if (cmdline_register_options(joydev1cmdline_options) < 0) {
             return -1;
@@ -329,7 +343,7 @@ int joy_arch_cmdline_options_init(void)
             return -1;
         }
     }
-
+#endif
     return 0;
 }
 
@@ -370,9 +384,9 @@ int joy_arch_init(void)
         joy = sdljoystick[i].joyptr = SDL_JoystickOpen(i);
         if (joy) {
 #ifndef USE_SDLUI2
-            sdljoystick[i].name = lib_stralloc(SDL_JoystickName(i));
+            sdljoystick[i].name = lib_strdup(SDL_JoystickName(i));
 #else
-            sdljoystick[i].name = lib_stralloc(SDL_JoystickName(sdljoystick[i].joyptr));
+            sdljoystick[i].name = lib_strdup(SDL_JoystickName(sdljoystick[i].joyptr));
 #endif
             axis = sdljoystick[i].input_max[AXIS] = SDL_JoystickNumAxes(joy);
             button = sdljoystick[i].input_max[BUTTON] = SDL_JoystickNumButtons(joy);
@@ -399,6 +413,11 @@ int joy_arch_init(void)
 
     SDL_JoystickEventState(SDL_ENABLE);
     return 0;
+}
+
+void joystick(void)
+{
+    /* Provided only for archdep joy.h. TODO: Migrate joystick polling in here if any needed? */
 }
 
 void joystick_close(void)
@@ -550,7 +569,7 @@ int joy_arch_mapping_dump(const char *filename)
             "#\n"
             "# action [action_parameters]:\n"
             "# 0               none\n"
-            "# 1 port pin      joystick (pin: 1/2/4/8/16 = u/d/l/r/fire)\n"
+            "# 1 port pin      joystick (pin: 1/2/4/8/16/32/64 = u/d/l/r/fire/fire2/fire3)\n"
             "# 2 row col       keyboard\n"
             "# 3               map\n"
             "# 4               UI activate\n"
@@ -565,7 +584,7 @@ int joy_arch_mapping_dump(const char *filename)
         for (j = AXIS; j < NUM_INPUT_TYPES; ++j) {
             for (k = 0; k < sdljoystick[i].input_max[j] * input_mult[j]; ++k) {
                 t = sdljoystick[i].input[j][k].action;
-                fprintf(fp, "%i %i %i %i", i, j, k, t);
+                fprintf(fp, "%i %u %i %u", i, j, k, t);
                 switch (t) {
                     case JOYSTICK:
                         fprintf(fp, " %i %i",
@@ -684,7 +703,7 @@ static void joy_arch_parse_entry(char *buffer)
                             break;
                     }
                 } else {
-                    log_warning(sdljoy_log, "inputindex %i too large for inputtype %i, joynum %i!", inputindex, inputtype, joynum);
+                    log_warning(sdljoy_log, "inputindex %i too large for inputtype %u, joynum %i!", inputindex, inputtype, joynum);
                 }
             }
         }
@@ -737,16 +756,22 @@ int joy_arch_mapping_load(const char *filename)
                 *p = 0;
             }
 
-            switch (*buffer) {
+            /* remove whitespace at the beginning of the line */
+            p = buffer;
+            while (((*p == ' ') || (*p == '\t')) && (*p != 0)) {
+                ++p;
+            }
+
+            switch (*p) {
                 case 0:
                     break;
                 case '!':
                     /* keyword handling */
-                    joy_arch_parse_keyword(buffer);
+                    joy_arch_parse_keyword(p);
                     break;
                 default:
                     /* table entry handling */
-                    joy_arch_parse_entry(buffer);
+                    joy_arch_parse_entry(p);
                     break;
             }
         }
@@ -1197,6 +1222,11 @@ void sdljoy_swap_ports(void)
     resources_get_int("JoyDevice2", &k);
     resources_set_int("JoyDevice1", k);
     resources_set_int("JoyDevice2", i);
+}
+
+void joystick(void)
+{
+    /* Provided only for archdep joy.h. TODO: Migrate joystick polling in here if any needed? */
 }
 
 void joystick_close(void)

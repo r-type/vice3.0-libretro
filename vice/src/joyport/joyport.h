@@ -36,38 +36,44 @@
 #define JOYPORT_ID_JOY4               -4
 #define JOYPORT_ID_JOY5               -5
 
-#define JOYPORT_ID_NONE                0
-#define JOYPORT_ID_JOYSTICK            1
-#define JOYPORT_ID_PADDLES             2
-#define JOYPORT_ID_MOUSE_1351          3
-#define JOYPORT_ID_MOUSE_NEOS          4
-#define JOYPORT_ID_MOUSE_AMIGA         5
-#define JOYPORT_ID_MOUSE_CX22          6
-#define JOYPORT_ID_MOUSE_ST            7
-#define JOYPORT_ID_MOUSE_SMART         8
-#define JOYPORT_ID_MOUSE_MICROMYS      9
-#define JOYPORT_ID_KOALAPAD           10
-#define JOYPORT_ID_LIGHTPEN_U         11
-#define JOYPORT_ID_LIGHTPEN_L         12
-#define JOYPORT_ID_LIGHTPEN_DATEL     13
-#define JOYPORT_ID_LIGHTGUN_Y         14
-#define JOYPORT_ID_LIGHTGUN_L         15
-#define JOYPORT_ID_LIGHTPEN_INKWELL   16
-#define JOYPORT_ID_SAMPLER_2BIT       17
-#define JOYPORT_ID_SAMPLER_4BIT       18
-#define JOYPORT_ID_BBRTC              19
-#define JOYPORT_ID_PAPERCLIP64        20
-#define JOYPORT_ID_COPLIN_KEYPAD      21
-#define JOYPORT_ID_CARDCO_KEYPAD      22
-#define JOYPORT_ID_CX85_KEYPAD        23
-#define JOYPORT_ID_RUSHWARE_KEYPAD    24
-#define JOYPORT_ID_CX21_KEYPAD        25
-#define JOYPORT_ID_SCRIPT64_DONGLE    26
-#define JOYPORT_ID_VIZAWRITE64_DONGLE 27
-#define JOYPORT_ID_WAASOFT_DONGLE     28
-#define JOYPORT_ID_SNESPAD            29
+/* #define JOYPORT_EXPERIMENTAL_DEVICES */
 
-#define JOYPORT_MAX_DEVICES           30
+enum {
+    JOYPORT_ID_NONE = 0,
+    JOYPORT_ID_JOYSTICK,
+    JOYPORT_ID_PADDLES,
+    JOYPORT_ID_MOUSE_1351,
+    JOYPORT_ID_MOUSE_NEOS,
+    JOYPORT_ID_MOUSE_AMIGA,
+    JOYPORT_ID_MOUSE_CX22,
+    JOYPORT_ID_MOUSE_ST,
+    JOYPORT_ID_MOUSE_SMART,
+    JOYPORT_ID_MOUSE_MICROMYS,
+    JOYPORT_ID_KOALAPAD,
+    JOYPORT_ID_LIGHTPEN_U,
+    JOYPORT_ID_LIGHTPEN_L,
+    JOYPORT_ID_LIGHTPEN_DATEL,
+    JOYPORT_ID_LIGHTGUN_Y,
+    JOYPORT_ID_LIGHTGUN_L,
+    JOYPORT_ID_LIGHTPEN_INKWELL,
+#ifdef JOYPORT_EXPERIMENTAL_DEVICES
+    JOYPORT_ID_LIGHTGUN_GUNSTICK,
+#endif
+    JOYPORT_ID_SAMPLER_2BIT,
+    JOYPORT_ID_SAMPLER_4BIT,
+    JOYPORT_ID_BBRTC,
+    JOYPORT_ID_PAPERCLIP64,
+    JOYPORT_ID_COPLIN_KEYPAD,
+    JOYPORT_ID_CARDCO_KEYPAD,
+    JOYPORT_ID_CX85_KEYPAD,
+    JOYPORT_ID_RUSHWARE_KEYPAD,
+    JOYPORT_ID_CX21_KEYPAD,
+    JOYPORT_ID_SCRIPT64_DONGLE,
+    JOYPORT_ID_VIZAWRITE64_DONGLE,
+    JOYPORT_ID_WAASOFT_DONGLE,
+    JOYPORT_ID_SNESPAD,
+    JOYPORT_MAX_DEVICES
+};
 
 #define JOYPORT_RES_ID_NONE        0
 #define JOYPORT_RES_ID_MOUSE       1
@@ -96,18 +102,19 @@
 #define JOYPORT_POT_REQUIRED   0
 #define JOYPORT_POT_OPTIONAL   1
 
+/* this structure is used for control port devices */
 typedef struct joyport_s {
-    char *name;
-    int resource_id;
-    int is_lp;
-    int pot_optional;
-    int (*enable)(int port, int val);
-    uint8_t (*read_digital)(int port);
-    void (*store_digital)(uint8_t val);
-    uint8_t (*read_potx)(void);
-    uint8_t (*read_poty)(void);
-    int (*write_snapshot)(struct snapshot_s *s, int port);
-    int (*read_snapshot)(struct snapshot_s *s, int port);
+    char *name;                                            /* name of the device */
+    int resource_id;                                       /* type of device, to determine if there can be multiple instances of the type of device */
+    int is_lp;                                             /* flag to indicate the device is a lightpen */
+    int pot_optional;                                      /* flag to indicate that the device can work without a potentiometer */
+    int (*enable)(int port, int val);                      /* pointer to the device enable function */
+    uint8_t (*read_digital)(int port);                     /* pointer to the device digital lines read function */
+    void (*store_digital)(uint8_t val);                    /* pointer to the device digital lines store function */
+    uint8_t (*read_potx)(int port);                        /* pointer to the device X potentiometer read function */
+    uint8_t (*read_poty)(int port);                        /* pointer to the device Y potentiometer read function */
+    int (*write_snapshot)(struct snapshot_s *s, int port); /* pointer to the device snapshot write function */
+    int (*read_snapshot)(struct snapshot_s *s, int port);  /* pointer to the device snapshot read function */
 } joyport_t;
 
 typedef struct joyport_desc_s {
@@ -115,11 +122,12 @@ typedef struct joyport_desc_s {
     int id;
 } joyport_desc_t;
 
+/* this structure is used for control ports */
 typedef struct joyport_port_props_s {
-    char *name;
-    int has_pot;
-    int has_lp_support;
-    int active;
+    char *name;         /* name of the port */
+    int has_pot;        /* flag to indicate that the port has potentiometer support */
+    int has_lp_support; /* flag to indicate that the port has lightpen support */
+    int active;         /* flag to indicate if the port is currently active */
 } joyport_port_props_t;
 
 extern int joyport_device_register(int id, joyport_t *device);

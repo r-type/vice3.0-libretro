@@ -1,5 +1,8 @@
-SUBDIRS = p64 @LAMEMP3SUB@ @LIBX264SUB@ @LIBFFMPEGSUB@ @FFMPEGSUB@
+SUBDIRS = p64 linenoise-ng @LAMEMP3SUB@ @LIBX264SUB@ @LIBFFMPEGSUB@ @FFMPEGSUB@
 
+AM_CFLAGS = @VICE_CFLAGS@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@
 
 ffmpeglibs: $(FFMPEG_DIR)
 
@@ -351,4 +354,11 @@ EXTRA_DIST = \
 	liblame/vc_solution/vc9_mpglib.vcproj \
 	liblame/vc_solution/vc9_nasm.rules
 
+endif
+
+if !HAVE_SHARED_FFMPEG
+if !HAVE_STATIC_FFMPEG
+dist-hook:
+	@$(SHELL) $(srcdir)/../buildtools/ffmpeg_dist.sh $(srcdir) $(distdir)
+endif
 endif

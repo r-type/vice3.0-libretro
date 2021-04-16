@@ -106,7 +106,7 @@ rtc_bq4830y_t *bq4830y_init(char *device)
     retval->old_offset = retval->offset;
     memcpy(retval->old_clock_regs, retval->clock_regs, BQ4830Y_REG_SIZE);
 
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
 
     return retval;
 }
@@ -453,7 +453,7 @@ uint8_t bq4830y_read(rtc_bq4830y_t *context, uint16_t address)
    STRING | device              | device name STRING
  */
 
-static char snap_module_name[] = "RTC_BQ4830Y";
+static const char snap_module_name[] = "RTC_BQ4830Y";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -536,7 +536,7 @@ int bq4830y_read_snapshot(rtc_bq4830y_t *context, snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

@@ -137,7 +137,7 @@ send:
 
 HDIGIT  [0-9a-f]
 
-%x FNAME CMD STR ROL ASM_MODE COND_MODE REG_ASGN LABEL_ASGN BNAME CTYPE RADIX
+%x FNAME CMD STR ROL ROLQ ASM_MODE COND_MODE REG_ASGN LABEL_ASGN BNAME CTYPE RADIX
 
 %%
 
@@ -173,8 +173,9 @@ HDIGIT  [0-9a-f]
         bsave|bs        { BEGIN(FNAME);         return CMD_BSAVE; }
         backtrace|bt    { BEGIN(INITIAL);       return CMD_BACKTRACE; }
         block_write|bw  { BEGIN(INITIAL);       return CMD_BLOCK_WRITE; }
+        bverify|bv      { BEGIN(FNAME);         return CMD_BVERIFY; }
         cartfreeze      { BEGIN(INITIAL);       return CMD_CARTFREEZE; }
-        cd              { BEGIN(ROL);           return CMD_CHDIR; }
+        cd              { BEGIN(ROLQ);          return CMD_CHDIR; }
         clear_labels|cl { BEGIN(INITIAL);       return CMD_CLEAR_LABELS; }
         command         { BEGIN(INITIAL);       return CMD_COMMAND; }
         compare|c       { BEGIN(INITIAL);       return CMD_COMPARE; }
@@ -204,18 +205,21 @@ HDIGIT  [0-9a-f]
         list            { BEGIN(INITIAL);       return CMD_LIST; }
         load|l          { BEGIN(FNAME);         return CMD_LOAD; }
         load_labels|ll  { BEGIN(FNAME);         return CMD_LOAD_LABELS; }
+        log             { BEGIN(INITIAL);       return CMD_LOG; }
+        logname         { BEGIN(FNAME);         return CMD_LOGNAME; }
         mem|m           { BEGIN(INITIAL);       return CMD_MEM_DISPLAY; }
         memchar|mc      { BEGIN(INITIAL);       return CMD_CHAR_DISPLAY; }
         memmapsave|mmsave { BEGIN(FNAME);       return CMD_MEMMAPSAVE; }
         memmapshow|mmsh { BEGIN(INITIAL);       return CMD_MEMMAPSHOW; }
         memmapzap|mmzap { BEGIN(INITIAL);       return CMD_MEMMAPZAP; }
+        mkdir           { BEGIN(ROLQ);           return CMD_MKDIR; }
         move|t          { BEGIN(INITIAL);       return CMD_MOVE; }
         memsprite|ms    { BEGIN(INITIAL);       return CMD_SPRITE_DISPLAY; }
         next|n          { BEGIN(INITIAL);       return CMD_NEXT; }
         playback|pb     { BEGIN(FNAME);         return CMD_PLAYBACK; }
         print|p         { BEGIN(INITIAL);       return CMD_PRINT; }
         pwd             { BEGIN(INITIAL);       return CMD_PWD; }
-        quit            { BEGIN(INITIAL);       return CMD_QUIT; }
+        quit|q          { BEGIN(INITIAL);       return CMD_QUIT; }
         radix|rad       { BEGIN(RADIX);         return CMD_RADIX; }
         record|rec      { BEGIN(FNAME);         return CMD_RECORD; }
         registers|r     { BEGIN(REG_ASGN);      return CMD_REGISTERS; }
@@ -225,12 +229,14 @@ HDIGIT  [0-9a-f]
         load_resources|resload  { BEGIN(FNAME); return CMD_LOAD_RESOURCES; }
         save_resources|ressave  { BEGIN(FNAME); return CMD_SAVE_RESOURCES; }
         return|ret      { BEGIN(INITIAL);       return CMD_RETURN; }
+        rmdir           { BEGIN(ROLQ);           return CMD_RMDIR; }
         save|s          { BEGIN(FNAME);         return CMD_SAVE; }
         save_labels|sl  { BEGIN(FNAME);         return CMD_SAVE_LABELS; }
         screen|sc       { BEGIN(INITIAL);       return CMD_SCREEN; }
         screenshot|scrsh { BEGIN(FNAME);        return CMD_SCREENSHOT; }
         show_labels|shl { BEGIN(INITIAL);       return CMD_SHOW_LABELS; }
         sidefx|sfx      { BEGIN(INITIAL);       return CMD_SIDEFX; }
+        dummy           { BEGIN(INITIAL);       return CMD_DUMMY; }
         step|z          { BEGIN(INITIAL);       return CMD_STEP; }
         stop            { BEGIN(INITIAL);       return CMD_MON_STOP; }
         stopwatch|sw    { BEGIN(INITIAL);       return CMD_STOPWATCH; }
@@ -238,14 +244,16 @@ HDIGIT  [0-9a-f]
         trace|tr        { BEGIN(INITIAL);       return CMD_TRACE; }
         until|un        { BEGIN(INITIAL);       return CMD_UNTIL; }
         undump          { BEGIN(FNAME);         return CMD_UNDUMP; }
+        verify|v        { BEGIN(FNAME);         return CMD_VERIFY; }
         watch|w         { BEGIN(INITIAL);       return CMD_WATCH; }
         yydebug         { BEGIN(INITIAL);       return CMD_YYDEBUG; }
         maincpu_trace   { BEGIN(INITIAL);       return CMD_MAINCPU_TRACE; }
 }
  /* this is not a real command, but could be a label name for a label assignment */
-<CMD>[_a-zA-Z][_a-zA-Z0-9]* { BEGIN(LABEL_ASGN); yylval.str = lib_stralloc(yytext); return CMD_LABEL_ASGN; }
+<CMD>[_a-zA-Z][_a-zA-Z0-9]* { BEGIN(LABEL_ASGN); yylval.str = lib_strdup(yytext); return CMD_LABEL_ASGN; }
 
 ;		{ new_cmd = 1; return CMD_SEP; }
+<REG_ASGN>;     { new_cmd = 1; BEGIN(INITIAL); return CMD_SEP; }
 
 on  		{ yylval.i = e_ON; return TOGGLE; }
 off 		{ yylval.i = e_OFF; return TOGGLE; }
@@ -272,7 +280,7 @@ if		{ BEGIN (COND_MODE); return IF; }
                                 (yyleng > 2) && (yytext[yyleng - 3] == '\\') &&
                                 (yytext[yyleng - 2] == '"')) {
                          /* special case, \"" at end of string */
-                         yylval.str = lib_stralloc(yytext);
+                         yylval.str = lib_strdup(yytext);
                          yylval.str[yyleng -1] = 0;
                          unescape(yylval.str);
                          quote = 0;
@@ -288,7 +296,7 @@ if		{ BEGIN (COND_MODE); return IF; }
 <STR>[^\"\n]*   { if (yytext[yyleng - 1] == '\\') {
                      yymore(); /* skip escaped quote */
                   } else {
-                     yylval.str = lib_stralloc(yytext);
+                     yylval.str = lib_strdup(yytext);
                      unescape(yylval.str);
                      return STRING;
                   }
@@ -340,7 +348,7 @@ if		{ BEGIN (COND_MODE); return IF; }
 <BNAME,INITIAL,COND_MODE>10:             { return MEM_DISK10; }
 <BNAME,INITIAL,COND_MODE>11:             { return MEM_DISK11; }
 
-<CTYPE>[_a-zA-Z0-9]*      { yylval.str = lib_stralloc(yytext); return CPUTYPE; }
+<CTYPE>[_a-zA-Z0-9]*      { yylval.str = lib_strdup(yytext); return CPUTYPE; }
 
 <*>[ \t]*
 <*>\n          { dont_match_reg_a = 0;
@@ -352,12 +360,22 @@ if		{ BEGIN (COND_MODE); return IF; }
                }
 
 <FNAME>\".+\" { yytext[yyleng-1] = '\0';
-                yylval.str = lib_stralloc(yytext+1);
+                yylval.str = lib_strdup(yytext+1);
                 BEGIN (INITIAL); return FILENAME; }
 
-<BNAME>[_a-zA-Z0-9]*      { yylval.str = lib_stralloc(yytext); return BANKNAME; }
+<BNAME>[_a-zA-Z0-9]*      { yylval.str = lib_strdup(yytext); BEGIN (INITIAL); return BANKNAME; }
 
-<ROL>[^ \t\n][^\n]*          { yylval.str = lib_stralloc(yytext); return R_O_L; }
+<ROL>[^ \t\n][^\n]*          { yylval.str = lib_strdup(yytext); return R_O_L; }
+
+<ROLQ>{
+     \".+\" { yytext[yyleng-1] = '\0';
+              yylval.str = lib_strdup(yytext+1);
+              BEGIN (INITIAL); return R_O_L_Q; }
+     \'.+\' { yytext[yyleng-1] = '\0';
+              yylval.str = lib_strdup(yytext+1);
+              BEGIN (INITIAL); return R_O_L_Q; }
+     [^ \t\n][^\n]*          { yylval.str = lib_strdup(yytext); return R_O_L_Q; }
+}
 
  /* see monitor.c and montypes.h for the commented list */
 <REG_ASGN>{
@@ -424,14 +442,21 @@ if		{ BEGIN (COND_MODE); return IF; }
 }
 
 <COND_MODE>{
-	== 		{ yylval.i = e_EQU; return COMPARE_OP; }
-	!= 		{ yylval.i = e_NEQ; return COMPARE_OP; }
-	\<=		{ yylval.i = e_LTE; return COMPARE_OP; }
-	\<		{ yylval.i = e_LT;  return COMPARE_OP; }
-	\>		{ yylval.i = e_GT;  return COMPARE_OP; }
-	\>=		{ yylval.i = e_GTE; return COMPARE_OP; }
-	&&		{ yylval.i = e_AND; return COMPARE_OP; }
-	\|\|		{ yylval.i = e_OR;  return COMPARE_OP; }
+	== 		{ yylval.i = e_EQU; return COND_OP; }
+	!= 		{ yylval.i = e_NEQ; return COND_OP; }
+	\<=		{ yylval.i = e_LTE; return COND_OP; }
+	\<		{ yylval.i = e_LT;  return COND_OP; }
+	\>		{ yylval.i = e_GT;  return COND_OP; }
+	\>=		{ yylval.i = e_GTE; return COND_OP; }
+	&&		{ yylval.i = e_AND; return COND_OP; }
+	\|\|	{ yylval.i = e_OR;  return COND_OP; }
+
+  \+    { yylval.i = e_ADD; return COND_OP; }
+  -     { yylval.i = e_SUB; return COND_OP; }
+  \*    { yylval.i = e_MUL; return COND_OP; }
+  \/    { yylval.i = e_DIV; return COND_OP; }
+  &     { yylval.i = e_BINARY_AND; return COND_OP; }
+  \|    { yylval.i = e_BINARY_OR; return COND_OP; }
 
 	A 		{ yylval.i = e_A; return MON_REGISTER; }		/* 65xx/c64dtv/658xx/6x09/z80 */
 	X 		{ yylval.i = e_X; return MON_REGISTER; }		/* 65xx/c64dtv/658xx/6x09 */
@@ -494,30 +519,33 @@ if		{ BEGIN (COND_MODE); return IF; }
 	IYH		{ yylval.i = e_IYH; return MON_REGISTER; }		/* z80 */
 	IYL		{ yylval.i = e_IYL; return MON_REGISTER; }		/* z80 */
 
+	RL		{ yylval.i = e_Rasterline; return MON_REGISTER; }		/* rasterline */
+	CY		{ yylval.i = e_Cycle; return MON_REGISTER; }		/* cycle in line */
+	
 	\(		{ return L_PAREN; }
 	\)		{ return R_PAREN; }
         \[              { return L_BRACKET; }
         \]              { return R_BRACKET; }
 
-	[_a-zA-Z0-0]*	{yylval.str= lib_stralloc(yytext); return BANKNAME; }
+	[_a-zA-Z0-0]*	{yylval.str= lib_strdup(yytext); return BANKNAME; }
 }
 
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z]\,[a-zA-Z] {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z]\,\([a-zA-Z][a-zA-Z]\) {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ \([a-zA-Z][a-zA-Z]\)\,[a-zA-Z] {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ \([a-zA-Z][a-zA-Z]\)\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z]\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z][a-zA-Z]\ [0-7]\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z]\ [a-zA-Z]\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>[a-zA-Z][a-zA-Z]\ [a-zA-Z][a-zA-Z]\, {
-    yylval.str = lib_stralloc(yytext); return OPCODE; }
+    yylval.str = lib_strdup(yytext); return OPCODE; }
 <ASM_MODE>af|AF         { return REG_AF; }
 <ASM_MODE>bc|BC         { return REG_BC; }
 <ASM_MODE>de|DE         { return REG_DE; }
@@ -528,8 +556,8 @@ if		{ BEGIN (COND_MODE); return IF; }
 <ASM_MODE>iy|IY         { return REG_IY; }
 <ASM_MODE>iyh|IYH       { return REG_IYH; }
 <ASM_MODE>iyl|IYL       { return REG_IYL; }
-<ASM_MODE>[a-zA-Z]{2,4}                           { yylval.str = lib_stralloc(yytext); return OPCODE; }
-<ASM_MODE,INITIAL,COND_MODE>\.[_@\?:a-zA-Z][_@\?:.a-zA-Z0-9]*        { yylval.str = lib_stralloc(yytext); return LABEL; }
+<ASM_MODE>[a-zA-Z]{2,4}                           { yylval.str = lib_strdup(yytext); return OPCODE; }
+<ASM_MODE,INITIAL,COND_MODE>\.[_@\?:a-zA-Z][_@\?:.a-zA-Z0-9]*        { yylval.str = lib_strdup(yytext); return LABEL; }
 
 <ASM_MODE>(a|A)/[ \t]*[:\n]           { if (!dont_match_reg_a) return REG_A;
                                         yylval.i = 0x0a; return H_NUMBER; }
@@ -555,16 +583,16 @@ if		{ BEGIN (COND_MODE); return IF; }
 <ASM_MODE>-             { return MINUS; }
 
 <ASM_MODE,INITIAL,COND_MODE,REG_ASGN,LABEL_ASGN>{
-    {HDIGIT}{8}             { yylval.str = lib_stralloc(yytext); return H_RANGE_GUESS; }
-    1[01]*                  { yylval.str = lib_stralloc(yytext); return B_NUMBER_GUESS; }
-    %[01]+                  { yylval.i = strtol(yytext+1, NULL, 2); return B_NUMBER; }
-    &[0-7]+                 { yylval.i = strtol(yytext+1, NULL, 8); return O_NUMBER; }
-    [0-7]*                  { yylval.str = lib_stralloc(yytext); return O_NUMBER_GUESS; }
-    \+[0-9]+                { yylval.i = strtol(yytext+1, NULL, 10); return D_NUMBER; }
-    [0-9]+                  { yylval.str = lib_stralloc(yytext); return D_NUMBER_GUESS; }
+    {HDIGIT}{8}             { yylval.str = lib_strdup(yytext); return H_RANGE_GUESS; }
+    1[01]*                  { yylval.str = lib_strdup(yytext); return B_NUMBER_GUESS; }
+    %[01]+                  { yylval.i = (int)strtol(yytext+1, NULL, 2); return B_NUMBER; }
+    &[0-7]+                 { yylval.i = (int)strtol(yytext+1, NULL, 8); return O_NUMBER; }
+    [0-7]*                  { yylval.str = lib_strdup(yytext); return O_NUMBER_GUESS; }
+    \+[0-9]+                { yylval.i = (int)strtol(yytext+1, NULL, 10); return D_NUMBER; }
+    [0-9]+                  { yylval.str = lib_strdup(yytext); return D_NUMBER_GUESS; }
     xx                      { yylval.i = 0x00; return MASK; }
-    \${HDIGIT}+             { yylval.i = strtol(yytext+1, NULL, 16); return H_NUMBER; }
-    {HDIGIT}+               { yylval.i = strtol(yytext, NULL, 16); return H_NUMBER; }
+    \${HDIGIT}+             { yylval.i = (int)strtol(yytext+1, NULL, 16); return H_NUMBER; }
+    {HDIGIT}+               { yylval.i = (int)strtol(yytext, NULL, 16); return H_NUMBER; }
 }
 
 <*>=	{ return EQUALS; }

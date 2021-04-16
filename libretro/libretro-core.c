@@ -70,7 +70,7 @@ bool prev_ui_finalized = false;
 #endif
 
 extern uint8_t mem_ram[];
-extern int g_mem_ram_size;
+int mem_ram_size;
 
 /* Core geometry */
 unsigned int retroXS = 0;
@@ -152,15 +152,19 @@ extern bool turbo_fire_locked;
 extern unsigned int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
-#if defined(__X64DTV__)
-const char *cartridge_current_filename(void) { return NULL; }
-#elif defined(__XVIC__) || defined(__XPLUS4__) || defined(__XCBM2__) || defined(__XCBM5x0__)
-const char *cartridge_current_filename(void) { return NULL; }
+#if defined(__XVIC__)
 void cartridge_trigger_freeze(void) {}
+#elif defined(__XCBM2__) || defined(__XCBM5x0__)
+void cartridge_trigger_freeze(void) {}
+const char *cartridge_get_file_name(int type) { return NULL; }
 #elif defined(__XPET__)
-const char *cartridge_current_filename(void) { return NULL; }
 void cartridge_trigger_freeze(void) {}
-void cartridge_detach_image(int type) {}
+const char *cartridge_get_file_name(int type) { return NULL; }
+#elif defined(__XPLUS4__)
+void cartridge_trigger_freeze(void) {}
+const char *cartridge_get_file_name(int type) { return NULL; }
+#else
+extern int cart_getid_slotmain(void);
 #endif
 
 retro_input_state_t input_state_cb = NULL;
@@ -1139,13 +1143,13 @@ static void autodetect_drivetype(int unit)
     snprintf(drive_type_resource_var, sizeof(drive_type_resource_var), "Drive%dType", unit);
     resources_get_int(drive_type_resource_var, &drive_type);
     const char* attached_image = NULL;
-    attached_image = file_system_get_disk_name(unit);
+    attached_image = file_system_get_disk_name(unit, 0);
 
     /* Autodetect drive type */
     vdrive_t *vdrive;
     struct disk_image_s *diskimg;
 
-    vdrive = file_system_get_vdrive(unit);
+    vdrive = file_system_get_vdrive(unit, 0);
     if (vdrive == NULL)
         log_cb(RETRO_LOG_ERROR, "Failed to get vdrive reference for unit %d.\n", unit);
     else
@@ -1171,7 +1175,7 @@ static void autodetect_drivetype(int unit)
                 log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
 
             /* Change from 1581 to 1541 will not detect disk properly without reattaching (?!) */
-            file_system_attach_disk(unit, attached_image);
+            file_system_attach_disk(unit, 0, attached_image);
 
             /* Don't bother with drive sound muting when autoloadwarp is on */
             if (opt_autoloadwarp & AUTOLOADWARP_DISK)
@@ -1242,18 +1246,18 @@ void update_work_disk()
         if (path_is_valid(opt_work_disk_filepath))
         {
             /* Detach previous disks */
-            if ((attached_image = file_system_get_disk_name(8)) != NULL)
-                file_system_detach_disk(8);
+            if ((attached_image = file_system_get_disk_name(8, 0)) != NULL)
+                file_system_detach_disk(8, 0);
 
-            if ((attached_image = file_system_get_disk_name(9)) != NULL)
+            if ((attached_image = file_system_get_disk_name(9, 0)) != NULL)
             {
-                file_system_detach_disk(9);
+                file_system_detach_disk(9, 0);
                 log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
             }
 
             if (opt_work_disk_unit == 9)
                 log_resources_set_int("Drive9Type", opt_work_disk_type);
-            file_system_attach_disk(opt_work_disk_unit, opt_work_disk_filepath);
+            file_system_attach_disk(opt_work_disk_unit, 0, opt_work_disk_filepath);
             autodetect_drivetype(opt_work_disk_unit);
             log_cb(RETRO_LOG_INFO, "Work disk '%s' attached in drive #%d\n", opt_work_disk_filepath, opt_work_disk_unit);
             display_current_image(opt_work_disk_filename, true);
@@ -1262,21 +1266,21 @@ void update_work_disk()
     else
     {
         /* Detach work disk if disabled while running */
-        if ((attached_image = file_system_get_disk_name(8)) != NULL && strstr(attached_image, "vice_work"))
+        if ((attached_image = file_system_get_disk_name(8, 0)) != NULL && strstr(attached_image, "vice_work"))
         {
             if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, "vice_work")))
             {
                 log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
-                file_system_detach_disk(8);
+                file_system_detach_disk(8, 0);
                 log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
                 display_current_image(attached_image, false);
             }
         }
 
-        if ((attached_image = file_system_get_disk_name(9)) != NULL && strstr(attached_image, "vice_work"))
+        if ((attached_image = file_system_get_disk_name(9, 0)) != NULL && strstr(attached_image, "vice_work"))
         {
             log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 9);
-            file_system_detach_disk(9);
+            file_system_detach_disk(9, 0);
             log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
         }
     }
@@ -1363,7 +1367,11 @@ void update_from_vice()
     /* If flip list is empty, get current tape or floppy image name and add to the list */
     if (dc->count == 0)
     {
-        if ((attachedImage = cartridge_current_filename()) != NULL)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
+        if ((attachedImage = cartridge_get_file_name(cart_getid_slotmain())) != NULL)
+#else
+        if ((attachedImage = cartridge_get_file_name(0)) != NULL)
+#endif
         {
             dc->unit = 0;
             dc_add_file(dc, attachedImage, NULL, NULL, NULL);
@@ -1379,7 +1387,7 @@ void update_from_vice()
             int unit;
             for (unit = 8; unit <= 11; ++unit)
             {
-                if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
+                if ((attachedImage = file_system_get_disk_name(unit, 0)) != NULL)
                 {
                     dc->unit = unit;
                     dc_add_file(dc, attachedImage, NULL, NULL, NULL);
@@ -1390,7 +1398,7 @@ void update_from_vice()
             /* Only add images to the list from device 8, otherwise leads to confusion when other devices have disks,
              * because Disk Control operates only on device 8 for now. */
             int unit = 8;
-            if ((attachedImage = file_system_get_disk_name(unit)) != NULL)
+            if ((attachedImage = file_system_get_disk_name(unit, 0)) != NULL)
             {
                 dc->unit = unit;
                 dc_add_file(dc, attachedImage, NULL, NULL, NULL);
@@ -1451,7 +1459,7 @@ void update_from_vice()
         }
         else if (dc->unit == 8)
         {
-            if ((attachedImage = file_system_get_disk_name(dc->unit)) == NULL)
+            if ((attachedImage = file_system_get_disk_name(dc->unit, 0)) == NULL)
             {
                 attachedImage = dc->files[0];
                 autostartProgram = x_strdup(dc->load[0]);
@@ -1459,7 +1467,7 @@ void update_from_vice()
                 if (autostartString != NULL || noautostart)
                 {
                     log_cb(RETRO_LOG_INFO, "Attaching first disk '%s' to drive #%d\n", attachedImage, dc->unit);
-                    file_system_attach_disk(dc->unit, attachedImage);
+                    file_system_attach_disk(dc->unit, 0, attachedImage);
                 }
             }
         }
@@ -1855,8 +1863,10 @@ void retro_set_environment(retro_environment_t cb)
          {
             { "C128 PAL", "C128 PAL" },
             { "C128 NTSC", "C128 NTSC" },
-            { "C128 DCR PAL", "C128DCR PAL" },
-            { "C128 DCR NTSC", "C128DCR NTSC" },
+            { "C128 D PAL", "C128 D PAL" },
+            { "C128 D NTSC", "C128 D NTSC" },
+            { "C128 DCR PAL", "C128 DCR PAL" },
+            { "C128 DCR NTSC", "C128 DCR NTSC" },
             { NULL, NULL },
          },
          "C128 PAL"
@@ -1875,7 +1885,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c128_go64",
          "System > GO64",
-         "Start in C64 compatibility mode.\nFull restart required.",
+         "Start in C64 compatibility mode.\nChanging while running resets the system!",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2070,6 +2080,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "enabled"
       },
+#if !defined(__X64DTV__)
       {
          "vice_reset",
          "System > Reset Type",
@@ -2083,7 +2094,8 @@ void retro_set_environment(retro_environment_t cb)
          },
          "autostart"
       },
-#if !defined(__XPET__)
+#endif
+#if !defined(__XPET__) && !defined(__X64DTV__)
       /* Sublabel and options filled dynamically in retro_set_environment() */
       {
          "vice_cartridge",
@@ -2095,6 +2107,7 @@ void retro_set_environment(retro_environment_t cb)
          NULL
       },
 #endif
+#if !defined(__X64DTV__)
       {
          "vice_autostart",
          "Media > Autostart",
@@ -2182,6 +2195,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#endif /* !defined(__X64DTV__) */
       {
          "vice_video_options_display",
          "Show Video Options",
@@ -2408,7 +2422,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "default"
       },
-#else
+#elif !defined(__X64DTV__)
       {
          "vice_external_palette",
          "Video > VIC-II Color Palette",
@@ -2589,10 +2603,18 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_sid_engine",
          "Audio > SID Engine",
+#if defined(__X64DTV__)
+         "'ReSID-DTV' is accurate, 'FastSID' is the last resort.",
+#else
          "'ReSID' is accurate, 'ReSID-FP' is more accurate, 'FastSID' is the last resort.",
+#endif
          {
             { "FastSID", NULL },
+#if defined(__X64DTV__)
+            { "ReSID", "ReSID-DTV" },
+#else
             { "ReSID", NULL },
+#endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
 #ifdef HAVE_RESID33
             { "ReSID-3.3", NULL },
@@ -2603,6 +2625,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "ReSID"
       },
+#if !defined(__X64DTV__)
       {
          "vice_sid_model",
          "Audio > SID Model",
@@ -2630,6 +2653,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#endif
       {
          "vice_resid_sampling",
          "Audio > ReSID Sampling",
@@ -2641,7 +2665,7 @@ void retro_set_environment(retro_environment_t cb)
             { "resampling", "Resampling" },
             { NULL, NULL },
          },
-#if defined(__X64__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
+#if defined(__X64__) || defined(__XCBM5x0__) || defined(__XCBM2__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
          "fast"
 #else
          "resampling"
@@ -2888,6 +2912,7 @@ void retro_set_environment(retro_environment_t cb)
          "disabled"
       },
 #endif
+#if !defined(__XPET__) && !defined(__XCBM2__)
       {
          "vice_keyrah_keypad_mappings",
          "Input > Keyrah Keypad Mappings",
@@ -2899,6 +2924,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#endif
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__)
       {
          "vice_keyboard_keymap",
@@ -3845,6 +3871,8 @@ static void update_variables(void)
 
       if      (!strcmp(var.value, "C128 PAL"))      model = C128MODEL_C128_PAL;
       else if (!strcmp(var.value, "C128 NTSC"))     model = C128MODEL_C128_NTSC;
+      else if (!strcmp(var.value, "C128 D PAL"))    model = C128MODEL_C128D_PAL;
+      else if (!strcmp(var.value, "C128 D NTSC"))   model = C128MODEL_C128D_NTSC;
       else if (!strcmp(var.value, "C128 DCR PAL"))  model = C128MODEL_C128DCR_PAL;
       else if (!strcmp(var.value, "C128 DCR NTSC")) model = C128MODEL_C128DCR_NTSC;
 
@@ -3889,8 +3917,7 @@ static void update_variables(void)
       if (retro_ui_finalized && vice_opt.Go64Mode != c128go64)
       {
          log_resources_set_int("Go64Mode", c128go64);
-         /* Skip reset for now, because going into 64 mode while running produces VDC related endless garbage, but typing GO64 works?! */
-         /*machine_trigger_reset(MACHINE_RESET_MODE_HARD);*/
+         request_restart = true;
       }
       vice_opt.Go64Mode = c128go64;
    }
@@ -4122,7 +4149,7 @@ static void update_variables(void)
             log_resources_set_int("SidStereo", 0);
          else
          {
-            log_resources_set_int("SidStereoAddressStart", sid_extra);
+            log_resources_set_int("Sid2AddressStart", sid_extra);
             if (!vice_opt.SidExtra)
                log_resources_set_int("SidStereo", 1);
          }
@@ -5351,7 +5378,7 @@ bool retro_disk_set_eject_state(bool ejected)
                tape_image_detach(unit);
                break;
             default:
-               file_system_detach_disk(unit);
+               file_system_detach_disk(unit, 0);
                break;
          }
       }
@@ -5377,7 +5404,7 @@ bool retro_disk_set_eject_state(bool ejected)
                tape_image_attach(unit, dc->files[dc->index]);
                break;
             default:
-               file_system_attach_disk(unit, dc->files[dc->index]);
+               file_system_attach_disk(unit, 0, dc->files[dc->index]);
                autodetect_drivetype(unit);
                break;
          }
@@ -5693,7 +5720,7 @@ void retro_get_system_info(struct retro_system_info *info)
 #endif
    memset(info, 0, sizeof(*info));
    info->library_name     = "VICE " CORE_NAME;
-   info->library_version  = "3.3" GIT_VERSION;
+   info->library_version  = "3.5" GIT_VERSION;
 #if defined(__XVIC__)
    info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|20|40|60|a0|b0|rom";
 #else
@@ -6244,9 +6271,9 @@ bool retro_load_game(const struct retro_game_info *info)
 
 void retro_unload_game(void)
 {
-   file_system_detach_disk(8);
+   file_system_detach_disk(8, 0);
    if (opt_work_disk_type && opt_work_disk_unit == 9)
-      file_system_detach_disk(9);
+      file_system_detach_disk(9, 0);
    tape_image_detach(1);
    cartridge_detach_image(-1);
    file_system_detach_disk_shutdown();
@@ -6291,22 +6318,12 @@ static void dc_sync_index(void)
 {
     unsigned dc_index;
     char* filename = strdup(dc_savestate_filename);
-    drive_t *drive = drive_context[0]->drive;
+    drive_t *drive = diskunit_context[0]->drives[0];
     if (drive == NULL || string_is_empty(filename))
         return;
 
-    switch (drive->type)
-    {
-        case DISK_IMAGE_TYPE_D64:
-        case DISK_IMAGE_TYPE_G64:
-        case DISK_IMAGE_TYPE_D71:
-        case DISK_IMAGE_TYPE_G71:
-            if (!drive->GCR_image_loaded)
-                return;
-            break;
-        default:
-            return;
-    }
+    if (!drive->GCR_image_loaded)
+        return;
 
     for (dc_index = 0; dc_index < dc->count; dc_index++)
     {
@@ -6437,7 +6454,7 @@ void *retro_get_memory_data(unsigned id)
 size_t retro_get_memory_size(unsigned id)
 {
    if (id == RETRO_MEMORY_SYSTEM_RAM)
-      return g_mem_ram_size;
+      return mem_ram_size;
    return 0;
 }
 

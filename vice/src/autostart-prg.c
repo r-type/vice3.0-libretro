@@ -2,6 +2,7 @@
  * \brief   Handle autostart of program files
  *
  * \author  Christian Vogelgsang <chris@vogelgsang.org>
+ * \author  groepaz <groepaz@gmx.net>
  */
 
 /*
@@ -25,7 +26,10 @@
  *
  */
 
+/* #define DEBUG_AUTOSTART */
+
 #include <string.h>
+#include <inttypes.h>
 
 #include "archdep.h"
 #include "attach.h"
@@ -43,8 +47,15 @@
 #include "vdrive-internal.h"
 #include "drive.h"
 
+#ifdef DEBUG_AUTOSTART
+#define DBG(_x_)        log_debug _x_
+#else
+#define DBG(_x_)
+#endif
+
 /* ----- Globals ----- */
 extern int autostart_basic_load;
+extern log_t autostart_log;
 
 /* program from last injection */
 static autostart_prg_t *inject_prg;
@@ -84,7 +95,7 @@ static autostart_prg_t * load_prg(const char *file_name, fileio_info_t *finfo, l
     /* check range */
     end = prg->start_addr + prg->size - 1;
     if (end > 0xffff) {
-        log_error(log, "Invalid size of '%s': %d", file_name, (unsigned int)prg->size);
+        log_error(log, "Invalid size of '%s': %" PRIu32, file_name, prg->size);
         return NULL;
     }
 
@@ -131,16 +142,24 @@ void autostart_prg_shutdown(void)
     }
 }
 
-int autostart_prg_with_virtual_fs(const char *file_name,
+int autostart_prg_with_virtual_fs(int unit, int drive, const char *file_name,
                                   fileio_info_t *fh,
                                   log_t log)
 {
     char *directory;
     char *file;
-    int val;
 
-    /* Extract the directory path to allow FS-based drive emulation to
-       work.  */
+    DBG(("autostart_prg_with_virtual_fs (unit: %d drive: %d file_name:%s)",
+         unit, drive, file_name));
+
+    if (unit < 8) {
+        return -1;
+    }
+    if (drive != 1) {
+        drive = 0;
+    }
+
+    /* Extract the directory path to allow FS-based drive emulation to work.  */
     util_fname_split(file_name, &directory, &file);
 
     if (archdep_path_is_relative(directory)) {
@@ -152,17 +171,17 @@ int autostart_prg_with_virtual_fs(const char *file_name,
         /* FIXME: We should actually eat `.'s and `..'s from `directory'
            instead.  */
     }
+    DBG(("autostart_prg_with_virtual_fs (directory:%s)", directory));
 
     /* Setup FS-based drive emulation.  */
-    fsdevice_set_directory(directory ? directory : ".", 8);
-    resources_get_int("AutostartHandleTrueDriveEmulation", &val);
-    if (val == 0) {
-        resources_set_int("DriveTrueEmulation", 0);
-    }
-    resources_set_int("VirtualDevices", 1);
-    resources_set_int("FSDevice8ConvertP00", 1);
-    file_system_detach_disk(8);
-    resources_set_int("FileSystemDevice8", ATTACH_DEVICE_FS);
+    /* resources_set_int("VirtualDevices", 1); FIXME: not restored */
+    resources_set_int_sprintf("FSDevice%dConvertP00", 1, unit);
+    file_system_detach_disk(unit, drive);              /* FIXME: not restored */
+    resources_set_int_sprintf("FileSystemDevice%d", ATTACH_DEVICE_FS, unit);
+    fsdevice_set_directory(directory ? directory : ".", unit);
+    log_message(autostart_log, "using virtual filesystem on: %s.", directory);
+
+    /* other setup was done by autostart_prg() */
 
     lib_free(directory);
     lib_free(file);
@@ -184,36 +203,45 @@ int autostart_prg_with_ram_injection(const char *file_name,
     return (inject_prg == NULL) ? -1 : 0;
 }
 
-int autostart_prg_with_disk_image(const char *file_name,
+int autostart_prg_with_disk_image(int unit, int drive, const char *file_name,
                                   fileio_info_t *fh,
                                   log_t log,
                                   const char *image_name)
 {
-    const int drive = 8;
     const int secondary = 1;
     autostart_prg_t *prg;
     vdrive_t *vdrive;
     int i;
-    int old_tde_state;
     int file_name_size;
     uint8_t data;
     unsigned int disk_image_type;
     int result, result2;
+    char tempname[32];
+
+    DBG(("autostart_prg_with_disk_image (unit: %d drive: %d file_name :%s image_name :%s)",
+         unit, drive, file_name, image_name));
+
+    if (unit < 8) {
+        return -1;
+    }
+    if (drive != 1) {
+        drive = 0;
+    }
 
     /* identify disk image type */
-    switch (drive_get_disk_drive_type(drive - 8)) {
+    switch (drive_get_disk_drive_type(unit - 8)) {
     case DRIVE_TYPE_1540:
     case DRIVE_TYPE_1541:
     case DRIVE_TYPE_1541II:
     case DRIVE_TYPE_1551:
     case DRIVE_TYPE_1570:
     case DRIVE_TYPE_2031:
-        disk_image_type = DISK_IMAGE_TYPE_D64; 
+        disk_image_type = DISK_IMAGE_TYPE_D64;
         break;
     case DRIVE_TYPE_2040:
     case DRIVE_TYPE_3040:
     case DRIVE_TYPE_4040:
-        disk_image_type = DISK_IMAGE_TYPE_D67; 
+        disk_image_type = DISK_IMAGE_TYPE_D67;
         break;
     case DRIVE_TYPE_1571:
     case DRIVE_TYPE_1571CR:
@@ -222,7 +250,7 @@ int autostart_prg_with_disk_image(const char *file_name,
     case DRIVE_TYPE_1581:
     case DRIVE_TYPE_2000:
     case DRIVE_TYPE_4000:
-        disk_image_type = DISK_IMAGE_TYPE_D81; 
+        disk_image_type = DISK_IMAGE_TYPE_D81;
         break;
     case DRIVE_TYPE_8050:
         disk_image_type = DISK_IMAGE_TYPE_D80;
@@ -231,7 +259,7 @@ int autostart_prg_with_disk_image(const char *file_name,
     case DRIVE_TYPE_1001:
         disk_image_type = DISK_IMAGE_TYPE_D82;
         break;
-    default: 
+    default:
         log_error(log, "No idea what disk image format to use.");
         return -1;
     }
@@ -240,13 +268,6 @@ int autostart_prg_with_disk_image(const char *file_name,
     prg = load_prg(file_name, fh, log);
     if (prg == NULL) {
         return -1;
-    }
-
-    /* disable TDE */
-    resources_get_int("DriveTrueEmulation", &old_tde_state);
-    if (old_tde_state != 0) {
-        log_message(log, "Turning true drive emulation off.");
-        resources_set_int("DriveTrueEmulation", 0);
     }
 
     do {
@@ -259,25 +280,39 @@ int autostart_prg_with_disk_image(const char *file_name,
         }
 
         /* attach disk image */
-        if (file_system_attach_disk(drive, image_name) < 0) {
+        if (file_system_attach_disk(unit, drive, image_name) < 0) {
             log_error(log, "Could not attach disk image: %s", image_name);
             break;
         }
 
         /* get vdrive */
-        vdrive = file_system_get_vdrive((unsigned int)drive);
+        vdrive = file_system_get_vdrive((unsigned int)unit, drive);
         if (vdrive == NULL) {
             break;
         }
 
-        /* get file name size */
-        file_name_size = strlen((const char *)fh->name);
+        /* create name for saving the file to the temporary disk. truncate to
+           16 characters max., remove ".prg" extension when found */
+        i = 0;while (fh->name[i]) {
+            if (i == 16) {
+                break;
+            }
+            if ((i < 16) && (!strcasecmp((const char*)&fh->name[i], ".prg"))) {
+                break;
+            }
+            tempname[i] = fh->name[i];
+            i++;
+        }
+        tempname[i] = 0;
+        file_name_size = i;
+
+        /* this should not happen */
         if (file_name_size > 16) {
             file_name_size = 16;
         }
 
         /* open file on disk */
-        if (vdrive_iec_open(vdrive, (const uint8_t *)fh->name, file_name_size, secondary, NULL) != SERIAL_OK) {
+        if (vdrive_iec_open(vdrive, (const uint8_t *)tempname, file_name_size, secondary, NULL) != SERIAL_OK) {
             log_error(log, "Could not open file");
             break;
         }
@@ -314,12 +349,6 @@ int autostart_prg_with_disk_image(const char *file_name,
     /* free prg file */
     free_prg(prg);
 
-    /* re-enable TDE */
-    if (old_tde_state != 0) {
-        log_message(log, "Turning true drive emulation on.");
-        resources_set_int("DriveTrueEmulation", old_tde_state);
-    }
-
     /* ready */
     return result;
 }
@@ -336,9 +365,8 @@ int autostart_prg_perform_injection(log_t log)
         return -1;
     }
 
-    log_message(log, "Injecting program data at $%04x (size $%04x)",
-                prg->start_addr,
-                (unsigned int)prg->size);
+    log_message(autostart_log, "Injecting program data at $%04x (size $%04x)",
+                prg->start_addr, (unsigned int)prg->size);
 
     /* store data in emu memory */
     for (i = 0; i < prg->size; i++) {

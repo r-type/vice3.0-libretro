@@ -31,13 +31,11 @@
 #include "log.h"
 #include "ioutil.h"
 #include "util.h"
-#include "archdep_atexit.h"
+#include "archdep_exit.h"
 #include "archdep_boot_path.h"
 #include "archdep_join_paths.h"
 
-/* TODO: #include for AmigaOS tmpnam() */
-/* TODO: #include for BeOS/Haiku tmpnam() */
-/* TODO: #include for OS/2 tmpnam() */
+/* TODO: include for BeOS/Haiku tmpnam() */
 
 /* Seems like tmpnam() is available in stdio.h for Linux, BSD, Windows and
  * perhaps others
@@ -56,12 +54,8 @@
 
 char *archdep_tmpnam(void)
 {
-#ifdef ARCHDEP_OS_AMIGA
-    return lib_stralloc(tmpnam(NULL));
-#elif defined(ARCHDEP_OS_BEOS)
-    return lib_stralloc(tmpnam(NULL));
-#elif defined(ARCHDEP_OS_OS2)
-    return = lib_stralloc(tmpnam(NULL));
+#if defined(ARCHDEP_OS_BEOS)
+    return lib_strdup(tmpnam(NULL));
 #elif defined(ARCHDEP_OS_UNIX)
     /*
      * Linux manpage for tmpnam(3) says to never use it, FreeBSD indicates the
@@ -103,11 +97,11 @@ char *archdep_tmpnam(void)
 
     /* reduce memory usage, not strictly required since I think on Linux
      * MAXPATH is 4096 or so, not a big slab memory */
-    final_name = lib_stralloc(tmp_name);
+    final_name = lib_strdup(tmp_name);
     lib_free(tmp_name);
     return final_name;
 # else
-    return lib_stralloc(tmpnam(NULL));
+    return lib_strdup(tmpnam(NULL));
 # endif
 #elif defined(ARCHDEP_OS_WINDOWS)
     /*

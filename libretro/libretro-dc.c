@@ -1102,7 +1102,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
          {
             case 1:
                /* Detach & disable drive 8 */
-               file_system_detach_disk(8);
+               file_system_detach_disk(8, 0);
                log_resources_set_int("Drive8Type", DRIVE_TYPE_NONE);
                break;
             
@@ -1115,7 +1115,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             case 0:
                /* Detach & disable tape, detach & disable drive 8 */
                tape_deinstall();
-               file_system_detach_disk(8);
+               file_system_detach_disk(8, 0);
                log_resources_set_int("Drive8Type", DRIVE_TYPE_NONE);
                break;
          }

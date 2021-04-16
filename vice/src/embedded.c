@@ -59,12 +59,15 @@ static embedded_t commonfiles[] = {
     { "dos2040", DRIVE_ROM2040_SIZE, DRIVE_ROM2040_SIZE, DRIVE_ROM2040_SIZE, NULL },
     { "dos3040", DRIVE_ROM3040_SIZE, DRIVE_ROM3040_SIZE, DRIVE_ROM3040_SIZE, NULL },
     { "dos4040", DRIVE_ROM4040_SIZE, DRIVE_ROM4040_SIZE, DRIVE_ROM4040_SIZE, NULL },
+#ifdef __LIBRETRO__
+    { "dos9000", DRIVE_ROM9000_SIZE, DRIVE_ROM9000_SIZE, DRIVE_ROM9000_SIZE, NULL },
+#endif
     { "dos1551", DRIVE_ROM1551_SIZE, DRIVE_ROM1551_SIZE, DRIVE_ROM1551_SIZE, NULL },
     { "d1571cr", DRIVE_ROM1571CR_SIZE, DRIVE_ROM1571CR_SIZE, DRIVE_ROM1571CR_SIZE, NULL },
     { NULL }
 };
 
-static size_t embedded_match_file(const char *name, BYTE *dest, int minsize, int maxsize, embedded_t *emb)
+static size_t embedded_match_file(const char *name, unsigned char *dest, int minsize, int maxsize, embedded_t *emb)
 {
     int i = 0;
     int load_at_start;
@@ -92,7 +95,7 @@ static size_t embedded_match_file(const char *name, BYTE *dest, int minsize, int
     return 0;
 }
 
-size_t embedded_check_extra(const char *name, BYTE *dest, int minsize, int maxsize)
+size_t embedded_check_extra(const char *name, unsigned char *dest, int minsize, int maxsize)
 {
     size_t retval;
 

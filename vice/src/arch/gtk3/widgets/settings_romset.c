@@ -55,11 +55,13 @@
  * $VICERES DosName1581         x64 x64sc xscpu64 xvic x128 xplus4
  * $VICERES DosName2000         x64 x64sc xscpu64 xvic x128 xplus4
  * $VICERES DosName4000         x64 x64sc xscpu64 xvic x128 xplus4
+ * $VICERES DosNameCMDHD        x64 x64sc xscpu64 xvic x128 xplus4
  * $VICERES DosName2031         x64 x64sc xscpu64 xvic x128 xcbm5x0 xcbm2 xpet
  * $VICERES DosName2040         x64 x64sc xscpu64 xvic x128 xcbm5x0 xcbm2 xpet
  * $VICERES DosName3040         x64 x64sc xscpu64 xvic x128 xcbm5x0 xcbm2 xpet
  * $VICERES DosName4040         x64 x64sc xscpu64 xvic x128 xcbm5x0 xcbm2 xpet
  * $VICERES DosName1001         x64 x64sc xscpu64 xvic x128 xcbm5x0 xcbm2 xpet
+ * $VICERES DosName9000         x64 x64sc xscpu64 xvic x128 xcbm5x0 xcbm2 xpet
  * $VICERES DriveProfDOS1571Name    x64 x64sc xscpu64 x128
  * $VICERES DriveSuperCardName      x64 x64sc xscpu64 x128
  * $VICERES DriveStarDosName        x64 x64sc xscpu64 x128
@@ -274,11 +276,13 @@ static const romset_entry_t c64_vic20_drive_roms[] = {
     { "DosName1581",    "1581",     NULL },
     { "DosName2000",    "2000",     NULL },
     { "DosName4000",    "4000",     NULL },
+    { "DosNameCMDHD",   "CMD HD",   NULL },
     { "DosName2031",    "2031",     NULL },
     { "DosName2040",    "2040",     NULL },
     { "DosName3040",    "3040",     NULL },
     { "DosName4040",    "4040",     NULL },
     { "DosName1001",    "1001",     NULL },
+    { "DosName9000",    "D9090/60", NULL },
     { NULL,         NULL,           NULL }
 };
 
@@ -295,18 +299,20 @@ static const romset_entry_t c128_drive_roms[] = {
     { "DosName1581",    "1581",     NULL },
     { "DosName2000",    "2000",     NULL },
     { "DosName4000",    "4000",     NULL },
+    { "DosNameCMDHD",   "CMD HD",   NULL },
     { "DosName2031",    "2031",     NULL },
     { "DosName2040",    "2040",     NULL },
     { "DosName3040",    "3040",     NULL },
     { "DosName4040",    "4040",     NULL },
     { "DosName1001",    "1001",     NULL },
+    { "DosName9000",    "D9090/60", NULL },
     { NULL,         NULL,           NULL }
 };
 
 
 static const romset_entry_t c64_c128_drive_exp_roms[] = {
     { "DriveProfDOS1571Name",   "ProfDOS 1571", NULL },
-    { "DriveSuperCardName",     "SuperCard",    NULL },
+    { "DriveSuperCardName",     "Supercard",    NULL },
     { "DriveStarDosName",       "StarDOS",      NULL },
     { NULL,                     NULL,           NULL }
 };
@@ -320,6 +326,7 @@ static const romset_entry_t pet_cbm2_drive_roms[] = {
     { "DosName3040",    "3040",     NULL },
     { "DosName4040",    "4040",     NULL },
     { "DosName1001",    "1001",     NULL },
+    { "DosName9000",    "D9090/60", NULL },
     { NULL,         NULL,           NULL }
 };
 
@@ -336,6 +343,7 @@ static const romset_entry_t plus4_drive_roms[] = {
     { "DosName1581",    "1581",     NULL },
     { "DosName2000",    "2000",     NULL },
     { "DosName4000",    "4000",     NULL },
+    { "DosNameCMDHD",   "CMD HD",   NULL },
     { NULL,         NULL,           NULL }
 };
 
@@ -501,28 +509,15 @@ static GtkWidget *create_scpu64_roms_widget(void)
 static GtkWidget *create_c128_roms_widget(void)
 {
     GtkWidget *grid;
-#if 0
-    GtkWidget *label;
-    GtkWidget *browser;
-#endif
-    grid = create_roms_widget(c128_machine_roms);
 
-/* two rows of browers - sucks */
-#if 0
-    label = gtk_label_new("Some resource");
-    browser = vice_gtk3_resource_browser_new("InvalidResourceName",
-            rom_file_patterns, "ROM files", "Select ROM file",
-            NULL /* no label, so the labels get aligned properly */,
-            NULL);
-    gtk_grid_attach(GTK_GRID(grid), label, 2, 1, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), browser, 3, 1, 1, 1);
-#endif
+    grid = create_roms_widget(c128_machine_roms);
     return grid;
 }
 
 static GtkWidget *create_c128_chargen_widget(void)
 {
     GtkWidget *grid;
+
     grid = create_roms_widget(c128_chargen_roms);
     return grid;
 }
@@ -531,6 +526,7 @@ static GtkWidget *create_c128_chargen_widget(void)
 static GtkWidget *create_plus4_roms_widget(void)
 {
     GtkWidget *grid;
+
     grid = create_roms_widget(plus4_machine_roms);
     return grid;
 }
@@ -539,6 +535,7 @@ static GtkWidget *create_plus4_roms_widget(void)
 static GtkWidget *create_cbm2_roms_widget(void)
 {
     GtkWidget *grid;
+
     grid = create_roms_widget(cbm2_machine_roms);
     return grid;
 }

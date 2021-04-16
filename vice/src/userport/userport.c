@@ -129,7 +129,7 @@ void userport_device_unregister(userport_device_list_t *device)
 static void userport_detach_devices(int collision, unsigned int highest_order)
 {
     userport_device_list_t *current = userport_head.next;
-    char *tmp1 = lib_stralloc("Userport collision detected from ");
+    char *tmp1 = lib_strdup("Userport collision detected from ");
     char *tmp2;
     int col_found = 0;
     char *last_device_resource = NULL;
@@ -738,6 +738,7 @@ int userport_snapshot_read_module(snapshot_t *s)
         current = userport_head.next;
         while (current) {
             detach_resource_list[i++] = current->device->resource;
+            current = current->next;
         }
         for (i = 0; i < amount; ++i) {
             resources_set_int(detach_resource_list[i], 0);
@@ -752,7 +753,7 @@ int userport_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_MAJOR || minor_version > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

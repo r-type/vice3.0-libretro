@@ -35,7 +35,8 @@
 #include "archdep.h"
 #include "log.h"
 
-#define PCM_BUFFER_SIZE SOUND_BUFSIZE * 4
+/* HACK: Massive fixed size buffer for now, as the sound.c buffer has been made dynamic in size there is no more constant to use here. */
+#define PCM_BUFFER_SIZE (SOUND_CHANNELS_MAX * 1024 * 1024)
 
 static int stereo = 0;
 static FLAC__int32 pcm_buffer[PCM_BUFFER_SIZE];
@@ -84,7 +85,7 @@ static int flac_init(const char *param,
             (metadata[1] = FLAC__metadata_object_new(FLAC__METADATA_TYPE_PADDING)) == NULL ||
             !FLAC__metadata_object_vorbiscomment_entry_from_name_value_pair(&entry, "CREATOR", "VICE") ||
             !FLAC__metadata_object_vorbiscomment_append_comment(metadata[0], entry, false) ||
-            !FLAC__metadata_object_vorbiscomment_entry_from_name_value_pair(&entry, "YEAR", "2018") ||
+            !FLAC__metadata_object_vorbiscomment_entry_from_name_value_pair(&entry, "YEAR", "2019") ||
             !FLAC__metadata_object_vorbiscomment_append_comment(metadata[0], entry, /*copy=*/false)
         ) {
             ok = false;
@@ -161,7 +162,8 @@ static sound_device_t flac_device =
     NULL,
     NULL,
     0,
-    2
+    2,
+    false
 };
 
 int sound_init_flac_device(void)

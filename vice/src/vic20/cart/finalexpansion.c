@@ -164,18 +164,19 @@ static void finalexpansion_io3_store(uint16_t addr, uint8_t value);
 static int finalexpansion_mon_dump(void);
 
 static io_source_t finalexpansion_device = {
-    CARTRIDGE_VIC20_NAME_FINAL_EXPANSION,
-    IO_DETACH_CART,
-    NULL,
-    0x9c00, 0x9fff, 0x3ff,
-    0,
-    finalexpansion_io3_store,
-    finalexpansion_io3_read,
-    finalexpansion_io3_peek,
-    finalexpansion_mon_dump,
-    CARTRIDGE_VIC20_FINAL_EXPANSION,
-    0,
-    0
+    CARTRIDGE_VIC20_NAME_FINAL_EXPANSION, /* name of the device */
+    IO_DETACH_CART,                       /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,                /* does not use a resource for detach */
+    0x9c00, 0x9fff, 0x03,                 /* range for the device, regs:$9c00-$9c03, mirrors:$9c04-$9fff */
+    0,                                    /* read validity is determined by the device upon a read */
+    finalexpansion_io3_store,             /* store function */
+    NULL,                                 /* NO poke function */
+    finalexpansion_io3_read,              /* read function */
+    finalexpansion_io3_peek,              /* peek function */
+    finalexpansion_mon_dump,              /* device state information dump function */
+    CARTRIDGE_VIC20_FINAL_EXPANSION,      /* cartridge ID */
+    IO_PRIO_NORMAL,                       /* normal priority, device read needs to be checked for collisions */
+    0                                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *finalexpansion_list_item = NULL;
@@ -622,12 +623,12 @@ static int zfile_load(const char *filename, uint8_t *dest)
         tsize = (fsize + 0x0fff) & 0xfffff000;
         offs = 0x8000 - tsize;
         dest += offs;
-        log_message(fe_log, "Size less than 32kB.  Aligning as close as possible to the 32kB boundary in 4kB blocks. (0x%06X-0x%06X)", (unsigned int)offs, (unsigned int)(offs + tsize));
+        log_message(fe_log, "Size less than 32KiB.  Aligning as close as possible to the 32KiB boundary in 4KiB blocks. (0x%06X-0x%06X)", (unsigned int)offs, (unsigned int)(offs + tsize));
     } else if (fsize < (size_t)CART_ROM_SIZE) {
-        log_message(fe_log, "Size less than 512kB, padding.");
+        log_message(fe_log, "Size less than 512KiB, padding.");
     } else if (fsize > (size_t)CART_ROM_SIZE) {
         fsize = CART_ROM_SIZE;
-        log_message(fe_log, "Size larger than 512kB, truncating.");
+        log_message(fe_log, "Size larger than 512KiB, truncating.");
     }
     if (fread(dest, fsize, 1, fd) < 1) {
         log_message(fe_log, "Failed to read image `%s'!", filename);
@@ -684,7 +685,7 @@ void finalexpansion_detach(void)
        and cartridge wasn't from a snapshot */
     if (finalexpansion_writeback && !cartridge_is_from_snapshot) {
         if (flash_state.flash_dirty) {
-            int n;
+            long n;
             FILE *fd;
 
             n = 0;
@@ -952,13 +953,15 @@ static void finalexpansion_mon_dump_blk(int blk)
     mon_out("\n  read %s ", finalexpansion_acc_mode[acc_mode_r]);
 
     if (acc_mode_r != ACC_OFF) {
-        mon_out("bank $%02x (offset $%06x)", bank_r, calc_addr(0, bank_r, base));
+        mon_out("bank $%02x (offset $%06x)",
+                (unsigned int)bank_r, calc_addr(0, bank_r, base));
     }
 
     mon_out("\n write %s ", finalexpansion_acc_mode[acc_mode_w]);
 
     if (acc_mode_w != ACC_OFF) {
-        mon_out("bank $%02x (offset $%06x)", bank_w, calc_addr(0, bank_w, base));
+        mon_out("bank $%02x (offset $%06x)",
+                (unsigned int)bank_w, calc_addr(0, bank_w, base));
     }
 
     mon_out("\n");

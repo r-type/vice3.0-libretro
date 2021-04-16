@@ -55,7 +55,7 @@
 
 /* #define T6721DEBUG */
 
-#define WRITEWAVFILE 0 /* write "test.wav" containing all generated output */
+#define WRITEWAVFILE 1 /* write "test.wav" containing all generated output */
 
 #ifdef T6721DEBUG
 #define DBG(x) DBG_STATUS(); printf x;
@@ -245,7 +245,7 @@ static int wav_create_file(const char *filename)
         return 1;
     }
 
-    archdep_vice_atexit(wav_close_file);
+    atexit(wav_close_file);
     return write_header();
 }
 
@@ -353,7 +353,7 @@ static int16_t output_update_sample(t6721_state *t6721)
     return this;
 }
 
-static int framestretch[0x10] =
+static const int framestretch[0x10] =
 {
     100, /* 0 : 1,0  */
      70, /* 1 : 0,7  (1.4% faster) */
@@ -1016,16 +1016,16 @@ int t6721_dump(t6721_state *t6721)
 /* FIXME: implement snapshot support */
 int t6721_snapshot_write_module(snapshot_t *s, t6721_state *t6721)
 {
-    return -1;
-#if 0
     snapshot_module_t *m;
 
-    m = snapshot_module_create(s, SNAP_MODULE_NAME,
-                               CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
+    m = snapshot_module_create(s, SNAP_MODULE_NAME, CART_DUMP_VER_MAJOR, CART_DUMP_VER_MINOR);
     if (m == NULL) {
         return -1;
     }
 
+    snapshot_set_error(SNAPSHOT_MODULE_NOT_IMPLEMENTED);
+    return -1;
+#if 0
     if (0) {
         snapshot_module_close(m);
         return -1;

@@ -105,6 +105,7 @@
 #include "sid.h"
 #include "snespad.h"
 #include "sound.h"
+#include "tapecart.h"
 #include "traps.h"
 #include "types.h"
 #include "userport.h"
@@ -185,108 +186,122 @@ static machine_timing_t machine_timing;
 /* ------------------------------------------------------------------------ */
 
 static io_source_t vicii_d000_device = {
-    "VIC-II",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xd000, 0xd0ff, 0x3f,
-    1, /* read is always valid */
-    vicii_store,
-    vicii_read,
-    vicii_peek,
-    vicii_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "VIC-II",              /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xd000, 0xd0ff, 0x3f,  /* range for the chip, regs:$d000-$d03f, mirrors:$d040-$d0ff */
+    1,                     /* read is always valid */
+    vicii_store,           /* store function */
+    NULL,                  /* NO poke function */
+    vicii_read,            /* read function */
+    vicii_peek,            /* peek function */
+    vicii_dump,            /* chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_HIGH,          /* high priority, chip and mirrors never involved in collisions */
+    0,                     /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_MASK         /* contains mirrors, defined by mask */
 };
 
 static io_source_t vicii_d100_device = {
-    "VIC-II $D100-$D1FF mirrors",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xd100, 0xd1ff, 0x3f,
-    1, /* read is always valid */
-    vicii_store,
-    vicii_read,
-    vicii_peek,
-    vicii_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "VIC-II $D100-$D1FF mirrors", /* name of the chip */
+    IO_DETACH_NEVER,              /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE,        /* does not use a resource for detach */
+    0xd100, 0xd1ff, 0x3f,         /* range for the chip, mirrors of $d000-$d03f */
+    1,                            /* read is always valid */
+    vicii_store,                  /* store function */
+    NULL,                         /* NO poke function */
+    vicii_read,                   /* read function */
+    vicii_peek,                   /* peek function */
+    vicii_dump,                   /* chip state information dump function */
+    IO_CART_ID_NONE,              /* not a cartridge */
+    IO_PRIO_HIGH,                 /* high priority, chip and mirrors never involved in collisions */
+    0,                            /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_OTHER               /* this is a mirror of another registered device */
 };
 
 static io_source_t sid_d400_device = {
-    "SID",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xd400, 0xd41f, 0x1f,
-    1, /* read is always valid */
-    sid_store,
-    sid_read,
-    sid_peek,
-    NULL, /* TODO: dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "SID",                 /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xd400, 0xd41f, 0x1f,  /* main registers */
+    1,                     /* read is always valid */
+    sid_store,             /* store function */
+    NULL,                  /* NO poke function */
+    sid_read,              /* read function */
+    sid_peek,              /* peek function */
+    sid_dump,              /* chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_HIGH,          /* high priority, chip never involved in collisions */
+    0,                     /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_NONE         /* this is not a mirror */
 };
 
 static io_source_t sid_d420_device = {
-    "SID $D420-$D4FF mirrors",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xd420, 0xd4ff, 0x1f,
-    1, /* read is always valid */
-    sid_store,
-    sid_read,
-    sid_peek,
-    NULL, /* TODO: dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_LOW, /* low priority, device and mirrors never involved in collisions */
-    0
+    "SID $D420-$D4FF mirrors", /* name of the chip */
+    IO_DETACH_NEVER,           /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE,     /* does not use a resource for detach */
+    0xd420, 0xd4ff, 0x1f,      /* mirrors of $d400-$d41f */
+    1,                         /* read is always valid */
+    sid_store,                 /* store function */
+    NULL,                      /* NO poke function */
+    sid_read,                  /* read function */
+    sid_peek,                  /* peek function */
+    sid_dump,                  /* chip state information dump function */
+    IO_CART_ID_NONE,           /* not a cartridge */
+    IO_PRIO_LOW,               /* low priority, chip never involved in collisions, this is to allow additional SID chips in the same range */
+    0,                         /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_OTHER            /* this is a mirror of another registered device */
 };
 
 static io_source_t sid_d500_device = {
-    "SID $D500-$D5FF mirrors",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xd500, 0xd5ff, 0x1f,
-    1, /* read is always valid */
-    sid_store,
-    sid_read,
-    sid_peek,
-    NULL, /* TODO: dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_LOW, /* low priority, device and mirrors never involved in collisions */
-    0
+    "SID $D500-$D5FF mirrors", /* name of the chip */
+    IO_DETACH_NEVER,           /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE,     /* does not use a resource for detach */
+    0xd500, 0xd5ff, 0x1f,      /* mirrors of $d400-$d41f */
+    1,                         /* read is always valid */
+    sid_store,                 /* store function */
+    NULL,                      /* NO poke function */
+    sid_read,                  /* read function */
+    sid_peek,                  /* peek function */
+    sid_dump,                  /* chip state information dump function */
+    IO_CART_ID_NONE,           /* not a cartridge */
+    IO_PRIO_LOW,               /* low priority, chip never involved in collisions, this is to allow additional SID chips in the same range */
+    0,                         /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_OTHER            /* this is a mirror of another registered device */
 };
 
 static io_source_t sid_d600_device = {
-    "SID $D600-$D6FF mirrors",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xd600, 0xd6ff, 0x1f,
-    1, /* read is always valid */
-    sid_store,
-    sid_read,
-    sid_peek,
-    NULL, /* TODO: dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_LOW, /* low priority, device and mirrors never involved in collisions */
-    0
+    "SID $D600-$D6FF mirrors", /* name of the chip */
+    IO_DETACH_NEVER,           /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE,     /* does not use a resource for detach */
+    0xd600, 0xd6ff, 0x1f,      /* mirrors of $d400-$d41f */
+    1,                         /* read is always valid */
+    sid_store,                 /* store function */
+    NULL,                      /* NO poke function */
+    sid_read,                  /* read function */
+    sid_peek,                  /* peek function */
+    sid_dump,                  /* chip state information dump function */
+    IO_CART_ID_NONE,           /* not a cartridge */
+    IO_PRIO_LOW,               /* low priority, chip never involved in collisions, this is to allow additional SID chips in the same range */
+    0,                         /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_OTHER            /* this is a mirror of another registered device */
 };
 
 static io_source_t sid_d700_device = {
-    "SID $D700-$D7FF mirrors",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xd700, 0xd7ff, 0x1f,
-    1, /* read is always valid */
-    sid_store,
-    sid_read,
-    sid_peek,
-    NULL, /* TODO: dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_LOW, /* low priority, device and mirrors never involved in collisions */
-    0
+    "SID $D700-$D7FF mirrors", /* name of the chip */
+    IO_DETACH_NEVER,           /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE,     /* does not use a resource for detach */
+    0xd700, 0xd7ff, 0x1f,      /* mirrors of $d400-$d41f */
+    1,                         /* read is always valid */
+    sid_store,                 /* store function */
+    NULL,                      /* NO poke function */
+    sid_read,                  /* read function */
+    sid_peek,                  /* peek function */
+    sid_dump,                  /* chip state information dump function */
+    IO_CART_ID_NONE,           /* not a cartridge */
+    IO_PRIO_LOW,               /* low priority, chip never involved in collisions, this is to allow additional SID chips in the same range */
+    0,                         /* insertion order, gets filled in by the registration function */
+    IO_MIRROR_OTHER            /* this is a mirror of another registered device */
 };
 
 static io_source_list_t *vicii_d000_list_item = NULL;
@@ -774,7 +789,7 @@ static void scpu64_monitor_init(void)
 {
     unsigned int dnr;
     monitor_cpu_type_t asm6502, asmR65C02, asm65816;
-    monitor_interface_t *drive_interface_init[DRIVE_NUM];
+    monitor_interface_t *drive_interface_init[NUM_DISK_UNITS];
     monitor_cpu_type_t *asmarray[4];
 
     asmarray[0] = &asm65816;
@@ -786,7 +801,7 @@ static void scpu64_monitor_init(void)
     asmR65C02_init(&asmR65C02);
     asm65816_init(&asm6502);
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
         drive_interface_init[dnr] = drive_cpu_monitor_interface_get(dnr);
     }
 
@@ -805,8 +820,6 @@ void machine_setup_context(void)
 /* C64-specific initialization.  */
 int machine_specific_init(void)
 {
-    int delay;
-
     scpu64_log = log_open("SCPU64");
 
     if (mem_load() < 0) {
@@ -840,19 +853,14 @@ int machine_specific_init(void)
 
     disk_image_init();
 
-    resources_get_int("AutostartDelay", &delay);
-    if (delay == 0) {
-#ifdef __LIBRETRO__
-        // scpu-dos-1.04.bin needs 5
-        // scpu-dos-2.04.bin needs 4
-        delay = 5;
-#else
-        delay = 3; /* default */
-#endif
-    }
-
     /* Initialize autostart.  */
-    autostart_init((CLOCK)(delay * SCPU64_PAL_RFSH_PER_SEC * SCPU64_PAL_CYCLES_PER_RFSH), 1, 0xcc, 0xd1, 0xd3, 0xd5);
+#ifdef __LIBRETRO__
+    /* scpu-dos-1.04.bin needs 5
+     * scpu-dos-2.04.bin needs 4 */
+    autostart_init(5, 1);
+#else
+    autostart_init(3, 1);
+#endif
 
     /* Pre-init C64-specific parts of the menus before vicii_init()
        creates a canvas window with a menubar at the top. */
@@ -892,7 +900,8 @@ int machine_specific_init(void)
 
     /* Initialize sound.  Notice that this does not really open the audio
        device yet.  */
-    sound_init(machine_timing.cycles_per_sec, machine_timing.cycles_per_rfsh);
+    sound_init((unsigned int)machine_timing.cycles_per_sec,
+               (unsigned int)machine_timing.cycles_per_rfsh);
 
     /* Initialize keyboard buffer.  */
     kbdbuf_init(631, 198, 10,
@@ -1107,38 +1116,38 @@ void machine_change_timing(int timeval, int border_mode)
 #ifdef HAVE_MOUSE
     neos_mouse_set_machine_parameter(machine_timing.cycles_per_sec);
 #endif
-    clk_guard_set_clk_base(maincpu_clk_guard, machine_timing.cycles_per_rfsh);
+    clk_guard_set_clk_base(maincpu_clk_guard, (CLOCK)machine_timing.cycles_per_rfsh);
 
     vicii_change_timing(&machine_timing, border_mode);
 
-    cia1_set_timing(machine_context.cia1, machine_timing.cycles_per_sec, machine_timing.power_freq);
-    cia2_set_timing(machine_context.cia2, machine_timing.cycles_per_sec, machine_timing.power_freq);
+    cia1_set_timing(machine_context.cia1,
+                    (int)machine_timing.cycles_per_sec,
+                    machine_timing.power_freq);
+    cia2_set_timing(machine_context.cia2,
+                    (int)machine_timing.cycles_per_sec,
+                    machine_timing.power_freq);
 
     machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 }
 
 /* ------------------------------------------------------------------------- */
 
-int machine_write_snapshot_to_stream(snapshot_stream_t *stream, int save_roms,
-                                     int save_disks, int event_mode)
-{
-    return scpu64_snapshot_write_to_stream(stream, save_roms, save_disks,
-                                          event_mode);
-}
-
-int machine_read_snapshot_from_stream(snapshot_stream_t *stream, int event_mode)
-{
-    return scpu64_snapshot_read_from_stream(stream, event_mode);
-}
-
 int machine_write_snapshot(const char *name, int save_roms, int save_disks, int event_mode)
 {
-    return scpu64_snapshot_write(name, save_roms, save_disks, event_mode);
+    int err = scpu64_snapshot_write(name, save_roms, save_disks, event_mode);
+    if ((err < 0) && (snapshot_get_error() == SNAPSHOT_NO_ERROR)) {
+        snapshot_set_error(SNAPSHOT_CANNOT_WRITE_SNAPSHOT);
+    }
+    return err;
 }
 
 int machine_read_snapshot(const char *name, int event_mode)
 {
-    return scpu64_snapshot_read(name, event_mode);
+    int err = scpu64_snapshot_read(name, event_mode);
+    if ((err < 0) && (snapshot_get_error() == SNAPSHOT_NO_ERROR)) {
+        snapshot_set_error(SNAPSHOT_CANNOT_READ_SNAPSHOT);
+    }
+    return err;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1188,6 +1197,16 @@ uint8_t machine_tape_behaviour(void)
     return 0;
 }
 
+int tapecart_is_valid(const char *filename)
+{
+    return 0;   /* FALSE */
+}
+
+int tapecart_attach_tcrt(const char *filename, void *unused)
+{
+    return -1;
+}
+
 static int get_cart_emulation_state(void)
 {
     int value;
@@ -1210,6 +1229,10 @@ static int check_cart_range(unsigned int addr)
 
 int machine_addr_in_ram(unsigned int addr)
 {
+    /* hack to make autostarting work */
+    if (addr < 0x100) {
+        return 0;
+    }
     return ((addr < 0xe000 && !(addr >= 0xa000 && addr < 0xc000)) && check_cart_range(addr));
 }
 
@@ -1228,11 +1251,11 @@ static void scpu64_userport_set_flag(uint8_t b)
 }
 
 static userport_port_props_t userport_props = {
-    1, /* has pa2 pin */
-    1, /* has pa3 pin */
-    scpu64_userport_set_flag, /* has flag pin */
-    1, /* has pc pin */
-    1  /* has cnt1, cnt2 and sp pins */
+    1,                        /* port has the pa2 pin */
+    1,                        /* port has the pa3 pin */
+    scpu64_userport_set_flag, /* port has the flag pin, set flag function */
+    1,                        /* port has the pc pin */
+    1                         /* port has the cnt1, cnt2 and sp pins */
 };
 
 int machine_register_userport(void)
@@ -1262,6 +1285,7 @@ static drive_type_info_t drive_type_info_list[] = {
     { DRIVE_NAME_1581, DRIVE_TYPE_1581 },
     { DRIVE_NAME_2000, DRIVE_TYPE_2000 },
     { DRIVE_NAME_4000, DRIVE_TYPE_4000 },
+    { DRIVE_NAME_CMDHD, DRIVE_TYPE_CMDHD },
     { DRIVE_NAME_2031, DRIVE_TYPE_2031 },
     { DRIVE_NAME_2040, DRIVE_TYPE_2040 },
     { DRIVE_NAME_3040, DRIVE_TYPE_3040 },
@@ -1269,6 +1293,7 @@ static drive_type_info_t drive_type_info_list[] = {
     { DRIVE_NAME_1001, DRIVE_TYPE_1001 },
     { DRIVE_NAME_8050, DRIVE_TYPE_8050 },
     { DRIVE_NAME_8250, DRIVE_TYPE_8250 },
+    { DRIVE_NAME_9000, DRIVE_TYPE_9000 },
     { NULL, -1 }
 };
 

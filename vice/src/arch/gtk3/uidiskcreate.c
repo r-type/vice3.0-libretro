@@ -30,9 +30,10 @@
 
 #include "basewidgets.h"
 #include "basedialogs.h"
-#include "debug_gtk3.h"
 #include "widgethelpers.h"
 #include "driveunitwidget.h"
+#include "drivenowidget.h"
+#include "drive.h"
 #include "diskimage.h"
 #include "filechooserhelpers.h"
 #include "util.h"
@@ -73,19 +74,25 @@ static disk_image_type_t disk_image_types[] = {
     { "d80", DISK_IMAGE_TYPE_D80 },
     { "d81", DISK_IMAGE_TYPE_D81 },
     { "d82", DISK_IMAGE_TYPE_D82 },
+    { "d90", DISK_IMAGE_TYPE_D90 },
     { "d1m", DISK_IMAGE_TYPE_D1M },
     { "d2m", DISK_IMAGE_TYPE_D2M },
     { "d4m", DISK_IMAGE_TYPE_D4M },
+    { "dhd", DISK_IMAGE_TYPE_DHD },
     { "g64", DISK_IMAGE_TYPE_G64 },
     { "g71", DISK_IMAGE_TYPE_G71 },
     { "p64", DISK_IMAGE_TYPE_P64 },
+#ifdef HAVE_X64_IMAGE
     { "x64", DISK_IMAGE_TYPE_X64 },
+#endif
     { NULL, -1 }
 };
 
 
 /** \brief  Drive unit to attach image to */
-static int unit_number = 8;
+static int unit_number = DRIVE_UNIT_MIN;
+/** \brief  Drive number to attach image to in unit*/
+static int drive_number = 0;
 /** \brief  Disk image type to create */
 static int image_type = 1541;
 
@@ -115,7 +122,11 @@ static void on_response(GtkWidget *widget, gint response_id, gpointer data)
         case GTK_RESPONSE_ACCEPT:
             filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget));
             if (filename != NULL) {
-                status = create_disk_image(filename);
+                gchar *filename_locale;
+
+                filename_locale = file_chooser_convert_to_locale(filename);
+                status = create_disk_image(filename_locale);
+                g_free(filename_locale);
             }
             g_free(filename);
             if (status) {
@@ -128,7 +139,6 @@ static void on_response(GtkWidget *widget, gint response_id, gpointer data)
             gtk_widget_destroy(widget);
             break;
         default:
-            debug_gtk3("warning: unhandled response ID %d\n", response_id);
             break;
     }
 }
@@ -149,16 +159,18 @@ static void on_disk_image_type_changed(GtkComboBox *combo, gpointer data)
         model = gtk_combo_box_get_model(combo);
         if (gtk_combo_box_get_active_iter(combo, &iter)) {
             gtk_tree_model_get(model, &iter, 1, &image_type, -1);
-            debug_gtk3("got disk image type %d\n", image_type);
         }
     }
 }
 
 
+/** \brief  Attempt to set drive to match image type
+ *
+ * \return  TRUE if succesful
+ */
 static gboolean attempt_to_set_drive_type(void)
 {
     if (resources_set_int_sprintf("Drive%dType", image_type, unit_number) < 0) {
-        debug_gtk3("failed to set Drive%dType to %d\n", unit_number, image_type);
         return FALSE;
     }
     return TRUE;
@@ -248,7 +260,7 @@ static gboolean create_disk_image(const char *filename)
         }
 
         /* finally attach the disk image */
-        if (file_system_attach_disk(unit_number, fname_copy) < 0) {
+        if (file_system_attach_disk(unit_number, drive_number, fname_copy) < 0) {
             vice_gtk3_message_error("fail", "Could not attach image '%s'",
                     fname_copy);
             status = FALSE;
@@ -320,6 +332,7 @@ static GtkWidget *create_extra_widget(GtkWidget *parent, int unit)
 {
     GtkWidget *grid;
     GtkWidget *unit_widget;
+    GtkWidget *drive_widget;
     GtkWidget *type_widget;
     GtkWidget *label;
 
@@ -331,6 +344,10 @@ static GtkWidget *create_extra_widget(GtkWidget *parent, int unit)
     unit_widget = drive_unit_widget_create(unit, &unit_number, NULL);
     gtk_widget_set_valign(unit_widget, GTK_ALIGN_CENTER);
     gtk_grid_attach(GTK_GRID(grid), unit_widget, 0, 0, 1, 1);
+
+    drive_widget = drive_no_widget_create(0, &drive_number, NULL);
+    gtk_widget_set_valign(drive_widget, GTK_ALIGN_CENTER);
+    gtk_grid_attach(GTK_GRID(grid), drive_widget, 0, 1, 1, 1);
 
     /* disk name */
     label = gtk_label_new("Name:");
@@ -361,7 +378,7 @@ static GtkWidget *create_extra_widget(GtkWidget *parent, int unit)
             "Set proper drive type when attaching image");
     /* disable by default */
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(set_drive_type), FALSE);
-    gtk_grid_attach(GTK_GRID(grid), set_drive_type, 0, 1, 4, 1);
+    gtk_grid_attach(GTK_GRID(grid), set_drive_type, 4, 1, 4, 1);
 
     gtk_widget_show_all(grid);
     return grid;
@@ -370,17 +387,20 @@ static GtkWidget *create_extra_widget(GtkWidget *parent, int unit)
 
 /** \brief  Create and show 'attach new disk image' dialog
  *
+ *  \param[in]  parent  parent widget
+ *  \param[in]  data    disk unit
+ *
+ * \return  TRUE;
  */
-void uidiskcreate_dialog_show(GtkWidget *parent, gpointer data)
+gboolean ui_disk_create_dialog_show(GtkWidget *parent, gpointer data)
 {
     GtkWidget *dialog;
     GtkFileFilter *filter;
     int unit;
 
     unit = GPOINTER_TO_INT(data);
-    /* TODO: stuff some UNIT_MIN/UNIT_MAX defines in some file */
-    if (unit < 8 || unit > 11) {
-        unit = 8;
+    if (unit < DRIVE_UNIT_MIN || unit > DRIVE_UNIT_MAX) {
+        unit = DRIVE_UNIT_DEFAULT;
     }
     unit_number = unit;
 
@@ -405,4 +425,6 @@ void uidiskcreate_dialog_show(GtkWidget *parent, gpointer data)
     g_signal_connect(dialog, "response", G_CALLBACK(on_response), NULL);
 
     gtk_widget_show(dialog);
+
+    return TRUE;
 }

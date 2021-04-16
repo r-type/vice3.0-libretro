@@ -27,10 +27,13 @@
 #ifndef VICE_MAIN_H
 #define VICE_MAIN_H
 
+#include <stdbool.h>
+
 extern int main_program(int argc, char **argv);
-#ifndef __LIBRETRO__
 extern void main_exit(void);
-#else
-extern void vice_main_exit(void);
+
+#ifdef USE_VICE_THREAD
+extern void vice_thread_shutdown(void);
 #endif
+
 #endif

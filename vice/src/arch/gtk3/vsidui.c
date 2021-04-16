@@ -30,8 +30,6 @@
 
 #include <stdio.h>
 
-#include "debug_gtk3.h"
-
 #include "vice_gtk3.h"
 #include "machine.h"
 #include "ui.h"
@@ -57,6 +55,9 @@ static const vice_gtk3_radiogroup_entry_t vsid_vicii_models[] = {
     { "PAL-N/Drean",    MACHINE_SYNC_PALN },
     { NULL,             -1 }
 };
+
+
+
 
 
 void vsid_ui_close(void)
@@ -140,9 +141,9 @@ void vsid_ui_display_sync(int sync)
  *
  * \param[in]   sec seconds of play time
  */
-void vsid_ui_display_time(unsigned int sec)
+void vsid_ui_display_time(unsigned int dsec)
 {
-    vsid_tune_info_widget_set_time(sec);
+    vsid_tune_info_widget_set_time(dsec);
 }
 
 
@@ -259,7 +260,5 @@ int vsid_ui_init(void)
     ui_create_main_window(canvas);
     ui_display_main_window(canvas->window_index);
 
-    /* for debugging */
-    debug_gtk3("libhvsc version: %s.", hvsc_lib_version_str());
     return 0;
 }

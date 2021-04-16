@@ -103,8 +103,10 @@ static UI_MENU_CALLBACK(select_c128_model_callback)
 
 static const ui_menu_entry_t c128_model_menu[] = {
     { "C128 (PAL)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128_PAL },
+    { "C128 D (PAL)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128D_PAL },
     { "C128 DCR (PAL)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128DCR_PAL },
     { "C128 (NTSC)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128_NTSC },
+    { "C128 D (NTSC)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128D_NTSC },
     { "C128 DCR (NTSC)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128DCR_NTSC },
     SDL_MENU_LIST_END
 };
@@ -128,11 +130,11 @@ static const ui_menu_entry_t vdc_menu[] = {
       (ui_callback_data_t)2 },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("VDC memory size"),
-    { "16kB",
+    { "16KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_VDC64KB_callback,
       (ui_callback_data_t)0 },
-    { "64kB",
+    { "64KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_VDC64KB_callback,
       (ui_callback_data_t)1 },

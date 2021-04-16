@@ -1,8 +1,10 @@
 /** \file   joy-unix-usb.c
- * \brief   NetBSD/FreeBSD USB joystick support
+ * \brief   NetBSD/FreeBSD/DragonFly USB joystick support
  *
  * \author  Dieter Baron <dillo@nih.at>
  * \author  Marco van den Heuvel <blackystardust68@yahoo.com>
+ *
+ * \todo    Check if this code also works on OpenBSD.
  */
 
 /*
@@ -42,7 +44,7 @@
 #include "resources.h"
 #include "types.h"
 
-#if defined(HAS_JOYSTICK) && defined(HAS_USB_JOYSTICK)
+#if defined(HAS_USB_JOYSTICK)
 
 #define ITEM_AXIS   0
 #define ITEM_BUTTON 1
@@ -88,7 +90,7 @@ extern log_t joystick_log;
 #include <libusbhid.h>
 #endif
 
-#define MAX_DEV 4	/* number of uhid devices to try */
+#define MAX_DEV 4   /* number of uhid devices to try */
 
 struct usb_joy_item {
     struct hid_item item;
@@ -322,6 +324,6 @@ void usb_joystick(void)
     }
 }
 
-#endif /* HAS_JOYSTICK && HAS_USB_JOYSTICK */
+#endif /* HAS_USB_JOYSTICK */
 #endif
 

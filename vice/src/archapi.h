@@ -1,10 +1,12 @@
+/** \file   archapi.h
+ * \brief   Common system-specific API.
+ *
+ * \author  Andreas Boose <viceteam@t-online.de>
+ * \author  Marco van den Heuvel <blackystardust68@yahoo.com>
+ * \author  Bas Wassink <b.wassink@ziggo.nl>
+ */
+
 /*
- * archapi.h - Common system-specific API.
- *
- * Written by
- *  Andreas Boose <viceteam@t-online.de>
- *  Marco van den Heuvel <blackystardust68@yahoo.com>
- *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
  *
@@ -35,16 +37,18 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-
+#include <stdint.h>
+#include <stdbool.h>
 
 /* Program start.  */
 extern int archdep_init(int *argc, char **argv);
 extern void archdep_startup_log_error(const char *format, ...);
 
+/*
+ * refactored into src/arch/shared/
+ */
+
 /* Filesystem related functions.  */
-
-/* XXX: refactored into src/arch/shared/ : */
-
 void        archdep_program_path_set_argv0(char *argv0);
 const char *archdep_program_path(void);
 void        archdep_program_path_free(void);
@@ -58,6 +62,8 @@ void        archdep_boot_path_free(void);
 const char *archdep_home_path(void);
 void        archdep_home_path_free(void);
 
+const char *archdep_pref_path(void);
+
 int         archdep_mkdir(const char *pathname, int mode);
 int         archdep_rmdir(const char *pathname);
 
@@ -67,7 +73,7 @@ int         archdep_expand_path(char **return_path, const char *filename);
 void        archdep_sanitize_filename(char *name);
 char *      archdep_make_backup_filename(const char *fname);
 int         archdep_stat(const char *file_name,
-                         unsigned int *len,
+                         size_t *len,
                          unsigned int *isdir);
 int         archdep_rename(const char *oldpath, const char *newpath);
 
@@ -77,13 +83,33 @@ void        archdep_default_sysfile_pathlist_free(void);
 char *      archdep_extra_title_text(void);
 void        archdep_extra_title_text_free(void);
 
-int         archdep_vice_atexit(void (*function)(void));
 void        archdep_vice_exit(int excode);
 
+#ifdef USE_NATIVE_GTK3
+void        archdep_thread_init(void);
+void        archdep_set_main_thread(void);
+void        archdep_thread_shutdown(void);
+#endif
+
+/* Get the absolute path to the directory that contains the documentation */
 char *      archdep_get_vice_docsdir(void);
+/* Get the absolute path to the directory that contains resources, icons, etc */
 char *      archdep_get_vice_datadir(void);
 
+void        archdep_create_user_cache_dir(void);
+char *      archdep_user_cache_path(void);
+void        archdep_user_cache_path_free(void);
+
+void        archdep_create_user_config_dir(void);
+char *      archdep_user_config_path(void);
+void        archdep_user_config_path_free(void);
+
+char *      archdep_default_hotkey_file_name(void);
+char *      archdep_default_joymap_file_name(void);
+
+/* Register CBM font with the OS without installing */
 int         archdep_register_cbmfont(void);
+/* Unregister CBM font */
 void        archdep_unregister_cbmfont(void);
 
 /* set permissions of given file to rw, respecting current umask */
@@ -91,12 +117,14 @@ int         archdep_fix_permissions(const char *file_name);
 
 /* Resource handling.  */
 char *      archdep_default_resource_file_name(void);
+char *      archdep_default_portable_resource_file_name(void);
 
 /* Fliplist.  */
 char *      archdep_default_fliplist_file_name(void);
 
 /* RTC. */
 char *      archdep_default_rtc_file_name(void);
+int         archdep_rtc_get_centisecond(void);
 
 /* Autostart-PRG */
 char *      archdep_default_autostart_disk_image_file_name(void);
@@ -107,43 +135,66 @@ FILE *      archdep_open_default_log_file(void);
 /* Allocates a filename for a tempfile.  */
 char *      archdep_tmpnam(void);
 
+/* Virtual keyboard handling */
+int         archdep_require_vkbd(void);
 
+/* returns a NULL terminated list of strings. Both the list and the strings
+ * must be freed by the caller using lib_free(void*) */
+char **     archdep_list_drives(void);
 
-/*
- * Not yet moved to arc/shared/
- */
+/* returns a string that corresponds to the current drive. The string must
+ * be freed by the caller using lib_free(void*) */
+char *      archdep_get_current_drive(void);
 
-extern int archdep_default_logger(const char *level_string, const char *txt);
+/* sets the current drive to the given string */
+void        archdep_set_current_drive(const char *drive);
+
+int         archdep_default_logger(const char *level_string, const char *txt);
+
+/* Track default audio output device and restart sound when it changes */
+void        archdep_sound_enable_default_device_tracking(void);
 
 /* Launch program `name' (searched via the PATH environment variable)
    passing `argv' as the parameters, wait for it to exit and return its
    exit status. If `pstdout_redir' or `stderr_redir' are != NULL,
    redirect stdout or stderr to the corresponding file.  */
-extern int archdep_spawn(const char *name, char **argv,
-                         char **pstdout_redir, const char *stderr_redir);
+int         archdep_spawn(const char *name, char **argv,
+                            char **pstdout_redir, const char *stderr_redir);
 
 /* Spawn need quoting the params or expanding the filename in some archs.  */
-extern char *archdep_filename_parameter(const char *name);
-extern char *archdep_quote_parameter(const char *name);
+char *      archdep_filename_parameter(const char *name);
+char *      archdep_quote_parameter(const char *name);
+char *      archdep_quote_unzip(const char *name);
 
 /* Allocates a filename and creates a tempfile.  */
-extern FILE *archdep_mkstemp_fd(char **filename, const char *mode);
-
+FILE *      archdep_mkstemp_fd(char **filename, const char *mode);
 
 /* Check file name for block or char device.  */
-extern int archdep_file_is_blockdev(const char *name);
-extern int archdep_file_is_chardev(const char *name);
+int         archdep_file_is_blockdev(const char *name);
+int         archdep_file_is_chardev(const char *name);
 
-/* Networking. */
+bool        archdep_file_exists(const char *path);
+
+void        archdep_usleep(uint64_t waitTime);
+
+
+/* Runtime OS checks, shouldn't be required */
+int         archdep_is_haiku(void);
+int         archdep_is_windows_nt(void);
+
+
+/* Icon handling */
+char *      archdep_app_icon_path_png(int size);
+
+/*
+ * Not yet moved to arch/shared/
+ */
+
+/* Networking. (in src/socketdrv) */
 extern int archdep_network_init(void);
 extern void archdep_network_shutdown(void);
 
-/* Free everything on exit.  */
+/* Free everything on exit. (in arch/../archdep.c)  */
 extern void archdep_shutdown(void);
-
-/* RTC. */
-extern int archdep_rtc_get_centisecond(void);
-
-
 
 #endif

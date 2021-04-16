@@ -43,6 +43,7 @@
 
 #include "alarm.h"
 #include "archdep.h"
+#include "archdep_kbd_get_host_mapping.h"
 #include "cmdline.h"
 #include "joystick.h"
 #include "joy.h"
@@ -68,7 +69,7 @@
 #define DBG(x)
 #endif
 
-#define KEYBOARD_RAND() lib_unsigned_rand(1, machine_get_cycles_per_frame())
+#define KEYBOARD_RAND() lib_unsigned_rand(1, (unsigned int)machine_get_cycles_per_frame())
 
 /* Keyboard array.  */
 int keyarr[KBD_ROWS];
@@ -96,6 +97,30 @@ static int keyboard_clear = 0;
 
 static alarm_t *restore_alarm = NULL; /* restore key alarm context */
 
+
+/** \brief  Resource value for KdbStatusbar
+ *
+ * Determines whether to show the keyboard debugging widget on the statusbar.
+ */
+static int kbd_statusbar_enabled = 0;
+
+
+/** \brief  Resource handler for 'KbdStatusbar'
+ *
+ * Enables/disables the display of the keyboard debugging on the statusbar
+ *
+ * \param[in]   val     enable display of widget
+ * \param[in]   param   extra data (unused)
+ *
+ * \return 0
+ */
+static int keyboard_set_keyboard_statusbar(int val, void *param)
+{
+    kbd_statusbar_enabled = val ? 1 : 0;
+    return 0;   /* Okidoki */
+}
+
+
 static void keyboard_latch_matrix(CLOCK offset)
 {
     if (network_connected()) {
@@ -115,6 +140,7 @@ static int keyboard_set_latch_keyarr(int row, int col, int value)
     if (row < 0 || col < 0) {
         return -1;
     }
+    /* printf("keyboard_set_latch_keyarr %d: %d %d\n", value, row, col); */
     if (value) {
         latch_keyarr[row] |= 1 << col;
         latch_rev_keyarr[col] |= 1 << row;
@@ -122,7 +148,17 @@ static int keyboard_set_latch_keyarr(int row, int col, int value)
         latch_keyarr[row] &= ~(1 << col);
         latch_rev_keyarr[col] &= ~(1 << row);
     }
-
+#if 0
+    {
+        int r, c;
+        for (r = 0; r < 8; r++) {
+            for (c = 0; c < 8; c++) {
+                printf("%c", latch_keyarr[r] & (1 << c) ? '*' : '.');
+            }
+            printf("\n");
+        }
+    }
+#endif
     return 0;
 }
 
@@ -205,6 +241,7 @@ void keyboard_clear_keymatrix(void)
     memset(rev_keyarr, 0, sizeof(rev_keyarr));
     memset(latch_keyarr, 0, sizeof(latch_keyarr));
     memset(latch_rev_keyarr, 0, sizeof(latch_rev_keyarr));
+    keyboard_shiftlock = 0;
 }
 
 void keyboard_register_machine(keyboard_machine_func_t func)
@@ -232,7 +269,7 @@ static signed long key_ctrl_caps = -1;
 static key_ctrl_caps_func_t key_ctrl_caps_func = NULL;
 
 /* joyport attached keypad. */
-static signed long key_joy_keypad[KBD_JOY_KEYPAD_ROWS][KDB_JOY_KEYPAD_COLS];
+static signed long key_joy_keypad[KBD_JOY_KEYPAD_ROWS][KBD_JOY_KEYPAD_COLS];
 static key_joy_keypad_func_t key_joy_keypad_func = NULL;
 
 void keyboard_register_column4080_key(key_ctrl_column4080_func_t func)
@@ -253,19 +290,30 @@ void keyboard_register_joy_keypad(key_joy_keypad_func_t func)
 /*-----------------------------------------------------------------------*/
 
 enum shift_type {
-    NO_SHIFT = 0,             /* Key is not shifted. */
-    VIRTUAL_SHIFT = (1 << 0), /* The key needs a shift on the real machine. */
-    LEFT_SHIFT = (1 << 1),    /* Key is left shift. */
-    RIGHT_SHIFT = (1 << 2),   /* Key is right shift. */
-    ALLOW_SHIFT = (1 << 3),   /* Allow key to be shifted. */
-    DESHIFT_SHIFT = (1 << 4), /* Although SHIFT might be pressed, do not
-                                 press shift on the real machine. */
-    ALLOW_OTHER = (1 << 5),   /* Allow another key code to be assigned if
-                                 SHIFT is pressed. */
-    SHIFT_LOCK = (1 << 6),    /* Key is shift lock. */
+    NO_SHIFT = 0,                 /* Key is not shifted. Keys will be deshifted,
+                                     no other flags will be checked */
 
-    ALT_MAP  = (1 << 8)       /* Key is used for an alternative keyboard
-                                 mapping */
+    VIRTUAL_SHIFT     = (1 << 0), /* The key needs a shift on the emulated machine. */
+    LEFT_SHIFT        = (1 << 1), /* Key is left shift on the emulated machine. */
+    RIGHT_SHIFT       = (1 << 2), /* Key is right shift on the emulated machine. */
+    ALLOW_SHIFT       = (1 << 3), /* Allow key to be shifted. */
+    DESHIFT_SHIFT     = (1 << 4), /* Although SHIFT might be pressed, do not
+                                     press shift on the emulated machine. */
+    ALLOW_OTHER       = (1 << 5), /* Allow another key code to be assigned if
+                                     SHIFT is pressed. */
+    SHIFT_LOCK        = (1 << 6), /* Key is shift lock on the emulated machine */
+    MAP_MOD_SHIFT     = (1 << 7), /* Key requires SHIFT to be pressed on host */
+
+    ALT_MAP           = (1 << 8), /* Key is used for an alternative keyboard mapping (x128) */
+
+    MAP_MOD_RIGHT_ALT = (1 << 9), /* Key requires right ALT (Alt-gr) to be pressed on host */
+    MAP_MOD_CTRL     = (1 << 10), /* Key requires control to be pressed on host */
+
+    VIRTUAL_CBM      = (1 << 11), /* The key is combined with CBM on the emulated machine */
+    VIRTUAL_CTRL     = (1 << 12), /* The key is combined with CTRL on the emulated machine */
+
+    LEFT_CBM         = (1 << 13), /* Key is CBM on the emulated machine */
+    LEFT_CTRL        = (1 << 14)  /* Key is CTRL on the emulated machine */
 };
 
 struct keyboard_conv_s {
@@ -295,40 +343,122 @@ static int key_alternative = 0;
 
 static keyboard_conv_t *keyconvmap = NULL;
 
-static int kbd_lshiftrow;
-static int kbd_lshiftcol;
-static int kbd_rshiftrow;
-static int kbd_rshiftcol;
+/* matrix locations for the modifier keys */
+static int kbd_lshiftrow = -1;
+static int kbd_lshiftcol = -1;
+static int kbd_rshiftrow = -1;
+static int kbd_rshiftcol = -1;
+static int kbd_lcbmrow   = -1;
+static int kbd_lcbmcol   = -1;
+static int kbd_lctrlrow  = -1;
+static int kbd_lctrlcol  = -1;
 
 #define KEY_NONE   0
 #define KEY_RSHIFT 1
 #define KEY_LSHIFT 2
+#define KEY_LCBM   3
+#define KEY_LCTRL  4
 
-static int vshift = KEY_NONE;
-static int shiftl = KEY_NONE;
+static int vshift = KEY_NONE;   /* virtual shift */
+static int vcbm   = KEY_NONE;   /* virtual cbm */
+static int vctrl  = KEY_NONE;   /* virtual ctrl */
+
+static int shiftl = KEY_NONE;   /* shift-lock */
 
 /*-----------------------------------------------------------------------*/
 
-static int left_shift_down, right_shift_down, virtual_shift_down;
+static int left_shift_down, right_shift_down, 
+            left_cbm_down, left_ctrl_down,
+            virtual_shift_down, virtual_cbm_down, virtual_ctrl_down;
 static int key_latch_row, key_latch_column;
+
+static inline int rshift_defined(void) {
+    if ((kbd_rshiftrow != -1) && (kbd_rshiftcol != -1)) {
+        return 1;
+    }
+    return 0;
+}
+
+static inline int lshift_defined(void) {
+    if ((kbd_lshiftrow != -1) && (kbd_lshiftcol != -1)) {
+        return 1;
+    }
+    return 0;
+}
+
+static inline int lcbm_defined(void) {
+    if ((kbd_lcbmrow != -1) && (kbd_lcbmcol != -1)) {
+        return 1;
+    }
+    return 0;
+}
+
+static inline int lctrl_defined(void) {
+    if ((kbd_lctrlrow != -1) && (kbd_lctrlcol != -1)) {
+        return 1;
+    }
+    return 0;
+}
+
+static inline int vshift_defined(void) {
+    return !(vshift == KEY_NONE);
+}
+
+static inline int vctrl_defined(void) {
+    return !(vctrl == KEY_NONE);
+}
+
+static inline int vcbm_defined(void) {
+    return !(vcbm == KEY_NONE);
+}
+
+static inline int shiftlock_defined(void) {
+    return !(shiftl == KEY_NONE);
+}
 
 static void keyboard_key_deshift(void)
 {
-    keyboard_set_latch_keyarr(kbd_lshiftrow, kbd_lshiftcol, 0);
-    keyboard_set_latch_keyarr(kbd_rshiftrow, kbd_rshiftcol, 0);
+    if (lshift_defined()) {
+        keyboard_set_latch_keyarr(kbd_lshiftrow, kbd_lshiftcol, 0);
+    }
+    if (rshift_defined()) {
+        keyboard_set_latch_keyarr(kbd_rshiftrow, kbd_rshiftcol, 0);
+    }
+    if (lcbm_defined()) {
+        keyboard_set_latch_keyarr(kbd_lcbmrow,   kbd_lcbmcol,   0);
+    }
+    if (lctrl_defined()) {
+        keyboard_set_latch_keyarr(kbd_lctrlrow,  kbd_lctrlcol,  0);
+    }
 }
 
 static void keyboard_key_shift(void)
 {
-    if (left_shift_down > 0
-        || (virtual_shift_down > 0 && vshift == KEY_LSHIFT)
-        || (keyboard_shiftlock > 0 && shiftl == KEY_LSHIFT)) {
-        keyboard_set_latch_keyarr(kbd_lshiftrow, kbd_lshiftcol, 1);
+    if (lshift_defined()) {
+        if (left_shift_down > 0
+            || (virtual_shift_down > 0 && vshift == KEY_LSHIFT)
+            || (keyboard_shiftlock > 0 && shiftl == KEY_LSHIFT)) {
+            keyboard_set_latch_keyarr(kbd_lshiftrow, kbd_lshiftcol, 1);
+        }
     }
-    if (right_shift_down > 0
-        || (virtual_shift_down > 0 && vshift == KEY_RSHIFT)
-        || (keyboard_shiftlock > 0 && shiftl == KEY_RSHIFT)) {
-        keyboard_set_latch_keyarr(kbd_rshiftrow, kbd_rshiftcol, 1);
+    if (rshift_defined()) {
+        if (right_shift_down > 0
+            || (virtual_shift_down > 0 && vshift == KEY_RSHIFT)
+            || (keyboard_shiftlock > 0 && shiftl == KEY_RSHIFT)) {
+            keyboard_set_latch_keyarr(kbd_rshiftrow, kbd_rshiftcol, 1);
+        }
+    }
+    if (lcbm_defined()) {
+        if (left_cbm_down > 0
+            || (virtual_cbm_down > 0 && vcbm == KEY_LCBM)) {
+            keyboard_set_latch_keyarr(kbd_lcbmrow, kbd_lcbmcol, 1);
+        }
+    }
+    if (lctrl_defined()) {
+        if (left_ctrl_down > 0
+            || (virtual_ctrl_down > 0 && vctrl == KEY_LCTRL)) {
+            keyboard_set_latch_keyarr(kbd_lctrlrow, kbd_lctrlcol, 1);
+        }
     }
 }
 
@@ -338,9 +468,16 @@ static int keyboard_key_pressed_matrix(int row, int column, int shift)
         key_latch_row = row;
         key_latch_column = column;
 
-        if (shift == NO_SHIFT || shift & DESHIFT_SHIFT) {
+        if (shift == NO_SHIFT) {
             keyboard_key_deshift();
         } else {
+            /* FIXME: somehow make sure virtual shift/cbm/ctrl is really only
+                      valid for one combined keypress. the shift/ctrl/cbm
+                      status should not get permanently altered by deshifting */
+            if (shift & DESHIFT_SHIFT) {
+                /* FIXME: should this really remove ALL modifiers? */
+                keyboard_key_deshift();
+            }
             if (shift & VIRTUAL_SHIFT) {
                 virtual_shift_down = 1;
             }
@@ -351,11 +488,35 @@ static int keyboard_key_pressed_matrix(int row, int column, int shift)
                 right_shift_down = 1;
             }
             if (shift & SHIFT_LOCK) {
-                keyboard_shiftlock = 1;
+                keyboard_shiftlock ^= 1;
+            }
+            if (lcbm_defined()) {
+                if (shift & VIRTUAL_CBM) {
+                    virtual_cbm_down = 1;
+                }
+                if (shift & LEFT_CBM) {
+                    left_cbm_down = 1;
+                }
+            }
+            if (lctrl_defined()) {
+                if (shift & VIRTUAL_CTRL) {
+                    virtual_ctrl_down = 1;
+                }
+                if (shift & LEFT_CTRL) {
+                    left_ctrl_down = 1;
+                }
+            }
+
+            if (shift & DESHIFT_SHIFT) {
+                /* FIXME: should this really remove ALL modifiers? */
+                left_shift_down = 0;
+                right_shift_down = 0;
+                left_ctrl_down = 0;
+                left_cbm_down = 0;
             }
             keyboard_key_shift();
-        }
 
+        }
         return 1;
     }
 
@@ -423,9 +584,12 @@ static void keyboard_restore_released(void)
     restore_raw = 0;
 }
 
-void keyboard_key_pressed(signed long key)
+/* press a key, this is called by the UI */
+void keyboard_key_pressed(signed long key, int mod)
 {
     int i, j, latch;
+
+    /* log_debug("%s:  %3i %04x", __func__, key, mod); */
 
     if (event_playback_active()) {
         return;
@@ -438,6 +602,7 @@ void keyboard_key_pressed(signed long key)
         return;
     }
 
+    /* c128 40/80 column key */
     if (key == key_ctrl_column4080) {
         if (key_ctrl_column4080_func != NULL) {
             key_ctrl_column4080_func();
@@ -445,6 +610,7 @@ void keyboard_key_pressed(signed long key)
         return;
     }
 
+    /* c128 caps lock key */
     if (key == key_ctrl_caps) {
         if (key_ctrl_caps_func != NULL) {
             key_ctrl_caps_func();
@@ -454,7 +620,7 @@ void keyboard_key_pressed(signed long key)
 
     if (key_joy_keypad_func != NULL) {
         for (i = 0; i < KBD_JOY_KEYPAD_ROWS; ++i) {
-            for (j = 0; j < KDB_JOY_KEYPAD_COLS; ++j) {
+            for (j = 0; j < KBD_JOY_KEYPAD_COLS; ++j) {
                 if (key == key_joy_keypad[i][j]) {
                     key_joy_keypad_func(i, j, 1);
                     return;
@@ -483,7 +649,19 @@ void keyboard_key_pressed(signed long key)
 
     for (i = 0; i < keyc_num; ++i) {
         if (key == keyconvmap[i].sym) {
+            /* skip keys from alternative keyset */
             if ((keyconvmap[i].shift & ALT_MAP) && !key_alternative) {
+                continue;
+            }
+
+            /* find explicit matches on modifiers pressed on host */
+            if ((keyconvmap[i].shift & MAP_MOD_RIGHT_ALT) && (!(mod & KBD_MOD_RALT)) ) {
+                continue;
+            }
+            if ((keyconvmap[i].shift & MAP_MOD_CTRL) && (!(mod & (KBD_MOD_LCTRL | KBD_MOD_RCTRL))) ) {
+                continue;
+            }
+            if ((keyconvmap[i].shift & MAP_MOD_SHIFT) && (!(mod & (KBD_MOD_LSHIFT | KBD_MOD_RSHIFT))) ) {
                 continue;
             }
 
@@ -492,7 +670,7 @@ void keyboard_key_pressed(signed long key)
                                             keyconvmap[i].shift)) {
                 latch = 1;
                 if (!(keyconvmap[i].shift & ALLOW_OTHER)
-                    || (right_shift_down + left_shift_down) == 0) {
+                    /*|| (right_shift_down + left_shift_down) == 0*/) {
                     break;
                 }
             }
@@ -534,11 +712,38 @@ static int keyboard_key_released_matrix(int row, int column, int shift)
                 skip_release = 1;
             }
         }
+#if 0
         if (shift & SHIFT_LOCK) {
             keyboard_shiftlock = 0;
             if (((shiftl == KEY_RSHIFT) && right_shift_down)
                 || ((shiftl == KEY_LSHIFT) && left_shift_down)) {
                 skip_release = 1;
+            }
+        }
+#endif
+        /* when shift lock is released and shift lock is "locked", then exit
+           early and do nothing */
+        if (shift & SHIFT_LOCK) {
+            if (keyboard_shiftlock) {
+                return 0;
+            }
+        }
+        
+        if (lcbm_defined()) {
+            if (shift & VIRTUAL_CBM) {
+                virtual_cbm_down = 0;
+            }
+            if (shift & LEFT_CBM) {
+                left_cbm_down = 0;
+            }
+        }
+        
+        if (lctrl_defined()) {
+            if (shift & VIRTUAL_CTRL) {
+                virtual_ctrl_down = 0;
+            }
+            if (shift & LEFT_CTRL) {
+                left_ctrl_down = 0;
             }
         }
 
@@ -559,15 +764,35 @@ static int keyboard_key_released_matrix(int row, int column, int shift)
             keyboard_set_latch_keyarr(kbd_lshiftrow, kbd_lshiftcol, 0);
         }
 
+        if (lcbm_defined()) {
+            if (left_cbm_down > 0
+                || (virtual_cbm_down > 0 && vcbm == KEY_LCBM)) {
+                keyboard_set_latch_keyarr(kbd_lcbmrow, kbd_lcbmcol, 1);
+            } else {
+                keyboard_set_latch_keyarr(kbd_lcbmrow, kbd_lcbmcol, 0);
+            }
+        }
+
+        if (lctrl_defined()) {
+            if (left_ctrl_down > 0
+                || (virtual_ctrl_down > 0 && vctrl == KEY_LCTRL)) {
+                keyboard_set_latch_keyarr(kbd_lctrlrow, kbd_lctrlcol, 1);
+            } else {
+                keyboard_set_latch_keyarr(kbd_lctrlrow, kbd_lctrlcol, 0);
+            }
+        }
         return !skip_release;
     }
 
     return 0;
 }
 
-void keyboard_key_released(signed long key)
+/* release a key, this is called by the UI */
+void keyboard_key_released(signed long key, int mod)
 {
     int i, j, latch;
+
+    /* log_debug("%s: %3i %04x", __func__, key, mod); */
 
     if (event_playback_active()) {
         return;
@@ -582,7 +807,7 @@ void keyboard_key_released(signed long key)
 
     if (key_joy_keypad_func != NULL) {
         for (i = 0; i < KBD_JOY_KEYPAD_ROWS; ++i) {
-            for (j = 0; j < KDB_JOY_KEYPAD_COLS; ++j) {
+            for (j = 0; j < KBD_JOY_KEYPAD_COLS; ++j) {
                 if (key == key_joy_keypad[i][j]) {
                     key_joy_keypad_func(i, j, 0);
                     return;
@@ -644,7 +869,8 @@ static void keyboard_key_clear_internal(void)
 {
     keyboard_clear_keymatrix();
     joystick_clear_all();
-    virtual_shift_down = left_shift_down = right_shift_down = keyboard_shiftlock = 0;
+    virtual_cbm_down = virtual_shift_down = 
+        left_shift_down = right_shift_down = keyboard_shiftlock = 0;
 #ifdef COMMON_JOYKEYS
     joystick_joypad_clear();
 #endif
@@ -669,24 +895,25 @@ void keyboard_set_keyarr_any(int row, int col, int value)
     signed long sym;
 
     if (row < 0) {
-        if (row == -3 && col == 0) {
+        if ((row == KBD_ROW_RESTORE_1) && (col == KBD_COL_RESTORE_1)) {
             sym = key_ctrl_restore1;
-        } else if (row == -3 && col == 1) {
+        } else if ((row == KBD_ROW_RESTORE_2) && (col == KBD_COL_RESTORE_2)) {
             sym = key_ctrl_restore2;
-        } else if (row == -4 && col == 0) {
+        } else if ((row == KBD_ROW_4080COLUMN) && (col == KBD_COL_4080COLUMN)) {
             sym = key_ctrl_column4080;
-        } else if (row == -4 && col == 1) {
+        } else if ((row == KBD_ROW_CAPSLOCK) && (col == KBD_COL_CAPSLOCK)) {
             sym = key_ctrl_caps;
-        } else if (row == -5 && col >= 0 && col < 20) {
-            sym = key_joy_keypad[col / 5][col % 5];
+        } else if ((row == KBD_ROW_JOY_KEYPAD) &&
+            (col >= 0) && (col < KBD_JOY_KEYPAD_NUMKEYS)) {
+            sym = key_joy_keypad[col / KBD_JOY_KEYPAD_COLS][col % KBD_JOY_KEYPAD_COLS];
         } else {
             return;
         }
 
         if (value) {
-            keyboard_key_pressed(sym);
+            keyboard_key_pressed(sym, 0);
         } else {
-            keyboard_key_released(sym);
+            keyboard_key_released(sym, 0);
         }
     } else {
         keyboard_set_keyarr(row, col, value);
@@ -728,57 +955,116 @@ static void keyboard_keyconvmap_realloc(void)
 
 static int keyboard_parse_keymap(const char *filename, int child);
 
-static void keyboard_keyword_lshift(void)
+static int keyboard_keyword_rowcol(int *row, int *col)
 {
+    int r, c;
     char *p;
 
     p = strtok(NULL, " \t,");
     if (p != NULL) {
-        kbd_lshiftrow = atoi(p);
+        r = atoi(p);
         p = strtok(NULL, " \t,");
         if (p != NULL) {
-            kbd_lshiftcol = atoi(p);
+            c = atoi(p);
+            /* no error */
+            *row = r; *col = c;
+            return 0;
         }
     }
+    return -1;
 }
 
-static void keyboard_keyword_rshift(void)
+static int keyboard_keyword_lshift(void)
 {
-    char *p;
+    return keyboard_keyword_rowcol(&kbd_lshiftrow, &kbd_lshiftcol);
+}
 
-    p = strtok(NULL, " \t,");
-    if (p != NULL) {
-        kbd_rshiftrow = atoi(p);
-        p = strtok(NULL, " \t,");
-        if (p != NULL) {
-            kbd_rshiftcol = atoi(p);
-        }
-    }
+static int keyboard_keyword_rshift(void)
+{
+    return keyboard_keyword_rowcol(&kbd_rshiftrow, &kbd_rshiftcol);
 }
 
 static int keyboard_keyword_vshiftl(void)
 {
-    char *p;
-
-    p = strtok(NULL, " \t,\r");
+    char *p = strtok(NULL, " \t,\r");
 
     if (!strcmp(p, "RSHIFT")) {
         return KEY_RSHIFT;
     } else if (!strcmp(p, "LSHIFT")) {
         return KEY_LSHIFT;
-    } else {
-        return KEY_NONE;
     }
+    
+    return -1;
 }
 
-static void keyboard_keyword_vshift(void)
+static int keyboard_keyword_vshift(void)
 {
-    vshift = keyboard_keyword_vshiftl();
+    int ret = keyboard_keyword_vshiftl();
+    if (ret < 0) {
+        return -1;
+    }
+    vshift = ret;
+    return 0;
 }
 
-static void keyboard_keyword_shiftl(void)
+static int keyboard_keyword_shiftl(void)
 {
-    shiftl = keyboard_keyword_vshiftl();
+    int ret = keyboard_keyword_vshiftl();
+    if (ret < 0) {
+        return -1;
+    }
+    shiftl = ret;
+    return 0;
+}
+
+static int keyboard_keyword_lcbm(void)
+{
+    return keyboard_keyword_rowcol(&kbd_lcbmrow, &kbd_lcbmcol);
+}
+
+static int keyboard_keyword_cbm(void)
+{
+    char *p = strtok(NULL, " \t,\r");
+
+    if (!strcmp(p, "LCBM")) {
+        return KEY_LCBM;
+    }
+    return -1;
+}
+
+static int keyboard_keyword_vcbm(void)
+{
+    int ret = keyboard_keyword_cbm();
+    if (ret < 0) {
+        return -1;
+    }
+    vcbm = ret;
+    return 0;
+}
+
+static int keyboard_keyword_lctrl(void)
+{
+    return keyboard_keyword_rowcol(&kbd_lctrlrow, &kbd_lctrlcol);
+}
+
+static int keyboard_keyword_ctrl(void)
+{
+    char *p = strtok(NULL, " \t,\r");
+
+    if (!strcmp(p, "LCTRL")) {
+        return KEY_LCTRL;
+    }
+    return -1;
+}
+
+static int keyboard_keyword_vctrl(void)
+{
+    int ret = keyboard_keyword_ctrl();
+    if (ret < 0) {
+        return -1;
+    }
+    vctrl = ret;
+    return 0;
 }
 
 static void keyboard_keyword_clear(void)
@@ -793,8 +1079,19 @@ static void keyboard_keyword_clear(void)
     key_ctrl_column4080 = -1;
     vshift = KEY_NONE;
     shiftl = KEY_NONE;
+    vcbm = KEY_NONE;
+    vctrl = KEY_NONE;
+    kbd_lshiftrow = -1;
+    kbd_lshiftcol = -1;
+    kbd_rshiftrow = -1;
+    kbd_rshiftcol = -1;
+    kbd_lcbmrow   = -1;
+    kbd_lcbmcol   = -1;
+    kbd_lctrlrow  = -1;
+    kbd_lctrlcol  = -1;
+    
     for (i = 0; i < KBD_JOY_KEYPAD_ROWS; ++i) {
-        for (j = 0; j < KDB_JOY_KEYPAD_COLS; ++j) {
+        for (j = 0; j < KBD_JOY_KEYPAD_COLS; ++j) {
             key_joy_keypad[i][j] = -1;
         }
     }
@@ -837,31 +1134,42 @@ static void keyboard_keyword_undef(void)
     keyboard_keysym_undef(kbd_arch_keyname_to_keynum(key));
 }
 
-static void keyboard_parse_keyword(char *buffer)
+static void keyboard_parse_keyword(char *buffer, int line, const char *filename)
 {
+    int ret = 0;
     char *key;
 
     key = strtok(buffer + 1, " \t:");
 
     if (!strcmp(key, "LSHIFT")) {
-        keyboard_keyword_lshift();
+        ret = keyboard_keyword_lshift();
     } else if (!strcmp(key, "RSHIFT")) {
-        keyboard_keyword_rshift();
+        ret = keyboard_keyword_rshift();
     } else if (!strcmp(key, "VSHIFT")) {
-        keyboard_keyword_vshift();
+        ret = keyboard_keyword_vshift();
     } else if (!strcmp(key, "SHIFTL")) {
-        keyboard_keyword_shiftl();
+        ret = keyboard_keyword_shiftl();
+    } else if (!strcmp(key, "LCBM")) {
+        ret = keyboard_keyword_lcbm();
+    } else if (!strcmp(key, "VCBM")) {
+        ret = keyboard_keyword_vcbm();
+    } else if (!strcmp(key, "LCTRL")) {
+        ret = keyboard_keyword_lctrl();
+    } else if (!strcmp(key, "VCTRL")) {
+        ret = keyboard_keyword_vctrl();
     } else if (!strcmp(key, "CLEAR")) {
         keyboard_keyword_clear();
     } else if (!strcmp(key, "INCLUDE")) {
         keyboard_keyword_include();
     } else if (!strcmp(key, "UNDEF")) {
         keyboard_keyword_undef();
+    } else {
+        log_error(keyboard_log, "%s:%d: unknown keyword (%s).", filename, line, key);
     }
 
-#ifdef COMMON_JOYKEYS
-    joystick_joypad_clear();
-#endif
+    if (ret) {
+        log_error(keyboard_log, "%s:%d: Bad keyword (%s).", filename, line, key);
+    }
 }
 
 static void keyboard_parse_set_pos_row(signed long sym, int row, int col,
@@ -899,40 +1207,46 @@ static void keyboard_parse_set_pos_row(signed long sym, int row, int col,
 
 static int keyboard_parse_set_neg_row(signed long sym, int row, int col)
 {
-    if (row == -1 && (col >= 0) && (col <= 8)) {
+    if ((row == KBD_ROW_JOY_KEYMAP_A) &&
+        (col >= 0) && (col < JOYSTICK_KEYSET_NUM_KEYS)) {
 #ifdef COMMON_JOYKEYS
-        joykeys[JOYSTICK_KEYSET_IDX_A][col] = sym;
+        joykeys[JOYSTICK_KEYSET_IDX_A][col] = (int)sym;
 #endif
-    } else if (row == -2 && (col >= 0) && (col <= 8)) {
+    } else if ((row == KBD_ROW_JOY_KEYMAP_B) &&
+        (col >= 0) && (col < JOYSTICK_KEYSET_NUM_KEYS)) {
 #ifdef COMMON_JOYKEYS
-        joykeys[JOYSTICK_KEYSET_IDX_B][col] = sym;
+        joykeys[JOYSTICK_KEYSET_IDX_B][col] = (int)sym;
 #endif
-    } else if (row == -3 && col == 0) {
+    } else if ((row == KBD_ROW_RESTORE_1) && (col == KBD_COL_RESTORE_1)) {
         key_ctrl_restore1 = sym;
-    } else if (row == -3 && col == 1) {
+    } else if ((row == KBD_ROW_RESTORE_2) && (col == KBD_COL_RESTORE_2)) {
         key_ctrl_restore2 = sym;
-    } else if (row == -4 && col == 0) {
+    } else if ((row == KBD_ROW_4080COLUMN) && (col == KBD_COL_4080COLUMN)) {
         key_ctrl_column4080 = sym;
-    } else if (row == -4 && col == 1) {
+    } else if ((row == KBD_ROW_CAPSLOCK) && (col == KBD_COL_CAPSLOCK)) {
         key_ctrl_caps = sym;
-    } else if (row == -5 && col >= 0 && col < 20) {
-        key_joy_keypad[col / 5][col % 5] = sym;
+    } else if ((row == KBD_ROW_JOY_KEYPAD) &&
+        (col >= 0) && (col < KBD_JOY_KEYPAD_NUMKEYS)) {
+        key_joy_keypad[col / KBD_JOY_KEYPAD_COLS][col % KBD_JOY_KEYPAD_COLS] = sym;
     } else {
         return -1;
     }
     return 0;
 }
 
-static void keyboard_parse_entry(char *buffer)
+static void keyboard_parse_entry(char *buffer, int line, const char *filename)
 {
     char *key, *p;
     signed long sym;
-    int row, col;
+    long row;
+    int col;
     int shift = 0;
 
     key = strtok(buffer, " \t:");
 
     sym = kbd_arch_keyname_to_keynum(key);
+
+    /* log_debug("%s: %s %i", __func__, key, sym); */
 
     if (sym < 0) {
         log_error(keyboard_log, "Could not find key `%s'!", key);
@@ -944,7 +1258,7 @@ static void keyboard_parse_entry(char *buffer)
         row = strtol(p, NULL, 10);
         p = strtok(NULL, " \t,");
         if (p != NULL) {
-            col = atoi(p);
+            col = atoi(p);  /* YUCK! */
             p = strtok(NULL, " \t");
             if (p != NULL || row < 0) {
                 if (p != NULL) {
@@ -952,12 +1266,144 @@ static void keyboard_parse_entry(char *buffer)
                 }
 
                 if (row >= 0) {
-                    keyboard_parse_set_pos_row(sym, row, col, shift);
+                    keyboard_parse_set_pos_row(sym, (int)row, col, shift);
                 } else {
-                    if (keyboard_parse_set_neg_row(sym, row, col) < 0) {
+                    if (keyboard_parse_set_neg_row(sym, (int)row, col) < 0) {
                         log_error(keyboard_log,
-                                  "Bad row/column value (%d/%d) for keysym `%s'.",
-                                  row, col, key);
+                                  "%s:%d: Bad row/column value (%ld/%d) for keysym `%s'.",
+                                  filename, line, row, col, key);
+                    }
+                }
+
+                /* printf("%s:%d: %s %d %d (%04x)\n", filename, line, key, row, col, shift); */
+
+                /* sanity checks */
+
+                if (((shift & LEFT_SHIFT) && ((shift & RIGHT_SHIFT) || (shift & SHIFT_LOCK))) ||
+                    ((shift & RIGHT_SHIFT) && ((shift & LEFT_SHIFT) || (shift & SHIFT_LOCK))) ||
+                    ((shift & SHIFT_LOCK) && ((shift & RIGHT_SHIFT) || (shift & LEFT_SHIFT)))) {
+                    log_warning(keyboard_log, "%s:%d: only one of \"right shift\", \"left shift\" or \"shift lock\" flags should be used.", filename, line);
+                }
+                if (((shift & VIRTUAL_SHIFT) && ((shift & VIRTUAL_CBM) || (shift & VIRTUAL_CTRL))) ||
+                    ((shift & VIRTUAL_CBM) && ((shift & VIRTUAL_SHIFT) || (shift & VIRTUAL_CTRL))) ||
+                    ((shift & VIRTUAL_CTRL) && ((shift & VIRTUAL_CBM) || (shift & VIRTUAL_SHIFT)))) {
+                    log_warning(keyboard_log, "%s:%d: only one of \"virtual shift\", \"virtual ctrl\" or \"virtual cbm\" flags should be used.", filename, line);
+                }
+
+                /* sanity checks for shift */
+                
+                if (shift & VIRTUAL_SHIFT) {
+                    if (!vshift_defined()) {
+                        log_warning(keyboard_log, "%s:%d: virtual shift flag used but no !VSHIFT defined", filename, line);
+                    }
+                }
+                
+                if (shift & LEFT_SHIFT) {
+                    if (!lshift_defined()) {
+                        log_warning(keyboard_log, "%s:%d: SHIFT flag used but no !LSHIFT defined", filename, line);
+                    } else {
+                        if ((row != kbd_lshiftrow) || (col != kbd_lshiftcol)) {
+                            log_warning(keyboard_log, "%s:%d: SHIFT flag used but row and/or col differs from !LSHIFT definition", filename, line);
+                        }
+                    }
+                }
+                if (shift & RIGHT_SHIFT) {
+                    if (!rshift_defined()) {
+                        log_warning(keyboard_log, "%s:%d: SHIFT flag used but no !RSHIFT defined", filename, line);
+                    } else {
+                        if ((row != kbd_rshiftrow) || (col != kbd_rshiftcol)) {
+                            log_warning(keyboard_log, "%s:%d: SHIFT flag used but row and/or col differs from !RSHIFT definition", filename, line);
+                        }
+                    }
+                }
+                if (shift & SHIFT_LOCK) {
+                    if (!shiftlock_defined()) {
+                        log_warning(keyboard_log, "%s:%d: SHIFT-lock flag used but no !SHIFTL defined", filename, line);
+                    } else {
+                        if (shiftl == KEY_RSHIFT) {
+                            if ((row != kbd_rshiftrow) || (col != kbd_rshiftcol)) {
+                                log_warning(keyboard_log, "%s:%d: SHIFT-lock flag used but row and/or col differs from !RSHIFT definition", filename, line);
+                            }
+                        } else if (shiftl == KEY_LSHIFT) {
+                            if ((row != kbd_lshiftrow) || (col != kbd_lshiftcol)) {
+                                log_warning(keyboard_log, "%s:%d: SHIFT-lock flag used but row and/or col differs from !LSHIFT definition", filename, line);
+                            }
+                        }
+                    }
+                }
+                
+                if (lshift_defined()) {
+                    if ((row == kbd_lshiftrow) && (col == kbd_lshiftcol)) {
+                        if ((!(shift & LEFT_SHIFT)) && (!(shift & (RIGHT_SHIFT | SHIFT_LOCK)))) {
+                            log_warning(keyboard_log, "%s:%d: !LSHIFT defined but key does not use SHIFT flag", filename, line);
+                        }
+                    }
+                }
+                if (rshift_defined()) {
+                    if ((row == kbd_rshiftrow) && (col == kbd_rshiftcol)) {
+                        if ((!(shift & RIGHT_SHIFT)) && (!(shift & (RIGHT_SHIFT | SHIFT_LOCK)))) {
+                            log_warning(keyboard_log, "%s:%d: !RSHIFT defined but key does not use SHIFT flag", filename, line);
+                        }
+                    }
+                }
+                if (shiftlock_defined()) {
+                        if (shiftl == KEY_RSHIFT) {
+                            if ((row == kbd_rshiftrow) && (col == kbd_rshiftcol)) {
+                                if ((!(shift & SHIFT_LOCK)) && (!(shift & (RIGHT_SHIFT | LEFT_SHIFT)))) {
+                                    log_warning(keyboard_log, "%s:%d: !SHIFTL defined but key does not use SHIFT-lock flag", filename, line);
+                                }
+                            }
+                        } else if (shiftl == KEY_LSHIFT) {
+                            if ((row == kbd_lshiftrow) && (col == kbd_lshiftcol)) {
+                                if ((!(shift & SHIFT_LOCK)) && (!(shift & (RIGHT_SHIFT | LEFT_SHIFT)))) {
+                                    log_warning(keyboard_log, "%s:%d: !SHIFTL defined but key does not use SHIFT-lock flag", filename, line);
+                                }
+                            }
+                        }
+                }
+                
+                /* sanity checks for cbm */
+                if (shift & VIRTUAL_CBM) {
+                    if (!vcbm_defined()) {
+                        log_warning(keyboard_log, "%s:%d: virtual CBM flag used but no !VCBM defined", filename, line);
+                    }
+                }
+                if (shift & LEFT_CBM) {
+                    if (!lcbm_defined()) {
+                        log_warning(keyboard_log, "%s:%d: CBM flag used but no !LCBM defined", filename, line);
+                    } else {
+                        if ((row != kbd_lcbmrow) || (col != kbd_lcbmcol)) {
+                            log_warning(keyboard_log, "%s:%d: CBM flag used but row and/or col differs from !LCBM definition", filename, line);
+                        }
+                    }
+                }
+                if (lcbm_defined()) {
+                    if ((row == kbd_lcbmrow) && (col == kbd_lcbmcol)) {
+                        if (!(shift & LEFT_CBM)) {
+                            log_warning(keyboard_log, "%s:%d: !LCBM defined but key does not use CBM flag", filename, line);
+                        }
+                    }
+                }
+                /* sanity checks for ctrl */
+                if (shift & VIRTUAL_CTRL) {
+                    if (!vctrl_defined()) {
+                        log_warning(keyboard_log, "%s:%d: virtual CTRL flag used but no !VCTRL defined", filename, line);
+                    }
+                }
+                if (shift & LEFT_CTRL) {
+                    if (!lctrl_defined()) {
+                        log_warning(keyboard_log, "%s:%d: CTRL flag used but no !LCTRL defined", filename, line);
+                    } else {
+                        if ((row != kbd_lctrlrow) || (col != kbd_lctrlcol)) {
+                            log_warning(keyboard_log, "%s:%d: CTRL flag used but row and/or col differs from !LCTRL definition", filename, line);
+                        }
+                    }
+                }
+                if (lctrl_defined()) {
+                    if ((row == kbd_lctrlrow) && (col == kbd_lctrlcol)) {
+                        if (!(shift & LEFT_CTRL)) {
+                            log_warning(keyboard_log, "%s:%d: !LCTRL defined but key does not use CTRL flag", filename, line);
+                        }
                     }
                 }
             }
@@ -965,12 +1411,60 @@ static void keyboard_parse_entry(char *buffer)
     }
 }
 
+static int check_modifiers(const char *filename)
+{
+    int n = 0;
+    char *ms[8] = {
+        "!LSHIFT ", "!RSHIFT ", "!VSHIFT! ", "!LCBM ", "!VCBM ", "!LCTRL ", "!VCTRL ", "!SHIFTL "
+    };
+    
+    if (!lshift_defined()) {
+        n |= (1 << 0);
+    }
+    if (!rshift_defined()) {
+        n |= (1 << 1);
+    }
+    if (!vshift_defined()) {
+        n |= (1 << 2);
+    }
+    if (!lcbm_defined()) {
+        n |= (1 << 3);
+    }
+    if (!vcbm_defined()) {
+        n |= (1 << 4);
+    }
+    if (!lctrl_defined()) {
+        n |= (1 << 5);
+    }
+    if (!vctrl_defined()) {
+        n |= (1 << 6);
+    }
+    if (!shiftlock_defined()) {
+        n |= (1 << 7);
+    }
+    if (n) {
+        log_warning(keyboard_log, "%s: %s%s%s%s%s%s%s%snot defined.",
+            filename,        
+            n & (1 << 0) ? ms[0] : "",
+            n & (1 << 1) ? ms[1] : "",
+            n & (1 << 2) ? ms[2] : "",
+            n & (1 << 3) ? ms[3] : "",
+            n & (1 << 4) ? ms[4] : "",
+            n & (1 << 5) ? ms[5] : "",
+            n & (1 << 6) ? ms[6] : "",
+            n & (1 << 7) ? ms[7] : ""
+        );
+        return -1;
+    }
+    return 0;
+}
 
 static int keyboard_parse_keymap(const char *filename, int child)
 {
     FILE *fp;
     char *complete_path = NULL;
     char buffer[1024];
+    int line = 0;
 
     DBG((">keyboard_parse_keymap(%s)\n", filename));
 
@@ -991,6 +1485,8 @@ static int keyboard_parse_keymap(const char *filename, int child)
             char *p;
             long blen = (long)strlen(buffer);
 
+            line++;
+            
             if (blen == 0) {
                 break;
             }
@@ -1011,11 +1507,11 @@ static int keyboard_parse_keymap(const char *filename, int child)
                     break;
                 case '!':
                     /* keyword handling */
-                    keyboard_parse_keyword(buffer);
+                    keyboard_parse_keyword(buffer, line, filename);
                     break;
                 default:
                     /* table entry handling */
-                    keyboard_parse_entry(buffer);
+                    keyboard_parse_entry(buffer, line, filename);
                     break;
             }
         }
@@ -1023,7 +1519,9 @@ static int keyboard_parse_keymap(const char *filename, int child)
     fclose(fp);
 
     lib_free(complete_path);
-
+    
+    check_modifiers(filename);
+    
     DBG(("<keyboard_parse_keymap OK\n"));
     return 0;
 }
@@ -1093,18 +1591,38 @@ int keyboard_keymap_dump(const char *filename)
             "# '!RSHIFT row col'      right shift keyboard row/column\n"
             "# '!VSHIFT shiftkey'     virtual shift key (RSHIFT or LSHIFT)\n"
             "# '!SHIFTL shiftkey'     shift lock key (RSHIFT or LSHIFT)\n"
+            "# '!LCTRL row col'       left control keyboard row/column\n"
+            "# '!VCTRL ctrlkey'       virtual control key (LCTRL)\n"
+            "# '!LCBM row col'        left CBM keyboard row/column\n"
+            "# '!VCBM cbmkey'         virtual CBM key (LCBM)\n"
             "# '!UNDEF keysym'        remove keysym from table\n"
             "#\n"
             "# Shiftflag can have the values:\n"
             "# 0      key is not shifted for this keysym/scancode\n"
-            "# 1      key is shifted for this keysym/scancode\n"
-            "# 2      left shift\n"
-            "# 4      right shift\n"
+            "# 1      key is combined with shift for this keysym/scancode\n"
+            "# 2      key is left shift on emulated machine\n"
+            "# 4      key is right shift on emulated machine\n"
             "# 8      key can be shifted or not with this keysym/scancode\n"
             "# 16     deshift key for this keysym/scancode\n"
             "# 32     another definition for this keysym/scancode follows\n"
-            "# 64     shift lock\n"
+            "# 64     key is shift-lock on emulated machine\n"
+            "# 128    shift modifier required on host\n"
             "# 256    key is used for an alternative keyboard mapping\n"
+            "# 512    alt-r (alt-gr) modifier required on host\n"
+            "# 1024   ctrl modifier required on host\n"
+            "# 2048   key is combined with cbm for this keysym/scancode\n"
+            "# 4096   key is combined with ctrl for this keysym/scancode\n"
+            "# 8192   key is (left) cbm on emulated machine\n"
+            "# 16384  key is (left) ctrl on emulated machine\n"
+            "#\n"
+            "# to migrate older keymaps and use the CBM and/or CTRL related features:\n"
+            "#\n"
+            "# - define !LCTRL, !VCTRL, !LCBM, !VCBM\n"
+            "# - add 'key is (left) cbm/ctrl on emulated machine' flags to\n"
+            "#   all keys that map to the cbm or ctrl key respectively.\n"
+            "#\n"
+            "# after that the virtual cbm/ctrl flags and requiring host modifiers\n"
+            "# should work as expected. keep an eye on the error messages.\n"
             "#\n"
             "# Negative row values:\n"
             "# 'keysym -1 n' joystick keymap A, direction n\n"
@@ -1140,24 +1658,38 @@ int keyboard_keymap_dump(const char *filename)
             "# When a bigger spaced key is used,\n"
             "# it uses the upper left most key value.\n"
            );
-    
+
     /* FIXME: output the keyboard matrix for the respective target */
-    
+
     fprintf(fp, "!CLEAR\n");
-    fprintf(fp, "!LSHIFT %d %d\n", kbd_lshiftrow, kbd_lshiftcol);
-    fprintf(fp, "!RSHIFT %d %d\n", kbd_rshiftrow, kbd_rshiftcol);
-    if (vshift != KEY_NONE) {
-        fprintf(fp, "!VSHIFT %s\n",
-                (vshift == KEY_RSHIFT) ? "RSHIFT" : "LSHIFT");
+    if (lshift_defined()) {
+        fprintf(fp, "!LSHIFT %d %d\n", kbd_lshiftrow, kbd_lshiftcol);
     }
-    if (shiftl != KEY_NONE) {
-        fprintf(fp, "!SHIFTL %s\n",
-                (shiftl == KEY_RSHIFT) ? "RSHIFT" : "LSHIFT");
+    if (rshift_defined()) {
+        fprintf(fp, "!RSHIFT %d %d\n", kbd_rshiftrow, kbd_rshiftcol);
+    }
+    if (vshift_defined()) {
+        fprintf(fp, "!VSHIFT %s\n", (vshift == KEY_RSHIFT) ? "RSHIFT" : "LSHIFT");
+    }
+    if (shiftlock_defined()) {
+        fprintf(fp, "!SHIFTL %s\n", (shiftl == KEY_RSHIFT) ? "RSHIFT" : "LSHIFT");
+    }
+    if (lctrl_defined()) {
+        fprintf(fp, "!LCTRL %d %d\n", kbd_lctrlrow, kbd_lctrlcol);
+    }
+    if (vctrl_defined()) {
+        fprintf(fp, "!VCTRL %s\n", (vctrl == KEY_LCTRL) ? "LCTRL" : "?");
+    }
+    if (lcbm_defined()) {
+        fprintf(fp, "!LCBM %d %d\n", kbd_lcbmrow, kbd_lcbmcol);
+    }
+    if (vcbm_defined()) {
+        fprintf(fp, "!VCBM %s\n", (vcbm == KEY_LCBM) ? "LCBM" : "?");
     }
     fprintf(fp, "\n");
 
     for (i = 0; keyconvmap[i].sym != ARCHDEP_KEYBOARD_SYM_NONE; i++) {
-        fprintf(fp, "%s %d %d %d\n",
+        fprintf(fp, "%s %d %d %u\n",
                 kbd_arch_keynum_to_keyname(keyconvmap[i].sym),
                 keyconvmap[i].row, keyconvmap[i].column,
                 keyconvmap[i].shift);
@@ -1201,13 +1733,13 @@ int keyboard_keymap_dump(const char *filename)
                 "# joyport attached keypad key mapping\n"
                 "#\n");
     for (i = 0; i < KBD_JOY_KEYPAD_ROWS; ++i) {
-        for (j = 0; j < KDB_JOY_KEYPAD_COLS; ++j) {
+        for (j = 0; j < KBD_JOY_KEYPAD_COLS; ++j) {
             if (key_joy_keypad[i][j] != -1) {
-                fprintf(fp, "%s -5 %d\n", kbd_arch_keynum_to_keyname(key_joy_keypad[i][j]), (i * 5) + j);
+                fprintf(fp, "%s -5 %d\n",
+                    kbd_arch_keynum_to_keyname(key_joy_keypad[i][j]), (i * KBD_JOY_KEYPAD_COLS) + j);
             }
         }
     }
-
 #ifdef COMMON_JOYKEYS
     for (i = 0; i < JOYSTICK_KEYSET_NUM_KEYS; i++) {
         if (joykeys[JOYSTICK_KEYSET_IDX_A][i] != ARCHDEP_KEYBOARD_SYM_NONE) {
@@ -1216,7 +1748,8 @@ int keyboard_keymap_dump(const char *filename)
                     "#\n");
             for (i = 0; i < JOYSTICK_KEYSET_NUM_KEYS; i++) {
                 if (joykeys[JOYSTICK_KEYSET_IDX_A][i] != ARCHDEP_KEYBOARD_SYM_NONE) {
-                    fprintf(fp, "%s -1 %d\n", kbd_arch_keynum_to_keyname(joykeys[JOYSTICK_KEYSET_IDX_A][i]), i);
+                    fprintf(fp, "%s -1 %d\n",
+                        kbd_arch_keynum_to_keyname(joykeys[JOYSTICK_KEYSET_IDX_A][i]), i);
                 }
             }
             fprintf(fp, "\n");
@@ -1231,7 +1764,8 @@ int keyboard_keymap_dump(const char *filename)
                     "#\n");
             for (i = 0; i < JOYSTICK_KEYSET_NUM_KEYS; i++) {
                 if (joykeys[JOYSTICK_KEYSET_IDX_B][i] != ARCHDEP_KEYBOARD_SYM_NONE) {
-                    fprintf(fp, "%s -2 %d\n", kbd_arch_keynum_to_keyname(joykeys[JOYSTICK_KEYSET_IDX_B][i]), i);
+                    fprintf(fp, "%s -2 %d\n",
+                        kbd_arch_keynum_to_keyname(joykeys[JOYSTICK_KEYSET_IDX_B][i]), i);
                 }
             }
             fprintf(fp, "\n");
@@ -1278,7 +1812,12 @@ static int machine_keyboard_mapping = 0;
 static int machine_keyboard_type = 0;
 
 static int try_set_keymap_file(int atidx, int idx, int mapping, int type);
-static int switch_keymap_file(int *idxp, int *mapp, int *typep);
+
+#define KBD_SWITCH_DEFAULT      0
+#define KBD_SWITCH_MAPPING      1
+#define KBD_SWITCH_INDEX        2
+#define KBD_SWITCH_TYPE         3
+static int switch_keymap_file(int sw, int *idxp, int *mapp, int *typep);
 
 /* (re)load keymap at index */
 static int load_keymap_file(int val)
@@ -1362,9 +1901,9 @@ int keyboard_set_keymap_index(int val, void *param)
     DBG((">keyboard_set_keymap_index(idx:%d mapping:%d type:%d)\n", val, mapping, type));
 
     if (val < 2) {
-        if (switch_keymap_file(&val, &mapping, &type) < 0) {
+        if (switch_keymap_file(KBD_SWITCH_INDEX, &val, &mapping, &type) < 0) {
             DBG(("<keyboard_set_keymap_index switch_keymap_file ERROR\n"));
-            /*log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");*/
+            log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");
             /* return -1; */
             return 0; /* HACK: allow to start up when default keymap is missing */
         }
@@ -1382,7 +1921,7 @@ int keyboard_set_keymap_index(int val, void *param)
     return 0;
 }
 
-/* handle change if "KeyboardType" */
+/* handle change of "KeyboardType" */
 static int keyboard_set_keyboard_type(int val, void *param)
 {
     int idx, mapping;
@@ -1392,10 +1931,11 @@ static int keyboard_set_keyboard_type(int val, void *param)
 #ifdef __LIBRETRO__
     machine_keyboard_type = val;
 #endif
+
     DBG((">keyboard_set_keyboard_type(idx:%d mapping:%d type:%d)\n", idx, mapping, val));
     if (idx < 2) {
-        if (switch_keymap_file(&idx, &mapping, &val) < 0) {
-            /*log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");*/
+        if (switch_keymap_file(KBD_SWITCH_TYPE, &idx, &mapping, &val) < 0) {
+            log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");
             /* return -1; */
             return 0; /* HACK: allow to start up when default keymap is missing */
         }
@@ -1425,8 +1965,8 @@ static int keyboard_set_keyboard_mapping(int val, void *param)
     DBG((">keyboard_set_keyboard_mapping(%d,%d,%d)\n", idx, type, val));
 
     if (idx < 2) {
-        if (switch_keymap_file(&idx, &val, &type) < 0) {
-            /*log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");*/
+        if (switch_keymap_file(KBD_SWITCH_MAPPING, &idx, &val, &type) < 0) {
+            log_error(keyboard_log, "Default keymap not found, this should be fixed. Going on anyway...");
             /* return -1; */
             return 0; /* HACK: allow to start up when default keymap is missing */
         }
@@ -1451,16 +1991,18 @@ int keyboard_get_num_mappings(void)
     return KBD_MAPPING_NUM;
 }
 
-/* (keep in sync with constants in keyboard.c) */
+/* (keep in sync with constants in keyboard.h) */
 static mapping_info_t kbdinfo[KBD_MAPPING_NUM + 1] = {
-    { "American (us)", KBD_MAPPING_US, "" },
+    { "American (us)", KBD_MAPPING_US, "" },    /* this must be first (=0) always */
     { "British (uk)", KBD_MAPPING_UK, "uk" },
-    { "German (de)", KBD_MAPPING_DE, "de" },
     { "Danish (da)", KBD_MAPPING_DA, "da" },
     { "Dutch (nl)", KBD_MAPPING_NL, "nl" },
-    { "Norwegian (no)", KBD_MAPPING_NO, "no" },
     { "Finnish (fi)", KBD_MAPPING_FI, "fi" },
+    { "German (de)", KBD_MAPPING_DE, "de" },
     { "Italian (it)", KBD_MAPPING_IT, "it" },
+    { "Norwegian (no)", KBD_MAPPING_NO, "no" },
+    { "Swedish (se)", KBD_MAPPING_SE, "se" },
+    { "Swiss (ch)", KBD_MAPPING_CH, "ch" },
     { NULL, 0, 0 }
 };
 
@@ -1474,14 +2016,13 @@ static char *keyboard_get_mapping_name(int mapping)
     return kbdinfo[mapping].mapping_name;
 }
 
-static int try_set_keymap_file(int atidx, int idx, int mapping, int type)
+static char *keyboard_get_keymap_name(int idx, int mapping, int type)
 {
     char *sympos[2] = { "sym", "pos"};
     char *mapname;
     char *name = NULL, *tstr = NULL;
-    char *complete_path;
 
-    DBG((">try_set_keymap_file idx %d mapping %d type %d\n", idx, mapping, type));
+    DBG((">keyboard_get_keymap_name idx %d mapping %d type %d\n", idx, mapping, type));
     if (type >= 0) {
         tstr = machine_get_keyboard_type_name(type);
     }
@@ -1498,9 +2039,67 @@ static int try_set_keymap_file(int atidx, int idx, int mapping, int type)
         name = util_concat(KBD_PORT_PREFIX, "_", tstr, "_", sympos[idx], "_", mapname, ".vkm", NULL);
     }
 
-    DBG(("try_set_keymap_file: (port:%s type:%s idx:%d mapping:%d) '%s' = '%s'\n",
+    DBG(("keyboard_get_keymap_name: (port:%s type:%s idx:%d mapping:%d) '%s' = '%s'\n",
                 KBD_PORT_PREFIX, tstr ? tstr : "-", idx, mapping,
                 idx ? "KeymapPosFile" : "KeymapSymFile", name));
+
+    return name;
+}
+
+/** \brief  Check if a keymap exists for given layout / mapping / emulated keyboard
+ *
+ * \param[in]   sympos      Symbolic or Positional mapping , KBD_INDEX_SYM or KBD_INDEX_POS
+ * \param[in]   hosttype    Type of Host Layout, KBD_MAPPING_... (mapping_info_t .mapping)
+ * \param[in]   kbdtype     Emulated Keyboard type, KBD_TYPE_... (kbdtype_info_t .type) or -1 if no different types exist
+ *
+ * \return  0: ok !=0: error
+ */
+int keyboard_is_keymap_valid(int sympos, int hosttype, int kbdtype)
+{
+    char *name = NULL;
+    char *complete_path;
+    int res;
+
+    name = keyboard_get_keymap_name(sympos, hosttype, kbdtype);
+    res = sysfile_locate(name, &complete_path);
+
+    lib_free(name);
+    lib_free(complete_path);
+    return res;
+}
+
+/** \brief  Check if a keymap exists for given host layout
+ *
+ * \param[in]   hosttype    Type of Host Layout, KBD_MAPPING_... (mapping_info_t .mapping)
+ *
+ * \return  0: ok !=0: error
+ */
+int keyboard_is_hosttype_valid(int hosttype)
+{
+    int numtypes = machine_get_num_keyboard_types();
+    kbdtype_info_t *typelist = machine_get_keyboard_info_list();
+    int i, type;
+
+    for (i = 0; i < numtypes; i++) {
+        if (typelist) {
+            type = typelist[i].type;
+        } else {
+            type = 0;
+        }
+        if ((keyboard_is_keymap_valid(KBD_INDEX_SYM, hosttype, type) == 0) ||
+            (keyboard_is_keymap_valid(KBD_INDEX_POS, hosttype, type) == 0)) {
+            return 0;
+        }
+    }
+    return -1;
+}
+
+static int try_set_keymap_file(int atidx, int idx, int mapping, int type)
+{
+    char *name = NULL;
+    char *complete_path;
+
+    name = keyboard_get_keymap_name(idx, mapping, type);
 
     util_string_set(&machine_keymap_file_list[atidx], name);
     DBG(("try_set_keymap_file calls sysfile_locate(%s)\n", name));
@@ -1516,7 +2115,7 @@ static int try_set_keymap_file(int atidx, int idx, int mapping, int type)
     return 0;
 }
 
-static int switch_keymap_file(int *idxp, int *mapp, int *typep)
+static int switch_keymap_file(int sw, int *idxp, int *mapp, int *typep)
 {
     int type = *typep;
     int mapping = *mapp;
@@ -1528,6 +2127,25 @@ static int switch_keymap_file(int *idxp, int *mapp, int *typep)
         goto ok;
     }
 #ifndef __LIBRETRO__
+    /* when switching host layout or emulated keyboard type, try the "other" 
+       index first if the current one does not exist */
+    if ((sw == KBD_SWITCH_MAPPING) || (sw == KBD_SWITCH_TYPE)) {
+        switch (idx) {
+            case KBD_INDEX_SYM:
+                if(try_set_keymap_file(atidx, KBD_INDEX_POS, mapping, type) >= 0) {
+                    idx = KBD_INDEX_POS;
+                    goto ok;
+                }
+                break;
+            case KBD_INDEX_POS:
+                if(try_set_keymap_file(atidx, KBD_INDEX_SYM, mapping, type) >= 0) {
+                    idx = KBD_INDEX_SYM;
+                    goto ok;
+                }
+                break;
+        }
+    }
+
     /* if a positional map was not found, we cant really do any better
        than trying a symbolic map for the same keyboard instead */
     if (idx != KBD_INDEX_SYM) {
@@ -1555,7 +2173,9 @@ ok:
     return 0;
 }
 
-/* called by keyboard_resources_init to create the default keymap(s) */
+/* called by keyboard_resources_init to create the default keymap(s) 
+   idx is the index to the resource for the setting ("KeymapIndex") 
+ */
 static int keyboard_set_default_keymap_file(int idx)
 {
     int mapping = 0;
@@ -1564,16 +2184,19 @@ static int keyboard_set_default_keymap_file(int idx)
     DBG((">keyboard_set_default_keymap_file(%d)\n", idx));
 
     if ((idx != KBD_INDEX_SYM) && (idx != KBD_INDEX_POS)) {
+        /* it's a user keymap, do not set a default */
         return -1;
     }
+    /* host keyboard layout type */
     if (resources_get_int("KeyboardMapping", &mapping) < 0) {
         return -1;
     }
+    /* emulated keyboard type */
     if (resources_get_int("KeyboardType", &type) < 0) {
         return -1;
     }
-
-    if(switch_keymap_file(&idx, &mapping, &type) < 0) {
+    
+    if(switch_keymap_file(KBD_SWITCH_DEFAULT, &idx, &mapping, &type) < 0) {
         /* return -1; */
         DBG(("<keyboard_set_default_keymap_file(FAILURE: idx: %d type: %d mapping: %d)\n", idx, type, mapping));
         return 0; /* always return success to allow starting up without valid keymap */
@@ -1596,13 +2219,17 @@ static char *resources_string_d3 = NULL;
 
 static const resource_string_t resources_string[] = {
     { "KeymapSymFile", "", RES_EVENT_NO, NULL,
-      &machine_keymap_file_list[KBD_INDEX_SYM], keyboard_set_keymap_file, (void *)KBD_INDEX_SYM },
+      &machine_keymap_file_list[KBD_INDEX_SYM],
+      keyboard_set_keymap_file, (void *)KBD_INDEX_SYM },
     { "KeymapPosFile", "", RES_EVENT_NO, NULL,
-      &machine_keymap_file_list[KBD_INDEX_POS], keyboard_set_keymap_file, (void *)KBD_INDEX_POS },
+      &machine_keymap_file_list[KBD_INDEX_POS],
+      keyboard_set_keymap_file, (void *)KBD_INDEX_POS },
     { "KeymapUserSymFile", "", RES_EVENT_NO, NULL,
-      &machine_keymap_file_list[KBD_INDEX_USERSYM], keyboard_set_keymap_file, (void *)KBD_INDEX_USERSYM },
+      &machine_keymap_file_list[KBD_INDEX_USERSYM],
+      keyboard_set_keymap_file, (void *)KBD_INDEX_USERSYM },
     { "KeymapUserPosFile", "", RES_EVENT_NO, NULL,
-      &machine_keymap_file_list[KBD_INDEX_USERPOS], keyboard_set_keymap_file, (void *)KBD_INDEX_USERPOS },
+      &machine_keymap_file_list[KBD_INDEX_USERPOS],
+      keyboard_set_keymap_file, (void *)KBD_INDEX_USERPOS },
     RESOURCE_STRING_LIST_END
 };
 
@@ -1613,6 +2240,8 @@ static const resource_int_t resources_int[] = {
       &machine_keyboard_type, keyboard_set_keyboard_type, NULL },
     { "KeyboardMapping", 0, RES_EVENT_NO, NULL,
       &machine_keyboard_mapping, keyboard_set_keyboard_mapping, NULL },
+    { "KbdStatusbar", 0, RES_EVENT_NO, NULL,
+      &kbd_statusbar_enabled, keyboard_set_keyboard_statusbar, NULL },
     RESOURCE_INT_LIST_END
 };
 
@@ -1631,6 +2260,7 @@ int keyboard_resources_init(void)
     if (resources_register_string(resources_string) < 0) {
         return -1;
     }
+
     if (resources_register_int(resources_int) < 0) {
         return -1;
     }
@@ -1641,15 +2271,17 @@ int keyboard_resources_init(void)
     DBG((">>keyboard_resources_init(first start:%s)\n", (npos && nsym) ? "yes" : "no"));
 
     if (npos && nsym) {
-        mapping = kbd_arch_get_host_mapping();
+        mapping = archdep_kbd_get_host_mapping();
         log_verbose("Setting up default keyboard mapping for host type %d (%s)",
                     mapping, keyboard_get_mapping_name(mapping));
         if (resources_set_int("KeymapIndex", KBD_INDEX_SYM) < 0) {
             /* return -1; */
         }
+        /* host keyboard mapping */
         if (resources_set_int("KeyboardMapping", mapping) < 0) {
             /* return -1; */
         }
+        
         keyboard_set_default_keymap_file(KBD_INDEX_POS);
         if (resources_get_string("KeymapPosFile", &name) < 0) {
             DBG(("<<keyboard_resources_init(error)\n"));
@@ -1665,6 +2297,7 @@ int keyboard_resources_init(void)
             return -1;
         }
         log_verbose("Default symbolic map is: %s", name);
+
         util_string_set(&resources_string_d0, name);
         util_string_set(&resources_string_d2, name);
 
@@ -1732,6 +2365,17 @@ static cmdline_option_t const cmdline_options[] =
     { "-poskeymap", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "KeymapUserPosFile", NULL,
       "<Name>", "Specify name of positional keymap file" },
+
+    /* enable keyboard debugging display in the statusbar */
+    { "-kbdstatusbar", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+        NULL, NULL, "KbdStatusbar", (resource_value_t)1,
+        NULL, "Enable keyboard-status bar" },
+
+    /* disable keyboard debugging display in the statusbar */
+    { "+kbdstatusbar", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+        NULL, NULL, "KbdStatusbar", (resource_value_t)0,
+        NULL, "Enable keyboard-status bar" },
+
     CMDLINE_LIST_END
 };
 
@@ -1821,7 +2465,7 @@ int keyboard_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_MAJOR || minor_version > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         snapshot_module_close(m);
         return -1;

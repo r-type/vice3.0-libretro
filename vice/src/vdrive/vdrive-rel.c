@@ -4,7 +4,7 @@
  *
  * Written by
  *  Andreas Boose <viceteam@t-online.de>
- *  Roberto Muscedere <cococommie@cogeco.ca>
+ *  Roberto Muscedere <rmusced@uwindsor.ca>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "cbmdos.h"
 #include "diskimage.h"
@@ -44,20 +45,6 @@
 #include "vdrive-iec.h"
 #include "vdrive-rel.h"
 #include "vdrive.h"
-
-#define SIDE_SECTORS_MAX 6
-#define SIDE_INDEX_MAX   120
-
-#define OFFSET_NEXT_TRACK  0
-#define OFFSET_NEXT_SECTOR 1
-#define OFFSET_SECTOR_NUM  2
-#define OFFSET_RECORD_LEN  3
-#define OFFSET_SIDE_SECTOR 4
-#define OFFSET_POINTER     16
-
-#define OFFSET_SUPER_254     2
-#define OFFSET_SUPER_POINTER 3
-#define SIDE_SUPER_MAX       126
 
 #define DIRTY_SECTOR   1
 #define DIRTY_RECORD   2
@@ -86,12 +73,14 @@ static unsigned int vdrive_rel_has_super(vdrive_t *vdrive)
             break;
         case VDRIVE_IMAGE_FORMAT_1581:
         case VDRIVE_IMAGE_FORMAT_8250:
+        case VDRIVE_IMAGE_FORMAT_9000:
             /* has super side sector */
             super = 1;
             break;
         default:
             log_error(vdrive_rel_log,
-                      "Unknown disk type %i.  Cannot determine if it supports super side sectors.",
+                      "Unknown disk type %u.  "
+                      "Cannot determine if it supports super side sectors.",
                       vdrive->image_format);
             break;
     }
@@ -128,9 +117,15 @@ static unsigned int vdrive_rel_blocks_max(vdrive_t *vdrive)
                read it.  We will therefore use 4090 as our limit. */
             maximum = 4090 + 5 * 6 + 5 + 1;
             break;
+        case VDRIVE_IMAGE_FORMAT_9000:
+            /* work this out, skip track 0 */
+            maximum = vdrive->image->sectors * vdrive->image->tracks
+                - (vdrive->bam_size>>8) - 1 - 1;
+            maximum = (maximum * 720) / 726;
+            break;
         default:
             log_error(vdrive_rel_log,
-                      "Unknown disk type %i.  Cannot determine max REL size.",
+                      "Unknown disk type %u.  Cannot determine max REL size.",
                       vdrive->image_format);
             break;
     }
@@ -352,8 +347,9 @@ static int vdrive_rel_add_sector(vdrive_t *vdrive, unsigned int secondary, unsig
                 p->buffer[o] = 0x00;
             }
             k = ( k + 1 ) % m;
-            /* increment the maximum records each time we complete a full
-                record. */
+            /* Increment the maximum records each time we complete a full
+                record. This does tend to create never-requested empty
+                records at the end of the file though. */
             if (k == 0) {
                 p->record_max++;
             }
@@ -375,8 +371,9 @@ static int vdrive_rel_add_sector(vdrive_t *vdrive, unsigned int secondary, unsig
             p->buffer_next[o] = 0x00;
         }
         k = ( k + 1 ) % m;
-        /* increment the maximum records each time we complete a full
-            record. */
+        /* Increment the maximum records each time we complete a full
+            record.  This does tend to create never-requested empty
+            records at the end of the file though. */
         if (k == 0) {
             p->record_max++;
         }
@@ -737,7 +734,7 @@ static int vdrive_rel_open_new(vdrive_t *vdrive, unsigned int secondary,
     uint8_t *slot;
 
 #ifdef DEBUG_DRIVE
-    log_debug("vdrive_rel_open_new: Name (%d) '%s'",
+    log_debug("vdrive_rel_open_new: Name (%u) '%s'",
               cmd_parse->parselength, cmd_parse->parsecmd);
 #endif
 
@@ -758,7 +755,7 @@ static int vdrive_rel_open_new(vdrive_t *vdrive, unsigned int secondary,
     memset(p->slot + SLOT_NAME_OFFSET, 0xa0, 16);
     memcpy(p->slot + SLOT_NAME_OFFSET, cmd_parse->parsecmd, cmd_parse->parselength);
 #ifdef DEBUG_DRIVE
-    log_debug("DIR: Created dir slot. Name (%d) '%s'",
+    log_debug("DIR: Created dir slot. Name (%u) '%s'",
               cmd_parse->parselength, cmd_parse->parsecmd);
 #endif
     p->slot[SLOT_TYPE_OFFSET] = cmd_parse->filetype | 0x80;       /* closed */
@@ -769,8 +766,12 @@ static int vdrive_rel_open_new(vdrive_t *vdrive, unsigned int secondary,
     memcpy(&(p->dir.buffer[p->dir.slot * 32 + 2]), p->slot + 2, 30);
 
 #ifdef DEBUG_DRIVE
-    log_debug("DEBUG: write DIR slot (%d %d).",
+    log_debug("DEBUG: write DIR slot (%u %u).",
+#if 0
               vdrive->Curr_track, vdrive->Curr_sector);
+#endif
+            /* hope I got this right: */
+              p->dir.track, p->dir.sector);
 #endif
     /* Write the sector */
     vdrive_write_sector(vdrive, p->dir.buffer, p->dir.track, p->dir.sector);
@@ -812,15 +813,15 @@ int vdrive_rel_open(vdrive_t *vdrive, unsigned int secondary,
 
     if (p->slot) {
         log_debug(
-            "Open existing REL file '%s' with record length %i on channel %d.",
+            "Open existing REL file '%s' with record length %u on channel %u.",
             name, cmd_parse->recordlength, secondary);
         /* Follow through to function. */
         if (vdrive_rel_open_existing(vdrive, secondary)) {
             return SERIAL_ERROR;
         }
-    } else {
+    } else if (cmd_parse->recordlength > 0) {
         log_debug(
-            "Open new REL file '%s' with record length %i on channel %d.",
+            "Open new REL file '%s' with record length %u on channel %u.",
             name, cmd_parse->recordlength, secondary);
 
         /* abort if we are in read only mode */
@@ -835,6 +836,12 @@ int vdrive_rel_open(vdrive_t *vdrive, unsigned int secondary,
         }
         /* set a flag so we can expand the rel file to 1 record later. */
         newrelfile++;
+    } else {
+        log_debug(
+            "Open non-existing REL file '%s' with unspecified record length on channel %u.",
+            name, secondary);
+        vdrive_command_set_error(vdrive, CBMDOS_IPE_NOT_FOUND, 0, 0);
+        return SERIAL_ERROR;
     }
 
     /* Allocate dual buffers to improve performance */
@@ -1014,7 +1021,7 @@ int vdrive_rel_position(vdrive_t *vdrive, unsigned int secondary,
        length */
     if (position >= rec_len) {
         log_error(vdrive_rel_log, "Position larger than record!?");
-        return 51;
+        return CBMDOS_IPE_OVERFLOW;
     }
 
     /* generate a 16 bit value for the record from the two 8-bit values */
@@ -1037,7 +1044,8 @@ int vdrive_rel_position(vdrive_t *vdrive, unsigned int secondary,
     /* Fill the rest of the currently written record. */
     vdrive_rel_fillrecord(vdrive, secondary);
 
-    log_debug("Requested position %d, %d on channel %d.", record, position, secondary);
+    log_debug("Requested position %u, %u on channel %u.",
+            record, position, secondary);
 
     /* locate the track, sector and sector offset of record */
     vdrive_rel_track_sector(vdrive, secondary, record, &track, &sector, &rec_start);
@@ -1063,7 +1071,8 @@ int vdrive_rel_position(vdrive_t *vdrive, unsigned int secondary,
 
         /* load in the sector to memory */
         if (vdrive_read_sector(vdrive, p->buffer, track, sector) != 0) {
-            log_error(vdrive_rel_log, "Cannot read track %i sector %i.", track, sector);
+            log_error(vdrive_rel_log, "Cannot read track %u sector %u.",
+                    track, sector);
             return 66;
         }
         p->track = track;
@@ -1201,7 +1210,8 @@ int vdrive_rel_read(vdrive_t *vdrive, uint8_t *data, unsigned int secondary)
                 /* keep buffered sector where ever it is */
                 /* we won't read in the next sector unless we have to */
             } else {
-                log_error(vdrive_rel_log, "Cannot read track %i sector %i.", track, sector);
+                log_error(vdrive_rel_log, "Cannot read track %u sector %u.",
+                        track, sector);
                 *data = 0xc7;
                 return SERIAL_EOF;
             }
@@ -1214,7 +1224,7 @@ int vdrive_rel_read(vdrive_t *vdrive, uint8_t *data, unsigned int secondary)
     #ifdef DEBUG_DRIVE
                 if (p->mode == BUFFER_COMMAND_CHANNEL) {
                     log_error(vdrive_rel_log,
-                              "Disk read  %d [%02d %02d] data %02x (%c).",
+                              "Disk read  %u [%02d %02d] data %02x (%c).",
                               p->mode, 0, 0, *data, (isprint(*data)
                                                      ? *data : '.'));
                 }
@@ -1284,7 +1294,8 @@ int vdrive_rel_read(vdrive_t *vdrive, uint8_t *data, unsigned int secondary)
                 }
             }
         }
-        log_debug("Forced from read to position %d, 0 on channel %d.", p->record, secondary);
+        log_debug("Forced from read to position %u, 0 on channel %u.",
+                p->record, secondary);
 
         return SERIAL_EOF;
     }
@@ -1349,7 +1360,8 @@ int vdrive_rel_write(vdrive_t *vdrive, uint8_t data, unsigned int secondary)
                 /* keep buffered sector where ever it is */
                 /* we won't read in the next sector unless we have to */
             } else {
-                log_error(vdrive_rel_log, "Cannot read track %i sector %i.", track, sector);
+                log_error(vdrive_rel_log, "Cannot read track %u sector %u.",
+                        track, sector);
                 return SERIAL_EOF;
             }
         }
@@ -1358,7 +1370,7 @@ int vdrive_rel_write(vdrive_t *vdrive, uint8_t data, unsigned int secondary)
 #ifdef DEBUG_DRIVE
             if (p->mode == BUFFER_COMMAND_CHANNEL) {
                 log_error(vdrive_rel_log,
-                          "Disk read  %d [%02d %02d] data %02x (%c).",
+                          "Disk read  %u [%02d %02d] data %02x (%c).",
                           p->mode, 0, 0, data, (isprint(data)
                                                 ? data : '.'));
             }
@@ -1404,7 +1416,7 @@ int vdrive_rel_close(vdrive_t *vdrive, unsigned int secondary)
 {
     bufferinfo_t *p = &(vdrive->buffers[secondary]);
 
-    log_debug("VDrive REL close channel %d.", secondary);
+    log_debug("VDrive REL close channel %u.", secondary);
 
     /* Fill the rest of the currently written record. */
     vdrive_rel_fillrecord(vdrive, secondary);
@@ -1498,6 +1510,7 @@ void vdrive_rel_listen(vdrive_t *vdrive, unsigned int secondary)
                 }
             }
         }
-        log_debug("Forced from write to position %d, 0 on channel %d.", p->record, secondary);
+        log_debug("Forced from write to position %u, 0 on channel %u.",
+                p->record, secondary);
     }
 }

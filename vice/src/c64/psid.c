@@ -348,7 +348,7 @@ int psid_load_file(const char* filename)
     }
 
     if (!feof(f)) {
-        log_error(vlog, "More than 64K PSID data.");
+        log_error(vlog, "More than 64KiB PSID data.");
         goto fail;
     }
 
@@ -475,7 +475,10 @@ void psid_init_tune(int install_driver_hook)
 
     reloc_addr = psid->start_page << 8;
 
-    log_message(vlog, "Driver=$%04X, Image=$%04X-$%04X, Init=$%04X, Play=$%04X", reloc_addr, psid->load_addr, psid->load_addr + psid->data_size - 1, psid->init_addr, psid->play_addr);
+    log_message(vlog, "Driver=$%04X, Image=$%04X-$%04X, Init=$%04X, Play=$%04X",
+            reloc_addr, psid->load_addr,
+            (unsigned int)(psid->load_addr + psid->data_size - 1),
+            psid->init_addr, psid->play_addr);
 
     /* PAL/NTSC. */
     resources_get_int("MachineVideoStandard", &sync);
@@ -647,19 +650,19 @@ void psid_init_driver(void)
     resources_set_int("SidStereo", 0);
     if (psid->version >= 3) {
         sid2loc = 0xd000 | ((psid->reserved >> 4) & 0x0ff0);
-        log_message(vlog, "2nd SID at $%04x", sid2loc);
+        log_message(vlog, "2nd SID at $%04x", (unsigned int)sid2loc);
         if (((sid2loc >= 0xd420 && sid2loc < 0xd800) || sid2loc >= 0xde00)
             && (sid2loc & 0x10) == 0) {
             resources_set_int("SidStereo", 1);
-            resources_set_int("SidStereoAddressStart", sid2loc);
+            resources_set_int("Sid2AddressStart", sid2loc);
         }
         sid3loc = 0xd000 | ((psid->reserved << 4) & 0x0ff0);
         if (sid3loc != 0xd000) {
-            log_message(vlog, "3rd SID at $%04x", sid3loc);
+            log_message(vlog, "3rd SID at $%04x", (unsigned int)sid3loc);
             if (((sid3loc >= 0xd420 && sid3loc < 0xd800) || sid3loc >= 0xde00)
                 && (sid3loc & 0x10) == 0) {
                 resources_set_int("SidStereo", 2);
-                resources_set_int("SidTripleAddressStart", sid3loc);
+                resources_set_int("Sid3AddressStart", sid3loc);
             }
         }
     }
@@ -689,7 +692,8 @@ void psid_init_driver(void)
     /* Relocation of C64 PSID driver code. */
     reloc_addr = psid->start_page << 8;
     psid_size = sizeof(psid_driver);
-    log_message(vlog, "PSID free pages: $%04x-$%04x", reloc_addr, (reloc_addr + (psid->max_pages << 8)) -1);
+    log_message(vlog, "PSID free pages: $%04x-$%04x",
+            reloc_addr, (reloc_addr + (psid->max_pages << 8)) - 1U);
 
     if (!reloc65((char **)&psid_reloc, &psid_size, reloc_addr)) {
         log_error(vlog, "Relocation.");
@@ -865,8 +869,9 @@ static int mus_load_file(const char* filename, int ispsid)
 {
     char *strname;
     FILE *f;
-    int n, stereo = 0;
-    int mus_datalen;
+    int stereo = 0;
+    size_t n;
+    size_t mus_datalen;
 
     if (!(f = zfile_fopen(filename, MODE_READ))) {
         return -1;
@@ -892,7 +897,7 @@ static int mus_load_file(const char* filename, int ispsid)
     /* FIXME: the psid file format specification does not tell how to handle
               stereo sidplayer tunes when they are in psid format */
     if (!ispsid) {
-        strname = lib_stralloc(filename);
+        strname = lib_strdup(filename);
         n = strlen(strname) - 4;
         strcpy(strname + n, ".str");
 
@@ -906,7 +911,7 @@ static int mus_load_file(const char* filename, int ispsid)
         }
         lib_free(strname);
         /* only extract credits if this is NOT a psid file */
-        mus_extract_credits(psid->data, mus_datalen);
+        mus_extract_credits(psid->data, (int)mus_datalen);
     }
 
     mus_install();

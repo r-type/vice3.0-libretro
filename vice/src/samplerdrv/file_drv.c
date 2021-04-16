@@ -1,9 +1,10 @@
+/** \file   file_drv.c
+ * \brief   File based audio input driver.
+ *
+ * \author  Marco van den Heuvel <blackystardust68@yahoo.com>
+ */
+
 /*
- * file_drv.c - File based audio input driver.
- *
- * Written by
- *  Marco van den Heuvel <blackystardust68@yahoo.com>
- *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
  *
@@ -322,7 +323,7 @@ static int convert_float_buffer(int size, int channels)
             c[3] = file_buffer[file_pointer + (i * frame_size) + 3];
         }
         memcpy(&f, c, sizeof(float));
-        f *= 0x7fffffff;
+        f *= (float)0x7fffffff;
         sample = (int32_t)f;
         sample_buffer1[i] = (uint8_t)((sample >> 24) + 0x80);
         if (sound_audio_channels == 2 && channels == SAMPLER_OPEN_STEREO) {
@@ -338,7 +339,7 @@ static int convert_float_buffer(int size, int channels)
                 c[3] = file_buffer[file_pointer + (i * frame_size) + 7];
             }
             memcpy(&f, c, sizeof(float));
-            f *= 0x7fffffff;
+            f *= (float)0x7fffffff;
             sample = (int32_t)f;
             sample_buffer2[i] = (uint8_t)((sample >> 24) + 0x80);
         }
@@ -491,7 +492,10 @@ static int handle_wav_file(int channels)
     /* sanity check header indicated size with loaded size */
     size = (file_buffer[7] << 24) | (file_buffer[6] << 16) | (file_buffer[5] << 8) | file_buffer[4];
     if (size != file_size - 8) {
-        log_error(filedrv_log, "header reported size not what was expected: header says: %d, filesize - 8 is %d.", size, file_size - 8);
+        log_error(filedrv_log,
+                "header reported size not what was expected: header says: %u, "
+                "filesize - 8 is %u.",
+                size, file_size - 8);
         return -1;
     }
 
@@ -537,7 +541,8 @@ static int handle_wav_file(int channels)
     /* channels used in the file */
     sound_audio_channels = (file_buffer[file_pointer + 1] << 8) | file_buffer[file_pointer];
     if (sound_audio_channels == 0 || sound_audio_channels > 2) {
-        log_error(filedrv_log, "unexpected amount of audio channels : %d", sound_audio_channels);
+        log_error(filedrv_log, "unexpected amount of audio channels : %u",
+                sound_audio_channels);
         return -1;
     }
     file_pointer +=2;
@@ -559,7 +564,9 @@ static int handle_wav_file(int channels)
     bps = (file_buffer[file_pointer + 1] << 8) | file_buffer[file_pointer];
     bps = bps * 8 / sound_audio_channels;
     if (bps != sound_audio_bits) {
-        log_error(filedrv_log, "First instance of bps does not match second instance: %d %d", sound_audio_bits, bps);
+        log_error(filedrv_log,
+                "First instance of bps does not match second instance: %u %u",
+                sound_audio_bits, bps);
         return -1;
     }
     file_pointer += 2;
@@ -567,7 +574,9 @@ static int handle_wav_file(int channels)
     /* get real instance of bits per sample */
     bps = (file_buffer[file_pointer + 1] << 8) | file_buffer[file_pointer];
     if (bps != sound_audio_bits) {
-        log_error(filedrv_log, "First instance of bps does not match real instance: %d %d", sound_audio_bits, bps);
+        log_error(filedrv_log,
+                "First instance of bps does not match real instance: %u %u",
+                sound_audio_bits, bps);
         return -1;
     }
     file_pointer += 2;
@@ -590,7 +599,9 @@ static int handle_wav_file(int channels)
     /* get remaining size */
     size = (file_buffer[file_pointer + 3] << 24) | (file_buffer[file_pointer + 2] << 16) | (file_buffer[file_pointer + 1] << 8) | file_buffer[file_pointer];
     if (size != file_size - (file_pointer + 4)) {
-        log_error(filedrv_log, "data chunk size does not match remaining file size: %d %d", size, file_size - (file_pointer + 4));
+        log_error(filedrv_log,
+                "data chunk size does not match remaining file size: %u %u",
+                size, file_size - (file_pointer + 4));
         return -1;
     }
     file_pointer += 4;
@@ -605,7 +616,8 @@ static int handle_wav_file(int channels)
                 case 64:
                     return convert_double_buffer(size, channels);
                 default:
-                    log_error(filedrv_log, "Unhandled float format : %d", sound_audio_bits);
+                    log_error(filedrv_log, "Unhandled float format : %u",
+                            sound_audio_bits);
                     return -1;
             }
         case AUDIO_TYPE_ALAW:
@@ -1004,7 +1016,8 @@ static int handle_voc_file(int channels)
     }
 
     if (file_buffer[20] != 0x1A || file_buffer[21] != 0) {
-        log_error(filedrv_log, "Incorrect voc file header length : %X", (file_buffer[21] << 8) | file_buffer[20]);
+        log_error(filedrv_log, "Incorrect voc file header length : %X", 
+                (unsigned int)(file_buffer[21] << 8) | file_buffer[20]);
         return -1;
     }
 
@@ -1086,7 +1099,9 @@ static int handle_voc_file(int channels)
 
 static int is_voc_file(void)
 {
-    char header[] = { 0x43, 0x72, 0x65, 0x61, 0x74, 0x69, 0x76, 0x65, 0x20, 0x56, 0x6F, 0x69, 0x63, 0x65, 0x20, 0x46, 0x69, 0x6C, 0x65 };
+    static const char header[] = {
+        0x43, 0x72, 0x65, 0x61, 0x74, 0x69, 0x76, 0x65, 0x20, 0x56, 0x6F, 0x69, 0x63, 0x65, 0x20, 0x46, 0x69, 0x6C, 0x65
+    };
     size_t i;
 
     if (file_size < 26) {
@@ -1337,7 +1352,8 @@ static int aiff_handle_comm(void)
 
     sound_audio_channels = (file_buffer[file_pointer] << 8) | file_buffer[file_pointer + 1];
     if (sound_audio_channels < 1 || sound_audio_channels > 2) {
-        log_error(filedrv_log, "COMM channels not 1 or 2 : %d", sound_audio_channels);
+        log_error(filedrv_log, "COMM channels not 1 or 2 : %u",
+                sound_audio_channels);
         return -1;
     }
 
@@ -1351,7 +1367,8 @@ static int aiff_handle_comm(void)
         case 32:
             break;
         default:
-            log_error(filedrv_log, "COMM bits not 8, 16, 24 or 32 : %d", sound_audio_bits);
+            log_error(filedrv_log, "COMM bits not 8, 16, 24 or 32 : %u",
+                    sound_audio_bits);
             return -1;
     }
 
@@ -1486,7 +1503,8 @@ static int aifc_handle_ssnd(int channels)
                 case 64:
                     return convert_double_buffer(size, channels);
                 default:
-                    log_error(filedrv_log, "Unhandled float format : %d", sound_audio_bits);
+                    log_error(filedrv_log, "Unhandled float format : %u",
+                            sound_audio_bits);
                     return -1;
             }
         case AUDIO_TYPE_ALAW:
@@ -1519,7 +1537,8 @@ static int aifc_handle_comm(void)
 
     sound_audio_channels = (file_buffer[file_pointer] << 8) | file_buffer[file_pointer + 1];
     if (sound_audio_channels < 1 || sound_audio_channels > 2) {
-        log_error(filedrv_log, "COMM channels not 1 or 2 : %d", sound_audio_channels);
+        log_error(filedrv_log, "COMM channels not 1 or 2 : %u",
+                sound_audio_channels);
         return -1;
     }
 
@@ -1535,7 +1554,8 @@ static int aifc_handle_comm(void)
         case 64:
             break;
         default:
-            log_error(filedrv_log, "COMM bits not 8, 16, 24, 32 or 64 : %d", sound_audio_bits);
+            log_error(filedrv_log, "COMM bits not 8, 16, 24, 32 or 64 : %u",
+                    sound_audio_bits);
             return -1;
     }
 
@@ -1697,7 +1717,7 @@ static int handle_mp3_file(int channels)
     buffer_size = mpg123_length(mh);
 
     lib_free(file_buffer);
-    file_size = buffer_size * 2 * mp3_channels;
+    file_size = (unsigned int)(buffer_size * 2 * mp3_channels);
     file_buffer = lib_malloc(file_size);
 
     mp3_err = mpg123_read(mh, file_buffer, file_size, &done);
@@ -1710,7 +1730,7 @@ static int handle_mp3_file(int channels)
 
     sound_audio_type = AUDIO_TYPE_PCM;
     sound_audio_channels = mp3_channels;
-    sound_audio_rate = mp3_rate;
+    sound_audio_rate = (unsigned int)mp3_rate;
     sound_audio_bits = 16;
 
     return convert_pcm_buffer(file_size, channels);
@@ -1929,14 +1949,14 @@ static int handle_vorbis_file(int channels)
     }
 
     for (i = 0; i < ov.links; i++) {
-        vi = ov_info(&ov, i);
+        vi = ov_info(&ov, (int)i);
         sound_audio_channels = vi->channels;
         if (sound_audio_channels < 1 || sound_audio_channels > 2) {
             ov_clear(&ov);
             log_error(filedrv_log, "The ogg/vorbis file channels is not 1 or 2");
             return -1;
         }
-        sound_audio_rate = vi->rate;
+        sound_audio_rate = (unsigned int)(vi->rate);
         sound_audio_bits = 16;
         sound_audio_type = AUDIO_TYPE_PCM;
     }
@@ -1944,8 +1964,10 @@ static int handle_vorbis_file(int channels)
     pcmlength = ov_pcm_total(&ov, -1);
     vorbis_buffer = lib_malloc(pcmlength * sound_audio_channels * 2);
     i = 0;
-    while (i < pcmlength * sound_audio_channels * 2){
-        int ret = ov_read(&ov, (char*)vorbis_buffer + i, (pcmlength * 2 * sound_audio_channels) - i, 0, 2, 1, &dummy);
+    while (i < pcmlength * sound_audio_channels * 2) {
+        int ret = (int)ov_read(&ov, (char*)vorbis_buffer + i,
+                               (int)((pcmlength * 2 * sound_audio_channels) - i),
+                               0, 2, 1, &dummy);
         if (ret < 0) {
             ov_clear(&ov);
             lib_free(vorbis_buffer);
@@ -1964,7 +1986,7 @@ static int handle_vorbis_file(int channels)
 
     lib_free(file_buffer);
     file_buffer = vorbis_buffer;
-    file_size = pcmlength * 2 * sound_audio_channels;
+    file_size = (unsigned int)(pcmlength * 2 * sound_audio_channels);
     file_pointer = 0;
 
     return convert_pcm_buffer(file_size, channels);
@@ -2074,7 +2096,7 @@ static void file_load_sample(int channels)
     sample_file = fopen(sample_name, "rb");
     if (sample_file) {
         fseek(sample_file, 0, SEEK_END);
-        file_size = ftell(sample_file);
+        file_size = (unsigned int)ftell(sample_file);
         fseek(sample_file, 0, SEEK_SET);
         file_buffer = lib_malloc(file_size);
         if (fread(file_buffer, 1, file_size, sample_file) != file_size) {
@@ -2084,8 +2106,8 @@ static void file_load_sample(int channels)
         err = handle_file_type(channels);
         if (!err) {
             sound_sampling_started = 0;
-            sound_cycles_per_frame = machine_get_cycles_per_frame();
-            sound_frames_per_sec = machine_get_cycles_per_second() / sound_cycles_per_frame;
+            sound_cycles_per_frame = (unsigned int)machine_get_cycles_per_frame();
+            sound_frames_per_sec = (unsigned int)machine_get_cycles_per_second() / sound_cycles_per_frame;
             sound_samples_per_frame = sound_audio_rate / sound_frames_per_sec;
             current_channels = channels;
         } else {

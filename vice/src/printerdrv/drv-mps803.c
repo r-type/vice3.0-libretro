@@ -73,11 +73,15 @@ struct mps_s {
 };
 typedef struct mps_s mps_t;
 
+#ifdef __LIBRETRO__
+static uint8_t charset[512][7];
+#else
 #ifdef USE_EMBEDDED
 #include "printermps803.h"
 #else
 static uint8_t charset[512][7];
 #endif
+#endif /* __LIBRETRO__ */
 
 static mps_t drv_mps803[NUM_OUTPUT_SELECT];
 static palette_t *palette = NULL;

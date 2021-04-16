@@ -31,7 +31,8 @@
 #include <gtk/gtk.h>
 
 
-void     uimedia_dialog_show(GtkWidget *parent, gpointer user_data);
-gboolean uimedia_stop_recording(GtkWidget *parent, gpointer data);
+gboolean ui_media_dialog_show(GtkWidget *parent, gpointer user_data);
+gboolean ui_media_stop_recording(GtkWidget *parent, gpointer data);
+void     ui_media_auto_screenshot(void);
 
 #endif

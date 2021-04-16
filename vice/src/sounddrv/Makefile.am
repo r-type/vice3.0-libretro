@@ -1,29 +1,33 @@
 # Makefile.am for `libsounddrv.a'.
 
 AM_CPPFLAGS = \
+	@VICE_CPPFLAGS@ \
 	@ARCH_INCLUDES@ \
+	-I$(top_srcdir)/src/arch/shared \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src
+
+AM_CFLAGS = @VICE_CFLAGS@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
 
 noinst_LIBRARIES = libsounddrv.a
 
 # These sources are linked only under certain circumstances.
 EXTRA_libsounddrv_a_SOURCES = \
 	soundahi.c \
-	soundaix.c \
 	soundalsa.c \
-	soundarts.c \
 	soundbeos.cc \
 	soundbsp.cc \
 	soundcoreaudio.c \
-	sounddart.c \
 	sounddx.c \
 	soundflac.c \
-	soundhpux.c \
 	soundmp3.c \
 	soundpulse.c \
 	soundsdl.c \
-	soundsgi.c \
 	soundsun.c \
 	sounduss.c \
 	soundvorbis.c \

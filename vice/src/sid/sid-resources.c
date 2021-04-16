@@ -65,12 +65,20 @@ static int sid_resid_8580_filter_bias;
 #endif
 int sid_stereo = 0;
 int checking_sid_stereo;
-unsigned int sid_stereo_address_start;
-unsigned int sid_stereo_address_end;
-unsigned int sid_triple_address_start;
-unsigned int sid_triple_address_end;
-unsigned int sid_quad_address_start;
-unsigned int sid_quad_address_end;
+unsigned int sid2_address_start;
+unsigned int sid2_address_end;
+unsigned int sid3_address_start;
+unsigned int sid3_address_end;
+unsigned int sid4_address_start;
+unsigned int sid4_address_end;
+unsigned int sid5_address_start;
+unsigned int sid5_address_end;
+unsigned int sid6_address_start;
+unsigned int sid6_address_end;
+unsigned int sid7_address_start;
+unsigned int sid7_address_end;
+unsigned int sid8_address_start;
+unsigned int sid8_address_end;
 static int sid_engine;
 #ifdef HAVE_HARDSID
 static int sid_hardsid_main;
@@ -90,7 +98,9 @@ static int set_sid_engine(int set_engine, void *param)
     }
 
     switch (engine) {
+#ifdef HAVE_FASTSID
         case SID_ENGINE_FASTSID:
+#endif
 #ifdef HAVE_RESID
         case SID_ENGINE_RESID:
 #ifdef __LIBRETRO__
@@ -162,50 +172,29 @@ static int set_sid_stereo(int val, void *param)
     return 0;
 }
 
-int sid_set_sid_stereo_address(int val, void *param)
-{
-    unsigned int sid2_adr;
-
-    sid2_adr = (unsigned int)val;
-
-    if (machine_sid2_check_range(sid2_adr) < 0) {
-        return -1;
+#define SET_SIDx_ADDRESS(sid_nr)                                        \
+    int sid_set_sid##sid_nr##_address(int val, void *param)             \
+    {                                                                   \
+        unsigned int sid_adr;                                           \
+                                                                        \
+        sid_adr = (unsigned int)val;                                    \
+                                                                        \
+        if (machine_sid##sid_nr##_check_range(sid_adr) < 0) {           \
+            return -1;                                                  \
+        }                                                               \
+                                                                        \
+        sid##sid_nr##_address_start = sid_adr;                          \
+        sid##sid_nr##_address_end = sid##sid_nr##_address_start + 0x20; \
+        return 0;                                                       \
     }
 
-    sid_stereo_address_start = sid2_adr;
-    sid_stereo_address_end = sid_stereo_address_start + 32;
-    return 0;
-}
-
-int sid_set_sid_triple_address(int val, void *param)
-{
-    unsigned int sid3_adr;
-
-    sid3_adr = (unsigned int)val;
-
-    if (machine_sid3_check_range(sid3_adr) < 0) {
-        return -1;
-    }
-
-    sid_triple_address_start = sid3_adr;
-    sid_triple_address_end = sid_triple_address_start + 32;
-    return 0;
-}
-
-int sid_set_sid_quad_address(int val, void *param)
-{
-    unsigned int sid4_adr;
-
-    sid4_adr = (unsigned int)val;
-
-    if (machine_sid4_check_range(sid4_adr) < 0) {
-        return -1;
-    }
-
-    sid_quad_address_start = sid4_adr;
-    sid_quad_address_end = sid_quad_address_start + 32;
-    return 0;
-}
+SET_SIDx_ADDRESS(2)
+SET_SIDx_ADDRESS(3)
+SET_SIDx_ADDRESS(4)
+SET_SIDx_ADDRESS(5)
+SET_SIDx_ADDRESS(6)
+SET_SIDx_ADDRESS(7)
+SET_SIDx_ADDRESS(8)
 
 static int set_sid_model(int val, void *param)
 {
@@ -222,7 +211,9 @@ static int set_sid_model(int val, void *param)
             (machine_class == VICE_MACHINE_C64) ||
             (machine_class == VICE_MACHINE_C64SC) ||
             (machine_class == VICE_MACHINE_SCPU64)){
+#ifndef __LIBRETRO__
             sid_model = SID_MODEL_8580;
+#endif
         }
     }
 
@@ -230,7 +221,6 @@ static int set_sid_model(int val, void *param)
         case SID_MODEL_6581:
         case SID_MODEL_8580:
         case SID_MODEL_8580D:
-        case SID_MODEL_6581R4:
 #ifdef HAVE_RESID
         case SID_MODEL_DTVSID:
 #endif
@@ -373,9 +363,12 @@ void sid_set_enable(int value)
         return;
     }
 
+#ifdef HAVE_FASTSID
     if (val) {
         sid_engine_set(SID_ENGINE_FASTSID);
-    } else {
+    } else 
+#endif
+    {
         sid_engine_set(sid_engine);
     }
     sid_enabled = val;
@@ -397,16 +390,27 @@ static const resource_int_t resid_resources_int[] = {
       &sid_resid_8580_passband, set_sid_resid_8580_passband, NULL },
     { "SidResid8580Gain", 97, RES_EVENT_NO, NULL,
       &sid_resid_8580_gain, set_sid_resid_8580_gain, NULL },
+#ifdef HAVE_NEW_8580_FILTER
     { "SidResid8580FilterBias", -3000, RES_EVENT_NO, NULL,
       &sid_resid_8580_filter_bias, set_sid_resid_8580_filter_bias, NULL },
+#else
+    { "SidResid8580FilterBias", 0, RES_EVENT_NO, NULL,
+      &sid_resid_8580_filter_bias, set_sid_resid_8580_filter_bias, NULL },
+#endif
     RESOURCE_INT_LIST_END
 };
 #endif
 
 static const resource_int_t common_resources_int[] = {
+#ifdef HAVE_RESID
     { "SidEngine", SID_ENGINE_DEFAULT,
       RES_EVENT_STRICT, (resource_value_t)SID_ENGINE_RESID,
       &sid_engine, set_sid_engine, NULL },
+#else
+    { "SidEngine", SID_ENGINE_DEFAULT,
+      RES_EVENT_STRICT, (resource_value_t)SID_ENGINE_FASTSID,
+      &sid_engine, set_sid_engine, NULL },
+#endif
     { "SidFilters", 1, RES_EVENT_SAME, NULL,
       &sid_filters_enabled, set_sid_filters_enabled, NULL },
     { "SidModel", SID_MODEL_DEFAULT, RES_EVENT_SAME, NULL,
@@ -470,19 +474,38 @@ static sid_engine_model_t sid_engine_models_resid_dtv[] = {
 };
 #endif
 
+#ifdef HAVE_FASTSID
+#ifdef HAVE_RESID
 static sid_engine_model_t sid_engine_models_fastsid[] = {
     { "6581 (Fast SID)", SID_FASTSID_6581 },
     { "8580 (Fast SID)", SID_FASTSID_8580 },
     { NULL, -1 }
 };
+#else
+static sid_engine_model_t sid_engine_models_fastsid[] = {
+    { "6581", SID_FASTSID_6581 },
+    { "8580", SID_FASTSID_8580 },
+    { NULL, -1 }
+};
+#endif
+#endif
 
 #ifdef HAVE_RESID
+#ifdef HAVE_FASTSID
 static sid_engine_model_t sid_engine_models_resid[] = {
     { "6581 (ReSID)", SID_RESID_6581 },
     { "8580 (ReSID)", SID_RESID_8580 },
     { "8580 + digi boost (ReSID)", SID_RESID_8580D },
     { NULL, -1 }
 };
+#else
+static sid_engine_model_t sid_engine_models_resid[] = {
+    { "6581", SID_RESID_6581 },
+    { "8580", SID_RESID_8580 },
+    { "8580 + digi boost", SID_RESID_8580D },
+    { NULL, -1 }
+};
+#endif
 #endif
 
 #ifdef HAVE_CATWEASELMKIII
@@ -532,7 +555,9 @@ sid_engine_model_t **sid_get_engine_model_list(void)
     }
 #endif
 
+#ifdef HAVE_FASTSID
     add_sid_engine_models(sid_engine_models_fastsid);
+#endif
 
 #ifdef HAVE_RESID
     /* Should we have if (machine_class != VICE_MACHINE_C64DTV) here? */
@@ -582,8 +607,10 @@ static int sid_check_engine_model(int engine, int model)
     }
 
     switch (engine << 8 | model) {
+#ifdef HAVE_FASTSID
         case SID_FASTSID_6581:
         case SID_FASTSID_8580:
+#endif
 #ifdef HAVE_RESID
         case SID_RESID_6581:
         case SID_RESID_8580:

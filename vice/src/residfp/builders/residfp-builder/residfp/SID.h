@@ -320,7 +320,7 @@ int SID::clock(unsigned int cycles, short* buf, int n, int interleave)
     ageBusValue(cycles);
     int s = 0;
 
-    while (cycles != 0)
+    while (cycles > 0 && cycles < 100)
     {
         unsigned int delta_t = std::min(nextVoiceSync, cycles);
 
@@ -340,7 +340,8 @@ int SID::clock(unsigned int cycles, short* buf, int n, int interleave)
 
                 if (unlikely(resampler->input(output())))
                 {
-                    buf[s++*interleave] = resampler->getOutput();
+                    buf[s*interleave] = resampler->getOutput();
+                    s++;
                 }
             }
 

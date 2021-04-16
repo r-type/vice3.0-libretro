@@ -37,6 +37,7 @@
 
 #include "embedded.h"
 #include "machine.h"
+#include "pets.h"
 
 #include "petbasic1.h"
 #include "petbasic2.h"
@@ -65,34 +66,34 @@
 
 #ifdef __LIBRETRO__
 static embedded_t petfiles[] = {
-    { "chargen", -0x800, 0x1000, 0x800, petchargen_embedded },
-    { "basic4", 0x2000, 0x3000, 0x3000, petbasic4_embedded },
-    { "kernal4", 0x1000, 0x1000, 0x1000, petkernal4_embedded },
-    { "edit4b80", -0x800, 0x1000, 0x800, petedit4b80_embedded },
-    { "kernal1", 0x1000, 0x1000, 0x1000, petkernal1_embedded },
-    { "basic1", 0x2000, 0x3000, 0x2000, petbasic1_embedded },
-    { "basic2", 0x2000, 0x3000, 0x2000, petbasic2_embedded },
-    { "kernal2", 0x1000, 0x1000, 0x1000, petkernal2_embedded },
-    { "edit1g", -0x800, 0x1000, 0x800, petedit1g_embedded },
-    { "edit2b", -0x800, 0x1000, 0x800, petedit2b_embedded },
-    { "edit2g", -0x800, 0x1000, 0x800, petedit2g_embedded },
-    { "edit4b40", -0x800, 0x1000, 0x800, petedit4b40_embedded },
-    { "edit4g40", -0x800, 0x1000, 0x800, petedit4g40_embedded },
-    { "characters.901640-01.bin", -0x800, 0x1000, 0x1000, superpet_char_embedded },
-    { "waterloo-a000.901898-01.bin", -0x1000, 0x6000, 0x1000, superpet_waterloo_a000_embedded },
-    { "waterloo-b000.901898-02.bin", -0x1000, 0x5000, 0x1000, superpet_waterloo_b000_embedded },
-    { "waterloo-c000.901898-03.bin", -0x1000, 0x4000, 0x1000, superpet_waterloo_c000_embedded },
-    { "waterloo-d000.901898-04.bin", -0x1000, 0x3000, 0x1000, superpet_waterloo_d000_embedded },
-    { "waterloo-e000.901897-01.bin", -0x800, 0x2000, 0x800, superpet_waterloo_e000_embedded },
-    { "waterloo-f000.901898-05.bin", -0x1000, 0x1000, 0x1000, superpet_waterloo_f000_embedded },
+    { PET_CHARGEN_NAME, -0x800, 0x1000, 0x800, petchargen_embedded },
+    { PET_BASIC4NAME, 0x2000, 0x3000, 0x3000, petbasic4_embedded },
+    { PET_KERNAL4NAME, 0x1000, 0x1000, 0x1000, petkernal4_embedded },
+    { PET_EDITOR4B80NAME, -0x800, 0x1000, 0x800, petedit4b80_embedded },
+    { PET_KERNAL1NAME, 0x1000, 0x1000, 0x1000, petkernal1_embedded },
+    { PET_BASIC1NAME, 0x2000, 0x3000, 0x2000, petbasic1_embedded },
+    { PET_BASIC2NAME, 0x2000, 0x3000, 0x2000, petbasic2_embedded },
+    { PET_KERNAL2NAME, 0x1000, 0x1000, 0x1000, petkernal2_embedded },
+    { PET_EDITOR1G40NAME, -0x800, 0x1000, 0x800, petedit1g_embedded },
+    { PET_EDITOR2B40NAME, -0x800, 0x1000, 0x800, petedit2b_embedded },
+    { PET_EDITOR2G40NAME, -0x800, 0x1000, 0x800, petedit2g_embedded },
+    { PET_EDITOR4B40NAME, -0x800, 0x1000, 0x800, petedit4b40_embedded },
+    { PET_EDITOR4G40NAME, -0x800, 0x1000, 0x800, petedit4g40_embedded },
+    { SUPERPET_CHARGEN_NAME, -0x800, 0x1000, 0x1000, superpet_char_embedded },
+    { SUPERPET_6809_A_NAME, -0x1000, 0x6000, 0x1000, superpet_waterloo_a000_embedded },
+    { SUPERPET_6809_B_NAME, -0x1000, 0x5000, 0x1000, superpet_waterloo_b000_embedded },
+    { SUPERPET_6809_C_NAME, -0x1000, 0x4000, 0x1000, superpet_waterloo_c000_embedded },
+    { SUPERPET_6809_D_NAME, -0x1000, 0x3000, 0x1000, superpet_waterloo_d000_embedded },
+    { SUPERPET_6809_E_NAME, -0x800, 0x2000, 0x800, superpet_waterloo_e000_embedded },
+    { SUPERPET_6809_F_NAME, -0x1000, 0x1000, 0x1000, superpet_waterloo_f000_embedded },
     EMBEDDED_LIST_END
 };
 #else
 static embedded_t petfiles[] = {
-    { "chargen", 0x800, 0x800, 0x800, petchargen_embedded },
-    { "basic4", 0x2000, 0x3000, 0x3000, petbasic4_embedded },
-    { "kernal4", 0x1000, 0x1000, 0x1000, petkernal4_embedded },
-    { "edit4b80", 0x800, 0x1000, 0x800, petedit4b80_embedded },
+    { PET_CHARGEN_NAME, 0x800, 0x800, 0x800, petchargen_embedded },
+    { PET_BASIC4NAME, 0x2000, 0x3000, 0x3000, petbasic4_embedded },
+    { PET_KERNAL4NAME, 0x1000, 0x1000, 0x1000, petkernal4_embedded },
+    { PET_EDITOR4B80NAME, 0x800, 0x1000, 0x800, petedit4b80_embedded },
     { "kernal1", 0x1000, 0x1000, 0x1000, petkernal1_embedded },
     { "basic1", 0x2000, 0x3000, 0x2000, petbasic1_embedded },
     { "basic2", 0x2000, 0x3000, 0x2000, petbasic2_embedded },
@@ -111,7 +112,7 @@ static embedded_t petfiles[] = {
     { "waterloo-f000.901898-05.bin", 0x1000, 0x1000, 0x1000, superpet_waterloo_f000_embedded },
     EMBEDDED_LIST_END
 };
-#endif
+#endif /* __LIBRETRO__ */
 
 static embedded_palette_t palette_files[] = {
     { "amber", "amber.vpl", 2, crtc_amber_vpl },
@@ -120,7 +121,7 @@ static embedded_palette_t palette_files[] = {
     EMBEDDED_PALETTE_LIST_END
 };
 
-static size_t embedded_match_file(const char *name, BYTE *dest, int minsize, int maxsize, embedded_t *emb)
+static size_t embedded_match_file(const char *name, unsigned char *dest, int minsize, int maxsize, embedded_t *emb)
 {
     int i = 0;
 
@@ -140,7 +141,7 @@ static size_t embedded_match_file(const char *name, BYTE *dest, int minsize, int
     return 0;
 }
 
-size_t embedded_check_file(const char *name, BYTE *dest, int minsize, int maxsize)
+size_t embedded_check_file(const char *name, unsigned char *dest, int minsize, int maxsize)
 {
     size_t retval;
 

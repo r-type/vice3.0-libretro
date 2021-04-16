@@ -115,7 +115,7 @@ extern int cur_len, last_len;
 #define ERR_EXPECT_CHECKNUM 5
 #define ERR_EXPECT_END_CMD 6
 #define ERR_MISSING_CLOSE_PAREN 7
-#define ERR_INCOMPLETE_COMPARE_OP 8
+#define ERR_INCOMPLETE_COND_OP 8
 #define ERR_EXPECT_FILENAME 9
 #define ERR_ADDR_TOO_BIG 10
 #define ERR_IMM_TOO_BIG 11
@@ -149,8 +149,8 @@ extern int cur_len, last_len;
 %token<str> H_RANGE_GUESS D_NUMBER_GUESS O_NUMBER_GUESS B_NUMBER_GUESS
 %token<i> BAD_CMD MEM_OP IF MEM_COMP MEM_DISK8 MEM_DISK9 MEM_DISK10 MEM_DISK11 EQUALS
 %token TRAIL CMD_SEP LABEL_ASGN_COMMENT
-%token CMD_SIDEFX CMD_RETURN CMD_BLOCK_READ CMD_BLOCK_WRITE CMD_UP CMD_DOWN
-%token CMD_LOAD CMD_SAVE CMD_VERIFY CMD_IGNORE CMD_HUNT CMD_FILL CMD_MOVE
+%token CMD_LOG CMD_LOGNAME CMD_SIDEFX CMD_DUMMY CMD_RETURN CMD_BLOCK_READ CMD_BLOCK_WRITE CMD_UP CMD_DOWN
+%token CMD_LOAD CMD_SAVE CMD_VERIFY CMD_BVERIFY CMD_IGNORE CMD_HUNT CMD_FILL CMD_MOVE
 %token CMD_GOTO CMD_REGISTERS CMD_READSPACE CMD_WRITESPACE CMD_RADIX
 %token CMD_MEM_DISPLAY CMD_BREAK CMD_TRACE CMD_IO CMD_BRMON CMD_COMPARE
 %token CMD_DUMP CMD_UNDUMP CMD_EXIT CMD_DELETE CMD_CONDITION CMD_COMMAND
@@ -160,7 +160,7 @@ extern int cur_len, last_len;
 %token CMD_RECORD CMD_MON_STOP CMD_PLAYBACK CMD_CHAR_DISPLAY CMD_SPRITE_DISPLAY
 %token CMD_TEXT_DISPLAY CMD_SCREENCODE_DISPLAY CMD_ENTER_DATA CMD_ENTER_BIN_DATA CMD_KEYBUF
 %token CMD_BLOAD CMD_BSAVE CMD_SCREEN CMD_UNTIL CMD_CPU CMD_YYDEBUG
-%token CMD_BACKTRACE CMD_SCREENSHOT CMD_PWD CMD_DIR
+%token CMD_BACKTRACE CMD_SCREENSHOT CMD_PWD CMD_DIR CMD_MKDIR CMD_RMDIR
 %token CMD_RESOURCE_GET CMD_RESOURCE_SET CMD_LOAD_RESOURCES CMD_SAVE_RESOURCES
 %token CMD_ATTACH CMD_DETACH CMD_MON_RESET CMD_TAPECTRL CMD_CARTFREEZE
 %token CMD_CPUHISTORY CMD_MEMMAPZAP CMD_MEMMAPSHOW CMD_MEMMAPSAVE
@@ -173,19 +173,19 @@ extern int cur_len, last_len;
 %token<i> REG_AF REG_BC REG_DE REG_HL REG_IX REG_IY REG_SP
 %token<i> REG_IXH REG_IXL REG_IYH REG_IYL
 %token<i> PLUS MINUS
-%token<str> STRING FILENAME R_O_L OPCODE LABEL BANKNAME CPUTYPE
+%token<str> STRING FILENAME R_O_L R_O_L_Q OPCODE LABEL BANKNAME CPUTYPE
 %token<reg> MON_REGISTER
-%left<cond_op> COMPARE_OP
+%left<cond_op> COND_OP
 %token<rt> RADIX_TYPE INPUT_SPEC
 %token<action> CMD_CHECKPT_ON CMD_CHECKPT_OFF TOGGLE
 %type<range> address_range address_opt_range
 %type<a>  address opt_address
-%type<cond_node> opt_if_cond_expr cond_expr compare_operand
+%type<cond_node> opt_if_cond_expr cond_expr cond_operand
 %type<i> number expression d_number guess_default device_num
 %type<i> memspace memloc memaddr checkpt_num mem_op opt_mem_op
 %type<i> top_level value
 %type<i> assembly_instruction register
-%type<str> rest_of_line opt_rest_of_line data_list data_element filename
+%type<str> rest_of_line opt_rest_of_line rest_of_line_or_quoted data_list data_element filename
 %token<i> MASK
 %type<str> hunt_list hunt_element
 %type<mode> asm_operand_mode
@@ -252,9 +252,9 @@ machine_state_rules: CMD_BANK end_cmd
                    | CMD_RETURN end_cmd
                      { mon_instruction_return(); }
                    | CMD_DUMP filename end_cmd
-                     { machine_write_snapshot($2,0,0,0); /* FIXME */ }
+                     { mon_write_snapshot($2,0,0,0); /* FIXME */ }
                    | CMD_UNDUMP filename end_cmd
-                     { machine_read_snapshot($2, 0); }
+                     { mon_read_snapshot($2, 0); }
                    | CMD_STEP end_cmd
                      { mon_instructions_step(-1); }
                    | CMD_STEP opt_sep expression end_cmd
@@ -272,7 +272,9 @@ machine_state_rules: CMD_BANK end_cmd
                    | CMD_DOWN opt_sep expression end_cmd
                      { mon_stack_down($3); }
                    | CMD_SCREEN end_cmd
-                     { mon_display_screen(); }
+                     { mon_display_screen(-1); }
+                   | CMD_SCREEN address end_cmd
+                     { mon_display_screen($2); }
                    | register_mod
                    ;
 
@@ -286,12 +288,12 @@ register_mod: CMD_REGISTERS end_cmd
 symbol_table_rules: CMD_LOAD_LABELS memspace opt_sep filename end_cmd
                     {
                         /* What about the memspace? */
-                        mon_playback_init($4);
+                        mon_playback_commands($4);
                     }
                   | CMD_LOAD_LABELS filename end_cmd
                     {
                         /* What about the memspace? */
-                        mon_playback_init($2);
+                        mon_playback_commands($2);
                     }
                   | CMD_SAVE_LABELS memspace opt_sep filename end_cmd
                     { mon_save_symbols($2, $4); }
@@ -377,9 +379,9 @@ memory_rules: CMD_MOVE address_range opt_sep address end_cmd
 checkpoint_rules: CMD_BREAK opt_mem_op address_opt_range opt_if_cond_expr end_cmd
                   {
                       if ($2) {
-                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], TRUE, $2, FALSE);
+                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], TRUE, $2, FALSE, TRUE);
                       } else {
-                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], TRUE, e_exec, FALSE);
+                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], TRUE, e_exec, FALSE, TRUE);
                       }
                       mon_breakpoint_set_checkpoint_condition(temp, $4);
                   }
@@ -388,7 +390,7 @@ checkpoint_rules: CMD_BREAK opt_mem_op address_opt_range opt_if_cond_expr end_cm
 
                 | CMD_UNTIL address_opt_range end_cmd
                   {
-                      mon_breakpoint_add_checkpoint($2[0], $2[1], TRUE, e_exec, TRUE);
+                      mon_breakpoint_add_checkpoint($2[0], $2[1], TRUE, e_exec, TRUE, TRUE);
                   }
                 | CMD_UNTIL end_cmd
                   { mon_breakpoint_print_checkpoints(); }
@@ -396,9 +398,9 @@ checkpoint_rules: CMD_BREAK opt_mem_op address_opt_range opt_if_cond_expr end_cm
                 | CMD_WATCH opt_mem_op address_opt_range opt_if_cond_expr end_cmd
                   {
                       if ($2) {
-                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], TRUE, $2, FALSE);
+                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], TRUE, $2, FALSE, TRUE);
                       } else {
-                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], TRUE, e_load | e_store, FALSE);
+                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], TRUE, e_load | e_store, FALSE, TRUE);
                       }
                       mon_breakpoint_set_checkpoint_condition(temp, $4);
                   }
@@ -408,9 +410,9 @@ checkpoint_rules: CMD_BREAK opt_mem_op address_opt_range opt_if_cond_expr end_cm
                 | CMD_TRACE opt_mem_op address_opt_range opt_if_cond_expr end_cmd
                   {
                       if ($2) {
-                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], FALSE, $2, FALSE);
+                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], FALSE, $2, FALSE, TRUE);
                       } else {
-                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], FALSE, e_load | e_store, FALSE);
+                          temp = mon_breakpoint_add_checkpoint($3[0], $3[1], FALSE, e_exec | e_load | e_store, FALSE, TRUE);
                       }
                       mon_breakpoint_set_checkpoint_condition(temp, $4);
                   }
@@ -449,6 +451,44 @@ monitor_state_rules: CMD_SIDEFX TOGGLE end_cmd
                      {
                          mon_out("I/O side effects are %s\n",
                                    sidefx ? "enabled" : "disabled");
+                     }
+                   | CMD_DUMMY TOGGLE end_cmd
+                     { 
+                         break_on_dummy_access = (($2 == e_TOGGLE) ? (break_on_dummy_access ^ 1) : $2); 
+                         /* FIXME: some day we might want to toggle the break-on-dummy-access 
+                                   per MEMSPACE, for now its a global option */                         
+                         mon_breakpoint_set_dummy_state(e_default_space, break_on_dummy_access);
+                     }
+                   | CMD_DUMMY end_cmd
+                     {
+                         mon_out("Checkpoints will %strigger on dummy accesses.\n",
+                                   break_on_dummy_access ? "" : "not ");
+                         /* FIXME: some day we might want to toggle the break-on-dummy-access 
+                                   per MEMSPACE, for now its a global option */                         
+                         mon_breakpoint_set_dummy_state(e_default_space, break_on_dummy_access);
+                     }                     
+                   | CMD_LOG TOGGLE end_cmd
+                     { 
+                        int logenabled;
+                        resources_get_int("MonitorLogEnabled", &logenabled);
+                        logenabled = (($2 == e_TOGGLE) ? (logenabled ^ 1) : $2);
+                        resources_set_int("MonitorLogEnabled", logenabled);
+                     }
+                   | CMD_LOG end_cmd
+                     {
+                         int logenabled;
+                         const char *logfilename;
+                         resources_get_int("MonitorLogEnabled", &logenabled);
+                         resources_get_string("MonitorLogFileName", &logfilename);
+                         if (logenabled) {
+                            mon_out("Logging to '%s' is enabled.\n", logfilename);
+                         } else {
+                            mon_out("Logging is disabled.\n");
+                         }
+                     }                     
+                   | CMD_LOGNAME filename end_cmd
+                     { 
+                        resources_set_string("MonitorLogFileName", $2);
                      }
                    | CMD_RADIX RADIX_TYPE end_cmd
                      { default_radix = $2; }
@@ -492,7 +532,7 @@ monitor_misc_rules: CMD_DISK rest_of_line end_cmd
                     { mon_command_print_help($2); }
                   | CONVERT_OP expression end_cmd
                     { mon_print_convert($2); }
-                  | CMD_CHDIR rest_of_line end_cmd
+                  | CMD_CHDIR rest_of_line_or_quoted end_cmd
                     { mon_change_dir($2); }
                   | CMD_KEYBUF rest_of_line end_cmd /* STRING */
                     { mon_keyboard_feed($2); }
@@ -502,6 +542,10 @@ monitor_misc_rules: CMD_DISK rest_of_line end_cmd
                      { mon_show_dir($2); }
                   | CMD_PWD end_cmd
                      { mon_show_pwd(); }
+                  | CMD_MKDIR rest_of_line_or_quoted end_cmd
+                    { mon_make_dir($2); }
+                  | CMD_RMDIR rest_of_line_or_quoted end_cmd
+                    { mon_remove_dir($2); }
                   | CMD_SCREENSHOT filename end_cmd
                     { mon_screenshot_save($2,-1); }
                   | CMD_SCREENSHOT filename opt_sep expression end_cmd
@@ -532,8 +576,10 @@ monitor_misc_rules: CMD_DISK rest_of_line end_cmd
 
 disk_rules: CMD_LOAD filename device_num opt_address end_cmd
             { mon_file_load($2, $3, $4, FALSE); }
-          | CMD_BLOAD filename device_num opt_address end_cmd
+          | CMD_BLOAD filename device_num address end_cmd
             { mon_file_load($2, $3, $4, TRUE); }
+          | CMD_BLOAD filename device_num error
+            { return ERR_EXPECT_ADDRESS; }
           | CMD_SAVE filename device_num address_range end_cmd
             { mon_file_save($2, $3, $4[0], $4[1], FALSE); }
           | CMD_SAVE filename error
@@ -544,9 +590,11 @@ disk_rules: CMD_LOAD filename device_num opt_address end_cmd
             { mon_file_save($2, $3, $4[0], $4[1], TRUE); }
           | CMD_BSAVE filename device_num error
             { return ERR_EXPECT_ADDRESS; }
-          | CMD_VERIFY filename device_num address end_cmd
-            { mon_file_verify($2,$3,$4); }
-          | CMD_VERIFY filename device_num error
+          | CMD_VERIFY filename device_num opt_address end_cmd
+            { mon_file_verify($2,$3,$4,FALSE); }
+          | CMD_BVERIFY filename device_num address end_cmd
+            { mon_file_verify($2,$3,$4,TRUE); }
+          | CMD_BVERIFY filename device_num error
             { return ERR_EXPECT_ADDRESS; }
           | CMD_BLOCK_READ expression expression opt_address end_cmd
             { mon_drive_block_cmd(0,$2,$3,$4); }
@@ -575,7 +623,7 @@ cmd_file_rules: CMD_RECORD filename end_cmd
               | CMD_MON_STOP end_cmd
                 { mon_end_recording(); }
               | CMD_PLAYBACK filename end_cmd
-                { mon_playback_init($2); }
+                { mon_playback_commands($2); }
               ;
 
 data_entry_rules: CMD_ENTER_DATA address data_list end_cmd
@@ -595,11 +643,14 @@ opt_rest_of_line: R_O_L { $$ = $1; }
                   | { $$ = NULL; }
                   ;
 
+rest_of_line_or_quoted: R_O_L_Q { $$ = $1; }
+            ;
+
 filename: FILENAME
         | error { return ERR_EXPECT_FILENAME; }
         ;
 
-device_num: expression
+device_num: d_number
       | error { return ERR_EXPECT_DEVICE_NUM; }
       ;
 
@@ -699,22 +750,22 @@ expression: expression '+' expression { $$ = $1 + $3; }
 opt_if_cond_expr: IF cond_expr { $$ = $2; }
                 | { $$ = 0; }
 
-cond_expr: cond_expr COMPARE_OP cond_expr
+cond_expr: cond_expr COND_OP cond_expr
            {
                $$ = new_cond; $$->is_parenthized = FALSE;
                $$->child1 = $1; $$->child2 = $3; $$->operation = $2;
            }
-         | cond_expr COMPARE_OP error
-           { return ERR_INCOMPLETE_COMPARE_OP; }
+      	 | cond_expr COND_OP error
+           { return ERR_INCOMPLETE_COND_OP; }
          | L_PAREN cond_expr R_PAREN
            { $$ = $2; $$->is_parenthized = TRUE; }
          | L_PAREN cond_expr error
            { return ERR_MISSING_CLOSE_PAREN; }
-         | compare_operand
+         | cond_operand
            { $$ = $1; }
          ;
 
-compare_operand: register { $$ = new_cond;
+cond_operand: register    { $$ = new_cond;
                             $$->operation = e_INV;
                             $$->is_parenthized = FALSE;
                             $$->reg_num = $1; $$->is_reg = TRUE; $$->banknum=-1;
@@ -729,7 +780,11 @@ compare_operand: register { $$ = new_cond;
                |  '@' BANKNAME ':' address {$$=new_cond;
                             $$->operation=e_INV;
                             $$->is_parenthized = FALSE;
-                            $$->banknum=mon_banknum_from_bank(e_default_space,$2); $$->value = $4; $$->is_reg = FALSE;
+                            $$->banknum = mon_banknum_from_bank(e_default_space, $2);
+                            if ($$->banknum < 0) {
+                                return ERR_ILLEGAL_INPUT;
+                            }
+                            $$->value = $4; $$->is_reg = FALSE;
                             $$->child1 = NULL; $$->child2 = NULL;  
                         }                        
                ;
@@ -756,9 +811,9 @@ value: number { $$ = $1; }
      ;
 
 d_number: D_NUMBER { $$ = $1; }
-        | B_NUMBER_GUESS { $$ = strtol($1, NULL, 10); }
-        | O_NUMBER_GUESS { $$ = strtol($1, NULL, 10); }
-        | D_NUMBER_GUESS { $$ = strtol($1, NULL, 10); }
+        | B_NUMBER_GUESS { $$ = (int)strtol($1, NULL, 10); }
+        | O_NUMBER_GUESS { $$ = (int)strtol($1, NULL, 10); }
+        | D_NUMBER_GUESS { $$ = (int)strtol($1, NULL, 10); }
         ;
 
 guess_default: B_NUMBER_GUESS { $$ = resolve_datatype(B_NUMBER,$1); }
@@ -1053,7 +1108,7 @@ index_ureg:
 
 %%
 
-void parse_and_execute_line(char *input)
+int parse_and_execute_line(char *input)
 {
    char *temp_buf;
    int i, rc;
@@ -1088,8 +1143,8 @@ void parse_and_execute_line(char *input)
          case ERR_MISSING_CLOSE_PAREN:
            mon_out("')' expected:\n");
            break;
-         case ERR_INCOMPLETE_COMPARE_OP:
-           mon_out("Compare operation missing an operand:\n");
+         case ERR_INCOMPLETE_COND_OP:
+           mon_out("Conditional operation missing an operand:\n");
            break;
          case ERR_EXPECT_FILENAME:
            mon_out("Expecting a filename:\n");
@@ -1128,11 +1183,15 @@ void parse_and_execute_line(char *input)
    }
    lib_free(temp_buf);
    free_buffer();
+
+   return rc;
 }
 
 static int yyerror(char *s)
 {
+#if 0
    fprintf(stderr, "ERR:%s\n", s);
+#endif
    return 0;
 }
 
@@ -1140,18 +1199,18 @@ static int resolve_datatype(unsigned guess_type, const char *num)
 {
    /* FIXME: Handle cases when default type is non-numerical */
    if (default_radix == e_hexadecimal) {
-       return strtol(num, NULL, 16);
+       return (int)strtol(num, NULL, 16);
    }
 
    if ((guess_type == D_NUMBER) || (default_radix == e_decimal)) {
-       return strtol(num, NULL, 10);
+       return (int)strtol(num, NULL, 10);
    }
 
    if ((guess_type == O_NUMBER) || (default_radix == e_octal)) {
-       return strtol(num, NULL, 8);
+       return (int)strtol(num, NULL, 8);
    }
 
-   return strtol(num, NULL, 2);
+   return (int)strtol(num, NULL, 2);
 }
 
 /*
@@ -1179,7 +1238,7 @@ static int resolve_range(enum t_memspace memspace, MON_ADDR range[2],
             memcpy(end, num + 4, 4);
             end[4] = '\0';
             sa = strtol(start, NULL, 16);
-            range[1] = new_addr(memspace, strtol(end, NULL, 16));
+            range[1] = (int)new_addr(memspace, strtol(end, NULL, 16));
         }
         else
             sa = strtol(num, NULL, 16);
@@ -1200,6 +1259,6 @@ static int resolve_range(enum t_memspace memspace, MON_ADDR range[2],
     if (!CHECK_ADDR(sa))
         return ERR_ADDR_TOO_BIG;
 
-    range[0] = new_addr(memspace, sa);
+    range[0] = (int)new_addr(memspace, sa);
     return 0;
 }

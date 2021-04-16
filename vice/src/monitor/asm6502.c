@@ -38,10 +38,6 @@
 #include "montypes.h"
 #include "types.h"
 
-#ifdef __PS3__
-#undef CLI
-#endif
-
 static const int addr_mode_size[] = {
     1, /* ASM_ADDR_MODE_IMPLIED */
     1, /* ASM_ADDR_MODE_ACCUMULATOR */

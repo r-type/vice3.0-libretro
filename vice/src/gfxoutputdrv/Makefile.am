@@ -1,12 +1,20 @@
 # Makefile.am for `libgfxoutputdrv.a'.
 
 AM_CPPFLAGS = \
+	@VICE_CPPFLAGS@ \
+	-I$(top_srcdir)/src/arch/shared \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/sounddrv \
 	@FFMPEG_INCLUDES@ \
-	@QUICKTIME_INCLUDES@ \
 	@ARCH_INCLUDES@
+
+AM_CFLAGS = @VICE_CFLAGS@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
 
 noinst_LIBRARIES = libgfxoutputdrv.a
 
@@ -21,15 +29,13 @@ EXTRA_libgfxoutputdrv_a_SOURCES = \
 	jpegdrv.c \
 	jpegdrv.h \
 	pngdrv.c \
-	pngdrv.h \
-	quicktimedrv.h \
-	quicktimedrv.c
+	pngdrv.h
 
 # These sources are always built.
 libgfxoutputdrv_a_SOURCES = \
 	bmpdrv.c \
 	bmpdrv.h \
-	doodledrv.c \
+	artstudiodrv.c \
 	gfxoutput.c \
 	godotdrv.c \
 	godotdrv.h \

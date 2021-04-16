@@ -42,6 +42,8 @@
 #define DBG(x)
 #endif
 
+#define SERIAL_DEVICE_NOT_PRESENT       (0x80)
+
 /* Call this if device is not attached: -128 == device not present.  */
 
 /*
@@ -51,25 +53,25 @@
 
 static int fn_getf(struct vdrive_s *foo, uint8_t *bar, unsigned int bas)
 {
-    return 0x80;
+    return SERIAL_DEVICE_NOT_PRESENT;
 }
 
 static int fn_putf(struct vdrive_s *foo, uint8_t bar, unsigned int bas)
 {
-    return 0x80;
+    return SERIAL_DEVICE_NOT_PRESENT;
 }
 
 
 static int fn_openf(struct vdrive_s *foo, const uint8_t *bar, unsigned int bas,
         unsigned int meloen, struct cbmdos_cmd_parse_s *appel)
 {
-    return 0x80;
+    return SERIAL_DEVICE_NOT_PRESENT;
 }
 
 
 static int fn_closef(struct vdrive_s *foo, unsigned int bar)
 {
-    return 0x80;
+    return SERIAL_DEVICE_NOT_PRESENT;
 }
 
 static void fn_flushf(struct vdrive_s *foo, unsigned int bar)
@@ -137,7 +139,7 @@ int machine_bus_device_attach(unsigned int unit, const char *name,
         if (p->name) {
             lib_free(p->name);
         }
-        p->name = lib_stralloc(name);
+        p->name = lib_strdup(name);
     }
 
     for (i = 0; i < 16; i++) {
@@ -156,7 +158,7 @@ int machine_bus_device_detach(unsigned int unit)
     DBG(("machine_bus_device_detach unit %d\n", unit));
 
     if (unit >= SERIAL_MAXDEVICES) {
-        log_error(LOG_DEFAULT, "Illegal device number %d.", unit);
+        log_error(LOG_DEFAULT, "Illegal device number %u.", unit);
         return -1;
     }
 

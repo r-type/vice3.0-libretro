@@ -25,6 +25,7 @@
  *
  */
 
+
 #ifndef VICE_ARCHDEP_DEFS_H
 #define VICE_ARCHDEP_DEFS_H
 
@@ -45,13 +46,8 @@
  *      ARCHDEP_OS_BSD_NET
  *      ARCHDEP_OS_BSD_OPEN
  *      ARCHDEP_OS_BSD_DRAGON
- *    ARCHDEP_OS_QNX (?)
- *    ARCHDEP_OS_SOLARIS (?)
  *  ARCHDEP_OS_WINDOWS
- *  ARCHDEP_OS_OS2 (?)
  *  ARCHDEP_OS_BEOS
- *  ARCHDEP_OS_MSDOS (?)
- *  ARCHDEP_OS_AMIGA
  * </pre>
  */
 #ifdef UNIX_COMPILE
@@ -61,8 +57,8 @@
 
 # if defined(MACOSX_SUPPORT)
 
-/** \brief  OS is Unix and OSX */
-#  define ARCHDEP_OS_OSX
+/** \brief  OS is Unix and MacOS */
+#  define ARCHDEP_OS_MACOS
 
 # elif defined(__linux__)
 
@@ -96,27 +92,12 @@
 /** \brief  OS is DragonFly BSD */
 #  define ARCHDEP_OS_BSD_DRAGON
 
-# elif defined(__QNX__)
-
-/**\brief   OS is QNX (do we even support this anymore?) */
-#  define ARCHDEP_OS_QNX
-
-# elif defined(sun) || defined(__sun)
-
-/** \brief  OS is Solaris (same question) */
-#  define ARCHDEP_OS_SOLARIS
-
 # endif /* ifdef UNIX_COMPILE */
 
 #elif defined(WIN32_COMPILE)
 
 /** \brief  OS is Windows */
 # define ARCHDEP_OS_WINDOWS
-
-#elif defined(OS2_COMPILE)
-
-/** \brief  OS is OS/2 (again: has anyone even tested this?) */
-# define ARCHDEP_OS_OS2
 
 #elif defined(BEOS_COMPILE)
 
@@ -135,25 +116,12 @@
 
 # endif /* ifdef BEOS_COMPILE */
 
-#elif defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__) || defined(__DOS__)
-
-/** \brief  OS is MS-DOS (really?) */
-# define ARCHDEP_OS_DOS
-
-#elif defined(AMIGA_SUPPORT)
-
-/** \brief  OS is AmigaOS
- *
- * May have to split/refine this for AROS etc
- */
-# define ARCHDEP_OS_AMIGA
 #endif
 
 
 /** \brief  Arch-dependent directory separator used in paths
  */
-#if defined(ARCHDEP_OS_WINDOWS) || defined(ARCHDEP_OS_OS2) \
-    || defined(ARCHDEP_OS_DOS)
+#if defined(ARCHDEP_OS_WINDOWS)
 
 /** \brief  OS-dependent directory separator
  */
@@ -164,11 +132,10 @@
 
 /** \brief  Extension used for autostart disks
  */
-#define ARCHDEP_AUTOSTART_DICK_EXTENSION    "d64"
+#define ARCHDEP_AUTOSTART_DISK_EXTENSION    "d64"
 
-
-#if defined(ARCHEP_OS_AMIGA) || defined(ARCHDEP_OS_MSDOS) \
-    || defined(ARCHDEP_OS_OS2) || defined(ARCHDEP_OS_WINDOWS)
+#ifndef __LIBRETRO__
+#if defined(ARCHDEP_OS_WINDOWS)
 /** \brief  Separator used for a pathlist
  */
 # define ARCHDEP_FINDPATH_SEPARATOR_STRING  ";"
@@ -179,23 +146,7 @@
  */
 # define ARCHDEP_FINDPATH_SEPARATOR_STRING  ":"
 #endif
-
-
-/* set LIBDIR and DOCDIR */
-#ifdef ARCHDEP_OS_UNIX
-/** \brief  Set VICE library dir
- *
- * This is completely wrong
- */
-# define LIBDIR VICEDIR
-
-/** 'brief  Set documentation dir
- *
- * Equally wrong, we should use XDG
- */
-# define DOCDIR LIBDIR "/doc"
-#endif
-
+#endif /* __LIBRETRO__ */
 
 /*
  * Determine if we compile against SDL
@@ -204,8 +155,8 @@
 # define ARCHDEP_USE_SDL
 #endif
 
-#if defined(ARCHDEP_OS_WINDOWS) || defined(ARCHDEP_OS_OS2) \
-    || defined(ARCHDEP_OS_MSDOS) || defined(ARCHDEP_OS_BEOS)
+#if defined(ARCHDEP_OS_WINDOWS) \
+    || defined(ARCHDEP_OS_BEOS)
 # ifdef ARCHDEP_USE_SDL
 #  define ARCHDEP_VICERC_NAME   "sdl-vice.ini"
 /* Just copying stuff, I'm backwards */
@@ -232,5 +183,22 @@
  */
 #define ARCHDEP_AUTOSTART_DISKIMAGE_SUFFIX  ".d64"
 
+
+/* Declare extra printf specifiers for Windows since Microsoft's support for
+ * C99 fucking sucks.
+ *
+ * This declares PRI_SIZE_T for use on all platforms, aliasing to 'zu' on
+ * anything not Windows, and using PRIu[32|64] on Windows.
+ */
+#ifdef _WIN32
+# include <inttypes.h>
+# ifdef _WIN64
+#  define PRI_SIZE_T    PRIu64
+# else
+#  define PRI_SIZE_T    PRIu32
+# endif
+#else
+# define PRI_SIZE_T     "zu"
+#endif
 
 #endif

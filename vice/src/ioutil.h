@@ -28,6 +28,8 @@
 #ifndef VICE_IOUTIL_H
 #define VICE_IOUTIL_H
 
+#include <stddef.h>
+
 #define IOUTIL_ACCESS_R_OK 4
 #define IOUTIL_ACCESS_W_OK 2
 #define IOUTIL_ACCESS_X_OK 1
@@ -46,10 +48,6 @@
 #define IOUTIL_ERRNO_ENOENT 3
 #define IOUTIL_ERRNO_ERANGE 4
 
-#ifdef __PS3__
-#include "PS3_include.h"
-#endif
-
 extern int ioutil_access(const char *pathname, int mode);
 extern int ioutil_chdir(const char *path);
 extern int ioutil_errno(unsigned int check);
@@ -60,7 +58,7 @@ extern int ioutil_mkdir(const char *pathname, int mode);
 extern int ioutil_remove(const char *name);
 extern int ioutil_rmdir(const char *pathname);
 extern int ioutil_rename(const char *oldpath, const char *newpath);
-extern int ioutil_stat(const char *file_name, unsigned int *len, unsigned int *isdir);
+extern int ioutil_stat(const char *file_name, size_t *len, unsigned int *isdir);
 
 extern char *ioutil_current_dir(void);
 
@@ -81,5 +79,8 @@ typedef struct ioutil_dir_s ioutil_dir_t;
 extern ioutil_dir_t *ioutil_opendir(const char *path, int mode);
 extern char *ioutil_readdir(ioutil_dir_t *ioutil_dir);
 extern void ioutil_closedir(ioutil_dir_t *ioutil_dir);
+extern void ioutil_resetdir(ioutil_dir_t *ioutil_dir);
+extern void ioutil_setdirpos(ioutil_dir_t *ioutil_dir, int pos);
+extern int ioutil_getdirpos(ioutil_dir_t *ioutil_dir);
 
 #endif

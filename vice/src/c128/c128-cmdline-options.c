@@ -2,7 +2,7 @@
  * \brief   C128 command line options
  *
  * \author  Andreas Boose <viceteam@t-online.de>
- * \author  Marco van den Heuvel <blackystardust68@yahoo.com
+ * \author  Marco van den Heuvel <blackystardust68@yahoo.com>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -175,6 +175,12 @@ static const cmdline_option_t cmdline_options[] =
     { "+c128fullbanks", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "C128FullBanks", (void *)0,
       NULL, "Disable RAM banks 2 and 3" },
+    { "-hidevdcwindow", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, "C128HideVDC", (void *)1,
+      NULL, "Hide the VDC window" },
+    { "+hidevdcwindow", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
+      NULL, NULL, "C128HideVDC", (void *)0,
+      NULL, "Do not hide the VDC window" },
     CMDLINE_LIST_END
 };
 

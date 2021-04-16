@@ -38,11 +38,13 @@
 #include "cartio.h"
 #include "cartridge.h"
 #include "export.h"
+#include "log.h"
 #include "monitor.h"
 #include "snapshot.h"
 #include "types.h"
 #include "util.h"
 #include "crt.h"
+#include "vicii-phi1.h"
 
 /* #define DEBUGAP */
 
@@ -94,39 +96,42 @@ static int ap_active;
 /* ---------------------------------------------------------------------*/
 
 /* some prototypes are needed */
+static uint8_t atomicpower_io1_read(uint16_t addr);
 static void atomicpower_io1_store(uint16_t addr, uint8_t value);
 static uint8_t atomicpower_io2_read(uint16_t addr);
 static void atomicpower_io2_store(uint16_t addr, uint8_t value);
 static int atomicpower_dump(void);
 
 static io_source_t atomicpower_io1_device = {
-    CARTRIDGE_NAME_ATOMIC_POWER,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    0,
-    atomicpower_io1_store,
-    NULL,
-    NULL, /* TODO: peek */
-    atomicpower_dump,
-    CARTRIDGE_ATOMIC_POWER,
-    0,
-    0
+    CARTRIDGE_NAME_ATOMIC_POWER, /* name of the device */
+    IO_DETACH_CART,              /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,       /* does not use a resource for detach */
+    0xde00, 0xdeff, 0xff,        /* range for the device, address is ignored, reg:$de00, mirrors:$de01-$deff */
+    0,                           /* read is never valid, there is no read or peek function */
+    atomicpower_io1_store,       /* store function */
+    NULL,                        /* NO poke function */
+    atomicpower_io1_read,        /* read function */
+    NULL,                        /* TODO: peek function */
+    atomicpower_dump,            /* device state information dump function */
+    CARTRIDGE_ATOMIC_POWER,      /* cartridge ID */
+    IO_PRIO_NORMAL,              /* normal priority, device read needs to be checked for collisions */
+    0                            /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t atomicpower_io2_device = {
-    CARTRIDGE_NAME_ATOMIC_POWER,
-    IO_DETACH_CART,
-    NULL,
-    0xdf00, 0xdfff, 0xff,
-    0,
-    atomicpower_io2_store,
-    atomicpower_io2_read,
-    NULL, /* TODO: peek */
-    atomicpower_dump,
-    CARTRIDGE_ATOMIC_POWER,
-    0,
-    0
+    CARTRIDGE_NAME_ATOMIC_POWER, /* name of the device */
+    IO_DETACH_CART,              /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,       /* does not use a resource for detach */
+    0xdf00, 0xdfff, 0xff,        /* range of the device */
+    0,                           /* read validity is determined by the device upon a read */
+    atomicpower_io2_store,       /* store function */
+    NULL,                        /* NO poke function */
+    atomicpower_io2_read,        /* read function */
+    NULL,                        /* TODO: peek function */
+    atomicpower_dump,            /* device state information dump function */
+    CARTRIDGE_ATOMIC_POWER,      /* cartridge ID */
+    IO_PRIO_NORMAL,              /* normal priority, device read needs to be checked for collisions */
+    0                            /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *atomicpower_io1_list_item = NULL;
@@ -169,6 +174,24 @@ static void atomicpower_io1_store(uint16_t addr, uint8_t value)
 
         cart_config_changed_slotmain((uint8_t) 2, (uint8_t) (mode | (bank << CMODE_BANK_SHIFT)), flags);
     }
+}
+
+static uint8_t atomicpower_io1_read(uint16_t addr)
+{
+    uint8_t value;
+    /* the read is really never valid */
+    atomicpower_io1_device.io_source_valid = 0;
+    if (!ap_active) {
+        return 0;
+    }
+    /* since the r/w line is not decoded, a read still changes the register,
+       to whatever was on the bus before */
+    value = vicii_read_phi1();    
+    atomicpower_io1_store(addr, value);
+    log_warning(LOG_DEFAULT, "AP: reading IO1 area at 0xde%02x, this corrupts the register",
+                addr & 0xffu);
+    
+    return value;
 }
 
 static uint8_t atomicpower_io2_read(uint16_t addr)
@@ -257,6 +280,8 @@ void atomicpower_romh_store(uint16_t addr, uint8_t value)
 {
     if (export_ram_at_a000) {
         export_ram0[addr & 0x1fff] = value;
+    } else {
+        mem_store_without_romlh(addr, value);
     }
 }
 
@@ -312,6 +337,7 @@ void atomicpower_freeze(void)
 void atomicpower_config_init(void)
 {
     ap_active = 1;
+    atomicpower_control_reg = 0;
     export_ram_at_a000 = 0;
     cart_config_changed_slotmain(0, 0, CMODE_READ);
 }
@@ -319,6 +345,7 @@ void atomicpower_config_init(void)
 void atomicpower_reset(void)
 {
     ap_active = 1;
+    atomicpower_control_reg = 0;
 }
 
 void atomicpower_config_setup(uint8_t *rawcart)
@@ -394,7 +421,7 @@ void atomicpower_detach(void)
    ARRAY | RAM         | 8192 BYTES of RAM data
  */
 
-static char snap_module_name[] = "CARTAP";
+static const char snap_module_name[] = "CARTAP";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -432,7 +459,7 @@ int atomicpower_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

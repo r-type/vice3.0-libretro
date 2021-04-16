@@ -70,9 +70,6 @@
 /* Enable Mac IOHIDManager Joystick driver. */
 /* #undef HAS_HIDMGR */
 
-/* Enable joystick emulation. */
-#define HAS_JOYSTICK /**/
-
 /* Support 64bit integer for Win32 performance counter */
 /* #undef HAS_LONGLONG_INTEGER */
 
@@ -296,9 +293,6 @@
 
 /* Define to 1 if you have the <libusb.h> header file. */
 /* #undef HAVE_LIBUSB_H */
-
-/* Is libXpm available? */
-/* #undef HAVE_LIBXPM */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1

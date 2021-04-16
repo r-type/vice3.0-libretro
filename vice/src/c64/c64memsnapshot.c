@@ -89,8 +89,6 @@ static int c64_snapshot_write_rom_module(snapshot_t *s)
         return -1;
     }
 
-    ui_update_menus();
-
     return snapshot_module_close(m);
 }
 
@@ -114,7 +112,7 @@ static int c64_snapshot_read_rom_module(snapshot_t *s)
     resources_get_int("VirtualDevices", &trapfl);
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_ROM_MAJOR || minor_version > SNAP_ROM_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_ROM_MAJOR, SNAP_ROM_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
@@ -233,7 +231,7 @@ int c64_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_MAJOR || minor_version > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
@@ -251,7 +249,7 @@ int c64_snapshot_read_module(snapshot_t *s)
     }
 
     /* new since 0.1 */
-    if (SNAPVAL(major_version, minor_version, 0, 1)) {
+    if (!snapshot_version_is_smaller(major_version, minor_version, 0, 1)) {
         if (0
             || SMR_DW_INT(m, &tmp_bit6) < 0
             || SMR_DW_INT(m, &tmp_bit7) < 0
@@ -285,8 +283,6 @@ int c64_snapshot_read_module(snapshot_t *s)
     if (cartridge_snapshot_read_modules(s) < 0) {
         return -1;
     }
-
-    ui_update_menus();
 
     return 0;
 

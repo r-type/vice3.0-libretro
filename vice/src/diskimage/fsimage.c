@@ -58,7 +58,7 @@ void fsimage_name_set(disk_image_t *image, const char *name)
 
     fsimage = image->media.fsimage;
 
-    fsimage->name = lib_stralloc(name);
+    fsimage->name = lib_strdup(name);
 }
 
 
@@ -72,9 +72,9 @@ const char *fsimage_name_get(const disk_image_t *image)
 {
     fsimage_t *fsimage;
 
-    fsimage = image->media.fsimage;
+    fsimage = image ? image->media.fsimage : NULL;
 
-    return fsimage->name;
+    return fsimage ? fsimage->name : NULL;
 }
 
 
@@ -188,7 +188,7 @@ int fsimage_read_sector(const disk_image_t *image, uint8_t *buf, const disk_addr
 
     fsimage = image->media.fsimage;
 
-    if (fsimage->fd == NULL) {
+    if (fsimage == NULL || fsimage->fd == NULL) {
         log_error(fsimage_log, "Attempt to read without disk image.");
         return CBMDOS_IPE_NOT_READY;
     }
@@ -200,10 +200,14 @@ int fsimage_read_sector(const disk_image_t *image, uint8_t *buf, const disk_addr
         case DISK_IMAGE_TYPE_D81:
         case DISK_IMAGE_TYPE_D80:
         case DISK_IMAGE_TYPE_D82:
+#ifdef HAVE_X64_IMAGE
         case DISK_IMAGE_TYPE_X64:
+#endif
         case DISK_IMAGE_TYPE_D1M:
         case DISK_IMAGE_TYPE_D2M:
         case DISK_IMAGE_TYPE_D4M:
+        case DISK_IMAGE_TYPE_DHD:
+        case DISK_IMAGE_TYPE_D90:
             return fsimage_dxx_read_sector(image, buf, dadr);
         case DISK_IMAGE_TYPE_G64:
         case DISK_IMAGE_TYPE_G71:
@@ -212,7 +216,7 @@ int fsimage_read_sector(const disk_image_t *image, uint8_t *buf, const disk_addr
             return fsimage_p64_read_sector(image, buf, dadr);
         default:
             log_error(fsimage_log,
-                      "Unknown disk image type %i.  Cannot read sector.",
+                      "Unknown disk image type %u.  Cannot read sector.",
                       image->type);
             return CBMDOS_IPE_NOT_READY;
     }
@@ -237,10 +241,14 @@ int fsimage_write_sector(disk_image_t *image, const uint8_t *buf,
         case DISK_IMAGE_TYPE_D81:
         case DISK_IMAGE_TYPE_D80:
         case DISK_IMAGE_TYPE_D82:
+#ifdef HAVE_X64_IMAGE
         case DISK_IMAGE_TYPE_X64:
+#endif
         case DISK_IMAGE_TYPE_D1M:
         case DISK_IMAGE_TYPE_D2M:
         case DISK_IMAGE_TYPE_D4M:
+        case DISK_IMAGE_TYPE_DHD:
+        case DISK_IMAGE_TYPE_D90:
             if (fsimage_dxx_write_sector(image, buf, dadr) < 0) {
                 return -1;
             }
@@ -272,4 +280,14 @@ void fsimage_init(void)
     fsimage_gcr_init();
     fsimage_p64_init();
     fsimage_probe_init();
+}
+
+/*-----------------------------------------------------------------------*/
+
+uint32_t fsimage_size(const disk_image_t *image)
+{
+    fsimage_t *fsimage;
+
+    fsimage = image->media.fsimage;
+    return (uint32_t)util_file_length(fsimage->fd);
 }

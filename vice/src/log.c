@@ -1,5 +1,5 @@
 /*
- * log.c - Logging facility. Overhauled for libretro use.
+ * log.c - Logging facility.
  *
  * Written by
  *  Ettore Perazzoli <ettore@comm2000.it>
@@ -33,17 +33,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __LIBRETRO__
-#include <libretro.h>
-#include "string/stdstring.h"
-#endif
-
 #include "archdep.h"
 #include "cmdline.h"
 #include "lib.h"
 #include "log.h"
 #include "resources.h"
 #include "util.h"
+
+#ifdef __LIBRETRO__
+#include <libretro.h>
+#include "string/stdstring.h"
+extern retro_log_printf_t log_cb;
+static char log_buf[1024]; /*create this here in case of tiny stack*/
+#endif
 
 #ifdef DBGLOGGING
 #define DBG(x) printf x
@@ -59,9 +61,6 @@ static log_t num_logs = 0;
 static int log_enabled = 1; /* cv: this flag allows to temporarly disable all logging */
 static int verbose = 0;
 static int locked = 0;
-
-extern retro_log_printf_t log_cb;
-static char log_buf[ 4096 ]; /*create this here in case of tiny stack*/
 
 /* ------------------------------------------------------------------------- */
 
@@ -243,12 +242,13 @@ log_t log_open(const char *id)
             break;
         }
     }
+
     if (i == num_logs) {
         new_log = num_logs++;
         logs = lib_realloc(logs, sizeof(*logs) * num_logs);
     }
 
-    logs[new_log] = lib_stralloc(id);
+    logs[new_log] = lib_strdup(id);
 
     /* printf("log_open(%s) = %d\n", id, (int)new_log); */
     return new_log;
@@ -316,11 +316,10 @@ static int log_archdep(const char *logtxt, const char *fmt, va_list ap)
     return rc;
 }
 
-
 static int log_helper(log_t log, unsigned int level, const char *format,
                       va_list ap)
 {
-    static const char *level_strings[3] = {
+    static const char * const level_strings[3] = {
         "",
         "Warning - ",
         "Error - "
@@ -343,7 +342,7 @@ static int log_helper(log_t log, unsigned int level, const char *format,
         }
     }
 
-    if ((logi != LOG_DEFAULT) && (logi != LOG_ERR) && (*logs[logi] != '\0')) {
+    if ((log_file != NULL) && (logi != LOG_DEFAULT) && (logi != LOG_ERR) && (*logs[logi] != '\0')) {
         logtxt = lib_msprintf("%s: %s", logs[logi], level_strings[level]);
     } else {
         logtxt = lib_msprintf("%s", level_strings[level]);
@@ -429,19 +428,23 @@ int log_verbose(const char *format, ...)
     return rc;
 }
 
-#else
+#else /* __LIBRETRO__ */
 
 static int log_helper(unsigned int level, log_t log, const char *format, va_list ap)
 {
-    const signed int logi = (signed int)log;
+    signed int logi = (signed int)log;
     int rc;
 
+    if (!log_enabled) {
+        return 0;
+    }
+
     rc = vsprintf(log_buf, format, ap);
-    string_replace_all_chars(log_buf, '`', '\'');
 
     if (rc >= 0)
     {
-        if ((logi != LOG_DEFAULT) && (logi != LOG_ERR) && (*logs[logi] != '\0')) {
+        string_replace_all_chars(log_buf, '`', '\'');
+        if ((num_logs > 0) && (logi != LOG_DEFAULT) && (logi != LOG_ERR) && (logs[logi][0] != '\0')) {
             log_cb(level, "%s: %s\n", logs[logi], log_buf);
         } else {
             log_cb(level, "%s\n", log_buf);
@@ -518,11 +521,17 @@ int log_verbose(const char *format, ...)
 int log_resources_init(void) {return 0;}
 void log_resources_shutdown(void) {}
 int log_cmdline_options_init(void) {return 0;}
-int log_init(void) {return 0;}
+//int log_init(void) {return 0;}
 int log_init_with_fd(FILE *f) {return 0;}
 int log_set_verbose(int n) {verbose=n?1:0;return 0;}
 int log_verbose_init(int argc, char **argv) {return 0;}
 #endif /* __LIBRETRO__ */
+
+int log_init(void)
+{
+    return (log_cb == NULL) ? -1 : 0;
+}
+
 
 void log_enable(int on)
 {

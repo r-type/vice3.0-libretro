@@ -33,9 +33,15 @@
  */
 
 /* This file is included by (some) CPU definition files */
-/* (mainc64cpu.c, mainviccpu.c) */
+/*  vic20cpu.c->mainviccpu.c
+    c64sccpu.c->mainc64cpu.c
+*/
 
+#ifdef DRIVE_CPU
+#define CPU_STR "Drive CPU"
+#else
 #define CPU_STR "Main CPU"
+#endif
 
 #include "traps.h"
 
@@ -269,7 +275,7 @@
 #define DO_IRQBRK()                                                                                                   \
     do {                                                                                                              \
         /* Interrupt vector to use. Assume regular IRQ/BRK. */                                                        \
-        uint16_t handler_vector = 0xfffe;                                                                                 \
+        uint16_t handler_vector = 0xfffe;                                                                             \
                                                                                                                       \
         PUSH(reg_pc >> 8);                                                                                            \
         CLK_INC();                                                                                                    \
@@ -307,8 +313,8 @@
 /* FIXME: LOCAL_STATUS() should check byte ready first.  */
 #define DO_INTERRUPT(int_kind)                                                 \
     do {                                                                       \
-        uint8_t ik = (int_kind);                                                  \
-        uint16_t addr;                                                             \
+        uint8_t ik = (int_kind);                                               \
+        uint16_t addr;                                                         \
                                                                                \
         if (ik & (IK_IRQ | IK_IRQPEND | IK_NMI)) {                             \
             if ((ik & IK_NMI)                                                  \
@@ -319,9 +325,9 @@
                 }                                                              \
                 interrupt_ack_nmi(CPU_INT_STATUS);                             \
                 if (!SKIP_CYCLE) {                                             \
-                    LOAD(reg_pc);                                              \
+                    LOAD_DUMMY(reg_pc);     /* dummy reads */                  \
                     CLK_INC();                                                 \
-                    LOAD(reg_pc);                                              \
+                    LOAD_DUMMY(reg_pc);                                        \
                     CLK_INC();                                                 \
                 }                                                              \
                 LOCAL_SET_BREAK(0);                                            \
@@ -348,9 +354,9 @@
                 }                                                              \
                 interrupt_ack_irq(CPU_INT_STATUS);                             \
                 if (!SKIP_CYCLE) {                                             \
-                    LOAD(reg_pc);                                              \
+                    LOAD_DUMMY(reg_pc);     /* dummy reads */                  \
                     CLK_INC();                                                 \
-                    LOAD(reg_pc);                                              \
+                    LOAD_DUMMY(reg_pc);                                        \
                     CLK_INC();                                                 \
                 }                                                              \
                 LOCAL_SET_BREAK(0);                                            \
@@ -361,7 +367,7 @@
         if (ik & (IK_TRAP | IK_RESET)) {                                       \
             if (ik & IK_TRAP) {                                                \
                 EXPORT_REGISTERS();                                            \
-                interrupt_do_trap(CPU_INT_STATUS, (uint16_t)reg_pc);               \
+                interrupt_do_trap(CPU_INT_STATUS, (uint16_t)reg_pc);           \
                 IMPORT_REGISTERS();                                            \
                 if (CPU_INT_STATUS->global_pending_int & IK_RESET) {           \
                     ik |= IK_RESET;                                            \
@@ -373,6 +379,8 @@
                 addr = LOAD(0xfffc);                                           \
                 addr |= (LOAD(0xfffd) << 8);                                   \
                 bank_start = bank_limit = 0; /* prevent caching */             \
+                LOCAL_SET_INTERRUPT(1);                                        \
+                cpu_is_jammed = 0;                                             \
                 JUMP(addr);                                                    \
                 DMA_ON_RESET;                                                  \
             }                                                                  \
@@ -386,11 +394,11 @@
                     EXPORT_REGISTERS();                                        \
                 }                                                              \
                 if (monitor_mask[CALLER] & (MI_STEP)) {                        \
-                    monitor_check_icount((uint16_t)reg_pc);                        \
+                    monitor_check_icount((uint16_t)reg_pc);                    \
                     IMPORT_REGISTERS();                                        \
                 }                                                              \
                 if (monitor_mask[CALLER] & (MI_BREAK)) {                       \
-                    if (monitor_check_breakpoints(CALLER, (uint16_t)reg_pc)) {     \
+                    if (monitor_check_breakpoints(CALLER, (uint16_t)reg_pc)) { \
                         monitor_startup(CALLER);                               \
                         IMPORT_REGISTERS();                                    \
                     }                                                          \
@@ -420,13 +428,13 @@
 /* same as above, for NOOP */
 #define GET_IMM_DUMMY()
 
-#define GET_ABS(dest)        \
+#define GET_ABS(dest)           \
     dest = (uint8_t)(LOAD(p2)); \
     CLK_INC();
 
 /* same as above, for NOOP */
 #define GET_ABS_DUMMY()      \
-    LOAD(p2);                \
+    LOAD_DUMMY(p2);          \
     CLK_INC();
 
 #define SET_ABS(value) \
@@ -435,22 +443,22 @@
 
 #define SET_ABS_RMW(old_value, new_value) \
     if (!SKIP_CYCLE) {                    \
-        STORE(p2, old_value);             \
+        STORE_DUMMY(p2, old_value);       \
         CLK_INC();                        \
     }                                     \
     STORE(p2, new_value);                 \
     CLK_INC();
 
-#define INT_ABS_I_R(reg_i)                                 \
-    if (!SKIP_CYCLE && ((((p2) & 0xff) + reg_i) > 0xff)) { \
-        LOAD((((p2) + reg_i) & 0xff) | ((p2) & 0xff00));   \
-        CLK_INC();                                         \
+#define INT_ABS_I_R(reg_i)                                     \
+    if (!SKIP_CYCLE && ((((p2) & 0xff) + reg_i) > 0xff)) {     \
+        LOAD_DUMMY((((p2) + reg_i) & 0xff) | ((p2) & 0xff00)); \
+        CLK_INC();                                             \
     }
 
-#define INT_ABS_I_W(reg_i)                               \
-    if (!SKIP_CYCLE) {                                   \
-        LOAD((((p2) + reg_i) & 0xff) | ((p2) & 0xff00)); \
-        CLK_INC();                                       \
+#define INT_ABS_I_W(reg_i)                                     \
+    if (!SKIP_CYCLE) {                                         \
+        LOAD_DUMMY((((p2) + reg_i) & 0xff) | ((p2) & 0xff00)); \
+        CLK_INC();                                             \
     }
 
 #define GET_ABS_X(dest)        \
@@ -460,7 +468,7 @@
 /* same as above, for NOOP */
 #define GET_ABS_X_DUMMY()      \
     INT_ABS_I_R(reg_x)         \
-    LOAD((p2) + reg_x);        \
+    LOAD_DUMMY((p2) + reg_x);  \
     CLK_INC();
 
 #define GET_ABS_Y(dest)        \
@@ -490,7 +498,7 @@
 
 #define SET_ABS_I_RMW(reg_i, old_value, new_value) \
     if (!SKIP_CYCLE) {                             \
-        STORE(p2 + reg_i, old_value);              \
+        STORE_DUMMY(p2 + reg_i, old_value);        \
         CLK_INC();                                 \
     }                                              \
     STORE(p2 + reg_i, new_value);                  \
@@ -505,8 +513,8 @@
     CLK_INC();
 
 /* same as above, for NOOP */
-#define GET_ZERO_DUMMY()    \
-    LOAD_ZERO(p1); \
+#define GET_ZERO_DUMMY() \
+    LOAD_ZERO_DUMMY(p1); \
     CLK_INC();
 
 #define SET_ZERO(value)    \
@@ -515,18 +523,19 @@
 
 #define SET_ZERO_RMW(old_value, new_value) \
     if (!SKIP_CYCLE) {                     \
-        STORE_ZERO(p1, old_value);         \
+        STORE_ZERO_DUMMY(p1, old_value);   \
         CLK_INC();                         \
     }                                      \
     STORE_ZERO(p1, new_value);             \
     CLK_INC();
 
-#define INT_ZERO_I      \
-    if (!SKIP_CYCLE) {  \
-        LOAD_ZERO(p1);  \
-        CLK_INC();      \
+#define INT_ZERO_I            \
+    if (!SKIP_CYCLE) {        \
+        LOAD_ZERO_DUMMY(p1);  \
+        CLK_INC();            \
     }
 
+/* load zp, x */    
 #define GET_ZERO_X(dest)          \
     INT_ZERO_I                    \
     dest = LOAD_ZERO(p1 + reg_x); \
@@ -534,7 +543,7 @@
 /* same as above, for NOOP */
 #define GET_ZERO_X_DUMMY()        \
     INT_ZERO_I                    \
-    LOAD_ZERO(p1 + reg_x);        \
+    LOAD_ZERO_DUMMY(p1 + reg_x);  \
     CLK_INC();
 
 #define GET_ZERO_Y(dest)          \
@@ -554,7 +563,7 @@
 
 #define SET_ZERO_I_RMW(reg_i, old_value, new_value) \
     if (!SKIP_CYCLE) {                              \
-        STORE_ZERO(p1 + reg_i, old_value);          \
+        STORE_ZERO_DUMMY(p1 + reg_i, old_value);    \
         CLK_INC();                                  \
     }                                               \
     STORE_ZERO(p1 + reg_i, new_value);              \
@@ -566,7 +575,7 @@
 
 #define INT_IND_X                   \
     unsigned int tmpa, addr;        \
-    LOAD_ZERO(p1);                  \
+    LOAD_ZERO_DUMMY(p1);            \
     CLK_INC();                      \
     tmpa = (p1 + reg_x) & 0xff;     \
     addr = LOAD_ZERO(tmpa);         \
@@ -575,6 +584,7 @@
     addr |= (LOAD_ZERO(tmpa) << 8); \
     CLK_INC();
 
+/* load (zp, x) */
 #define GET_IND_X(dest) \
     INT_IND_X           \
     dest = LOAD(addr);  \
@@ -587,28 +597,28 @@
         CLK_INC();          \
     }
 
-#define INT_IND_Y_R()                                        \
-    unsigned int tmpa, addr;                                 \
-    tmpa = LOAD_ZERO(p1);                                    \
-    CLK_INC();                                               \
-    tmpa |= (LOAD_ZERO(p1 + 1) << 8);                        \
-    CLK_INC();                                               \
-    if (!SKIP_CYCLE && ((((tmpa) & 0xff) + reg_y) > 0xff)) { \
-        LOAD((tmpa & 0xff00) | ((tmpa + reg_y) & 0xff));     \
-        CLK_INC();                                           \
-    }                                                        \
-    addr = (tmpa + reg_y) & 0xffff;                          \
+#define INT_IND_Y_R()                                          \
+    unsigned int tmpa, addr;                                   \
+    tmpa = LOAD_ZERO(p1);                                      \
+    CLK_INC();                                                 \
+    tmpa |= (LOAD_ZERO(p1 + 1) << 8);                          \
+    CLK_INC();                                                 \
+    if (!SKIP_CYCLE && ((((tmpa) & 0xff) + reg_y) > 0xff)) {   \
+        LOAD_DUMMY((tmpa & 0xff00) | ((tmpa + reg_y) & 0xff)); \
+        CLK_INC();                                             \
+    }                                                          \
+    addr = (tmpa + reg_y) & 0xffff;                            \
 
-#define INT_IND_Y_W()                                    \
-    unsigned int tmpa, addr;                             \
-    tmpa = LOAD_ZERO(p1);                                \
-    CLK_INC();                                           \
-    tmpa |= (LOAD_ZERO(p1 + 1) << 8);                    \
-    CLK_INC();                                           \
-    if (!SKIP_CYCLE) {                                   \
-        LOAD((tmpa & 0xff00) | ((tmpa + reg_y) & 0xff)); \
-        CLK_INC();                                       \
-    }                                                    \
+#define INT_IND_Y_W()                                          \
+    unsigned int tmpa, addr;                                   \
+    tmpa = LOAD_ZERO(p1);                                      \
+    CLK_INC();                                                 \
+    tmpa |= (LOAD_ZERO(p1 + 1) << 8);                          \
+    CLK_INC();                                                 \
+    if (!SKIP_CYCLE) {                                         \
+        LOAD_DUMMY((tmpa & 0xff00) | ((tmpa + reg_y) & 0xff)); \
+        CLK_INC();                                             \
+    }                                                          \
     addr = (tmpa + reg_y) & 0xffff;
 /* like above, for SHA_IND_Y */
 #define INT_IND_Y_W_NOADDR()                                          \
@@ -622,6 +632,7 @@
         CLK_INC();                                                    \
     }
 
+/* load (zp),y */
 #define GET_IND_Y(dest) \
     INT_IND_Y_R()       \
     dest = LOAD(addr);  \
@@ -641,7 +652,7 @@
 
 #define SET_IND_RMW(old_value, new_value) \
     if (!SKIP_CYCLE) {                    \
-        STORE(addr, old_value);           \
+        STORE_DUMMY(addr, old_value);     \
         CLK_INC();                        \
     }                                     \
     STORE(addr, new_value);               \
@@ -739,32 +750,82 @@
 
 /*
 The result of the ANE opcode is A = ((A | CONST) & X & IMM), with CONST apparently
-being both chip- and temperature dependent.
+being both chip- and temperature dependent. There is also a dependency on the RDY
+line, ie somehow bit4 and bit0 are affected in the cycle when a DMA starts.
 
 The commonly used value for CONST in various documents is 0xee, which is however
 not to be taken for granted (as it is unstable). see here:
 http://visual6502.org/wiki/index.php?title=6502_Opcode_8B_(XAA,_ANE)
 
 as seen in the list, there are several possible values, and its origin is still
-kinda unknown. instead of the commonly used 0xee we use 0xff here, since this
-will make the only known occurance of this opcode in actual code work. see here:
-https://sourceforge.net/tracker/?func=detail&aid=2110948&group_id=223021&atid=1057617
+kinda unknown. instead of the commonly used 0xee we use 0xef here, since this
+appears to work with all known occurances of this opcode in real code:
 
+known occurances of this opcode in actual code are:
+
+- spectipede (original tape), use of ANE is unstable. bits 7,6,5,0 MUST be set
+  in the magic constant (that makes it not work with the common 0xee, but 0xef
+  works)
+- turrican 3 (by smash designs), use of ANE is unstable. bits 6,1,0 MUST be set
+  in the magic constant (that makes it not work with the common 0xee, but 0xef
+  works)
+- the ocean/imagine tape loader (yie ar kung fu, rambo first blood part ii,
+  comic bakery), use of ANE is stable.
+
+also see here:
+
+https://sourceforge.net/tracker/?func=detail&aid=2110948&group_id=223021&atid=1057617
+  
 FIXME: in the unlikely event that other code surfaces that depends on another
 CONST value, it probably has to be made configureable somehow if no value can
 be found that works for both.
+
+FIXME: perhaps we really have to add some randomness to (some) bits
 */
 
+#define ANE_MAGIC       0xef
+#define ANE_RDY_MAGIC   0xee
+
+/* FIXME: perhaps we should make the log level a user setting */
+#if 1
+static int ane_log_level = 1; /* 0: none, 1: unstable only 2: all */
+
+#define ANE_LOGGING(rdy)                                                                    \
+    do {                                                                                    \
+        unsigned int result = ((reg_a_read | (rdy ? ANE_RDY_MAGIC : ANE_MAGIC)) & reg_x & p1); \
+        unsigned int unstablebits = ((reg_a_read ^ 0xff) & (p1 & reg_x));                   \
+        if ((ane_log_level == 2) || ((ane_log_level == 1) && (unstablebits != 0))) {        \
+            if (unstablebits == 0) {                                                        \
+                log_warning(LOG_DEFAULT, "%04x ANE #$%02x ; A=$%02x X=$%02x -> A=$%02x%s",  \
+                    reg_pc, p1, reg_a_read, reg_x, result, rdy ? " (RDY cycle)" : "");      \
+            } else {                                                                        \
+                log_warning(LOG_DEFAULT, "%04x ANE #$%02x ; A=$%02x X=$%02x -> A=$%02x (unstable bits: %c%c%c%c%c%c%c%c)%s", \
+                    reg_pc, p1, reg_a_read, reg_x, result,                                  \
+                    unstablebits & 0x80 ? '*' : '.', unstablebits & 0x40 ? '*' : '.',       \
+                    unstablebits & 0x20 ? '*' : '.', unstablebits & 0x10 ? '*' : '.',       \
+                    unstablebits & 0x08 ? '*' : '.', unstablebits & 0x04 ? '*' : '.',       \
+                    unstablebits & 0x02 ? '*' : '.', unstablebits & 0x01 ? '*' : '.',       \
+                    rdy ? " (RDY cycle)" : ""                                               \
+                    );                                                                      \
+            }                                                                               \
+        }                                                                                   \
+    } while (0)
+#else
+#define ANE_LOGGING(rdy)
+#endif
+    
 #define ANE()                                                       \
     do {                                                            \
         /* Set by main-cpu to signal steal after first fetch */     \
         if (OPINFO_ENABLES_IRQ(LAST_OPCODE_INFO)) {                 \
             /* Remove the signal */                                 \
             LAST_OPCODE_INFO &= ~OPINFO_ENABLES_IRQ_MSK;            \
-            /* TODO emulate the different behaviour */              \
-            reg_a_write = (uint8_t)((reg_a_read | 0xff) & reg_x & p1); \
+            /* TODO: the real behaviour is more complex */          \
+            ANE_LOGGING(1);                                         \
+            reg_a_write = (uint8_t)((reg_a_read | ANE_RDY_MAGIC) & reg_x & p1); \
         } else {                                                    \
-            reg_a_write = (uint8_t)((reg_a_read | 0xff) & reg_x & p1); \
+            ANE_LOGGING(0);                                         \
+            reg_a_write = (uint8_t)((reg_a_read | ANE_MAGIC) & reg_x & p1); \
         }                                                           \
         LOCAL_SET_NZ(reg_a_read);                                   \
         INC_PC(2);                                                  \
@@ -884,10 +945,10 @@ be found that works for both.
                                                               \
             dest_addr = reg_pc + (signed char)(p1);           \
                                                               \
-            LOAD(reg_pc);                                     \
+            LOAD_DUMMY(reg_pc);                               \
             CLK_INC();                                        \
             if ((reg_pc ^ dest_addr) & 0xff00) {              \
-                LOAD((reg_pc & 0xff00) | (dest_addr & 0xff)); \
+                LOAD_DUMMY((reg_pc & 0xff00) | (dest_addr & 0xff)); \
                 CLK_INC();                                    \
             } else {                                          \
                 OPCODE_DELAYS_INTERRUPT();                    \
@@ -916,6 +977,7 @@ be found that works for both.
         uint32_t trap_result;                                                            \
         EXPORT_REGISTERS();                                                           \
         if (!ROM_TRAP_ALLOWED() || (trap_result = ROM_TRAP_HANDLER()) == (uint32_t)-1) { \
+            cpu_is_jammed = 1;                                                        \
             REWIND_FETCH_OPCODE(CLK);                                                 \
             JAM();                                                                    \
         } else {                                                                      \
@@ -1091,8 +1153,8 @@ be found that works for both.
 
 #define JSR()                                     \
     do {                                          \
-        uint8_t addr_msb;                            \
-        uint16_t dest_addr;                           \
+        uint8_t addr_msb;                         \
+        uint16_t dest_addr;                       \
         if (!SKIP_CYCLE) {                        \
             STACK_PEEK();                         \
             CLK_INC();                            \
@@ -1152,13 +1214,70 @@ be found that works for both.
         INC_PC(1);                          \
     } while (0)
 
-/* Note: this is not always exact, as this opcode can be quite unstable!
-   Moreover, the behavior is different from the one described in 64doc. */
-#define LXA(value, pc_inc)                                             \
-    do {                                                               \
-        reg_a_write = reg_x = ((reg_a_read | 0xee) & ((uint8_t)(value))); \
-        LOCAL_SET_NZ(reg_a_read);                                      \
-        INC_PC(pc_inc);                                                \
+/*
+The result of the LXA opcode is A = X = ((A | CONST) & IMM), with CONST apparently
+being both chip- and temperature dependent. There is also a dependency on the RDY
+line, ie somehow bit4 and bit0 are affected in the cycle when a DMA starts.
+
+The commonly used value for CONST in various documents is 0xee, which is however
+not to be taken for granted (as it is unstable).
+
+FIXME: in the unlikely event that other code surfaces that depends on another
+CONST value, it probably has to be made configureable somehow if no value can
+be found that works for both.
+
+FIXME: perhaps we really have to add some randomness to (some) bits
+*/
+
+#define LXA_MAGIC       0xee    /* needs to be 0xee for wizball */
+#define LXA_RDY_MAGIC   0xee
+
+/* FIXME: perhaps we should make the log level a user setting */
+#if 1
+static int lxa_log_level = 1; /* 0: none, 1: unstable only 2: all */
+
+#define LXA_LOGGING(rdy)                                                                    \
+    do {                                                                                    \
+        unsigned int result = (reg_a_read | (rdy ? LXA_RDY_MAGIC : LXA_MAGIC)) & p1;        \
+        unsigned int unstablebits = (reg_a_read ^ 0xff) & p1;                               \
+        if ((lxa_log_level == 2) || ((lxa_log_level == 1) && (unstablebits != 0))) {        \
+            if (unstablebits == 0) {                                                        \
+                log_warning(LOG_DEFAULT, "%04x LAX #$%02x ; A=$%02x -> A=X=$%02x%s",        \
+                    reg_pc, p1, reg_a_read, result, rdy ? " (RDY cycle)" : "");             \
+            } else {                                                                        \
+                log_warning(LOG_DEFAULT, "%04x LAX #$%02x ; A=$%02x -> A=X=$%02x (unstable bits: %c%c%c%c%c%c%c%c)%s", \
+                    reg_pc, p1, reg_a_read, result,                                         \
+                    unstablebits & 0x80 ? '*' : '.', unstablebits & 0x40 ? '*' : '.',       \
+                    unstablebits & 0x20 ? '*' : '.', unstablebits & 0x10 ? '*' : '.',       \
+                    unstablebits & 0x08 ? '*' : '.', unstablebits & 0x04 ? '*' : '.',       \
+                    unstablebits & 0x02 ? '*' : '.', unstablebits & 0x01 ? '*' : '.',       \
+                    rdy ? " (RDY cycle)" : ""                                               \
+                    );                                                                      \
+            }                                                                               \
+        }                                                                                   \
+    } while (0)
+#else
+#define LXA_LOGGING(rdy)
+#endif
+
+#define LXA()                                                       \
+    do {                                                            \
+        /* Set by main-cpu to signal steal after first fetch */     \
+        if (OPINFO_ENABLES_IRQ(LAST_OPCODE_INFO)) {                 \
+            /* Remove the signal */                                 \
+            LAST_OPCODE_INFO &= ~OPINFO_ENABLES_IRQ_MSK;            \
+            /* TODO: the real behaviour is more complex */          \
+            LXA_LOGGING(1);                                         \
+            reg_a_write = reg_x = (uint8_t)((reg_a_read | LXA_RDY_MAGIC) & p1); \
+        } else {                                                    \
+            LXA_LOGGING(0);                                         \
+            reg_a_write = reg_x = (uint8_t)((reg_a_read | LXA_MAGIC) & p1); \
+        }                                                           \
+        LOCAL_SET_NZ(reg_a_read);                                   \
+        INC_PC(2);                                                  \
+        /* Pretend to be NOP #$nn to not trigger the special case   \
+           when cycles are stolen after the second fetch */         \
+        SET_LAST_OPCODE(0x80);                                      \
     } while (0)
 
 #define ORA(get_func, pc_inc)                       \
@@ -1204,7 +1323,7 @@ be found that works for both.
 
 #define PLP()                                                 \
     do {                                                      \
-        uint8_t s;                                               \
+        uint8_t s;                                            \
         if (!SKIP_CYCLE) {                                    \
             STACK_PEEK();                                     \
             CLK_INC();                                        \
@@ -1298,26 +1417,26 @@ be found that works for both.
    from 1 to 0 because the value of I is set 3 cycles before the end of the
    opcode, and thus the 6510 has enough time to call the interrupt routine as
    soon as the opcode ends, if necessary.  */
-#define RTI()                        \
-    do {                             \
-        uint16_t tmp;                    \
-        if (!SKIP_CYCLE) {           \
-            STACK_PEEK();            \
-            CLK_INC();               \
-        }                            \
-        tmp = (uint16_t)PULL();          \
-        CLK_INC();                   \
+#define RTI()                           \
+    do {                                \
+        uint16_t tmp;                   \
+        if (!SKIP_CYCLE) {              \
+            STACK_PEEK();               \
+            CLK_INC();                  \
+        }                               \
+        tmp = (uint16_t)PULL();         \
+        CLK_INC();                      \
         LOCAL_SET_STATUS((uint8_t)tmp); \
-        tmp = (uint16_t)PULL();          \
-        CLK_INC();                   \
-        tmp |= (uint16_t)PULL() << 8;    \
-        CLK_INC();                   \
-        JUMP(tmp);                   \
+        tmp = (uint16_t)PULL();         \
+        CLK_INC();                      \
+        tmp |= (uint16_t)PULL() << 8;   \
+        CLK_INC();                      \
+        JUMP(tmp);                      \
     } while (0)
 
 #define RTS()                 \
     do {                      \
-        uint16_t tmp;             \
+        uint16_t tmp;         \
         if (!SKIP_CYCLE) {    \
             STACK_PEEK();     \
             CLK_INC();        \
@@ -1408,14 +1527,14 @@ be found that works for both.
         INC_PC(2);                                     \
     } while (0)
 
-#define SH_ABS_I(reg_and, reg_i)                                        \
-    do {                                                                \
-        if (!SKIP_CYCLE) {                                              \
-            LOAD_CHECK_BA_LOW(((p2 + reg_i) & 0xff) | ((p2) & 0xff00)); \
-            CLK_INC();                                                  \
-        }                                                               \
-        SET_ABS_SH_I(p2, reg_and, reg_i);                               \
-        INC_PC(3);                                                      \
+#define SH_ABS_I(reg_and, reg_i)                                              \
+    do {                                                                      \
+        if (!SKIP_CYCLE) {                                                    \
+            LOAD_CHECK_BA_LOW_DUMMY(((p2 + reg_i) & 0xff) | ((p2) & 0xff00)); \
+            CLK_INC();                                                        \
+        }                                                                     \
+        SET_ABS_SH_I(p2, reg_and, reg_i);                                     \
+        INC_PC(3);                                                            \
     } while (0)
 
 #define SHS_ABS_Y()                          \
@@ -1533,12 +1652,25 @@ static const uint8_t fetch_tab[] = {
 /* Here, the CPU is emulated. */
 
 {
+    static int cpu_is_jammed = 0;
+    
 #ifdef CHECK_AND_RUN_ALTERNATE_CPU
     CHECK_AND_RUN_ALTERNATE_CPU
 #endif
 
     while (CLK >= alarm_context_next_pending_clk(ALARM_CONTEXT)) {
         alarm_context_dispatch(ALARM_CONTEXT, CLK);
+    }
+    
+    /* HACK: when the CPU is jammed, no interrupts are served, the only way 
+       to recover is reset. so we clear the interrupt flags and force 
+       acknowledging them here in this case. */
+    if (cpu_is_jammed) {
+        interrupt_ack_irq(CPU_INT_STATUS);
+        CPU_INT_STATUS->global_pending_int &= ~(IK_IRQ | IK_NMI);
+        if (CPU_INT_STATUS->global_pending_int & IK_RESET) {
+            cpu_is_jammed = 0;
+        }
     }
 
     {
@@ -1574,13 +1706,14 @@ static const uint8_t fetch_tab[] = {
 #endif
 
         SET_LAST_ADDR(reg_pc);
+
         FETCH_OPCODE(opcode);
 
 #ifdef FEATURE_CPUMEMHISTORY
         /* If reg_pc >= bank_limit  then JSR (0x20) hasn't load p2 yet.
            The earlier LOAD(reg_pc+2) hack can break stealing badly on x64sc.
            The fixing is now handled in JSR(). */
-        monitor_cpuhistory_store(reg_pc, p0, p1, p2 >> 8, reg_a_read, reg_x, reg_y, reg_sp, LOCAL_STATUS());
+        monitor_cpuhistory_store(maincpu_clk, reg_pc, p0, p1, p2 >> 8, reg_a_read, reg_x, reg_y, reg_sp, LOCAL_STATUS());
         memmap_state &= ~(MEMMAP_STATE_INSTR | MEMMAP_STATE_OPCODE);
 #endif
 
@@ -1634,6 +1767,7 @@ trap_skipped:
             case 0x32:          /* JAM */
             case 0x42:          /* JAM */
 #endif
+                cpu_is_jammed = 1;
                 REWIND_FETCH_OPCODE(CLK);
                 JAM();
                 break;
@@ -2264,7 +2398,7 @@ trap_skipped:
                 break;
 
             case 0xab:          /* LXA #$nn */
-                LXA(p1, 2);
+                LXA();
                 break;
 
             case 0xac:          /* LDY $nnnn */

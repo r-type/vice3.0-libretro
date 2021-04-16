@@ -1308,9 +1308,13 @@ void ata_image_attach(ata_drive_t *drv, char *filename, ata_drive_type_t type, a
 
     if (drv->file) {
         if (drv->atapi) {
-            log_message(drv->log, "Attached `%s' %u sectors total.", drv->filename, drv->geometry.size);
+            log_message(drv->log, "Attached `%s' %u sectors total.",
+                    drv->filename, (unsigned int)drv->geometry.size);
         } else {
-            log_message(drv->log, "Attached `%s' %i/%i/%i CHS geometry, %u sectors total.", drv->filename, drv->geometry.cylinders, drv->geometry.heads, drv->geometry.sectors, drv->geometry.size);
+            log_message(drv->log,
+                    "Attached `%s' %i/%i/%i CHS geometry, %u sectors total.",
+                    drv->filename, drv->geometry.cylinders, drv->geometry.heads,
+                    drv->geometry.sectors, (unsigned int)drv->geometry.size);
         }
     } else {
         if (drv->filename && drv->filename[0] && drv->type != ATA_DRIVE_NONE) {
@@ -1421,7 +1425,7 @@ int ata_snapshot_write_module(ata_drive_t *drv, snapshot_t *s)
     SMW_B(m, (uint8_t)drv->heads);
     SMW_B(m, (uint8_t)drv->sectors);
     SMW_DW(m, drv->pos);
-    SMW_DW(m, pos / drv->sector_size);
+    SMW_DW(m, (uint32_t)(pos / drv->sector_size));
     SMW_B(m, (uint8_t)drv->wcache);
     SMW_B(m, (uint8_t)drv->lookahead);
     SMW_B(m, (uint8_t)drv->busy);

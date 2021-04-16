@@ -37,6 +37,7 @@
 #include "archdep.h"
 #include "attach.h"
 #include "autostart.h"
+#include "cartridge.h"
 #include "cmdline.h"
 #include "initcmdline.h"
 #include "ioutil.h"
@@ -48,7 +49,6 @@
 #include "tape.h"
 #include "util.h"
 #include "vicefeatures.h"
-#include "monitor.h"
 
 #ifdef DEBUG_CMDLINE
 #define DBG(x)  printf x
@@ -56,27 +56,16 @@
 #define DBG(x)
 #endif
 
+#define NUM_STARTUP_DISK_IMAGES 8
 static char *autostart_string = NULL;
-static char *startup_disk_images[4];
+static char *startup_disk_images[NUM_STARTUP_DISK_IMAGES];
 static char *startup_tape_image;
 static unsigned int autostart_mode = AUTOSTART_MODE_NONE;
-
-int cmdline_get_autostart_mode(void)
-{
-    return autostart_mode;
-}
 
 #ifdef __LIBRETRO__
 const char* cmdline_get_autostart_string(void)
 {
     return autostart_string;
-}
-#endif /* __LIBRETRO__ */
-
-static void cmdline_free_autostart_string(void)
-{
-    lib_free(autostart_string);
-    autostart_string = NULL;
 }
 
 static void cmdline_free_startup_images(void)
@@ -94,17 +83,55 @@ static void cmdline_free_startup_images(void)
     }
     startup_tape_image = NULL;
 }
-#ifdef __LIBRETRO__
+
 void retro_cmdline_free_startup_images(void)
 {
     cmdline_free_startup_images();
 }
-#endif
+#endif /* __LIBRETRO__ */
+
+/** \brief  Get autostart mode
+ *
+ * \return  autostart mode
+ */
+int cmdline_get_autostart_mode(void)
+{
+    return autostart_mode;
+}
+
+
+void cmdline_set_autostart_mode(int mode)
+{
+    autostart_mode = mode;
+}
+
+
+static void cmdline_free_autostart_string(void)
+{
+    lib_free(autostart_string);
+    autostart_string = NULL;
+}
+
+void initcmdline_shutdown(void)
+{
+    int unit;
+
+    for (unit = 0; unit < NUM_STARTUP_DISK_IMAGES; unit++) {
+        if (startup_disk_images[unit] != NULL) {
+            lib_free(startup_disk_images[unit]);
+        }
+        startup_disk_images[unit] = NULL;
+    }
+    if (startup_tape_image != NULL) {
+        lib_free(startup_tape_image);
+    }
+    startup_tape_image = NULL;
+}
+
 static int cmdline_help(const char *param, void *extra_param)
 {
     cmdline_show_help(NULL);
 #ifndef __LIBRETRO__
-//FIXME
     archdep_vice_exit(0);
 #endif
     return 0;   /* OSF1 cc complains */
@@ -112,15 +139,15 @@ static int cmdline_help(const char *param, void *extra_param)
 
 static int cmdline_features(const char *param, void *extra_param)
 {
-    feature_list_t *list = vice_get_feature_list();
+    const feature_list_t *list = vice_get_feature_list();
 
     printf("Compile time options:\n");
     while (list->symbol) {
         printf("%-25s %4s %s\n", list->symbol, list->isdefined ? "yes " : "no  ", list->descr);
         ++list;
     }
+
 #ifndef __LIBRETRO__
-//FIXME
     archdep_vice_exit(0);
 #endif
     return 0;   /* OSF1 cc complains */
@@ -132,6 +159,11 @@ static int cmdline_config(const char *param, void *extra_param)
        but it also needs to be registered as a cmdline option,
        hence this kludge. */
     return 0;
+}
+
+static int cmdline_add_config(const char *param, void *extra_param)
+{
+    return resources_load(param);
 }
 
 static int cmdline_dumpconfig(const char *param, void *extra_param)
@@ -151,14 +183,19 @@ static int cmdline_chdir(const char *param, void *extra_param)
 
 static int cmdline_limitcycles(const char *param, void *extra_param)
 {
-    maincpu_clk_limit = strtoul(param, NULL, 0);
+    uint64_t clk_limit = strtoull(param, NULL, 0);
+    if (clk_limit > CLOCK_MAX) {
+        fprintf(stderr, "too many cycles, use max %u\n", CLOCK_MAX);
+        return -1;
+    }
+    maincpu_clk_limit = (CLOCK)clk_limit;
     return 0;
 }
 
 static int cmdline_autostart(const char *param, void *extra_param)
 {
     cmdline_free_autostart_string();
-    autostart_string = lib_stralloc(param);
+    autostart_string = lib_strdup(param);
     autostart_mode = AUTOSTART_MODE_RUN;
     return 0;
 }
@@ -166,7 +203,7 @@ static int cmdline_autostart(const char *param, void *extra_param)
 static int cmdline_autoload(const char *param, void *extra_param)
 {
     cmdline_free_autostart_string();
-    autostart_string = lib_stralloc(param);
+    autostart_string = lib_strdup(param);
     autostart_mode = AUTOSTART_MODE_LOAD;
     return 0;
 }
@@ -188,14 +225,21 @@ static int cmdline_attach(const char *param, void *extra_param)
     switch (unit) {
         case 1:
             lib_free(startup_tape_image);
-            startup_tape_image = lib_stralloc(param);
+            startup_tape_image = lib_strdup(param);
             break;
         case 8:
         case 9:
         case 10:
         case 11:
             lib_free(startup_disk_images[unit - 8]);
-            startup_disk_images[unit - 8] = lib_stralloc(param);
+            startup_disk_images[unit - 8] = lib_strdup(param);
+            break;
+        case 64:
+        case 65:
+        case 66:
+        case 67:
+            lib_free(startup_disk_images[unit - 64 + 4]);
+            startup_disk_images[unit - 64 + 4] = lib_strdup(param);
             break;
         default:
             archdep_startup_log_error("cmdline_attach(): unexpected unit number %d?!\n", unit);
@@ -208,7 +252,7 @@ static const cmdline_option_t common_cmdline_options[] =
 {
     { "-help", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       cmdline_help, NULL, NULL, NULL,
-      NULL, "Show a list of the available options and exit normally" },
+      NULL, "Show a list of the available options an_vice_xit normally" },
     { "-?", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       cmdline_help, NULL, NULL, NULL,
       NULL, "Show a list of the available options and exit normally" },
@@ -224,6 +268,9 @@ static const cmdline_option_t common_cmdline_options[] =
     { "-config", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_config, NULL, NULL, NULL,
       "<filename>", "Specify config file" },
+    { "-addconfig", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
+      cmdline_add_config, NULL, NULL, NULL,
+      "<filename>", "Specify extra config file for loading additional resources." },
     { "-dumpconfig", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_dumpconfig, NULL, NULL, NULL,
       "<filename>", "Dump all resources to specified config file" },
@@ -260,16 +307,28 @@ static const cmdline_option_t cmdline_options[] =
       "<Name>", "Attach <name> as a tape image" },
     { "-8", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)8, NULL, NULL,
-      "<Name>", "Attach <name> as a disk image in drive #8" },
+      "<Name>", "Attach <name> as a disk image in unit #8" },
+    { "-8d1", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
+      cmdline_attach, (void *)64, NULL, NULL,
+      "<Name>", "Attach <name> as a disk image in unit #8 drive #1" },
     { "-9", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)9, NULL, NULL,
-      "<Name>", "Attach <name> as a disk image in drive #9" },
+      "<Name>", "Attach <name> as a disk image in unit #9" },
+    { "-9d1", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
+      cmdline_attach, (void *)65, NULL, NULL,
+      "<Name>", "Attach <name> as a disk image in unit #9 drive #1" },
     { "-10", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)10, NULL, NULL,
-      "<Name>", "Attach <name> as a disk image in drive #10" },
+      "<Name>", "Attach <name> as a disk image in unit #10" },
+    { "-10d1", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
+      cmdline_attach, (void *)66, NULL, NULL,
+      "<Name>", "Attach <name> as a disk image in unit #10 drive #1" },
     { "-11", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       cmdline_attach, (void *)11, NULL, NULL,
-      "<Name>", "Attach <name> as a disk image in drive #11" },
+      "<Name>", "Attach <name> as a disk image in unit #11" },
+    { "-11d1", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
+      cmdline_attach, (void *)67, NULL, NULL,
+      "<Name>", "Attach <name> as a disk image in unit #11 drive #1" },
     CMDLINE_LIST_END
 };
 
@@ -286,9 +345,6 @@ int initcmdline_init(void)
         }
     }
 
-#ifndef __LIBRETRO__
-    archdep_vice_atexit(cmdline_free_startup_images);
-#endif
     return 0;
 }
 
@@ -319,7 +375,7 @@ int initcmdline_check_args(int argc, char **argv)
 
     /* The last orphan option is the same as `-autostart'.  */
     if ((argc > 1) && (autostart_string == NULL)) {
-        autostart_string = lib_stralloc(argv[1]);
+        autostart_string = lib_strdup(argv[1]);
         autostart_mode = AUTOSTART_MODE_RUN;
         argc--, argv++;
     }
@@ -356,7 +412,14 @@ void initcmdline_check_attach(void)
 
         /* `-autostart' */
         if (autostart_string != NULL) {
-            autostart_autodetect_opt_prgname(autostart_string, 0, autostart_mode);
+            if (autostart_autodetect_opt_prgname(autostart_string, 0, autostart_mode) < 0) {
+                log_error(LOG_DEFAULT,
+                        "Failed to autostart '%s'", autostart_string);
+                if (autostart_string != NULL) {
+                    lib_free(autostart_string);
+                }
+                archdep_vice_exit(1);
+            }
         }
         /* `-8', `-9', `-10' and `-11': Attach specified disk image.  */
         {
@@ -364,11 +427,20 @@ void initcmdline_check_attach(void)
 
             for (i = 0; i < 4; i++) {
                 if (startup_disk_images[i] != NULL
-                    && file_system_attach_disk(i + 8, startup_disk_images[i])
+                    && file_system_attach_disk(i + 8, 0, startup_disk_images[i])
                     < 0) {
                     log_error(LOG_DEFAULT,
                               "Cannot attach disk image `%s' to unit %d.",
                               startup_disk_images[i], i + 8);
+                }
+            }
+            for (i = 4; i < 8; i++) {
+                if (startup_disk_images[i] != NULL
+                    && file_system_attach_disk(i + 4, 1, startup_disk_images[i])
+                    < 0) {
+                    log_error(LOG_DEFAULT,
+                              "Cannot attach disk image `%s' to unit %d drive 1.",
+                              startup_disk_images[i], i + 4);
                 }
             }
         }
@@ -381,9 +453,8 @@ void initcmdline_check_attach(void)
     }
 
 #ifndef __LIBRETRO__
-    /* Keep autostart string for libretro-core */
     cmdline_free_autostart_string();
-#endif /* __LIBRETRO__ */
+#endif
 }
 
 #ifdef __LIBRETRO__
@@ -393,7 +464,9 @@ int initcmdline_cleanup()
 
     /* Detach all tapes and disks from previous content */
     tape_image_detach(1);
-    file_system_detach_disk(-1);
+    cartridge_detach_image(-1);
+    file_system_detach_disk(8, 0);
+    file_system_detach_disk_shutdown();
 
     /* Detach cartridge and reset default name */
     if (resources_query_type("CartridgeFile") == RES_STRING) {

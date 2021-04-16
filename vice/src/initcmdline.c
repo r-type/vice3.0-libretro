@@ -475,7 +475,7 @@ int initcmdline_cleanup()
 
     /* Reset resources to defaults */
     resources_set_defaults();
-    resources_load(NULL);
+    resources_reset_and_load(NULL);
 }
 
 int initcmdline_restart(int argc, char **argv)

@@ -9,8 +9,3 @@ int skel_main(int argc, char *argv[])
 {
    return main_program(argc, argv);
 }
-
-void main_exit()
-{
-   machine_shutdown();
-}

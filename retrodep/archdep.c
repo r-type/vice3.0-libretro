@@ -64,11 +64,9 @@
 #include "util.h"
 #include "keyboard.h"
 
-#include "arch/shared/archdep_exit.c"
 #include "arch/shared/archdep_extra_title_text.c"
 #include "arch/shared/archdep_default_portable_resource_file_name.c"
 #include "arch/shared/archdep_join_paths.c"
-#include "arch/shared/archdep_pref_path.c"
 #include "arch/shared/archdep_stat.c"
 #include "arch/shared/archdep_quote_unzip.c"
 
@@ -78,9 +76,6 @@ extern char full_path[RETRO_PATH_MAX];
 
 static char *argv0 = NULL;
 static char *boot_path = NULL;
-
-/* alternate storage of preferences */
-//const char *archdep_pref_path = NULL; /* NULL -> use home_path + ".vice" */
 
 #include <stddef.h>
 
@@ -149,20 +144,20 @@ int archdep_init(int *argc, char **argv)
 {
     argv0 = lib_strdup(argv[0]);
 
-    archdep_pref_path();
+    boot_path = lib_strdup(archdep_boot_path());
 
     return 0;
 }
 
 char *archdep_default_rtc_file_name(void)
 {
-    if (pref_path == NULL) {
+    if (boot_path == NULL) {
         const char *home;
 
         home = archdep_home_path();
         return util_concat(home, "/.vice/vice.rtc", NULL);
     } else {
-        return util_concat(pref_path, "/vice.rtc", NULL);
+        return util_concat(boot_path, "/vice.rtc", NULL);
     }
 }
 
@@ -203,13 +198,13 @@ const char *archdep_home_path(void)
 
 char *archdep_default_autostart_disk_image_file_name(void)
 {
-    if (pref_path == NULL) {
+    if (boot_path == NULL) {
         const char *home;
 
         home = archdep_home_path();
         return util_concat(home, "/.vice/autostart-", machine_name, ".d64", NULL);
     } else {
-        return util_concat(pref_path, "/autostart-", machine_name, ".d64", NULL);
+        return util_concat(boot_path, "/autostart-", machine_name, ".d64", NULL);
     }
 }
 
@@ -292,7 +287,7 @@ char *archdep_make_backup_filename(const char *fname)
 
 char *archdep_default_resource_file_name(void)
 {
-    if (pref_path == NULL) {
+    if (boot_path == NULL) {
         const char *home;
         home = archdep_home_path();
         return util_concat(home, "/.vice/vicerc", NULL);
@@ -319,10 +314,10 @@ char *archdep_default_resource_file_name(void)
             else
                log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
             /* Process "system/vice/vicerc" */
-            snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", pref_path, FSDEV_DIR_SEP_STR);
+            snprintf(content_vicerc, sizeof(content_vicerc), "%s%svicerc", boot_path, FSDEV_DIR_SEP_STR);
             if (ioutil_access(content_vicerc, IOUTIL_ACCESS_R_OK))
                log_message(LOG_DEFAULT, "No configuration file found at '%s'.", content_vicerc);
-            return util_concat(pref_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
+            return util_concat(boot_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
         }
         else
             return NULL;
@@ -331,48 +326,16 @@ char *archdep_default_resource_file_name(void)
 
 char *archdep_default_fliplist_file_name(void)
 {
-    if (pref_path == NULL) {
+    if (boot_path == NULL) {
       const char *home;
 
       home = archdep_home_path();
       return util_concat(home, "/.vice/fliplist-", machine_name, ".vfl", NULL);
     } else {
-      return util_concat(pref_path, "/fliplist-", machine_name, ".vfl", NULL);
+      return util_concat(boot_path, "/fliplist-", machine_name, ".vfl", NULL);
     }
 }
-/*
-char *archdep_default_save_resource_file_name(void)
-{ 
-    char *fname;
-    const char *home;
-    const char *viceuserdir;
 
-    if (pref_path == NULL) {
-      home = archdep_home_path();
-      viceuserdir = util_concat(home, "/.vice", NULL);
-    } else {
-      viceuserdir = pref_path;
-    }
-
-    if (ioutil_access(viceuserdir, IOUTIL_ACCESS_F_OK)) {
-#if defined(__WIN32__)
-        mkdir(viceuserdir);
-#elif defined(VITA)
-        sceIoMkdir(viceuserdir, 0777);
-#else
-        mkdir(viceuserdir, 0755);
-#endif
-    }
-
-    fname = util_concat(viceuserdir, "/vicerc", NULL);
-    
-    if (pref_path == NULL) {
-      lib_free(viceuserdir);
-    }
-
-    return fname;
-}
-*/
 FILE *archdep_open_default_log_file(void)
 {
     return NULL;
@@ -655,21 +618,6 @@ int archdep_rmdir(const char *pathname)
     return 0;
 }
 
-/*
-int archdep_stat(const char *file_name, unsigned int *len, unsigned int *isdir)
-{
-    struct stat statbuf;
-
-    if (stat(file_name, &statbuf) < 0)
-        return -1;
-
-    *len = statbuf.st_size;
-    *isdir = S_ISDIR(statbuf.st_mode);
-
-    return 0;
-}
-*/
-
 int archdep_file_is_blockdev(const char *name)
 {
     struct stat buf;
@@ -706,7 +654,6 @@ void archdep_shutdown(void)
     lib_free(boot_path);
 }
 
-#if 0
 int archdep_network_init(void)
 {
     return 0;
@@ -715,12 +662,6 @@ int archdep_network_init(void)
 void archdep_network_shutdown(void)
 {
 }
-
-void archdep_vice_exit(int excode)
-{
-    exit(excode);
-}
-#endif
 
 char *archdep_get_runtime_os(void)
 {
@@ -747,6 +688,15 @@ int archdep_is_haiku(void)
 }
 
 void archdep_sound_enable_default_device_tracking(void)
+{
+}
+
+bool archdep_is_exiting(void)
+{
+   return false;
+}
+
+void archdep_vice_exit(int excode)
 {
 }
 

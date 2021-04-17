@@ -56,6 +56,12 @@
 #include "vic20mem.h"
 #include "zfile.h"
 
+/*
+   UltiMem by Retro Innovations
+
+   see http://www.go4retro.com/products/ultimem/
+*/
+
 /* ------------------------------------------------------------------------- */
 /*
  * Cartridge RAM (512KiB or 1 MiB)
@@ -87,7 +93,7 @@ static uint8_t ultimem[17];
 
 /** Used bits in ultimem[] */
 static const uint8_t ultimem_mask[16] = {
-    ultimem_reg0_regs_disable | ultimem_reg0_led,
+    0xc7,
     0x3f, /* 00:IO3 config:IO2 config:RAM123 config */
     0xff, /* BLK5:BLK3:BLK2:BLK1 */
     0,
@@ -153,33 +159,35 @@ static void vic_um_io3_store(uint16_t addr, uint8_t value);
 static int vic_um_mon_dump(void);
 
 static io_source_t ultimem_io2 = {
-    CARTRIDGE_VIC20_NAME_UM,
-    IO_DETACH_CART,
-    "I/O2",
-    0x9800, 0x9bff, 0x3ff,
-    0,
-    vic_um_io2_store,
-    vic_um_io2_read,
-    vic_um_io2_peek,
-    NULL,
-    CARTRIDGE_VIC20_UM,
-    0,
-    0
+    CARTRIDGE_VIC20_NAME_UM, /* name of the device */
+    IO_DETACH_CART,          /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,   /* does not use a resource for detach */
+    0x9800, 0x9bff, 0x3ff,   /* range for the device, regs:$9800-$9bff */
+    0,                       /* read validity is determined by the device upon a read */
+    vic_um_io2_store,        /* store function */
+    NULL,                    /* NO poke function */
+    vic_um_io2_read,         /* read function */
+    vic_um_io2_peek,         /* peek function */
+    NULL,                    /* TODO: device state information dump function */
+    CARTRIDGE_VIC20_UM,      /* cartridge ID */
+    IO_PRIO_NORMAL,          /* normal priority, device read needs to be checked for collisions */
+    0                        /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t ultimem_io3 = {
-    CARTRIDGE_VIC20_NAME_UM,
-    IO_DETACH_CART,
-    "I/O3",
-    0x9c00, 0x9fff, 0x3ff,
-    0,
-    vic_um_io3_store,
-    vic_um_io3_read,
-    vic_um_io3_peek,
-    vic_um_mon_dump,
-    CARTRIDGE_VIC20_UM,
-    0,
-    0
+    CARTRIDGE_VIC20_NAME_UM, /* name of the device */
+    IO_DETACH_CART,          /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,   /* does not use a resource for detach */
+    0x9c00, 0x9fff, 0x3ff,   /* range for the device, regs:$9c00-$9fff */
+    0,                       /* read validity is determined by the device upon a read */
+    vic_um_io3_store,        /* store function */
+    NULL,                    /* NO poke function */
+    vic_um_io3_read,         /* read function */
+    vic_um_io3_peek,         /* peek function */
+    vic_um_mon_dump,         /* device state information dump function */
+    CARTRIDGE_VIC20_UM,      /* cartridge ID */
+    IO_PRIO_NORMAL,          /* normal priority, device read needs to be checked for collisions */
+    0                        /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *io2_list_item = NULL;
@@ -525,6 +533,9 @@ static void vic_um_io3_store(uint16_t addr, uint8_t value)
         switch (addr) {
             case 0:
                 value |= ultimem_reset[0];
+                if (value & 0x40) {
+                    machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+                }
                 break;
             case 3:
                 return; /* not writable */
@@ -570,19 +581,25 @@ void vic_um_init(void)
 void vic_um_reset(void)
 {
     flash040core_reset(&flash_state);
-    memcpy(ultimem, ultimem_reset, sizeof ultimem);
-    switch (cart_rom_size) {
-        case CART_ROM_SIZE_8M:
-            ultimem[3] = ultimem_reg3_8m;
-            break;
-        case CART_ROM_SIZE_512K:
-            ultimem[3] = ultimem_reg3_512k;
-            break;
+    if (ultimem[0] & 0x40) {
+        /* soft reset triggered by write to $9ff0 */
+        ultimem[0] &= ~0x40;
+    } else {
+        memcpy(ultimem, ultimem_reset, sizeof ultimem);
+        switch (cart_rom_size) {
+            case CART_ROM_SIZE_8M:
+                ultimem[3] = ultimem_reg3_8m;
+                break;
+            case CART_ROM_SIZE_512K:
+                ultimem[3] = ultimem_reg3_512k;
+                break;
+        }
     }
 }
 
 void vic_um_config_setup(uint8_t *rawcart)
 {
+    memcpy(ultimem, ultimem_reset, sizeof ultimem);
 }
 
 int vic_um_bin_attach(const char *filename)
@@ -647,7 +664,7 @@ int vic_um_bin_attach(const char *filename)
 
 void vic_um_detach(void)
 {
-    int n = 0;
+    long n = 0;
     FILE *fd;
 
     /* try to write back cartridge contents if write back is enabled
@@ -753,8 +770,8 @@ int vic_um_snapshot_write_module(snapshot_t *s)
 
     if (0
         || (SMW_BA(m, ultimem, sizeof ultimem) < 0)
-        || (SMW_BA(m, cart_ram, cart_ram_size) < 0)
-        || (SMW_BA(m, cart_rom, cart_rom_size) < 0)) {
+        || (SMW_BA(m, cart_ram, (unsigned int)cart_ram_size) < 0)
+        || (SMW_BA(m, cart_rom, (unsigned int)cart_rom_size) < 0)) {
         snapshot_module_close(m);
         return -1;
     }
@@ -814,8 +831,8 @@ int vic_um_snapshot_read_module(snapshot_t *s)
     }
 
     if (0
-        || (SMR_BA(m, cart_ram, cart_ram_size) < 0)
-        || (SMR_BA(m, cart_rom, cart_rom_size) < 0)) {
+        || (SMR_BA(m, cart_ram, (unsigned int)cart_ram_size) < 0)
+        || (SMR_BA(m, cart_rom, (unsigned int)cart_rom_size) < 0)) {
         goto snapshot_error;
     }
 

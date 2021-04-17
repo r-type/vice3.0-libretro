@@ -39,17 +39,18 @@
 
 /* ---------------------------------------------------------------------*/
 
+/* VSID SID sound chip */
 static sound_chip_t sid_sound_chip = {
-    sid_sound_machine_open,
-    sid_sound_machine_init,
-    sid_sound_machine_close,
-    sid_sound_machine_calculate_samples,
-    sid_sound_machine_store,
-    sid_sound_machine_read,
-    sid_sound_machine_reset,
-    sid_sound_machine_cycle_based,
-    sid_sound_machine_channels,
-    1 /* chip enabled */
+    sid_sound_machine_open,              /* sound chip open function */ 
+    sid_sound_machine_init,              /* sound chip init function */
+    sid_sound_machine_close,             /* sound chip close function */
+    sid_sound_machine_calculate_samples, /* sound chip calculate samples function */
+    sid_sound_machine_store,             /* sound chip store function */
+    sid_sound_machine_read,              /* sound chip read function */
+    sid_sound_machine_reset,             /* sound chip reset function */
+    sid_sound_machine_cycle_based,       /* sound chip 'is_cycle_based()' function, RESID engine is cycle based, everything else is NOT */
+    sid_sound_machine_channels,          /* sound chip 'get_amount_of_channels()' function, depends on how many extra SIDs are active */
+    1                                    /* chip is always enabled */
 };
 
 static uint16_t sid_sound_chip_offset = 0;
@@ -61,35 +62,24 @@ void sid_sound_chip_init(void)
 
 /* ---------------------------------------------------------------------*/
 
-int machine_sid2_check_range(unsigned int sid2_adr)
-{
-    if (sid2_adr >= 0xd400 && sid2_adr <= 0xdfe0) {
-        sid_stereo_address_start = sid2_adr;
-        sid_stereo_address_end = sid2_adr + 0x1f;
-        return 0;
+#define SIDx_CHECK_RANGE(sid_nr)                                \
+    int machine_sid##sid_nr##_check_range(unsigned int sid_adr) \
+    {                                                           \
+        if (sid_adr >= 0xd400 && sid_adr <= 0xdfe0) {           \
+            sid##sid_nr##_address_start = sid_adr;              \
+            sid##sid_nr##_address_end = sid_adr + 0x1f;         \
+            return 0;                                           \
+        }                                                       \
+        return -1;                                              \
     }
-    return -1;
-}
 
-int machine_sid3_check_range(unsigned int sid3_adr)
-{
-    if (sid3_adr >= 0xd400 && sid3_adr <= 0xdfe0) {
-        sid_triple_address_start = sid3_adr;
-        sid_triple_address_end = sid3_adr + 0x1f;
-        return 0;
-    }
-    return -1;
-}
-
-int machine_sid4_check_range(unsigned int sid4_adr)
-{
-    if (sid4_adr >= 0xd400 && sid4_adr <= 0xdfe0) {
-        sid_quad_address_start = sid4_adr;
-        sid_quad_address_end = sid4_adr + 0x1f;
-        return 0;
-    }
-    return -1;
-}
+SIDx_CHECK_RANGE(2)
+SIDx_CHECK_RANGE(3)
+SIDx_CHECK_RANGE(4)
+SIDx_CHECK_RANGE(5)
+SIDx_CHECK_RANGE(6)
+SIDx_CHECK_RANGE(7)
+SIDx_CHECK_RANGE(8)
 
 void machine_sid2_enable(int val)
 {

@@ -99,33 +99,35 @@ static int mach5_dump(void)
 /* ---------------------------------------------------------------------*/
 
 static io_source_t mach5_io1_device = {
-    CARTRIDGE_NAME_MACH5,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    1, /* read is always valid */
-    mach5_io1_store,
-    mach5_io1_read,
-    mach5_io1_read,
-    mach5_dump,
-    CARTRIDGE_MACH5,
-    0,
-    0
+    CARTRIDGE_NAME_MACH5,  /* name of the device */
+    IO_DETACH_CART,        /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xde00, 0xdeff, 0xff,  /* range for the device, regs:$de00-$deff */
+    1,                     /* read is always valid */
+    mach5_io1_store,       /* store function */
+    NULL,                  /* NO poke function */
+    mach5_io1_read,        /* read function */
+    mach5_io1_read,        /* peek function */
+    mach5_dump,            /* device state information dump function */
+    CARTRIDGE_MACH5,       /* cartridge ID */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t mach5_io2_device = {
-    CARTRIDGE_NAME_MACH5,
-    IO_DETACH_CART,
-    NULL,
-    0xdf00, 0xdfff, 0xff,
-    1, /* read is always valid */
-    mach5_io2_store,
-    mach5_io2_read,
-    mach5_io2_read,
-    mach5_dump,
-    CARTRIDGE_MACH5,
-    0,
-    0
+    CARTRIDGE_NAME_MACH5,  /* name of the device */
+    IO_DETACH_CART,        /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xdf00, 0xdfff, 0xff,  /* range for the device, regs:$df00-$dfff */
+    1,                     /* read is always valid */
+    mach5_io2_store,       /* store function */
+    NULL,                  /* NO poke function */
+    mach5_io2_read,        /* read function */
+    mach5_io2_read,        /* peek function */
+    mach5_dump,            /* device state information dump function */
+    CARTRIDGE_MACH5,       /* cartridge ID */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *mach5_io1_list_item = NULL;
@@ -217,7 +219,7 @@ void mach5_detach(void)
    ARRAY | ROML   |   0.0+  | 8192 BYTES of ROML data
  */
 
-static char snap_module_name[] = "CARTMACH5";
+static const char snap_module_name[] = "CARTMACH5";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   1
 
@@ -253,13 +255,13 @@ int mach5_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
 
     /* new in 0.1 */
-    if (SNAPVAL(vmajor, vminor, 0, 1)) {
+    if (!snapshot_version_is_smaller(vmajor, vminor, 0, 1)) {
         if (SMR_B_INT(m, &mach5_active) < 0) {
             goto fail;
         }

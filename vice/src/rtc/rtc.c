@@ -56,14 +56,8 @@ inline static int bcd_to_int(int bcd)
 /* get 1/100 seconds from clock */
 uint8_t rtc_get_centisecond(int bcd)
 {
-#ifdef HAVE_GETTIMEOFDAY
-    struct timeval t;
-
-    gettimeofday(&t, NULL);
-    return (uint8_t)((bcd) ? int_to_bcd(t.tv_usec / 10000) : t.tv_usec / 10000);
-#else
-    return (uint8_t)((bcd) ? int_to_bcd(archdep_rtc_get_centisecond()) : archdep_rtc_get_centisecond());
-#endif
+    return (uint8_t)((bcd) ? (uint8_t)int_to_bcd(archdep_rtc_get_centisecond())
+                           : archdep_rtc_get_centisecond());
 }
 
 /* get seconds from time value
@@ -831,7 +825,9 @@ void rtc_save_context(uint8_t *ram, int ram_size, uint8_t *regs, int reg_size, c
 
     /* create the directory where the context should be written first */
     util_fname_split(filename, &savedir, NULL);
-    ioutil_mkdir(savedir, IOUTIL_MKDIR_RWXU);
+    if ((savedir != NULL) && (*savedir != 0) && (!strcmp(savedir, "."))) {
+        ioutil_mkdir(savedir, IOUTIL_MKDIR_RWXU);
+    }
     lib_free(savedir);
 
     if (util_file_exists(filename)) {

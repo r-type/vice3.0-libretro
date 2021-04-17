@@ -40,7 +40,7 @@ static const cmdline_option_t cmdline_options[] =
       "<Name>", "Specify name of Professional DOS 1571 ROM image" },
     { "-supercard", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DriveSuperCardName", NULL,
-      "<Name>", "Specify name of SuperCard+ ROM image" },
+      "<Name>", "Specify name of Supercard+ ROM image" },
     { "-stardos", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DriveStarDosName", NULL,
       "<Name>", "Specify name of StarDOS ROM image" },
@@ -60,10 +60,10 @@ static cmdline_option_t cmd_drive[] =
       NULL, "Disable Professional DOS" },
     { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
-      NULL, "Enable SuperCard+" },
+      NULL, "Enable Supercard+" },
     { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)0,
-      NULL, "Disable SuperCard+" },
+      NULL, "Disable Supercard+" },
     { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, NULL, (void *)1,
       NULL, "Enable StarDOS" },
@@ -77,7 +77,7 @@ int c64exp_cmdline_options_init(void)
 {
     unsigned int dnr, i;
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
         cmd_drive[0].name = lib_msprintf("-parallel%i", dnr + 8);
         cmd_drive[0].resource_name
             = lib_msprintf("Drive%iParallelCable", dnr + 8);

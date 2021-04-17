@@ -33,6 +33,7 @@
 #include "filechooserhelpers.h"
 #include "lastdir.h"
 #include "lib.h"
+#include "resources.h"
 #include "ui.h"
 #include "uiapi.h"
 #include "uivsidwindow.h"
@@ -52,6 +53,7 @@ static ui_file_filter_t filters[] = {
 /** \brief  Last used directory in dialog
  */
 static gchar *last_dir = NULL;
+static gchar *last_file = NULL;
 
 
 /*
@@ -124,11 +126,18 @@ static void on_response(GtkWidget *widget, gint response_id, gpointer user_data)
 
         /* 'Open' button, double-click on file */
         case GTK_RESPONSE_ACCEPT:
-            lastdir_update(widget, &last_dir);
+            lastdir_update(widget, &last_dir, &last_file);
             filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(widget));
+
             text = lib_msprintf("Opening '%s'", filename);
-            debug_gtk3("Loading SID file '%s'.", filename);
-            ui_vsid_window_load_psid(filename);
+            ui_display_statustext(text, 10);
+            if (ui_vsid_window_load_psid(filename) < 0) {
+                lib_free(text);
+                text = lib_msprintf("Error: '%s' is not a valid PSID file",
+                        filename);
+                ui_display_statustext(text, 10);
+            }
+            ui_pause_disable();
 
             g_free(filename);
             lib_free(text);
@@ -146,6 +155,8 @@ static void on_response(GtkWidget *widget, gint response_id, gpointer user_data)
 
 
 /** \brief  Create the 'extra' widget
+ *
+ * \param[in]   parent  parent widget
  *
  * \return  GtkGrid
  */
@@ -169,7 +180,7 @@ static GtkWidget *create_extra_widget(GtkWidget *parent)
 
 /** \brief  Create the SID attach dialog
  *
- * \param[in]   parent  parent widget, used to get the top level window
+ * \param[in]   parent  parent widget (unused)
  *
  * \return  GtkFileChooserDialog
  */
@@ -197,8 +208,24 @@ static GtkWidget *create_sid_attach_dialog(GtkWidget *parent)
     gtk_file_chooser_set_preview_widget(GTK_FILE_CHOOSER(dialog),
             preview_widget);
 */
-    /* set last used directory, if present */
-    lastdir_set(dialog, &last_dir);
+    /* set last used directory, if present, otherwise use HVSCRoot if set */
+    if (last_dir == NULL) {
+        const char *hvsc_root;
+
+        if (resources_get_string("HVSCRoot", &hvsc_root) >= 0) {
+            if (hvsc_root != NULL && *hvsc_root != '\0') {
+                /*
+                 * The last_dir.c code uses GLib memory management, so use
+                 * g_strdup() here and not lib_strdup(). I did, and it produced
+                 * a nice segfault, and I actually wrote the lastdir code ;)
+                 */
+                last_dir = g_strdup(hvsc_root);
+            }
+        }
+    }
+
+
+    lastdir_set(dialog, &last_dir, &last_file);
 
     /* add filters */
     for (i = 0; filters[i].name != NULL; i++) {
@@ -222,15 +249,17 @@ static GtkWidget *create_sid_attach_dialog(GtkWidget *parent)
  *
  * \param[in]   widget  menu item triggering the callback
  * \param[in]   data    ignored
+ *
+ * \return  TRUE
  */
-void uisidattach_show_dialog(GtkWidget *widget, gpointer data)
+gboolean uisidattach_show_dialog(GtkWidget *widget, gpointer data)
 {
     GtkWidget *dialog;
 
     debug_gtk3("called.");
     dialog = create_sid_attach_dialog(widget);
     gtk_widget_show(dialog);
-
+    return TRUE;
 }
 
 
@@ -238,5 +267,5 @@ void uisidattach_show_dialog(GtkWidget *widget, gpointer data)
  */
 void uisidattach_shutdown(void)
 {
-    lastdir_shutdown(&last_dir);
+    lastdir_shutdown(&last_dir, &last_file);
 }

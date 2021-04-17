@@ -59,10 +59,6 @@ void video_viewport_resize(video_canvas_t *canvas, char resize_canvas)
     int y_offset;
     int small_x_border, small_y_border;
 
-    if (canvas->initialized == 0) {
-        return;
-    }
-
     geometry = canvas->geometry;
     viewport = canvas->viewport;
 
@@ -173,7 +169,7 @@ void video_viewport_title_set(video_canvas_t *canvas, const char *title)
     viewport = canvas->viewport;
 
     lib_free(viewport->title);
-    viewport->title = lib_stralloc(title);
+    viewport->title = lib_strdup(title);
 }
 
 void video_viewport_title_free(viewport_t *viewport)

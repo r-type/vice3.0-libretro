@@ -52,6 +52,7 @@
 #include "clkguard.h"
 #include "crtc.h"
 #include "datasette.h"
+#include "datasette-sound.h"
 #include "debug.h"
 #include "debugcart.h"
 #include "diskimage.h"
@@ -376,6 +377,7 @@ int machine_resources_init(void)
 
 void machine_resources_shutdown(void)
 {
+    serial_shutdown();
     cbm2_resources_shutdown();
     rs232drv_resources_shutdown();
     printer_resources_shutdown();
@@ -578,7 +580,7 @@ static void cbm2_monitor_init(void)
 {
     unsigned int dnr;
     monitor_cpu_type_t asm6502;
-    monitor_interface_t *drive_interface_init[DRIVE_NUM];
+    monitor_interface_t *drive_interface_init[NUM_DISK_UNITS];
     monitor_cpu_type_t *asmarray[2];
 
     asmarray[0] = &asm6502;
@@ -586,7 +588,7 @@ static void cbm2_monitor_init(void)
 
     asm6502_init(&asm6502);
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
         drive_interface_init[dnr] = drive_cpu_monitor_interface_get(dnr);
     }
 
@@ -667,11 +669,13 @@ int machine_specific_init(void)
     userport_digimax_sound_chip_init();
 
     drive_sound_init();
+    datasette_sound_init();
     video_sound_init();
 
     /* Initialize sound.  Notice that this does not really open the audio
        device yet.  */
-    sound_init(machine_timing.cycles_per_sec, machine_timing.cycles_per_rfsh);
+    sound_init((unsigned int)machine_timing.cycles_per_sec,
+               (unsigned int)machine_timing.cycles_per_rfsh);
 
     /* Initialize the CBM-II-specific part of the UI.  */
     if (!console_mode) {
@@ -900,9 +904,11 @@ void machine_change_timing(int timeval, int border_mode)
     debug_set_machine_parameter(machine_timing.cycles_per_line,
                                 machine_timing.screen_lines);
     drive_set_machine_parameter(machine_timing.cycles_per_sec);
-    clk_guard_set_clk_base(maincpu_clk_guard, machine_timing.cycles_per_rfsh);
+    clk_guard_set_clk_base(maincpu_clk_guard, (CLOCK)machine_timing.cycles_per_rfsh);
 
-    cia1_set_timing(machine_context.cia1, machine_timing.cycles_per_sec, machine_timing.power_freq);
+    cia1_set_timing(machine_context.cia1,
+                    (int)machine_timing.cycles_per_sec,
+                    machine_timing.power_freq);
 }
 
 /* Set the screen refresh rate, as this is variable in the CRTC */
@@ -924,27 +930,23 @@ void machine_set_cycles_per_frame(long cpf)
 
 /* ------------------------------------------------------------------------- */
 
-int machine_write_snapshot_to_stream(snapshot_stream_t *stream, int save_roms,
-                                   int save_disks, int event_mode)
-{
-    return cbm2_snapshot_write_to_stream(stream, save_roms, save_disks,
-                                          event_mode);
-}
-
-int machine_read_snapshot_from_stream(snapshot_stream_t *stream, int event_mode)
-{
-    return cbm2_snapshot_read_from_stream(stream, event_mode);
-}
-
 int machine_write_snapshot(const char *name, int save_roms, int save_disks,
                            int event_mode)
 {
-    return cbm2_snapshot_write(name, save_roms, save_disks, event_mode);
+    int err = cbm2_snapshot_write(name, save_roms, save_disks, event_mode);
+    if ((err < 0) && (snapshot_get_error() == SNAPSHOT_NO_ERROR)) {
+        snapshot_set_error(SNAPSHOT_CANNOT_WRITE_SNAPSHOT);
+    }
+    return err;
 }
 
 int machine_read_snapshot(const char *name, int event_mode)
 {
-    return cbm2_snapshot_read(name, event_mode);
+    int err = cbm2_snapshot_read(name, event_mode);
+    if ((err < 0) && (snapshot_get_error() == SNAPSHOT_NO_ERROR)) {
+        snapshot_set_error(SNAPSHOT_CANNOT_READ_SNAPSHOT);
+    }
+    return err;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -993,8 +995,8 @@ uint8_t machine_tape_behaviour(void)
 
 int machine_addr_in_ram(unsigned int addr)
 {
-    /* FIXME are these correct? */
-    return (addr < 0xe000 && !(addr >= 0xa000 && addr < 0xc000)) ? 1 : 0;
+    /* FIXME: handle the banking */
+    return (addr < 0xe000 && !(addr >= 0x8000 && addr < 0xc000)) ? 1 : 0;
 }
 
 const char *machine_get_name(void)
@@ -1021,11 +1023,11 @@ static void cbm2_userport_set_flag(uint8_t b)
 }
 
 static userport_port_props_t userport_props = {
-    1, /* has pa2 pin */
-    1, /* has pa3 pin */
-    cbm2_userport_set_flag, /* has flag pin */
-    1, /* has pc pin */
-    0  /* NO cnt1, cnt2 or sp pins */
+    1,                      /* port has the pa2 pin */
+    1,                      /* port has the pa3 pin */
+    cbm2_userport_set_flag, /* port has the flag pin, set flag function */
+    1,                      /* port has the pc pin */
+    0                       /* port does NOT have the cnt1, cnt2 or sp pins */
 };
 
 int machine_register_userport(void)

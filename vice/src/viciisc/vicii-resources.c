@@ -35,26 +35,46 @@
 #include "raster-resources.h"
 #include "resources.h"
 #include "vicii-chip-model.h"
+#include "vicii-cycle.h"
 #include "vicii-color.h"
 #include "vicii-resources.h"
 #include "vicii-timing.h"
 #include "vicii.h"
 #include "viciitypes.h"
 #include "video.h"
+#include "vsync.h"
 
 
 vicii_resources_t vicii_resources;
 static video_chip_cap_t video_chip_cap;
 
+static int next_border_mode;
 
-static int set_border_mode(int val, void *param)
+static void on_vsync_set_border_mode(void *unused)
 {
-    if (vicii_resources.border_mode != val) {
-        vicii_resources.border_mode = val;
+    if (vicii_resources.border_mode != next_border_mode) {
+        vicii_resources.border_mode = next_border_mode;
         /* this works because vicii-timing.c only handles borders in
            viciisc. */
         vicii_change_timing(0, vicii_resources.border_mode);
     }
+}
+
+static int set_border_mode(int val, void *param)
+{
+    switch (val) {
+        case VICII_NORMAL_BORDERS:
+        case VICII_FULL_BORDERS:
+        case VICII_DEBUG_BORDERS:
+        case VICII_NO_BORDERS:
+            break;
+        default:
+            return -1;
+    }
+
+    next_border_mode = val;
+    vsync_on_vsync_do(on_vsync_set_border_mode, NULL);
+
     return 0;
 }
 
@@ -73,6 +93,7 @@ static int set_sprite_background_collisions_enabled(int val, void *param)
 static int set_vsp_bug_enabled(int val, void *param)
 {
     vicii_resources.vsp_bug_enabled = val;
+    vicii_init_vsp_bug();
     return 0;
 }
 
@@ -179,10 +200,12 @@ int vicii_resources_init(void)
 
     vicii.video_chip_cap = &video_chip_cap;
 
+#ifndef __LIBRETRO__
     if ((machine_class == VICE_MACHINE_C64SC) ||
         (machine_class == VICE_MACHINE_SCPU64)){
         resources_int2[0].factory_value = VICII_MODEL_8565;
     }
+#endif
 
     if (raster_resources_chip_init("VICII", &vicii.raster, &video_chip_cap) < 0) {
         return -1;
@@ -192,4 +215,31 @@ int vicii_resources_init(void)
         return -1;
     }
     return resources_register_int(resources_int);
+}
+
+void vicii_comply_with_video_standard(int machine_sync)
+{
+    /* We're assuming that the model has a sensible value already
+     * here, but that's an assumption we make everywhere so it's
+     * probably fine */
+    if (vicii_info[vicii_resources.model].video != machine_sync) {
+        int newmodel;
+        switch (machine_sync) {
+        case MACHINE_SYNC_PAL:
+            newmodel = VICII_MODEL_6569;
+            break;
+        case MACHINE_SYNC_NTSC:
+            newmodel = VICII_MODEL_6567;
+            break;
+        case MACHINE_SYNC_NTSCOLD:
+            newmodel = VICII_MODEL_6567R56A;
+            break;
+        case MACHINE_SYNC_PALN:
+            newmodel = VICII_MODEL_6572;
+            break;
+        default:
+            return;
+        }
+        resources_set_int("VICIIModel", newmodel);
+    }
 }

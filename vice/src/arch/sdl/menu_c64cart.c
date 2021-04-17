@@ -46,6 +46,7 @@
 #include "uifilereq.h"
 #include "uimenu.h"
 
+/* attach .bin cartridge image */
 static UI_MENU_CALLBACK(attach_c64_cart_callback)
 {
     char *name = NULL;
@@ -120,7 +121,6 @@ void uicart_menu_shutdown(void)
     }
 }
 
-
 static UI_MENU_CALLBACK(detach_c64_cart_callback)
 {
     if (activated) {
@@ -146,6 +146,14 @@ static UI_MENU_CALLBACK(set_c64_cart_default_callback)
     return NULL;
 }
 
+static UI_MENU_CALLBACK(unset_c64_cart_default_callback)
+{
+    if (activated) {
+        cartridge_unset_default();
+    }
+    return NULL;
+}
+
 /* FIXME: we need an error reporting system, so all this
           stuff can go away. */
 typedef struct c64_cart_flush_s {
@@ -165,9 +173,13 @@ static c64_cart_flush_t carts[] = {
     { CARTRIDGE_MMC64, "MMC64", "MMC64BIOSfilename" },
     { CARTRIDGE_MMC_REPLAY, NULL, "MMCREEPROMImage" },
     { CARTRIDGE_GMOD2, NULL, "GMod2EEPROMImage" },
+    { CARTRIDGE_RAMLINK, "RAMLINK", "RAMLINKfilename" },
     { CARTRIDGE_RETRO_REPLAY, NULL, NULL },
     { 0, NULL, NULL }
 };
+
+static void cartmenu_update_flush(void);
+static void cartmenu_update_save(void);
 
 static UI_MENU_CALLBACK(c64_cart_flush_callback)
 {
@@ -212,6 +224,8 @@ static UI_MENU_CALLBACK(c64_cart_flush_callback)
                 ui_error("Cannot save cartridge image.");
             }
         }
+    } else {
+        cartmenu_update_flush();
     }
     return NULL;
 }
@@ -230,6 +244,8 @@ static UI_MENU_CALLBACK(c64_cart_save_callback)
             }
             lib_free(name);
         }
+    } else {
+        cartmenu_update_save();
     }
     return NULL;
 }
@@ -242,7 +258,7 @@ UI_MENU_DEFINE_RADIO(RAMCARTsize)
 UI_MENU_DEFINE_FILE_STRING(RAMCARTfilename)
 UI_MENU_DEFINE_TOGGLE(RAMCARTImageWrite)
 
-static const ui_menu_entry_t ramcart_menu[] = {
+static ui_menu_entry_t ramcart_menu[] = {
     { "Enable " CARTRIDGE_NAME_RAMCART,
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_RAMCART_callback,
@@ -253,11 +269,11 @@ static const ui_menu_entry_t ramcart_menu[] = {
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Memory size"),
-    { "64kB",
+    { "64KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RAMCARTsize_callback,
       (ui_callback_data_t)64 },
-    { "128kB",
+    { "128KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RAMCARTsize_callback,
       (ui_callback_data_t)128 },
@@ -282,7 +298,6 @@ static const ui_menu_entry_t ramcart_menu[] = {
     SDL_MENU_LIST_END
 };
 
-
 /* REU */
 
 UI_MENU_DEFINE_TOGGLE(REU)
@@ -290,42 +305,42 @@ UI_MENU_DEFINE_RADIO(REUsize)
 UI_MENU_DEFINE_FILE_STRING(REUfilename)
 UI_MENU_DEFINE_TOGGLE(REUImageWrite)
 
-static const ui_menu_entry_t reu_menu[] = {
+static ui_menu_entry_t reu_menu[] = {
     { "Enable " CARTRIDGE_NAME_REU,
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_REU_callback,
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Memory size"),
-    { "128kB",
+    { "128KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_REUsize_callback,
       (ui_callback_data_t)128 },
-    { "256kB",
+    { "256KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_REUsize_callback,
       (ui_callback_data_t)256 },
-    { "512kB",
+    { "512KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_REUsize_callback,
       (ui_callback_data_t)512 },
-    { "1024kB",
+    { "1MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_REUsize_callback,
       (ui_callback_data_t)1024 },
-    { "2048kB",
+    { "2MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_REUsize_callback,
       (ui_callback_data_t)2048 },
-    { "4096kB",
+    { "4MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_REUsize_callback,
       (ui_callback_data_t)4096 },
-    { "8192kB",
+    { "8MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_REUsize_callback,
       (ui_callback_data_t)8192 },
-    { "16384kB",
+    { "16MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_REUsize_callback,
       (ui_callback_data_t)16384 },
@@ -358,7 +373,7 @@ UI_MENU_DEFINE_RADIO(ExpertCartridgeMode)
 UI_MENU_DEFINE_FILE_STRING(Expertfilename)
 UI_MENU_DEFINE_TOGGLE(ExpertImageWrite)
 
-static const ui_menu_entry_t expert_cart_menu[] = {
+static ui_menu_entry_t expert_cart_menu[] = {
     { "Enable " CARTRIDGE_NAME_EXPERT,
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_ExpertCartridgeEnabled_callback,
@@ -405,7 +420,7 @@ UI_MENU_DEFINE_TOGGLE(DQBB)
 UI_MENU_DEFINE_FILE_STRING(DQBBfilename)
 UI_MENU_DEFINE_TOGGLE(DQBBImageWrite)
 
-static const ui_menu_entry_t dqbb_cart_menu[] = {
+static ui_menu_entry_t dqbb_cart_menu[] = {
     { "Enable " CARTRIDGE_NAME_DQBB,
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_DQBB_callback,
@@ -439,7 +454,7 @@ UI_MENU_DEFINE_TOGGLE(IsepicSwitch)
 UI_MENU_DEFINE_FILE_STRING(Isepicfilename)
 UI_MENU_DEFINE_TOGGLE(IsepicImageWrite)
 
-static const ui_menu_entry_t isepic_cart_menu[] = {
+static ui_menu_entry_t isepic_cart_menu[] = {
     { "Enable " CARTRIDGE_NAME_ISEPIC,
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_IsepicCartridgeEnabled_callback,
@@ -477,7 +492,7 @@ UI_MENU_DEFINE_TOGGLE(EasyFlashWriteCRT)
 UI_MENU_DEFINE_TOGGLE(EasyFlashOptimizeCRT)
 
 
-static const ui_menu_entry_t easyflash_cart_menu[] = {
+static ui_menu_entry_t easyflash_cart_menu[] = {
     { "Jumper",
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_EasyFlashJumper_callback,
@@ -509,38 +524,38 @@ UI_MENU_DEFINE_RADIO(GEORAMsize)
 UI_MENU_DEFINE_FILE_STRING(GEORAMfilename)
 UI_MENU_DEFINE_TOGGLE(GEORAMImageWrite)
 
-static const ui_menu_entry_t georam_menu[] = {
+static ui_menu_entry_t georam_menu[] = {
     { "Enable " CARTRIDGE_NAME_GEORAM,
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_GEORAM_callback,
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Memory size"),
-    { "64kB",
+    { "64KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)64 },
-    { "128kB",
+    { "128KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)128 },
-    { "256kB",
+    { "256KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)256 },
-    { "512kB",
+    { "512KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)512 },
-    { "1024kB",
+    { "1MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)1024 },
-    { "2048kB",
+    { "2MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)2048 },
-    { "4096kB",
+    { "4MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)4096 },
@@ -602,7 +617,7 @@ UI_MENU_DEFINE_FILE_STRING(MMC64BIOSfilename)
 UI_MENU_DEFINE_TOGGLE(MMC64_RO)
 UI_MENU_DEFINE_FILE_STRING(MMC64imagefilename)
 
-static const ui_menu_entry_t mmc64_cart_menu[] = {
+static ui_menu_entry_t mmc64_cart_menu[] = {
     { "Enable " CARTRIDGE_NAME_MMC64,
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_MMC64_callback,
@@ -698,7 +713,7 @@ UI_MENU_DEFINE_TOGGLE(MMCREEPROMRW)
 UI_MENU_DEFINE_TOGGLE(MMCRRescueMode)
 UI_MENU_DEFINE_TOGGLE(MMCRImageWrite)
 
-static const ui_menu_entry_t mmcreplay_cart_menu[] = {
+static ui_menu_entry_t mmcreplay_cart_menu[] = {
     { "Rescue mode",
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_MMCRRescueMode_callback,
@@ -773,7 +788,7 @@ static const ui_menu_entry_t retroreplay_revision_menu[] = {
     SDL_MENU_LIST_END
 };
 
-static const ui_menu_entry_t retroreplay_cart_menu[] = {
+static ui_menu_entry_t retroreplay_cart_menu[] = {
     { "Revision",
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
@@ -813,7 +828,7 @@ UI_MENU_DEFINE_FILE_STRING(GMod2EEPROMImage)
 UI_MENU_DEFINE_TOGGLE(GMOD2EEPROMRW)
 UI_MENU_DEFINE_TOGGLE(GMod2FlashWrite)
 
-static const ui_menu_entry_t gmod2_cart_menu[] = {
+static ui_menu_entry_t gmod2_cart_menu[] = {
     SDL_MENU_ITEM_TITLE("EEPROM image"),
     { "EEPROM image file",
       MENU_ENTRY_DIALOG,
@@ -829,14 +844,289 @@ static const ui_menu_entry_t gmod2_cart_menu[] = {
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_GMod2FlashWrite_callback,
       NULL },
+    { "Save image now",
+      MENU_ENTRY_OTHER,
+      c64_cart_flush_callback,
+      (ui_callback_data_t)CARTRIDGE_GMOD2 },
+    { "Save image as",
+      MENU_ENTRY_OTHER,
+      c64_cart_save_callback,
+      (ui_callback_data_t)CARTRIDGE_GMOD2 },
     SDL_MENU_LIST_END
 };
+
+/* GMod3 */
+
+UI_MENU_DEFINE_TOGGLE(GMod3FlashWrite)
+
+static ui_menu_entry_t gmod3_cart_menu[] = {
+    { "Enable writes to flash image",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_GMod3FlashWrite_callback,
+      NULL },
+    { "Save image now",
+      MENU_ENTRY_OTHER,
+      c64_cart_flush_callback,
+      (ui_callback_data_t)CARTRIDGE_GMOD3 },
+    { "Save image as",
+      MENU_ENTRY_OTHER,
+      c64_cart_save_callback,
+      (ui_callback_data_t)CARTRIDGE_GMOD3 },
+    SDL_MENU_LIST_END
+};
+
+/* LT.Kernal */
+
+UI_MENU_DEFINE_FILE_STRING(LTKimage0)
+UI_MENU_DEFINE_FILE_STRING(LTKimage1)
+UI_MENU_DEFINE_FILE_STRING(LTKimage2)
+UI_MENU_DEFINE_FILE_STRING(LTKimage3)
+UI_MENU_DEFINE_FILE_STRING(LTKimage4)
+UI_MENU_DEFINE_FILE_STRING(LTKimage5)
+UI_MENU_DEFINE_FILE_STRING(LTKimage6)
+UI_MENU_DEFINE_STRING(LTKserial)
+UI_MENU_DEFINE_RADIO(LTKport)
+UI_MENU_DEFINE_RADIO(LTKio)
+
+static ui_menu_entry_t ltk_cart_menu[] = {
+    SDL_MENU_ITEM_TITLE("HD images"),
+    { "HD0 image file",
+      MENU_ENTRY_DIALOG,
+      file_string_LTKimage0_callback,
+      (ui_callback_data_t)"Select HD image" },
+    { "HD1 image file",
+      MENU_ENTRY_DIALOG,
+      file_string_LTKimage1_callback,
+      (ui_callback_data_t)"Select HD image" },
+    { "HD2 image file",
+      MENU_ENTRY_DIALOG,
+      file_string_LTKimage2_callback,
+      (ui_callback_data_t)"Select HD image" },
+    { "HD3 image file",
+      MENU_ENTRY_DIALOG,
+      file_string_LTKimage3_callback,
+      (ui_callback_data_t)"Select HD image" },
+    { "HD4 image file",
+      MENU_ENTRY_DIALOG,
+      file_string_LTKimage4_callback,
+      (ui_callback_data_t)"Select HD image" },
+    { "HD5 image file",
+      MENU_ENTRY_DIALOG,
+      file_string_LTKimage5_callback,
+      (ui_callback_data_t)"Select HD image" },
+    { "HD6 image file",
+      MENU_ENTRY_DIALOG,
+      file_string_LTKimage6_callback,
+      (ui_callback_data_t)"Select HD image" },
+    SDL_MENU_ITEM_SEPARATOR,
+    SDL_MENU_ITEM_TITLE("Serial Number"),
+    { "Serial",
+      MENU_ENTRY_DIALOG,
+      string_LTKserial_callback,
+      (ui_callback_data_t)"Enter serial" },
+    SDL_MENU_ITEM_SEPARATOR,
+    SDL_MENU_ITEM_TITLE("I/O address"),
+    { "$dexx",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKio_callback,
+      (ui_callback_data_t)0 },
+    { "$dfxx",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKio_callback,
+      (ui_callback_data_t)1 },
+    SDL_MENU_ITEM_SEPARATOR,
+    SDL_MENU_ITEM_TITLE("Port Number"),
+    { "0",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)0 },
+    { "1",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)1 },
+    { "2",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)2 },
+    { "3",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)3 },
+    { "4",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)4 },
+    { "5",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)5 },
+    { "6",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)6 },
+    { "7",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)7 },
+    { "8",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)8 },
+    { "9",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)9 },
+    { "10",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)10 },
+    { "11",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)1 },
+    { "12",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)12 },
+    { "13",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)13 },
+    { "14",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)14 },
+    { "15",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_LTKport_callback,
+      (ui_callback_data_t)15 },
+    SDL_MENU_LIST_END
+};
+
+/* RAMLINK */
+
+UI_MENU_DEFINE_TOGGLE(RAMLINK)
+UI_MENU_DEFINE_RADIO(RAMLINKmode)
+UI_MENU_DEFINE_TOGGLE(RAMLINKrtcsave)
+UI_MENU_DEFINE_RADIO(RAMLINKsize)
+UI_MENU_DEFINE_FILE_STRING(RAMLINKfilename)
+UI_MENU_DEFINE_TOGGLE(RAMLINKImageWrite)
+
+static ui_menu_entry_t ramlink_menu[] = {
+    { "Enable " CARTRIDGE_NAME_RAMLINK,
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RAMLINK_callback,
+      NULL },
+    { "RTC Save",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RAMLINKrtcsave_callback,
+      NULL },
+    SDL_MENU_ITEM_TITLE("Mode"),
+    { "Normal",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKmode_callback,
+      (ui_callback_data_t)1 },
+    { "Direct",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKmode_callback,
+      (ui_callback_data_t)0 },
+    SDL_MENU_ITEM_SEPARATOR,
+    SDL_MENU_ITEM_TITLE("Memory size"),
+    { "0MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)0 },
+    { "1MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)1 },
+    { "2MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)2 },
+    { "3MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)3 },
+    { "4MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)4 },
+    { "5MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)5 },
+    { "6MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)6 },
+    { "7MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)7 },
+    { "8MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)8 },
+    { "9MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)9 },
+    { "10MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)10 },
+    { "11MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)11 },
+    { "12MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)12 },
+    { "13MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)13 },
+    { "14MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)14 },
+    { "15MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)15 },
+    { "16MiB",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_RAMLINKsize_callback,
+      (ui_callback_data_t)16 },
+    SDL_MENU_ITEM_SEPARATOR,
+    SDL_MENU_ITEM_TITLE("RAM image"),
+    { "Specify Image file and load",
+      MENU_ENTRY_DIALOG,
+      file_string_RAMLINKfilename_callback,
+      (ui_callback_data_t)"Select " CARTRIDGE_NAME_RAMLINK " image" },
+    { "Save image on detach",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RAMLINKImageWrite_callback,
+      NULL },
+    { "Save image now",
+      MENU_ENTRY_OTHER,
+      c64_cart_flush_callback,
+      (ui_callback_data_t)CARTRIDGE_RAMLINK },
+    { "Save image as", /* 29 */
+      MENU_ENTRY_OTHER,
+      c64_cart_save_callback,
+      (ui_callback_data_t)CARTRIDGE_RAMLINK },
+    SDL_MENU_LIST_END
+};
+
 
 /* RRNET MK3 */
 UI_MENU_DEFINE_TOGGLE(RRNETMK3_flashjumper)
 UI_MENU_DEFINE_TOGGLE(RRNETMK3_bios_write)
 
-static const ui_menu_entry_t rrnet_mk3_cart_menu[] = {
+static ui_menu_entry_t rrnet_mk3_cart_menu[] = {
     { "BIOS flash jumper",
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_RRNETMK3_flashjumper_callback,
@@ -935,6 +1225,42 @@ static UI_MENU_CALLBACK(iocollision_show_type_callback)
     return "n/a";
 }
 
+static void cartmenu_update_flush(void)
+{
+    ramcart_menu[10].status = cartridge_can_flush_image(CARTRIDGE_RAMCART) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    reu_menu[15].status = cartridge_can_flush_image(CARTRIDGE_REU) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    expert_cart_menu[10].status = cartridge_can_flush_image(CARTRIDGE_EXPERT) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    dqbb_cart_menu[5].status = cartridge_can_flush_image(CARTRIDGE_DQBB) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    isepic_cart_menu[6].status = cartridge_can_flush_image(CARTRIDGE_ISEPIC) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    easyflash_cart_menu[3].status = cartridge_can_flush_image(CARTRIDGE_EASYFLASH) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    georam_menu[14].status = cartridge_can_flush_image(CARTRIDGE_GEORAM) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    mmc64_cart_menu[11].status = cartridge_can_flush_image(CARTRIDGE_MMC64) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    mmcreplay_cart_menu[4].status = cartridge_can_flush_image(CARTRIDGE_MMC_REPLAY) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    ramlink_menu[28].status = cartridge_can_flush_image(CARTRIDGE_RAMLINK) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    retroreplay_cart_menu[4].status = cartridge_can_flush_image(CARTRIDGE_RETRO_REPLAY) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    gmod2_cart_menu[6].status = cartridge_can_flush_image(CARTRIDGE_GMOD2) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    gmod3_cart_menu[1].status = cartridge_can_flush_image(CARTRIDGE_GMOD3) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    rrnet_mk3_cart_menu[2].status = cartridge_can_flush_image(CARTRIDGE_RRNETMK3) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+}
+
+static void cartmenu_update_save(void)
+{
+    ramcart_menu[11].status = cartridge_can_save_image(CARTRIDGE_RAMCART) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    reu_menu[16].status = cartridge_can_save_image(CARTRIDGE_REU) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    expert_cart_menu[11].status = cartridge_can_save_image(CARTRIDGE_EXPERT) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    dqbb_cart_menu[6].status = cartridge_can_save_image(CARTRIDGE_DQBB) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    isepic_cart_menu[7].status = cartridge_can_save_image(CARTRIDGE_ISEPIC) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    easyflash_cart_menu[4].status = cartridge_can_save_image(CARTRIDGE_EASYFLASH) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    georam_menu[15].status = cartridge_can_save_image(CARTRIDGE_GEORAM) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    mmc64_cart_menu[12].status = cartridge_can_save_image(CARTRIDGE_MMC64) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    mmcreplay_cart_menu[5].status = cartridge_can_save_image(CARTRIDGE_MMC_REPLAY) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    ramlink_menu[29].status = cartridge_can_save_image(CARTRIDGE_RAMLINK) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    retroreplay_cart_menu[5].status = cartridge_can_save_image(CARTRIDGE_RETRO_REPLAY) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    gmod2_cart_menu[7].status = cartridge_can_save_image(CARTRIDGE_GMOD2) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    gmod3_cart_menu[2].status = cartridge_can_save_image(CARTRIDGE_GMOD3) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    rrnet_mk3_cart_menu[3].status = cartridge_can_save_image(CARTRIDGE_RRNETMK3) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+}
+
 /* Cartridge menu */
 
 UI_MENU_DEFINE_TOGGLE(CartridgeReset)
@@ -964,6 +1290,10 @@ ui_menu_entry_t c64cart_menu[] = {
     { "Set current cartridge as default",
       MENU_ENTRY_OTHER,
       set_c64_cart_default_callback,
+      NULL },
+    { "Unset default cartridge",
+      MENU_ENTRY_OTHER,
+      unset_c64_cart_default_callback,
       NULL },
     { "I/O collision handling ($D000-$DFFF)",
       MENU_ENTRY_SUBMENU,
@@ -1023,6 +1353,18 @@ ui_menu_entry_t c64cart_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)gmod2_cart_menu },
+    { CARTRIDGE_NAME_GMOD3,
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)gmod3_cart_menu },
+    { CARTRIDGE_NAME_LT_KERNAL,
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)ltk_cart_menu },
+    { CARTRIDGE_NAME_RAMLINK,
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)ramlink_menu },
     { CARTRIDGE_NAME_RRNETMK3,
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -1043,7 +1385,7 @@ ui_menu_entry_t c64cart_menu[] = {
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_CPMCart_callback,
       NULL },
-    { "Super Snapshot 32k RAM",
+    { "Super Snapshot 32KiB RAM",
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_SSRamExpansion_callback,
       NULL },
@@ -1131,10 +1473,18 @@ ui_menu_entry_t c128cart_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)gmod2_cart_menu },
+    { CARTRIDGE_NAME_GMOD3,
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)gmod3_cart_menu },
     { CARTRIDGE_NAME_MAGIC_VOICE,
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)magicvoice_cart_menu },
+    { CARTRIDGE_NAME_LT_KERNAL,
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)ltk_cart_menu },
     { CARTRIDGE_NAME_SFX_SOUND_EXPANDER " settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -1215,6 +1565,10 @@ ui_menu_entry_t scpu64cart_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)mmcreplay_cart_menu },
+    { CARTRIDGE_NAME_RAMLINK,
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)ramlink_menu },
     { CARTRIDGE_NAME_RETRO_REPLAY,
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -1223,6 +1577,10 @@ ui_menu_entry_t scpu64cart_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)gmod2_cart_menu },
+    { CARTRIDGE_NAME_GMOD3,
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)gmod3_cart_menu },
     { CARTRIDGE_NAME_MAGIC_VOICE,
       MENU_ENTRY_SUBMENU,
       submenu_callback,

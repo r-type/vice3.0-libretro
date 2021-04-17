@@ -144,33 +144,35 @@ static void ramcart_io2_store(uint16_t addr, uint8_t byte);
 static int ramcart_dump(void);
 
 static io_source_t ramcart_io1_device = {
-    CARTRIDGE_NAME_RAMCART,
-    IO_DETACH_RESOURCE,
-    "RAMCART",
-    0xde00, 0xdeff, 0x01,
-    1, /* read is always valid */
-    ramcart_io1_store,
-    ramcart_io1_read,
-    ramcart_io1_peek,
-    ramcart_dump,
-    CARTRIDGE_RAMCART,
-    0,
-    0
+    CARTRIDGE_NAME_RAMCART, /* name of the device */
+    IO_DETACH_RESOURCE,     /* use resource to detach the device when involved in a read-collision */
+    "RAMCART",              /* resource to set to '0' */
+    0xde00, 0xdeff, 0x01,   /* range for the device, regs:$de00-$de01, mirrors:$de02-$deff */
+    1,                      /* read is always valid */
+    ramcart_io1_store,      /* store function */
+    NULL,                   /* NO poke function */
+    ramcart_io1_read,       /* read function */
+    ramcart_io1_peek,       /* peek function */
+    ramcart_dump,           /* device state information dump function */
+    CARTRIDGE_RAMCART,      /* cartridge ID */
+    IO_PRIO_NORMAL,         /* normal priority, device read needs to be checked for collisions */
+    0                       /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t ramcart_io2_device = {
-    CARTRIDGE_NAME_RAMCART,
-    IO_DETACH_RESOURCE,
-    "RAMCART",
-    0xdf00, 0xdfff, 0xff,
-    1, /* read is always valid */
-    ramcart_io2_store,
-    ramcart_io2_read,
-    ramcart_io2_read,
-    ramcart_dump,
-    CARTRIDGE_RAMCART,
-    0,
-    0
+    CARTRIDGE_NAME_RAMCART, /* name of the device */
+    IO_DETACH_RESOURCE,     /* use resource to detach the device when involved in a read-collision */
+    "RAMCART",              /* resource to set to '0' */
+    0xdf00, 0xdfff, 0xff,   /* range for the device, regs:$df00-$dfff */
+    1,                      /* read is always valid */
+    ramcart_io2_store,      /* store function */
+    NULL,                   /* NO poke function */
+    ramcart_io2_read,       /* read function */
+    ramcart_io2_read,       /* peek function */
+    ramcart_dump,           /* device state information dump function */
+    CARTRIDGE_RAMCART,      /* cartridge ID */
+    IO_PRIO_NORMAL,         /* normal priority, device read needs to be checked for collisions */
+    0                       /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *ramcart_io1_list_item = NULL;
@@ -265,7 +267,7 @@ static int ramcart_dump(void)
     bank += ramcart[0];
 
     mon_out("RAM size: %s, bank: %d, status: %s\n",
-            (ramcart_size_kb == 128) ? "128Kb" : "64Kb",
+            (ramcart_size_kb == 128) ? "128KiB" : "64KiB",
             bank,
             (ramcart_readonly) ? ((mirrored) ? "read-only and mirrored at $8000-$80FF" : "read-only") : "read/write");
     return 0;
@@ -288,7 +290,7 @@ static int ramcart_activate(void)
 
     old_ramcart_ram_size = ramcart_size;
 
-    log_message(ramcart_log, "%dKB unit installed.", ramcart_size >> 10);
+    log_message(ramcart_log, "%dKiB unit installed.", ramcart_size >> 10);
 
     if (!util_check_null_string(ramcart_filename)) {
         if (util_file_load(ramcart_filename, ramcart_ram, (size_t)ramcart_size, UTIL_FILE_LOAD_RAW) < 0) {
@@ -493,7 +495,7 @@ static const cmdline_option_t cmdline_options[] =
       NULL, "Disable the RamCart expansion" },
     { "-ramcartsize", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "RAMCARTsize", NULL,
-      "<size in KB>", "Size of the RAMCART expansion. (64/128)" },
+      "<size in KiB>", "Size of the RAMCART expansion. (64/128)" },
     { "-ramcartimage", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "RAMCARTfilename", NULL,
       "<Name>", "Specify name of RAMCART image" },
@@ -666,7 +668,7 @@ int ramcart_peek_mem(uint16_t addr, uint8_t *value)
    ARRAY | RAM       | 65536 or 131072 BYTES of RAM data
  */
 
-static char snap_module_name[] = "CARTRAMCART";
+static const char snap_module_name[] = "CARTRAMCART";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -706,7 +708,7 @@ int ramcart_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

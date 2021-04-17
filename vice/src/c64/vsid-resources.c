@@ -179,7 +179,7 @@ static int set_hvsc_root(const char *path, void *param)
     archdep_expand_path(&result, path);
 
     util_string_set(&hvsc_root, result);
-    
+
     /* "reboot" hvsclib */
     hvsc_exit();
     hvsc_init(result);
@@ -198,14 +198,7 @@ static const resource_string_t resources_string[] = {
     { "BasicName", "basic", RES_EVENT_NO, NULL,
       /* FIXME: should be same but names may differ */
       &basic_rom_name, set_basic_rom_name, NULL },
-    { "HVSCRoot",
-#ifdef WIN32_COMPILE
-        /* totally self serving change */
-        "D:\\C64Music",
-#else
-        "~/C64Music",
-#endif
-        RES_EVENT_NO, NULL,
+    { "HVSCRoot", "", RES_EVENT_NO, NULL,
       &hvsc_root, set_hvsc_root, NULL },
     RESOURCE_STRING_LIST_END
 };
@@ -215,10 +208,20 @@ static const resource_int_t resources_int[] = {
       &sync_factor, set_sync_factor, NULL },
     { "KernalRev", C64_KERNAL_REV3, RES_EVENT_SAME, NULL,
       &kernal_revision, set_kernal_revision, NULL },
-    { "SidStereoAddressStart", 0xde00, RES_EVENT_SAME, NULL,
-      (int *)&sid_stereo_address_start, sid_set_sid_stereo_address, NULL },
-    { "SidTripleAddressStart", 0xdf00, RES_EVENT_SAME, NULL,
-      (int *)&sid_triple_address_start, sid_set_sid_triple_address, NULL },
+    { "Sid2AddressStart", 0xde00, RES_EVENT_SAME, NULL,
+      (int *)&sid2_address_start, sid_set_sid2_address, NULL },
+    { "Sid3AddressStart", 0xdf00, RES_EVENT_SAME, NULL,
+      (int *)&sid3_address_start, sid_set_sid3_address, NULL },
+    { "Sid4AddressStart", 0xdf80, RES_EVENT_SAME, NULL,
+      (int *)&sid4_address_start, sid_set_sid4_address, NULL },
+    { "Sid5AddressStart", 0xde80, RES_EVENT_SAME, NULL,
+      (int *)&sid5_address_start, sid_set_sid5_address, NULL },
+    { "Sid6AddressStart", 0xdf40, RES_EVENT_SAME, NULL,
+      (int *)&sid6_address_start, sid_set_sid6_address, NULL },
+    { "Sid7AddressStart", 0xde40, RES_EVENT_SAME, NULL,
+      (int *)&sid7_address_start, sid_set_sid7_address, NULL },
+    { "Sid8AddressStart", 0xdfc0, RES_EVENT_SAME, NULL,
+      (int *)&sid8_address_start, sid_set_sid8_address, NULL },
     RESOURCE_INT_LIST_END
 };
 

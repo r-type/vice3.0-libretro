@@ -32,6 +32,8 @@
 
 #include "lib.h"
 #include "log.h"
+#include "machine.h"
+#include "pets.h"
 #include "sysfile.h"
 #include "uifonts.h"
 #include "uimenu.h"
@@ -49,6 +51,15 @@ static unsigned char crtcextrachars[8 * 4] = {
     0x30, 0x18, 0x18, 0x0c, 0x18, 0x18, 0x30, 0x00, /* } */
     0x60, 0x92, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, /* ~ */
 };
+
+/* KLUDGES: this needs to be updated when ROM files are being renamed */
+static char *get_chargen_name(void)
+{
+    if (machine_class == VICE_MACHINE_PET) {
+        return PET_CHARGEN_NAME;
+    }
+    return "chargen";
+}
 
 static int loadchar(char *name)
 {
@@ -93,11 +104,11 @@ static int loadchar(char *name)
 int sdl_ui_crtc_font_init(void)
 {
     int i;
-    char *name = "chargen";
+    char *name = get_chargen_name();
     char *path = NULL;
 
     if (sysfile_locate(name, &path) != 0) {
-           log_error(LOG_DEFAULT, "could not locate menu charset `%s'.\n", name ? name : "(null)");
+           log_error(LOG_DEFAULT, "could not locate menu charset '%s'.\n", name ? name : "(null)");
            return -1;
     }
 
@@ -106,7 +117,7 @@ int sdl_ui_crtc_font_init(void)
     crtcfontmon = lib_malloc(CRTCFONTSIZE);
 
     if (loadchar(path) != 0) {
-        log_error(LOG_DEFAULT, "could not load menu charset `%s'.\n", name ? name : "(null)");
+        log_error(LOG_DEFAULT, "could not load menu charset '%s'.\n", name ? name : "(null)");
     }
     lib_free(path);
 
@@ -121,7 +132,7 @@ int sdl_ui_crtc_font_init(void)
     for (i = 0; i < 7; i++) {
         crtcfontasc[0x1c * 8 + i] = crtcfontasc[0x2f * 8 + (7 - i)];
     }
-    /* 40 fix ´ */
+    /* 40 fix ' */
     for (i = 0; i < 3; i++) {
         crtcfontasc[0x40 * 8 + i] = crtcfontasc[0x27 * 8 + (3 - i)];
         crtcfontasc[0x40 * 8 + i + 3] = 0;

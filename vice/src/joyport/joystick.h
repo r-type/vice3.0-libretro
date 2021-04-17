@@ -60,7 +60,7 @@ typedef void (*joystick_machine_func_t)(void);
 extern void joystick_register_machine(joystick_machine_func_t func);
 
 /*! the number of joysticks that can be attached to the emu */
-#define JOYSTICK_NUM 5
+#define JOYSTICK_NUM 8
 
 /* the values used internally to represent joystick state
 FIXME: this is only an extern because of
@@ -71,14 +71,24 @@ extern uint8_t joystick_value[JOYSTICK_NUM + 1];
 /* the mapping of real devices to emulated joystick ports */
 extern int joystick_port_map[JOYSTICK_NUM];
 
-#if (!defined(__OS2__) || defined(USE_SDLUI) || defined(USE_SDLUI2)) && !defined(__LIBRETRO__)
-#define COMMON_JOYKEYS
 
-#define JOYSTICK_KEYSET_NUM 3
-#define JOYSTICK_KEYSET_NUM_KEYS 9
+/** \brief  Use keypad as predefined keys for joystick emulation
+ *
+ * Should always be defined for proper VICE, can be undef'ed for ports
+ */
+#ifndef __LIBRETRO__
+#define COMMON_JOYKEYS
+#else
+#define JOYSTICK_KEYSET_NUM_KEYS     11 /* 4 directions, 4 diagonals, 3 fire */
+#endif
+
+#ifdef COMMON_JOYKEYS
+
+#define JOYSTICK_KEYSET_NUM          3
+#define JOYSTICK_KEYSET_NUM_KEYS     11 /* 4 directions, 4 diagonals, 3 fire */
 #define JOYSTICK_KEYSET_IDX_NUMBLOCK 0
-#define JOYSTICK_KEYSET_IDX_A 1
-#define JOYSTICK_KEYSET_IDX_B 2
+#define JOYSTICK_KEYSET_IDX_A        1
+#define JOYSTICK_KEYSET_IDX_B        2
 extern int joykeys[JOYSTICK_KEYSET_NUM][JOYSTICK_KEYSET_NUM_KEYS];
 
 /* several things depend on the order/exact values of the members in this enum,
@@ -93,7 +103,9 @@ typedef enum {
     JOYSTICK_KEYSET_E,
     JOYSTICK_KEYSET_NW,
     JOYSTICK_KEYSET_N,
-    JOYSTICK_KEYSET_NE
+    JOYSTICK_KEYSET_NE,
+    JOYSTICK_KEYSET_FIRE2,
+    JOYSTICK_KEYSET_FIRE3
 } joystick_direction_t;
 #endif
 

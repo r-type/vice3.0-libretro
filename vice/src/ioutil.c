@@ -1,10 +1,12 @@
+/** \file   ioutil.c
+ * \brief   Miscellaneous IO utility functions
+ *
+ * \author  Andreas Boose <viceteam@t-online.de>
+ * \author  Marco van den Heuvel <blackystardust68@yahoo.com>
+ * \author  Bas Wassink <b.wassink@ziggo.nl>
+ */
+
 /*
- * ioutil.c - Miscellaneous IO utility functions.
- *
- * Written by
- *  Andreas Boose <viceteam@t-online.de>
- *  Marco van den Heuvel <blackystardust68@yahoo.com>
- *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
  *
@@ -60,11 +62,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#ifdef __NeXT__
-#include <sys/dir.h>
-#define dirent direct
-#endif
-
 #include "archdep.h"
 #include "ioutil.h"
 #include "lib.h"
@@ -76,52 +73,37 @@
 
 int ioutil_access(const char *pathname, int mode)
 {
-#if defined(__PS3__)
-   struct stat buf;
-   /* This can be improved but since ps3 os doesn't really have ACLs, who
-      cares? */
-   if (stat(pathname, &buf) == 0 &&
-         (buf.st_mode & (S_IRUSR|S_IWUSR)))
-   {
-      /* file points to user readable or writable file */
-      return 0;
-   }
-   return -1;
-#else
-   int access_mode = 0;
+    int access_mode = 0;
 
-   if ((mode & IOUTIL_ACCESS_R_OK) == IOUTIL_ACCESS_R_OK) {
-      access_mode |= ARCHDEP_R_OK;
-   }
-   if ((mode & IOUTIL_ACCESS_W_OK) == IOUTIL_ACCESS_W_OK) {
-      access_mode |= ARCHDEP_W_OK;
-   }
-   if ((mode & IOUTIL_ACCESS_X_OK) == IOUTIL_ACCESS_X_OK) {
-      access_mode |= ARCHDEP_X_OK;
-   }
-   if ((mode & IOUTIL_ACCESS_F_OK) == IOUTIL_ACCESS_F_OK) {
-      access_mode |= ARCHDEP_F_OK;
-   }
+    if ((mode & IOUTIL_ACCESS_R_OK) == IOUTIL_ACCESS_R_OK) {
+        access_mode |= ARCHDEP_R_OK;
+    }
+    if ((mode & IOUTIL_ACCESS_W_OK) == IOUTIL_ACCESS_W_OK) {
+        access_mode |= ARCHDEP_W_OK;
+    }
+    if ((mode & IOUTIL_ACCESS_X_OK) == IOUTIL_ACCESS_X_OK) {
+        access_mode |= ARCHDEP_X_OK;
+    }
+    if ((mode & IOUTIL_ACCESS_F_OK) == IOUTIL_ACCESS_F_OK) {
+        access_mode |= ARCHDEP_F_OK;
+    }
 
-   return access(pathname, access_mode);
-#endif
+    return access(pathname, access_mode);
 }
 
 int ioutil_chdir(const char *path)
 {
-    return chdir((char*)path);
+    return chdir(path);
 }
 
 int ioutil_errno(unsigned int check)
 {
     switch (check) {
-#ifndef __OS2__
         case IOUTIL_ERRNO_EPERM:
             if (errno == EPERM) {
                 return 1;
             }
             break;
-#endif
         case IOUTIL_ERRNO_EEXIST:
             if (errno == EEXIST) {
                 return 1;
@@ -137,13 +119,11 @@ int ioutil_errno(unsigned int check)
                 return 1;
             }
             break;
-#ifndef __OS2__
         case IOUTIL_ERRNO_ERANGE:
             if (errno == ERANGE) {
                 return 1;
             }
             break;
-#endif
         default:
             return 0;
     }
@@ -204,7 +184,7 @@ int ioutil_rename(const char *oldpath, const char *newpath)
     return archdep_rename(oldpath, newpath);
 }
 
-int ioutil_stat(const char *file_name, unsigned int *len, unsigned int *isdir)
+int ioutil_stat(const char *file_name, size_t *len, unsigned int *isdir)
 {
     return archdep_stat(file_name, len, isdir);
 }
@@ -233,8 +213,8 @@ static int files_amount = 0;
 
 static int ioutil_compare_names(const void* a, const void* b)
 {
-    ioutil_name_table_t *arg1 = (ioutil_name_table_t*)a;
-    ioutil_name_table_t *arg2 = (ioutil_name_table_t*)b;
+    const ioutil_name_table_t *arg1 = (const ioutil_name_table_t*)a;
+    const ioutil_name_table_t *arg2 = (const ioutil_name_table_t*)b;
     return strcmp(arg1->name, arg2->name);
 }
 
@@ -263,7 +243,8 @@ static int ioutil_count_dir_items(const char *path, int mode)
     DIR *dirp;
     struct dirent *dp;
 /* #ifndef _DIRENT_HAVE_D_TYPE */
-    unsigned int len, isdir;
+    size_t len;
+    unsigned int isdir;
     char *filename;
     int retval;
 /* #endif */
@@ -336,7 +317,8 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
     int dir_count = 0;
     int file_count = 0;
 /* #ifndef _DIRENT_HAVE_D_TYPE */
-    unsigned int len, isdir;
+    size_t len;
+    unsigned int isdir;
     char *filename;
     int retval;
 /* #endif */
@@ -350,7 +332,7 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
 #ifdef _DIRENT_HAVE_D_TYPE
             if (dp->d_type != DT_UNKNOWN) {
                 if (dp->d_type == DT_DIR) {
-                    dirs[dir_count].name = lib_stralloc(dp->d_name);
+                    dirs[dir_count].name = lib_strdup(dp->d_name);
                     dir_count++;
 #ifdef DT_LNK
                 } else if (dp->d_type == DT_LNK) {
@@ -358,10 +340,10 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
                     retval = ioutil_stat(filename, &len, &isdir);
                     if (retval == 0) {
                         if (isdir) {
-                            dirs[dir_count].name = lib_stralloc(dp->d_name);
+                            dirs[dir_count].name = lib_strdup(dp->d_name);
                             dir_count++;
                         } else {
-                            files[file_count].name = lib_stralloc(dp->d_name);
+                            files[file_count].name = lib_strdup(dp->d_name);
                             file_count++;
                         }
                     }
@@ -371,7 +353,7 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
                     }
 #endif /* DT_LNK */
                 } else {
-                    files[file_count].name = lib_stralloc(dp->d_name);
+                    files[file_count].name = lib_strdup(dp->d_name);
                     file_count++;
                 }
                 dp = readdir(dirp);
@@ -381,10 +363,10 @@ static void ioutil_filldir(const char *path, ioutil_name_table_t *dirs, ioutil_n
                 retval = ioutil_stat(filename, &len, &isdir);
                 if (retval == 0) {
                     if (isdir) {
-                        dirs[dir_count].name = lib_stralloc(dp->d_name);
+                        dirs[dir_count].name = lib_strdup(dp->d_name);
                         dir_count++;
                     } else {
-                        files[file_count].name = lib_stralloc(dp->d_name);
+                        files[file_count].name = lib_strdup(dp->d_name);
                         file_count++;
                     }
                 }
@@ -458,3 +440,19 @@ void ioutil_closedir(ioutil_dir_t *ioutil_dir)
     lib_free(ioutil_dir->files);
     lib_free(ioutil_dir);
 }
+
+void ioutil_resetdir(ioutil_dir_t *ioutil_dir)
+{
+    ioutil_dir->counter = 0;
+}
+
+void ioutil_setdirpos(ioutil_dir_t *ioutil_dir, int pos)
+{
+    ioutil_dir->counter = pos;
+}
+
+int ioutil_getdirpos(ioutil_dir_t *ioutil_dir)
+{
+    return ioutil_dir->counter;
+}
+

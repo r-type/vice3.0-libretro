@@ -139,33 +139,35 @@ static void freezemachine_io2_store(uint16_t addr, uint8_t value)
 }
 
 static io_source_t freezemachine_io1_device = {
-    CARTRIDGE_NAME_FREEZE_MACHINE,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    0, /* read is never valid */
-    freezemachine_io1_store,
-    freezemachine_io1_read,
-    freezemachine_io1_peek,
-    NULL, /* TODO: dump */
-    CARTRIDGE_FREEZE_MACHINE,
-    0,
-    0
+    CARTRIDGE_NAME_FREEZE_MACHINE, /* name of the device */
+    IO_DETACH_CART,                /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,         /* does not use a resource for detach */
+    0xde00, 0xdeff, 0xff,          /* range for the device, address is ignored, reg:$de00, mirrors:$de01-$deff */
+    0,                             /* read is never valid */
+    freezemachine_io1_store,       /* store function */
+    NULL,                          /* NO poke function */
+    freezemachine_io1_read,        /* read function */
+    freezemachine_io1_peek,        /* peek function */
+    NULL,                          /* TODO: device state information dump function */
+    CARTRIDGE_FREEZE_MACHINE,      /* cartridge ID */
+    IO_PRIO_NORMAL,                /* normal priority, device read needs to be checked for collisions */
+    0                              /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t freezemachine_io2_device = {
-    CARTRIDGE_NAME_FREEZE_MACHINE,
-    IO_DETACH_CART,
-    NULL,
-    0xdf00, 0xdfff, 0xff,
-    0, /* read is never valid */
-    freezemachine_io2_store,
-    freezemachine_io2_read,
-    freezemachine_io2_peek,
-    NULL, /* TODO: dump */
-    CARTRIDGE_FREEZE_MACHINE,
-    0,
-    0
+    CARTRIDGE_NAME_FREEZE_MACHINE, /* name of the device */
+    IO_DETACH_CART,                /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,         /* does not use a resource for detach */
+    0xdf00, 0xdfff, 0xff,          /* range for the device, address is ignored, reg:$df00, mirrors:$df01-$dfff */
+    0,                             /* read is never valid */
+    freezemachine_io2_store,       /* store function */
+    NULL,                          /* NO poke function */
+    freezemachine_io2_read,        /* read function */
+    freezemachine_io2_peek,        /* peek function */
+    NULL,                          /* TODO: device state information dump function */
+    CARTRIDGE_FREEZE_MACHINE,      /* cartridge ID */
+    IO_PRIO_NORMAL,                /* normal priority, device read needs to be checked for collisions */
+    0                              /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *freezemachine_io1_list_item = NULL;
@@ -276,7 +278,8 @@ int freezemachine_bin_attach(const char *filename, uint8_t *rawcart)
  */
 int freezemachine_crt_attach(FILE *fd, uint8_t *rawcart)
 {
-    int i, pos, banks, chips;
+    int i, banks, chips;
+    size_t pos;
     crt_chip_header_t chip;
 
     /* find out how many banks and chips are in the file */
@@ -363,7 +366,7 @@ void freezemachine_detach(void)
    ARRAY | ROMH         |   0.0+  | 16384 BYTES of ROMH data
  */
 
-static char snap_module_name[] = "CARTFREEZEM";
+static const char snap_module_name[] = "CARTFREEZEM";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   1
 
@@ -402,7 +405,7 @@ int freezemachine_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
@@ -414,7 +417,7 @@ int freezemachine_snapshot_read_module(snapshot_t *s)
     }
 
     /* new in 0.1 */
-    if (SNAPVAL(vmajor, vminor, 0, 1)) {
+    if (!snapshot_version_is_smaller(vmajor, vminor, 0, 1)) {
         if (SMR_B_INT(m, &allow_toggle) < 0) {
             goto fail;
         }

@@ -42,8 +42,6 @@
 #include "types.h"
 #include "util.h"
 
-#ifdef HAS_JOYSTICK
-
 /* ----- Static Data ------------------------------------------------------ */
 
 static int joy_done_init = 0;
@@ -76,26 +74,6 @@ typedef struct device_info_s {
     int         id;     /**< device ID (\see joy.h) */
 } device_info_t;
 
-static device_info_t predefined_device_list[] = {
-#ifdef HAS_JOYSTICK
-    { "Analog joystick 0",  JOYDEV_ANALOG_0 },
-    { "Analog joystick 1",  JOYDEV_ANALOG_1 },
-    { "Analog joystick 2",  JOYDEV_ANALOG_2 },
-    { "Analog joystick 3",  JOYDEV_ANALOG_3 },
-    { "Analog joystick 4",  JOYDEV_ANALOG_4 },
-    { "Analog joystick 5",  JOYDEV_ANALOG_5 },
-#endif
-#ifdef HAS_DIGITAL_JOYSTICK
-    { "Digital joystick 0", JOYDEV_DIGITAL_0 },
-    { "Digital joystick 1", JOYDEV_DIGITAL_1 },
-#endif
-#ifdef HAS_USB_JOYSTICK
-    { "USB joystick 0",     JOYDEV_USB_0 },
-    { "USB joystick 1",     JOYDEV_USB_1 },
-#endif
-    { NULL, -1 }
-};
-
 static int joystickdeviceidx = 0;
 
 void joystick_ui_reset_device_list(void)
@@ -106,12 +84,19 @@ void joystick_ui_reset_device_list(void)
 const char *joystick_ui_get_next_device_name(int *id)
 {
     const char *name;
-    if ((name = predefined_device_list[joystickdeviceidx].name)) {
-        *id = predefined_device_list[joystickdeviceidx].id;
-        joystickdeviceidx++;
-        return name;
+    const joy_hid_device_array_t *devices;
+    
+    devices = joy_hid_get_devices();
+    if (joystickdeviceidx >= devices->num_devices) {
+        return NULL;
     }
-    return NULL;
+
+    name = devices->devices[joystickdeviceidx].product_name;
+    *id = JOYDEV_HID_0 + joystickdeviceidx;
+
+    joystickdeviceidx++;
+    
+    return name;
 }
 
 /* HID settings */
@@ -518,7 +503,7 @@ int joy_arch_resources_init(void)
 }
 
 /* ----- VICE Command-line options ----- */
-
+#if 0
 static const cmdline_option_t cmdline_options[] =
 {
     { "-joyAdevice", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
@@ -611,9 +596,11 @@ static const cmdline_option_t joydev5cmdline_options[] =
       "<0-5>", "Set device for extra joystick port 3" },
     CMDLINE_LIST_END
 };
-
+#endif
 int joy_arch_cmdline_options_init(void)
 {
+    return 0;
+#if 0
     int num_ports = 0, num_extra_ports = 0;
 
     if (joyport_get_port_name(JOYPORT_1)) {
@@ -651,6 +638,7 @@ int joy_arch_cmdline_options_init(void)
     joy_num_extra_ports = num_extra_ports;
 
     return cmdline_register_options(cmdline_options);
+#endif
 }
 
 /* ----- Setup Joystick Descriptor ---------------------------------------- */
@@ -832,17 +820,17 @@ static int match_joystick(joystick_descriptor_t *joy, joy_hid_device_t *dev)
     return 0;
 }
 
-static void setup_joystick(joystick_descriptor_t *joy, joy_hid_device_t *dev, const char *desc)
+static void setup_joystick(joystick_descriptor_t *joy, joy_hid_device_t *dev, const char *setup_desc)
 {
     if (joy_hid_map_device(joy, dev) >= 0) {
         log_message(LOG_DEFAULT, "mac_joy: set up %s HID joystick (%d buttons, %d axis, %d hat switches)", 
-                    desc, joy->num_hid_buttons, joy->num_hid_axis, joy->num_hid_hat_switches);
+                    setup_desc, joy->num_hid_buttons, joy->num_hid_axis, joy->num_hid_hat_switches);
         setup_axis_mapping(joy);
         setup_button_mapping(joy);
         setup_auto_button_mapping(joy);
         setup_hat_switch_mapping(joy);
     } else {
-        log_message(LOG_DEFAULT, "mac_joy: ERROR setting up %s HID joystick", desc);
+        log_message(LOG_DEFAULT, "mac_joy: ERROR setting up %s HID joystick", setup_desc);
     }
 }
 
@@ -1134,14 +1122,5 @@ void joystick(void)
         }
     }
 }
-
-#else
-
-void joystick_close(void)
-{
-    /* NOP */
-}
-
-#endif /* HAS_JOYSTICK */
 
 #endif /* MACOSX_SUPPORT */

@@ -86,6 +86,8 @@
  */
 
 /* This module is currently used in the following emulated hardware:
+ * CMDHD
+ * RAMLINK
  */
 
 /* ---------------------------------------------------------------------------------------------------- */
@@ -103,7 +105,7 @@ rtc_72421_t *rtc72421_init(char *device)
     retval->old_offset = retval->offset;
 
     retval->hour24 = 0;
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
 
     return retval;
 }
@@ -168,7 +170,7 @@ uint8_t rtc72421_read(rtc_72421_t *context, uint8_t address)
             }
             break;
         case RTC72421_REGISTER_WEEKDAYS:
-            retval = rtc_get_weekday(latch) - 1;
+            retval = rtc_get_weekday(latch);
             if (retval > 6) {
                 retval = 6;
             }
@@ -196,6 +198,11 @@ uint8_t rtc72421_read(rtc_72421_t *context, uint8_t address)
         case RTC72421_REGISTER_10YEARS:
             retval = rtc_get_year(latch, 0);
             retval /= 10;
+            break;
+        case RTC72421_REGISTER_CTRL1:
+            /* RAMLINK writes/reads data to this register to detect the
+               presence of the rtc */
+            retval = context->control[1];
             break;
         case RTC72421_REGISTER_CTRL2:
             retval = context->hour24 ? 2 : 0;
@@ -387,14 +394,28 @@ void rtc72421_write(rtc_72421_t *context, uint8_t address, uint8_t data)
                 context->offset = rtc_set_year(new_data, context->offset, 0);
             }
             break;
+        case RTC72421_REGISTER_CTRL0:
+            context->control[0] = real_data;
+            break;
+        case RTC72421_REGISTER_CTRL1:
+            /* RAMLINK writes/reads data to this register to detect the
+               presence of the rtc */
+            context->control[1] = real_data;
+            break;
         case RTC72421_REGISTER_CTRL2:
+            context->control[2] = real_data;
             context->hour24 = (real_data & 4) ? 1: 0;
             if (real_data & 2) {
                 context->stop = 1;
                 context->latch = rtc_get_latch(context->offset);
             } else {
-                context->stop = 0;
-                context->offset = context->offset - (rtc_get_latch(0) - (context->latch - context->offset));
+                /* problem here, we have to do this only if we were previously
+                    stopped, otherwise we mess up the counter */
+                if (context->stop) {
+                    context->stop = 0;
+                    context->offset = context->offset -
+                        (rtc_get_latch(0) - (context->latch - context->offset));
+                }
             }
             break;
     }
@@ -417,7 +438,7 @@ void rtc72421_write(rtc_72421_t *context, uint8_t address, uint8_t data)
    STRING | device        | device name string
  */
 
-static char snap_module_name[] = "RTC_72421";
+static const char snap_module_name[] = "RTC_72421";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -485,7 +506,7 @@ int rtc72421_read_snapshot(rtc_72421_t *context, snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

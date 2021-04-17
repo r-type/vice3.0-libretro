@@ -93,7 +93,7 @@ int cbm2rom_load_chargen(const char *rom_name)
 
 int cbm2rom_checksum(void)
 {
-    int i, delay;
+    int i;
     uint16_t sum;
 
     /* Checksum over top 8 kByte kernal.  */
@@ -103,15 +103,8 @@ int cbm2rom_checksum(void)
 
     log_message(cbm2rom_log, "Kernal checksum is %d ($%04X).", sum, sum);
 
-    resources_get_int("AutostartDelay", &delay);
-    if (delay == 0) {
-        delay = 10; /* default */
-    }
-    autostart_init((CLOCK)(delay * C500_PAL_RFSH_PER_SEC * C500_PAL_CYCLES_PER_RFSH), 0,
-                    0, /* Pointer: Cursor Blink enable: 0 = Flash Cursor */
-                    0xc8, /* Pointer: Current Screen Line Address */
-                    0xcb, /* Pointer: Cursor Column on Current Line */
-                    -40); /* chars per line */
+    /* Initialize Autostart */
+    autostart_init(10, 0);
     return 0;
 }
 
@@ -123,7 +116,7 @@ int cbm2rom_load_kernal(const char *rom_name)
     /* De-initialize kbd-buf, autostart and tape stuff here before
        reloading the ROM the traps are installed in.  */
     kbdbuf_init(0, 0, 0, 0);
-    autostart_init(0, 0, 0, 0, 0, 0);
+    autostart_init(0, 0);
     tape_init(&tapeinit);
 
     /* Load Kernal ROM.  */

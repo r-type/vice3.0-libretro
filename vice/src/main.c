@@ -37,6 +37,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef USE_VICE_THREAD
+#include <pthread.h>
+#endif
 
 #include "archdep.h"
 #include "cmdline.h"
@@ -53,12 +56,20 @@
 #include "machine.h"
 #include "maincpu.h"
 #include "main.h"
+#include "mainlock.h"
 #include "resources.h"
 #include "sysfile.h"
+#include "tick.h"
 #include "types.h"
 #include "uiapi.h"
 #include "version.h"
 #include "video.h"
+#include "vsyncapi.h"
+
+#ifdef __LIBRETRO__
+#include "libretro-core.h"
+#define LOG_HR "--------------------------------------------------------------------------------"
+#endif
 
 #ifdef USE_SVN_REVISION
 #include "svnversion.h"
@@ -70,17 +81,15 @@
 #define DBG(x)
 #endif
 
-#ifdef __LIBRETRO__
-#include "libretro-core.h"
-#define LOG_HR "--------------------------------------------------------------------------------"
-#endif
-
-#ifdef __OS2__
-const
-#endif
 int console_mode = 0;
 int video_disabled_mode = 0;
-static int init_done = 0;
+
+void main_loop_forever(void);
+
+#ifdef USE_VICE_THREAD
+void *vice_thread_main(void *);
+static pthread_t vice_thread;
+#endif
 
 
 /** \brief  Size of buffer used to write core team members' names to log/stdout
@@ -99,29 +108,47 @@ int main_program(int argc, char **argv)
     int i, n;
     const char *program_name;
     int ishelp = 0;
+    int loadconfig = 1;
     char term_tmp[TERM_TMP_SIZE];
     size_t name_len;
 
+    lib_init();
 
-    lib_init_rand();
-
-    /* Check for -config and -console before initializing the user interface.
+    /* Check for some options at the beginning of the commandline before 
+       initializing the user interface or loading the config file.
+       -default => use default config, do not load any config
        -config  => use specified configuration file
        -console => no user interface
     */
     DBG(("main:early cmdline(argc:%d)\n", argc));
-    for (i = 0; i < argc; i++) {
-#ifndef __OS2__
+    for (i = 1; i < argc; i++) {
         if ((!strcmp(argv[i], "-console")) || (!strcmp(argv[i], "--console"))) {
             console_mode = 1;
             video_disabled_mode = 1;
         } else
-#endif
         if ((!strcmp(argv[i], "-config")) || (!strcmp(argv[i], "--config"))) {
             if ((i + 1) < argc) {
-                vice_config_file = lib_stralloc(argv[++i]);
+                vice_config_file = lib_strdup(argv[++i]);
+                loadconfig = 1;
             }
-        } else if ((!strcmp(argv[i], "-help")) ||
+        } else if (!strcmp(argv[i], "-default")) {
+            loadconfig = 0;
+        } else {
+            break;
+        }
+    }
+    /* remove the already handled items from the commandline, else they will
+       get parsed again later, which causes surprising effects. */
+    for (n = 1; i < argc; n++, i++) {
+        argv[n] = argv[i];
+    }
+    argv[n] = NULL;
+    argc = n;
+
+    /* help is also special, but we want it NOT to be ignored by the main
+       commandline handler */
+    for (i = 1; i < argc; i++) {
+        if ((!strcmp(argv[i], "-help")) ||
                    (!strcmp(argv[i], "--help")) ||
                    (!strcmp(argv[i], "-h")) ||
                    (!strcmp(argv[i], "-?"))) {
@@ -134,21 +161,8 @@ int main_program(int argc, char **argv)
         archdep_startup_log_error("archdep_init failed.\n");
         return -1;
     }
-#ifndef __LIBRETRO__
-    if (archdep_vice_atexit(main_exit) != 0) {
-        archdep_startup_log_error("archdep_vice_atexit failed.\n");
-        return -1;
-    }
-#else
-#if 0
-    if (atexit(vice_main_exit) < 0)
-    {
-       archdep_startup_log_error("atexit failed.\n");
-       return -1;
-    }
-#endif
-#endif
 
+    tick_init();
     maincpu_early_init();
     machine_setup_context();
     drive_setup_context();
@@ -177,9 +191,9 @@ int main_program(int argc, char **argv)
         return -1;
     }
 
-    if (!ishelp) {
+    if ((!ishelp) && (loadconfig)) {
         /* Load the user's default configuration file.  */
-        if (resources_load(NULL) < 0) {
+        if (resources_reset_and_load(NULL) < 0) {
             /* The resource file might contain errors, and thus certain
             resources might have been initialized anyway.  */
             if (resources_set_defaults() < 0) {
@@ -190,14 +204,25 @@ int main_program(int argc, char **argv)
     }
 
     if (log_init() < 0) {
-        archdep_startup_log_error("Cannot startup logging system.\n");
+        const char *logfile = NULL;
+
+        /* assuming LogFileName exists */
+        resources_get_string("LogFileName", &logfile);
+
+        if (logfile != NULL && *logfile != '\0') {
+            archdep_startup_log_error(
+                    "Cannot start logging system, failed to open '%s' for writing",
+                    logfile);
+        } else {
+            archdep_startup_log_error("Cannot startup logging system.\n");
+        }
     }
 
     DBG(("main:initcmdline_check_args(argc:%d)\n", argc));
     if (initcmdline_check_args(argc, argv) < 0) {
         return -1;
     }
-    
+
     program_name = archdep_program_name();
 
     /* VICE boot sequence.  */
@@ -213,13 +238,13 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, "%s", "");
     log_message(LOG_DEFAULT, "This is free software with ABSOLUTELY NO WARRANTY.");
     log_message(LOG_DEFAULT, LOG_HR);
-#else
+#else /* __LIBRETRO __ */
     log_message(LOG_DEFAULT, " ");
 #ifdef USE_SVN_REVISION
     log_message(LOG_DEFAULT, "*** VICE Version %s, rev %s ***", VERSION, VICE_SVN_REV_STRING);
 #else
     log_message(LOG_DEFAULT, "*** VICE Version %s ***", VERSION);
-#endif /* __LIBRETRO__ */
+#endif
     log_message(LOG_DEFAULT, " ");
     if (machine_class == VICE_MACHINE_VSID) {
         log_message(LOG_DEFAULT, "Welcome to %s, the free portable SID Player.",
@@ -262,7 +287,7 @@ int main_program(int argc, char **argv)
     log_message(LOG_DEFAULT, "This is free software with ABSOLUTELY NO WARRANTY.");
     log_message(LOG_DEFAULT, "See the \"About VICE\" command for more info.");
     log_message(LOG_DEFAULT, " ");
-#endif
+#endif /* __LIBRETRO__ */
 
     /* lib_free(program_name); */
 
@@ -279,23 +304,79 @@ int main_program(int argc, char **argv)
     if (initcmdline_check_psid() < 0) {
         return -1;
     }
-
+    
     if (init_main() < 0) {
         return -1;
     }
-
+    
     initcmdline_check_attach();
 
-    init_done = 1;
+#ifdef USE_VICE_THREAD
 
-    /* Let's go...  */
-    log_message(LOG_DEFAULT, "Main CPU: starting at ($FFFC).");
+    if (pthread_create(&vice_thread, NULL, vice_thread_main, NULL)) {
+        log_error(LOG_DEFAULT, "Fatal: failed to launch main thread");
+        return 1;
+    }
 
-    maincpu_mainloop();
+#else /* #ifdef USE_VICE_THREAD */
 
-#ifndef __LIBRETRO__
-    log_error(LOG_DEFAULT, "perkele!");
-#endif
+    main_loop_forever();
+
+#endif /* #ifdef USE_VICE_THREAD */
 
     return 0;
 }
+
+void main_loop_forever(void)
+{
+    log_message(LOG_DEFAULT, "Main CPU: starting at ($FFFC).");
+
+    /* This doesn't return. The thread will directly exit when requested. */
+    maincpu_mainloop();
+
+#ifndef __LIBRETRO__
+    log_error(LOG_DEFAULT, "perkele! (THREAD)");
+#endif
+}
+
+#ifdef USE_VICE_THREAD
+
+void vice_thread_shutdown(void)
+{
+    if (!vice_thread) {
+        /* We're exiting early in program life, such as when invoked with -help */
+        return;
+    }
+
+    if (pthread_equal(pthread_self(), vice_thread)) {
+        printf("FIXME! VICE thread is trying to shut itself down directly, this needs to be called from the ui thread for a correct shutdown!\n");
+        mainlock_initiate_shutdown();
+        return;
+    }
+
+    mainlock_obtain();
+    mainlock_initiate_shutdown();
+    mainlock_release();
+
+    pthread_join(vice_thread, NULL);
+
+    log_message(LOG_DEFAULT, "VICE thread has been joined.");
+}
+
+void *vice_thread_main(void *unused)
+{
+    archdep_thread_init();
+
+    mainlock_init();
+
+    main_loop_forever();
+
+    /*
+     * main_loop_forever() does not return, so we call archdep_thread_shutdown()
+     * in the mainlock system which manages a direct pthread based thread exit.
+     */
+
+    return NULL;
+}
+
+#endif /* #ifdef USE_VICE_THREAD */

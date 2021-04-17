@@ -1,8 +1,7 @@
-/**
+/** \file   isepicwidget.c
  * \brief   Widget to control ISEPIC resources
  *
- * Written by
- *  Bas Wassink <b.wassink@ziggo.nl>
+ * \autor   Bas Wassink <b.wassink@ziggo.nl>
  */
 
 /*
@@ -34,19 +33,20 @@
  */
 
 #include "vice.h"
+
 #include <gtk/gtk.h>
 
-#include "machine.h"
-#include "resources.h"
-#include "debug_gtk3.h"
-#include "basewidgets.h"
-#include "widgethelpers.h"
 #include "basedialogs.h"
-#include "openfiledialog.h"
-#include "savefiledialog.h"
+#include "basewidgets.h"
+#include "carthelpers.h"
 #include "cartimagewidget.h"
 #include "cartridge.h"
-#include "carthelpers.h"
+#include "debug_gtk3.h"
+#include "machine.h"
+#include "openfiledialog.h"
+#include "resources.h"
+#include "savefiledialog.h"
+#include "widgethelpers.h"
 
 #include "isepicwidget.h"
 
@@ -62,7 +62,6 @@
 static gboolean on_isepic_switch_state_set(GtkWidget *widget, gboolean state,
         gpointer user_data)
 {
-    debug_gtk3("setting IsepicSwitch to %s.", state ? "ON" : "OFF");
     resources_set_int("IsepicSwitch", state);
     return FALSE;
 }
@@ -107,6 +106,7 @@ static GtkWidget *create_isepic_image_widget(GtkWidget *parent)
     return cart_image_widget_create(parent, "ISEPIC image",
             "Isepicfilename", "IsepicImageWrite",
             carthelpers_save_func, carthelpers_flush_func,
+            carthelpers_can_save_func, carthelpers_can_flush_func,
             CARTRIDGE_NAME_ISEPIC, CARTRIDGE_ISEPIC);
 }
 

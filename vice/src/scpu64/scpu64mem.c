@@ -1346,10 +1346,31 @@ void mem_set_basic_text(uint16_t start, uint16_t end)
     mem_sram[0x2e] = mem_sram[0x30] = mem_sram[0x32] = mem_sram[0xaf] = end >> 8;
 }
 
+/* this function should always read from the screen currently used by the kernal
+   for output, normally this does just return system ram - except when the 
+   videoram is not memory mapped.
+   used by autostart to "read" the kernal messages
+*/
+uint8_t mem_read_screen(uint16_t addr)
+{
+    return ram_read(addr);
+}
+
 void mem_inject(uint32_t addr, uint8_t value)
 {
     /* could be made to handle various internal expansions in some sane way */
     mem_ram[addr & 0xffff] = mem_sram[addr & 0xffff] = value;
+}
+
+/* In banked memory architectures this will always write to the bank that
+   contains the keyboard buffer and "number of keys in buffer", regardless of
+   what the CPU "sees" currently.
+   In all other cases this just writes to the first 64kb block, usually by
+   wrapping to mem_inject().
+*/
+void mem_inject_key(uint16_t addr, uint8_t value)
+{
+    mem_inject(addr, value);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1521,14 +1542,16 @@ int scpu64_interrupt_reroute(void)
 /* ------------------------------------------------------------------------- */
 
 /* Exported banked memory access functions for the monitor.  */
+#define MAXBANKS (6 + 0x100)
 
-static const char *banknames[] = {
+static const char *banknames[MAXBANKS + 1] = {
     "default",
     "cpu",
     "ram",
     "rom",
     "io",
     "cart",
+    /* by convention, a "bank array" has a 2-hex-digit bank index appended */
     "ram00", "ram01", "ram02", "ram03", "ram04", "ram05", "ram06", "ram07",
     "ram08", "ram09", "ram0a", "ram0b", "ram0c", "ram0d", "ram0e", "ram0f",
     "ram10", "ram11", "ram12", "ram13", "ram14", "ram15", "ram16", "ram17",
@@ -1564,9 +1587,15 @@ static const char *banknames[] = {
     NULL
 };
 
-static const int banknums[] = 
-{ 
-    1, 0, 1, 2, 3, 4,
+static const int banknums[MAXBANKS + 1] =
+{
+    1,
+    0,
+    1,
+    2,
+    3,
+    4,
+
     5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
     21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
     37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
@@ -1582,7 +1611,67 @@ static const int banknums[] =
     197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212,
     213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228,
     229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244,
-    245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260
+    245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260,
+
+    -1
+};
+
+static const int bankindex[MAXBANKS + 1] =
+{
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+    0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+    0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
+    0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+    0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
+    0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+    0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f,
+    0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
+    0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
+    0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf,
+    0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf,
+    0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
+    0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
+
+    -2
+};
+
+static const int bankflags[MAXBANKS + 1] =
+{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+
+    MEM_BANK_ISARRAY | MEM_BANK_ISARRAYFIRST , MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYLAST, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYFIRST, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYLAST,
+
+    -2
 };
 
 const char **mem_bank_list(void)
@@ -1590,6 +1679,21 @@ const char **mem_bank_list(void)
     return banknames;
 }
 
+const int *mem_bank_list_nos(void) {
+    return banknums;
+}
+
+#if 0
+const int *mem_bank_list_index(void) {
+    return bankindex;
+}
+
+const int *mem_bank_list_flags(void) {
+    return bankindex;
+}
+#endif
+
+/* return bank number for a given literal bank name */
 int mem_bank_from_name(const char *name)
 {
     int i = 0;
@@ -1597,6 +1701,33 @@ int mem_bank_from_name(const char *name)
     while (banknames[i]) {
         if (!strcmp(name, banknames[i])) {
             return banknums[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+/* return current index for a given bank */
+int mem_bank_index_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankindex[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+int mem_bank_flags_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankflags[i];
         }
         i++;
     }
@@ -1739,6 +1870,12 @@ void mem_bank_write(int bank, uint16_t addr, uint8_t byte, void *context)
     mem_sram[addr] = byte;
 }
 
+/* used by monitor if sfx off */
+void mem_bank_poke(int bank, uint16_t addr, uint8_t byte, void *context)
+{
+    mem_bank_write(bank, addr, byte, context);
+}
+
 static int mem_dump_io(void *context, uint16_t addr)
 {
     if ((addr >= 0xdc00) && (addr <= 0xdc3f)) {
@@ -1753,10 +1890,10 @@ mem_ioreg_list_t *mem_ioreg_list_get(void *context)
 {
     mem_ioreg_list_t *mem_ioreg_list = NULL;
 
-    mon_ioreg_add_list(&mem_ioreg_list, "CIA1", 0xdc00, 0xdc0f, mem_dump_io, NULL);
-    mon_ioreg_add_list(&mem_ioreg_list, "CIA2", 0xdd00, 0xdd0f, mem_dump_io, NULL);
+    io_source_ioreg_add_list(&mem_ioreg_list);  /* VIC-II, SID first so it's in address order */
 
-    io_source_ioreg_add_list(&mem_ioreg_list);
+    mon_ioreg_add_list(&mem_ioreg_list, "CIA1", 0xdc00, 0xdc0f, mem_dump_io, NULL, IO_MIRROR_NONE);
+    mon_ioreg_add_list(&mem_ioreg_list, "CIA2", 0xdd00, 0xdd0f, mem_dump_io, NULL, IO_MIRROR_NONE);
 
     return mem_ioreg_list;
 }
@@ -1769,26 +1906,43 @@ void mem_get_screen_parameter(uint16_t *base, uint8_t *rows, uint8_t *columns, i
     *bank = 0;
 }
 
+/* used by autostart to locate and "read" kernal output on the current screen
+ * this function should return whatever the kernal currently uses, regardless
+ * what is currently visible/active in the UI 
+ */
+void mem_get_cursor_parameter(uint16_t *screen_addr, uint8_t *cursor_column, uint8_t *line_length, int *blinking)
+{
+    /* Cursor Blink enable: 1 = Flash Cursor, 0 = Cursor disabled, -1 = n/a */
+    *blinking = mem_sram[0xcc] ? 0 : 1;
+    *screen_addr = mem_sram[0xd1] + mem_sram[0xd2] * 256; /* Cursor Blink enable: 0 = Flash Cursor */
+    *cursor_column = mem_sram[0xd3];    /* Cursor Column on Current Line */
+    *line_length = mem_sram[0xd5] + 1;  /* Physical Screen Line Length */
+}
+
 /* ------------------------------------------------------------------------- */
 
 void mem_set_simm_size(int val)
 {
-    size_t size = val << 20;
-    if (!size) size = 1;
+    unsigned int size = val << 20;
+
+    if (size == 0) {
+        size = 1;
+    }
     mem_simm_ram_mask = size - 1;
     mem_simm_ram = lib_realloc(mem_simm_ram, size);
     ram_init(mem_simm_ram, size);
+
     switch (val) {
-    case 1:
-        mem_simm_page_size = 9 + 2; /* 0 */
-        break;
-    case 4:                             /* 1 */
-    case 8:                             /* 2 */
-        mem_simm_page_size = 10 + 2;  /* 3 */
-        break;
-    default:
-        mem_simm_page_size = 11 + 2;  /* 4,3 */
-        break;
+        case 1:
+            mem_simm_page_size = 9 + 2; /* 0 */
+            break;
+        case 4:                             /* 1 */
+        case 8:                             /* 2 */
+            mem_simm_page_size = 10 + 2;  /* 3 */
+            break;
+        default:
+            mem_simm_page_size = 11 + 2;  /* 4,3 */
+            break;
     }
     maincpu_resync_limits();
 }

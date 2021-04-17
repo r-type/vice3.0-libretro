@@ -43,6 +43,8 @@
 #define JOYDEV_ANALOG_4 8
 #define JOYDEV_ANALOG_5 9
 
+#define JOYDEV_DEFAULT   JOYDEV_NUMPAD
+
 #define JOYSTICK_DESCRIPTOR_MAX_BUTTONS 32
 #define JOYSTICK_DESCRIPTOR_MAX_AXIS    6
 #define JOYSTICK_DESCRIPTOR_MAX_HAT_SWITCHES 4
@@ -66,8 +68,6 @@
 #define HID_X_AXIS      0
 #define HID_Y_AXIS      1
 #define HID_NUM_AXIS    2
-
-#ifdef HAS_JOYSTICK
 
 #include "vice.h"
 #include "types.h"
@@ -155,7 +155,5 @@ const char *joystick_ui_get_next_device_name(int *id);
 #else
 
 void joystick_close(void);
-
-#endif  /* HAS_JOYSTICK */
 
 #endif /* VICE_JOY_H */

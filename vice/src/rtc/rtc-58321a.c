@@ -103,7 +103,7 @@ rtc_58321a_t *rtc58321a_init(char *device)
     retval->old_offset = retval->offset;
 
     retval->hour24 = 1;
-    retval->device = lib_stralloc(device);
+    retval->device = lib_strdup(device);
 
     return retval;
 }
@@ -411,7 +411,7 @@ void rtc58321a_write_data(rtc_58321a_t *context, uint8_t data)
    STRING | device        | device name STRING
  */
 
-static char snap_module_name[] = "RTC_58321A";
+static const char snap_module_name[] = "RTC_58321A";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -480,7 +480,7 @@ int rtc58321a_read_snapshot(rtc_58321a_t *context, snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

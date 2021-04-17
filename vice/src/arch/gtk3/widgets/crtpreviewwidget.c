@@ -29,12 +29,12 @@
 
 #include <gtk/gtk.h>
 
-#include "widgethelpers.h"
-#include "debug_gtk3.h"
 #include "basewidgets.h"
-#include "cartridge.h"
 #include "c64/cart/crt.h"
+#include "cartridge.h"
+#include "debug_gtk3.h"
 #include "machine.h"
+#include "widgethelpers.h"
 
 #include "crtpreviewwidget.h"
 
@@ -54,15 +54,26 @@ static const gchar *romstate[2] = {
     "active (lo)", "inactive (hi)"
 };
 
-
+/** \brief  Open function */
 static FILE *(*open_func)(const char *, crt_header_t *header) = NULL;
+/** \brief  Function to read chip header */
 static int (*chip_func)(crt_chip_header_t *, FILE *) = NULL;
 
+/* FIXME:   Do we actually need all these references? Perhaps get them via
+ *          gtk_grid_get_child_at() ?
+ */
 
+/** \brief  CRT ID label */
 static GtkWidget *crtid_label = NULL;
+/** \brief  CRT revision label */
+static GtkWidget *crtrevision_label = NULL;
+/** 'brief  CRT name label */
 static GtkWidget *crtname_label = NULL;
+/** \brief  EX ROM label */
 static GtkWidget *exrom_label = NULL;
+/** \brief  Game title label */
 static GtkWidget *game_label = NULL;
+/** \brief  GtkTreeView used for the CRT data display */
 static GtkWidget *chip_tree = NULL;
 
 
@@ -242,6 +253,12 @@ GtkWidget *crt_preview_widget_create(void)
     gtk_grid_attach(GTK_GRID(grid), crtid_label, 1, row, 1, 1);
     row++;
 
+    label = create_label("Revision:");
+    crtrevision_label = create_label("<unknown>");
+    gtk_grid_attach(GTK_GRID(grid), label, 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), crtrevision_label, 1, row, 1, 1);
+    row++;
+
     label = create_label("Name:");
     crtname_label = create_label("<unknown>");
     gtk_grid_attach(GTK_GRID(grid), label, 0, row, 1, 1);
@@ -314,8 +331,10 @@ void crt_preview_widget_update(const gchar *path)
     crt_header_t header;
     crt_chip_header_t chip;
     gchar buffer[1024];
-#ifdef HAVE_DEBUG_GTK3UI
+#if 0
+# ifdef HAVE_DEBUG_GTK3UI
     int packets = 0;
+# endif
 #endif
 
     /*
@@ -323,7 +342,6 @@ void crt_preview_widget_update(const gchar *path)
      * Once we implement CRT headers for VIC20 and others, this needs to be
      * removed.
      */
-    debug_gtk3("Got path '%s'.", path);
     if (machine_class != VICE_MACHINE_C64
             && machine_class != VICE_MACHINE_C64SC
             && machine_class != VICE_MACHINE_C128)
@@ -336,6 +354,7 @@ void crt_preview_widget_update(const gchar *path)
     if (fd == NULL) {
         debug_gtk3("failed to open crt image");
         gtk_label_set_text(GTK_LABEL(crtid_label), "<unknown>");
+        gtk_label_set_text(GTK_LABEL(crtrevision_label), "<unknown>");
         gtk_label_set_text(GTK_LABEL(crtname_label), "<unknown>");
         gtk_label_set_text(GTK_LABEL(exrom_label), "<unknown>");
         gtk_label_set_text(GTK_LABEL(game_label), "<unknown>");
@@ -345,6 +364,10 @@ void crt_preview_widget_update(const gchar *path)
     /* type */
     g_snprintf(buffer, sizeof(buffer), "%d", (int)header.type);
     gtk_label_set_text(GTK_LABEL(crtid_label), buffer);
+
+    /* revision */
+    g_snprintf(buffer, sizeof(buffer), "%d", (int)header.subtype);
+    gtk_label_set_text(GTK_LABEL(crtrevision_label), buffer);
 
     /* name */
     gtk_label_set_text(GTK_LABEL(crtname_label), header.name);
@@ -361,11 +384,12 @@ void crt_preview_widget_update(const gchar *path)
     chip_packets_clear();
 
 
-    while (!feof(fd)) {
+    while (1) {
         long int pos;
         uint32_t skip;
-
+#if 0
         debug_gtk3("reading packet #%d.", packets++);
+#endif
         if (chip_func(&chip, fd) != 0) {
             debug_gtk3("couldn't read further CHIP packets, exiting.");
             break;
@@ -381,13 +405,16 @@ void crt_preview_widget_update(const gchar *path)
         chip_packet_add(chip.type, chip.start, chip.size, chip.bank);
 
         pos = ftell(fd) + skip;
+#if 0
         debug_gtk3("next chip packet offset = %lx", (unsigned long)pos);
+#endif
         if (fseek(fd, pos, SEEK_SET) != 0) {
-            debug_gtk3("OEPS");
+            debug_gtk3("OEPS!");
             break;
         }
     }
-
+#if 0
     debug_gtk3("read %d CHIP packets.", packets);
+#endif
     fclose(fd);
 }

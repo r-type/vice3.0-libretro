@@ -42,6 +42,7 @@
 #include "uifilereq.h"
 #include "uimenu.h"
 #include "uipoll.h"
+#include "uistatusbar.h"
 
 static UI_MENU_CALLBACK(save_settings_callback)
 {
@@ -81,7 +82,7 @@ static UI_MENU_CALLBACK(save_settings_to_callback)
 static UI_MENU_CALLBACK(load_settings_callback)
 {
     if (activated) {
-        if (resources_load(NULL) < 0) {
+        if (resources_reset_and_load(NULL) < 0) {
             ui_error("Cannot load settings.");
         } else {
             ui_message("Settings loaded.");
@@ -91,6 +92,25 @@ static UI_MENU_CALLBACK(load_settings_callback)
 }
 
 static UI_MENU_CALLBACK(load_settings_from_callback)
+{
+    if (activated) {
+        char *name = NULL;
+
+        name = sdl_ui_file_selection_dialog("Choose settings file", FILEREQ_MODE_CHOOSE_FILE);
+
+        if (name != NULL) {
+            if (resources_reset_and_load(name) < 0) {
+                ui_error("Cannot load settings.");
+            } else {
+                ui_message("Settings loaded.");
+            }
+            lib_free(name);
+        }
+    }
+    return NULL;
+}
+
+static UI_MENU_CALLBACK(load_extra_settings_from_callback)
 {
     if (activated) {
         char *name = NULL;
@@ -135,9 +155,19 @@ static UI_MENU_CALLBACK(save_keymap_callback)
     return NULL;
 }
 
-UI_MENU_DEFINE_RADIO(KeymapIndex)
+static UI_MENU_CALLBACK(radio_KeymapIndex_callback)
+{
+    const char *res = sdl_ui_menu_radio_helper(activated, param, "KeymapIndex");
+    if (activated) {
+        /* FIXME: update keyboard type menu (PET/C128) */
+        uikeyboard_update_mapping_menu();
+    }
+    return res;
+}
 
-static const ui_menu_entry_t keymap_index_submenu[] = {
+static ui_menu_entry_t *keymap_index_submenu;
+
+static const ui_menu_entry_t keymap_index_submenu_entries[] = {
     { "Symbolic",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_KeymapIndex_callback,
@@ -157,7 +187,41 @@ static const ui_menu_entry_t keymap_index_submenu[] = {
     SDL_MENU_LIST_END
 };
 
-UI_MENU_DEFINE_RADIO(KeyboardMapping)
+#define SETTINGS_ACTIVE_KEYMAP_IDX      10
+#define SETTINGS_KEYBOARD_MAPPING_IDX   11
+
+void uikeyboard_update_index_menu(void)
+{
+    int idx, type, mapping;
+    ui_menu_entry_t *entry;
+
+    resources_get_int("KeyboardType", &type);
+    resources_get_int("KeyboardMapping", &mapping);
+    
+    if(settings_manager_menu[SETTINGS_ACTIVE_KEYMAP_IDX].data) {
+        lib_free(settings_manager_menu[SETTINGS_ACTIVE_KEYMAP_IDX].data);
+    }
+    
+    entry = keymap_index_submenu = lib_malloc(sizeof(ui_menu_entry_t) * (5));
+    for (idx = 0; idx < 4; idx++) {
+        if (!((idx < 2) && (keyboard_is_keymap_valid(idx, mapping, type) < 0))) {
+            memcpy(entry, &keymap_index_submenu_entries[idx], sizeof(ui_menu_entry_t));
+            entry++;
+        }
+    }
+    memset(entry, 0, sizeof(ui_menu_entry_t));
+    settings_manager_menu[SETTINGS_ACTIVE_KEYMAP_IDX].data = keymap_index_submenu;
+}
+
+static UI_MENU_CALLBACK(radio_KeyboardMapping_callback)
+{
+    const char *res = sdl_ui_menu_radio_helper(activated, param, "KeyboardMapping");
+    if (activated) {
+        /* FIXME: update keyboard type menu (PET/C128) */
+        uikeyboard_update_index_menu();
+    }
+    return res;
+}
 
 static ui_menu_entry_t *keyboard_mapping_submenu;
 
@@ -166,33 +230,41 @@ ui_menu_entry_t ui_keyboard_mapping_entry = {
     (ui_callback_data_t)0
 };
 
-void uikeyboard_menu_create(void)
+void uikeyboard_update_mapping_menu(void)
 {
-    int num;
+    int num, mapping;
     mapping_info_t *kbdlist = keyboard_get_info_list();
     ui_menu_entry_t *entry;
 
+    resources_get_int("KeyboardMapping", &mapping);
+    
     num = keyboard_get_num_mappings();
     entry = keyboard_mapping_submenu = lib_malloc(sizeof(ui_menu_entry_t) * (num + 1));
     while(num) {
-        ui_keyboard_mapping_entry.string = kbdlist->name;
-        ui_keyboard_mapping_entry.data = (ui_callback_data_t)(int_to_void_ptr(kbdlist->mapping));
-        memcpy(entry, &ui_keyboard_mapping_entry, sizeof(ui_menu_entry_t));
-        entry++;
+        if (!(keyboard_is_hosttype_valid(kbdlist->mapping) < 0)) {
+            ui_keyboard_mapping_entry.string = kbdlist->name;
+            ui_keyboard_mapping_entry.data = (ui_callback_data_t)(int_to_void_ptr(kbdlist->mapping));
+            memcpy(entry, &ui_keyboard_mapping_entry, sizeof(ui_menu_entry_t));
+            entry++;
+        }
         kbdlist++;
         num--;
     }
     memset(entry, 0, sizeof(ui_menu_entry_t));
-    settings_manager_menu[10].data = keyboard_mapping_submenu;
+    settings_manager_menu[SETTINGS_KEYBOARD_MAPPING_IDX].data = keyboard_mapping_submenu;
 }
 
+void uikeyboard_menu_create(void)
+{
+    uikeyboard_update_mapping_menu();
+    uikeyboard_update_index_menu();
+}
 
 void uikeyboard_menu_shutdown(void)
 {
-    lib_free(settings_manager_menu[10].data);
+    lib_free(settings_manager_menu[SETTINGS_ACTIVE_KEYMAP_IDX].data);
+    lib_free(settings_manager_menu[SETTINGS_KEYBOARD_MAPPING_IDX].data);
 }
-
-
 
 static UI_MENU_CALLBACK(load_sym_keymap_callback)
 {
@@ -475,7 +547,7 @@ static const ui_menu_entry_t define_ui_keyset_menu[] = {
     SDL_MENU_LIST_END
 };
 
-UI_MENU_DEFINE_TOGGLE(SDLKbdStatusbar)
+UI_MENU_DEFINE_TOGGLE(KbdStatusbar)
 
 ui_menu_entry_t settings_manager_menu[] = {
     { "Save current settings",
@@ -494,6 +566,10 @@ ui_menu_entry_t settings_manager_menu[] = {
       MENU_ENTRY_OTHER,
       load_settings_from_callback,
       NULL },
+    { "Load extra settings from",
+      MENU_ENTRY_OTHER,
+      load_extra_settings_from_callback,
+      NULL },
     { "Restore default settings",
       MENU_ENTRY_OTHER,
       default_settings_callback,
@@ -508,10 +584,11 @@ ui_menu_entry_t settings_manager_menu[] = {
       toggle_ConfirmOnExit_callback,
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
+    /* CAUTION: the position of this item is hardcoded above */
     { "Active keymap",
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
-      (ui_callback_data_t)keymap_index_submenu },
+      (ui_callback_data_t)NULL },
     /* CAUTION: the position of this item is hardcoded above */
     { "Keyboard mapping",
       MENU_ENTRY_SUBMENU,
@@ -527,7 +604,7 @@ ui_menu_entry_t settings_manager_menu[] = {
       NULL },
     { "Show keyboard status in statusbar",
       MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_SDLKbdStatusbar_callback,
+      toggle_KbdStatusbar_callback,
       NULL },
     { "Save current keymap to",
       MENU_ENTRY_OTHER,
@@ -595,6 +672,10 @@ ui_menu_entry_t settings_manager_menu_vsid[] = {
     { "Load settings from",
       MENU_ENTRY_OTHER,
       load_settings_from_callback,
+      NULL },
+    { "Load extra settings from",
+      MENU_ENTRY_OTHER,
+      load_extra_settings_from_callback,
       NULL },
     { "Restore default settings",
       MENU_ENTRY_OTHER,

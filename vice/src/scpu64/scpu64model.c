@@ -58,7 +58,6 @@ static int is_new_sid(int model)
 {
     switch (model) {
         case SID_MODEL_6581:
-        case SID_MODEL_6581R4:
         default:
             return 0;
 
@@ -90,10 +89,10 @@ struct model_s {
     int iec;
     int userport;
     int keyboard;
-    char *chargenname;
+    const char *chargenname;
 };
 
-static struct model_s scpu64models[] = {
+static const struct model_s scpu64models[] = {
 
     /* C64 PAL / PET64 PAL */
     { VICII_MODEL_6569, MACHINE_SYNC_PAL,

@@ -150,7 +150,7 @@ void exos_detach(void)
    ARRAY | ROMH | 8192 BYTES of ROMH data
  */
 
-static char snap_module_name[] = "CARTEXOS";
+static const char snap_module_name[] = "CARTEXOS";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -184,7 +184,7 @@ int exos_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

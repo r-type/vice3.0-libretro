@@ -60,7 +60,10 @@
 #include "vicii_c64hq_vpl.h"
 #include "vicii_c64s_vpl.h"
 #include "vicii_ccs64_vpl.h"
+#ifdef __LIBRETRO__
+#include "vicii_cjam_vpl.h"
 #include "vicii_colodore_vpl.h"
+#endif
 #include "vicii_community_colors_vpl.h"
 #include "vicii_deekay_vpl.h"
 #include "vicii_frodo_vpl.h"
@@ -103,7 +106,10 @@ static embedded_palette_t palette_files[] = {
     { "c64hq", "c64hq.vpl", 16, vicii_c64hq_vpl },
     { "c64s", "c64s.vpl", 16, vicii_c64s_vpl  },
     { "ccs64", "ccs64.vpl", 16, vicii_ccs64_vpl },
+#ifdef __LIBRETRO__
+    { "cjam", "cjam.vpl", 16, vicii_cjam_vpl },
     { "colodore", "colodore.vpl", 16, vicii_colodore_vpl },
+#endif
     { "community-colors", "community-colors.vpl", 16, vicii_community_colors_vpl },
     { "deekay", "deekay.vpl", 16, vicii_deekay_vpl },
     { "frodo", "frodo.vpl", 16, vicii_frodo_vpl },
@@ -121,7 +127,7 @@ static embedded_palette_t palette_files[] = {
     EMBEDDED_PALETTE_LIST_END
 };
 
-static size_t embedded_match_file(const char *name, BYTE *dest, int minsize, int maxsize, embedded_t *emb)
+static size_t embedded_match_file(const char *name, unsigned char *dest, int minsize, int maxsize, embedded_t *emb)
 {
     int i = 0;
 
@@ -141,7 +147,7 @@ static size_t embedded_match_file(const char *name, BYTE *dest, int minsize, int
     return 0;
 }
 
-size_t embedded_check_file(const char *name, BYTE *dest, int minsize, int maxsize)
+size_t embedded_check_file(const char *name, unsigned char *dest, int minsize, int maxsize)
 {
     size_t retval;
 
@@ -152,7 +158,6 @@ size_t embedded_check_file(const char *name, BYTE *dest, int minsize, int maxsiz
     if ((retval = embedded_match_file(name, dest, minsize, maxsize, c128files)) != 0) {
         return retval;
     }
-
     return 0;
 }
 

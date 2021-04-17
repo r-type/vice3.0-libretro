@@ -1,5 +1,6 @@
-
 #include <retro_endianness.h>
+
+#define USE_EMBEDDED 1
 
 #ifdef __WIN32__
 #define HAVE_HTONS 1
@@ -16,7 +17,6 @@
 
    #endif
 */
-
    #define AC_APPLE_UNIVERSAL_BUILD
    #define HAVE_TIME_T_IN_TIME_H 1
 #endif
@@ -38,12 +38,7 @@
 
 #undef HAVE_NETWORK
 
-#define USE_EMBEDDED 1
-
 #define HAVE_U_SHORT 1
-
-/* Dingoo has atexit */
-#define HAVE_ATEXIT 1
 
 /* Define to 1 if you have the declaration of `sys_siglist', and to 0 if you don't. */
 #define HAVE_DECL_SYS_SIGLIST 0
@@ -84,6 +79,9 @@
 
 /* Enable 1351 mouse support */
 #define HAVE_MOUSE 1
+
+/* FastSID */
+#define HAVE_FASTSID
 
 /* This version provides ReSID support. */
 #define HAVE_RESID 
@@ -157,5 +155,4 @@
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a `char[]'. */
 #define YYTEXT_POINTER 1
-
 

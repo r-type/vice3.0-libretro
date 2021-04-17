@@ -87,7 +87,6 @@ static void io_source_detach(io_source_detach_t *source)
             resources_set_int(source->det_name, 0);
             break;
     }
-    ui_update_menus();
 }
 
 /*
@@ -120,7 +119,7 @@ static void io_source_msg_detach_all(uint16_t addr, int amount, io_source_list_t
 
             /* first part of the message "read collision at x from" */
             if (found == 0) {
-                old_msg = lib_stralloc("I/O read collision at %X from ");
+                old_msg = lib_strdup("I/O read collision at %X from ");
                 new_msg = util_concat(old_msg, current->device->name, NULL);
                 lib_free(old_msg);
             }
@@ -192,7 +191,7 @@ static void io_source_msg_detach_last(uint16_t addr, int amount, io_source_list_
 
             /* first part of the message "read collision at x from" */
             if (found == 0) {
-                old_msg = lib_stralloc("I/O read collision at %X from ");
+                old_msg = lib_strdup("I/O read collision at %X from ");
                 new_msg = util_concat(old_msg, current->device->name, NULL);
                 lib_free(old_msg);
             }
@@ -254,7 +253,7 @@ static void io_source_log_collisions(uint16_t addr, int amount, io_source_list_t
 
             /* first part of the message "read collision at x from" */
             if (found == 0) {
-                old_msg = lib_stralloc("I/O read collision at %X from ");
+                old_msg = lib_strdup("I/O read collision at %X from ");
                 new_msg = util_concat(old_msg, current->device->name, NULL);
                 lib_free(old_msg);
             }
@@ -342,8 +341,8 @@ static inline uint8_t io_read(io_source_list_t *list, uint16_t addr)
         return read_unused(addr);
     }
     /* only one valid I/O source was read, return value */
-    if (!(io_source_counter > 1)) {
-        return retval;
+    if (io_source_valid == 1) {
+        return firstval;
     }
     /* more than one I/O source was read, handle collision */
     if (io_source_collision_handling == IO_COLLISION_METHOD_DETACH_ALL) {
@@ -532,7 +531,8 @@ static void io_source_ioreg_add_onelist(struct mem_ioreg_list_s **mem_ioreg_list
             end = current->device->start_address + current->device->address_mask;
         }
 
-        mon_ioreg_add_list(mem_ioreg_list, current->device->name, current->device->start_address, end, current->device->dump, NULL);
+        mon_ioreg_add_list(mem_ioreg_list, current->device->name, current->device->start_address,
+                           end, current->device->dump, NULL, current->device->mirror_mode);
         current = current->next;
     }
 }

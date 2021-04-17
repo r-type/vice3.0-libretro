@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "cbmdos.h"
 #include "diskimage.h"
@@ -64,6 +65,11 @@ static int vdrive_command_rename(vdrive_t *vdrive, uint8_t *dest, int length);
 static int vdrive_command_scratch(vdrive_t *vdrive, uint8_t *name, int length);
 static int vdrive_command_position(vdrive_t *vdrive, uint8_t *buf,
                                    unsigned int length);
+
+/* CMD style commands */
+static int vdrive_command_time_read(struct vdrive_s *vdrive, const char format);
+static int vdrive_command_time_write(struct vdrive_s *vdrive, const char format, const uint8_t* newtime);
+
 
 #if 0
 const char *vdrive_command_errortext(unsigned int code)
@@ -193,6 +199,7 @@ int vdrive_command_execute(vdrive_t *vdrive, const uint8_t *buf,
 
         case 'P': /* Position */
             status = vdrive_command_position(vdrive, p, length);
+            vdrive->last_code = CBMDOS_IPE_OK;
             break;
 
         case 'U': /* User */
@@ -242,6 +249,23 @@ int vdrive_command_execute(vdrive_t *vdrive, const uint8_t *buf,
             } /* Un */
             break;
 
+        case 'T': /* Time T-RA/B/D, T-WA/B/D*/
+            if (minus) {
+                if (minus[1] == 'R') {
+                    status = vdrive_command_time_read(vdrive, minus[2]);
+                    /* the time is returned in the command channel, so we skip
+                       updating it */
+                    if (status == CBMDOS_IPE_OK) {
+                        lib_free((char *)p);
+                        return CBMDOS_IPE_OK;
+                    }
+                } else if (minus[1] == 'W') {
+                    status = vdrive_command_time_write(vdrive, minus[2], minus + 3);
+                }
+            }
+            break;
+
+
         default:
             break;
     } /* commands */
@@ -278,7 +302,7 @@ static int vdrive_get_block_parameters(char *buf, int *p1, int *p2, int *p3,
             break;
         }
         /* Convert and skip over decimal number.  */
-        *p[ip] = strtol(bp, &bp, 10);
+        *p[ip] = (int)strtol(bp, &bp, 10);
     }
     endsign = *bp;
     if (isalnum((int)endsign) && (ip == 4)) {
@@ -307,7 +331,7 @@ static int vdrive_command_block(vdrive_t *vdrive, unsigned char command,
 
             if (l < 0) {
 #ifdef DEBUG_DRIVE
-                log_debug("b-R/W parsed OK. (l=%d) channel %d mode %d, "
+                log_debug("b-R/W parsed OK. (l=%d) channel %d mode %u, "
                           "drive=%d, track=%d sector=%d.", l, channel,
                           vdrive->buffers[channel].mode, drive, track, sector);
 #endif
@@ -348,7 +372,7 @@ static int vdrive_command_block(vdrive_t *vdrive, unsigned char command,
 
             if (l < 0) {
 #ifdef DEBUG_DRIVE
-                log_debug("b-r/w parsed OK. (l=%d) channel %d mode %d, "
+                log_debug("b-r/w parsed OK. (l=%d) channel %d mode %u, "
                           "drive=%d, track=%d sector=%d.", l, channel,
                           vdrive->buffers[channel].mode, drive, track, sector);
 #endif
@@ -652,14 +676,13 @@ static int vdrive_command_scratch(vdrive_t *vdrive, uint8_t *name, int length)
         status = CBMDOS_IPE_WRITE_PROTECT_ON;
     } else {
 /*#ifdef DEBUG_DRIVE*/
-        log_debug("remove name='%s', len=%d (%d), type= %d.",
+        log_debug("remove name='%s', len=%u (%d), type= %u.",
                   cmd_parse.parsecmd, cmd_parse.parselength,
                   length, cmd_parse.filetype);
 /*#endif*/
         deleted_files = 0;
 
-	filetype = vdrive_dir_filetype(cmd_parse.parsecmd,
-				       cmd_parse.parselength);
+        filetype = vdrive_dir_filetype(cmd_parse.parsecmd, cmd_parse.parselength);
         vdrive_dir_find_first_slot(vdrive, cmd_parse.parsecmd,
                                    cmd_parse.parselength, filetype, &dir);
 
@@ -698,7 +721,7 @@ static int vdrive_command_chdir(vdrive_t *vdrive, uint8_t *name, int length)
         status = CBMDOS_IPE_NO_NAME;
     } else {
 /*#ifdef DEBUG_DRIVE*/
-        log_debug("chdir name='%s', len=%d (%d), type= %d.",
+        log_debug("chdir name='%s', len=%u (%d), type= %u.",
                   cmd_parse.parsecmd, cmd_parse.parselength,
                   length, cmd_parse.filetype);
 /*#endif*/
@@ -760,7 +783,7 @@ static int vdrive_command_chpart(vdrive_t *vdrive, uint8_t *name, int length)
         status = CBMDOS_IPE_NO_NAME;
     } else {
 /*#ifdef DEBUG_DRIVE*/
-        log_debug("chpart name='%s', len=%d (%d), type= %d.",
+        log_debug("chpart name='%s', len=%u (%d), type= %u.",
                   cmd_parse.parsecmd, cmd_parse.parselength,
                   length, cmd_parse.filetype);
 /*#endif*/
@@ -879,7 +902,12 @@ int vdrive_command_validate(vdrive_t *vdrive)
 
     vdrive_bam_clear_all(vdrive);
 
-    for (t = 1; t <= vdrive->num_tracks; t++) {
+    t = 1;
+    /* D9090/60 has track 0 */
+    if (vdrive->image_format == VDRIVE_IMAGE_FORMAT_9000) {
+        t--;
+    }
+    for (; t <= vdrive->num_tracks; t++) {
         max_sector = vdrive_get_max_sectors(vdrive, t);
         for (s = 0; s < (unsigned int)max_sector; s++) {
             vdrive_bam_free_sector(vdrive, t, s);
@@ -887,8 +915,10 @@ int vdrive_command_validate(vdrive_t *vdrive)
     }
 
     /* First, map out the header (BAM) and the directory, themselves. */
-    status = vdrive_bam_allocate_chain(vdrive, vdrive->Bam_Track,
-                                       vdrive->Bam_Sector);
+    if (vdrive->image_format != VDRIVE_IMAGE_FORMAT_9000) {
+        status = vdrive_bam_allocate_chain(vdrive, vdrive->Bam_Track,
+                                           vdrive->Bam_Sector);
+    }
 
     if (status != CBMDOS_IPE_OK) {
         memcpy(vdrive->bam, oldbam, vdrive->bam_size);
@@ -908,6 +938,11 @@ int vdrive_command_validate(vdrive_t *vdrive)
             vdrive_bam_allocate_sector(vdrive, vdrive->Bam_Track, vdrive->Bam_Sector + 1);
             vdrive_bam_allocate_sector(vdrive, vdrive->Bam_Track, vdrive->Bam_Sector + 2);
             break;
+        case VDRIVE_IMAGE_FORMAT_8050:
+        case VDRIVE_IMAGE_FORMAT_8250:
+            /* BAM allocation above doesn't include track 39, sector 0 */
+            vdrive_bam_allocate_sector(vdrive, vdrive->Header_Track, vdrive->Header_Sector);
+            break;
         case VDRIVE_IMAGE_FORMAT_4000:
             /* Map the boot sector. */
             vdrive_bam_allocate_sector(vdrive, 1, 0);
@@ -916,6 +951,16 @@ int vdrive_command_validate(vdrive_t *vdrive)
             for (s = 2; s < 34; s++) {
                 vdrive_bam_allocate_sector(vdrive, 1, s);
             }
+            break;
+        case VDRIVE_IMAGE_FORMAT_9000:
+            /* The D9090/60 bam ends with 255/255 not 0/x */
+            vdrive_bam_allocate_chain_255(vdrive, vdrive->Bam_Track, vdrive->Bam_Sector);
+            /* BAM allocation above doesn't include header or dir */
+            /* header include dir */
+            vdrive_bam_allocate_chain(vdrive, vdrive->Header_Track, vdrive->Header_Sector);
+            /* Map the config sector and bad blocks sector */
+            vdrive_bam_allocate_sector(vdrive, 0, 0);
+            vdrive_bam_allocate_sector(vdrive, 0, 1);
             break;
     }
 
@@ -984,7 +1029,7 @@ int vdrive_command_format(vdrive_t *vdrive, const char *disk_name)
             memcpy(name, disk_name, comma - disk_name);
             name[comma - disk_name] = '\0';
         } else {
-            name = lib_stralloc(" ");
+            name = lib_strdup(" ");
         }
         if (comma[1] != '\0') {
             id[0] = comma[1];
@@ -997,7 +1042,7 @@ int vdrive_command_format(vdrive_t *vdrive, const char *disk_name)
             id[1] = id[0] = ' ';
         }
     } else {
-        name = lib_stralloc(disk_name);
+        name = lib_strdup(disk_name);
         id[1] = id[0] = ' ';
     }
 
@@ -1057,20 +1102,19 @@ void vdrive_command_set_error(vdrive_t *vdrive, int code, unsigned int track,
                               unsigned int sector)
 {
     const char *message = "";
-    static int last_code = CBMDOS_IPE_OK;
     bufferinfo_t *p = &vdrive->buffers[15];
 
 #ifdef DEBUG_DRIVE
-    log_debug("Set error channel: code =%d, last_code =%d, track =%d, "
-              "sector =%d.", code, last_code, track, sector);
+    log_debug("Set error channel: code =%d, last_code =%d, track =%u, "
+              "sector =%u.", code, vdrive->last_code, track, sector);
 #endif
 
     /* Set an error only once per command. */
-    if (code != CBMDOS_IPE_OK && last_code != CBMDOS_IPE_OK) {
+    if (code != CBMDOS_IPE_OK && vdrive->last_code != CBMDOS_IPE_OK) {
         return;
     }
 
-    last_code = code;
+    vdrive->last_code = code;
 
     if (code != CBMDOS_IPE_MEMORY_READ) {
         message = cbmdos_errortext(code);
@@ -1099,10 +1143,16 @@ int vdrive_command_memory_write(vdrive_t *vdrive, const uint8_t *buf, uint16_t a
 {
     unsigned int len = buf[0];
 
-    log_warning(vdrive_command_log, "M-W %04x %u (+%d) (might need TDE)", addr, len, length - 6);
     if (length < 6) {
+        log_warning(vdrive_command_log, 
+            "M-W %04x %u (command ends prematurely, got %u bytes) (might need TDE)", addr, len, length);
         return CBMDOS_IPE_SYNTAX;
     }
+    /* FIXME: is this correct? */
+    if (len == 0 || len > IP_MAX_COMMAND_LEN) {
+        len = IP_MAX_COMMAND_LEN;
+    }
+    log_warning(vdrive_command_log, "M-W %04x %u (+%u) (might need TDE)", addr, len, length - 6);
 
 #if 0
     /* data= buf[1+0 ... 1+34]; */
@@ -1114,7 +1164,12 @@ int vdrive_command_memory_write(vdrive_t *vdrive, const uint8_t *buf, uint16_t a
 /* FIXME: This function doesn't need buf or length. */
 int vdrive_command_memory_exec(vdrive_t *vdrive, const uint8_t *buf, uint16_t addr, unsigned int length)
 {
-    log_warning(vdrive_command_log, "M-E %04x (+%d) (needs TDE)", addr, length - 5);
+    if (length < 5) {
+        log_warning(vdrive_command_log, 
+            "M-E %04x (command ends prematurely, got %u bytes) (needs TDE)", addr, length);
+        return CBMDOS_IPE_SYNTAX;
+    }
+    log_warning(vdrive_command_log, "M-E %04x (+%u) (needs TDE)", addr, length - 5);
     return CBMDOS_IPE_OK;
 }
 
@@ -1125,17 +1180,130 @@ int vdrive_command_memory_read(vdrive_t *vdrive, const uint8_t *buf, uint16_t ad
 {
     unsigned int len = buf[0];
 
-    log_warning(vdrive_command_log, "M-R %04x %u (+%d) (might need TDE)", addr, len, length - 6);
     if (length < 6) {
-        return CBMDOS_IPE_SYNTAX;
+        log_warning(vdrive_command_log, 
+            "M-R %04x %u (command ends prematurely, got %u bytes) (might need TDE)", addr, len, length);
+        if (length < 5) {
+            return CBMDOS_IPE_SYNTAX;
+        } else {
+            len = 1; /* when no length byte is present, the length is 1 */
+        }
+    } else {
+        log_warning(vdrive_command_log, "M-R %04x %u (+%u) (might need TDE)", addr, len, length - 6);
     }
 
-    if (len == 0 || len > IP_MAX_COMMAND_LEN) {
-        len = IP_MAX_COMMAND_LEN;
+    if (len == 0) {
+        len = 256;
     }
-
     memset(vdrive->mem_buf, 0, len);
 
     vdrive->mem_length = len;
     return CBMDOS_IPE_MEMORY_READ;
+}
+
+/* CMD style RTC read and write */
+int vdrive_command_time_read(struct vdrive_s *vdrive, const char format)
+{
+    bufferinfo_t *p = &vdrive->buffers[15];
+    int status = CBMDOS_IPE_SYNTAX;
+    char message[30] = { 0 };
+    size_t length;
+    time_t timep;
+    struct tm *ts;
+
+    static const char * const days[7] = {
+        "SUN.", "MON.", "TUES", "WED.", "THUR", "FRI.", "SAT."
+    };
+
+    time(&timep);
+    ts = localtime(&timep);
+#ifdef DEBUG_DRIVE
+    log_debug("current time: %s %02d/%02d/%04d %02d:%02d:%02d\n",
+            days[ts->tm_wday], ts->tm_mon, ts->tm_mday, ts->tm_year + 1900, 
+            ts->tm_hour, ts->tm_min, ts->tm_sec);
+#endif
+    switch (format) {
+        case 'A': /* "DOW. MO/DA/YR HR:MI:SE xM"+chr$(13) */
+            sprintf(message, "%s %02d/%02d/%02d %02d:%02d:%02d %cM\x0d",
+                    days[ts->tm_wday], ts->tm_mon, ts->tm_mday, ts->tm_year % 100, 
+                    ts->tm_hour % 12, ts->tm_min, ts->tm_sec, ts->tm_hour >= 12 ? 'P' : 'A');
+            /* printf("returning: '%s'\n", message); */
+            length = strlen(message);
+            memcpy((char *)p->buffer, message, length);
+            p->length = (unsigned int)(length - 1U);
+            p->bufptr = 0;
+            p->readmode = CBMDOS_FAM_READ;
+            status = CBMDOS_IPE_OK;
+            break;
+        case 'B': /* time in BCD format:
+                    Byte 0  day of week ($00=SUN., $01=MON., etc.)
+                    Byte 1  year (i.e 1990=$90)
+                    Byte 2  month ($01-$12)
+                    Byte 3  day ($01-xx)
+                    Byte 4  hour ($01-$12)
+                    Byte 5  minute ($00-$59)
+                    Byte 6  second ($00-$59)
+                    Byte 7  AM/PM flag (0=AM, non-0=PM)
+                    Byte 8  CHR$(13) */
+            message[0] = ts->tm_wday;
+            message[1] = ((ts->tm_year / 10) << 4) | (ts->tm_year % 10);
+            message[2] = ((ts->tm_mon / 10) << 4) | (ts->tm_mon % 10);
+            message[3] = ((ts->tm_mday / 10) << 4) | (ts->tm_mday % 10);
+            message[4] = ((ts->tm_hour / 10) << 4) | (ts->tm_hour % 10);
+            message[5] = ((ts->tm_min / 10) << 4) | (ts->tm_min % 10);
+            message[6] = ((ts->tm_sec / 10) << 4) | (ts->tm_sec % 10);
+            message[7] = ts->tm_hour >= 12 ? 1 : 0;
+            message[8] = 13;
+            memcpy((char *)p->buffer, message, 9);
+            p->length = 9 - 1;
+            p->bufptr = 0;
+            p->readmode = CBMDOS_FAM_READ;
+            status = CBMDOS_IPE_OK;
+            break;
+        case 'D': /* time in decimal format:
+                    Byte 0  day of week (0=SUN., 1=MON., etc.)
+                    Byte 1  year (i.e 1990=90)
+                    Byte 2  month (01-12)
+                    Byte 3  day (01-xx)
+                    Byte 4  hour (01-12)
+                    Byte 5  minute (00-59)
+                    Byte 6  second (00-59)
+                    Byte 7  AM/PM flag (0=AM, non-0=PM)
+                    Byte 8  CHR$(13) */
+            message[0] = ts->tm_wday;
+            message[1] = ts->tm_year;
+            message[2] = ts->tm_mon;
+            message[3] = ts->tm_mday;
+            message[4] = ts->tm_hour;
+            message[5] = ts->tm_min;
+            message[6] = ts->tm_sec;
+            message[7] = ts->tm_hour >= 12 ? 1 : 0;
+            message[8] = 13;
+            memcpy((char *)p->buffer, message, 9);
+            p->length = 9 - 1;
+            p->bufptr = 0;
+            p->readmode = CBMDOS_FAM_READ;
+            status = CBMDOS_IPE_OK;
+            break;
+    }
+    return status;
+}
+
+int vdrive_command_time_write(struct vdrive_s *vdrive, const char format, const uint8_t *newtime)
+{
+    switch (format) {
+        case 'A': /* "DOW. MO/DA/YR HR:MI:SE xM"+chr$(13) */
+            log_warning(vdrive_command_log, "T-WA command is being ignored.");
+            return CBMDOS_IPE_OK;
+            /*break;*/
+        case 'B':
+            log_warning(vdrive_command_log, "T-WB command is being ignored.");
+            return CBMDOS_IPE_OK;
+            /*break;*/
+        case 'D':
+            log_warning(vdrive_command_log, "T-WD command is being ignored.");
+            return CBMDOS_IPE_OK;
+            /*break;*/
+    }
+    return CBMDOS_IPE_SYNTAX;
 }

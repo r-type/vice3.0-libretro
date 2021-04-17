@@ -8,7 +8,7 @@
 
 /*
  *  HVSClib - a library to work with High Voltage SID Collection files
- *  Copyright (C) 2018  Bas Wassink <b.wassink@ziggo.nl>
+ *  Copyright (C) 2018-2020  Bas Wassink <b.wassink@ziggo.nl>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -94,9 +94,11 @@ static int stil_parse_tune_number(const char *s)
 
 /** \brief  Parse a STIL timestamp
  *
- * A STIL timestamp is either '([H]H:MM)' or '([H]H:MM-[H]H:MM)'. In the first
- * case, the 'to' member of \a ts is set to -1 to indicate only a single
- * timestamp was found, not a range.
+ * A STIL timestamp is either '([H]H:MM[.f]{1,3)' or
+ * '([H]H:MM[.f]{1,3}-[H]H:MM[.f]{1,3})'.
+ *
+ * In the first case, the 'to' member of \a ts is set to -1 to indicate only a
+ * single timestamp was found, not a range.
  *
  * \param[in]   s       string to parse
  * \param[out]  ts      timestamp object to store result
@@ -363,7 +365,8 @@ static void stil_block_free(hvsc_stil_block_t *block)
 static int stil_block_add_field(hvsc_stil_block_t *block,
                                  hvsc_stil_field_t *field)
 {
-    hvsc_dbg("max = %zu, used = %zu\n", block->fields_max, block->fields_used);
+    hvsc_dbg("max = %" PRI_SIZE_T ", used = %" PRI_SIZE_T "\n",
+            `block->fields_max, block->fields_used);
     /* do we need to resize the array? */
     if (block->fields_max == block->fields_used) {
         /* yep */
@@ -507,8 +510,8 @@ int hvsc_stil_open(const char *psid, hvsc_stil_t *handle)
     handle->entry_bufused = 0;
 
     if (!hvsc_text_file_open(hvsc_stil_path, &(handle->stil))) {
-        return 0;
         hvsc_stil_close(handle);
+        return 0;
     }
 
     /* make copy of psid, ripping off the HVSC root directory */
@@ -543,10 +546,12 @@ int hvsc_stil_open(const char *psid, hvsc_stil_t *handle)
         }
     }
 
+#if 0 /* above loop never breaks - following code can never execute */
     /* not found */
     hvsc_errno = HVSC_ERR_NOT_FOUND;
     hvsc_stil_close(handle);
     return 1;
+#endif
 }
 
 
@@ -593,7 +598,7 @@ static int hvsc_stil_entry_add_line(hvsc_stil_t *handle, const char *line)
     char *tmp;
 
     if (handle->entry_bufmax == handle->entry_bufused) {
-        hvsc_dbg("resizing line buffer to %zu entries\n",
+        hvsc_dbg("resizing line buffer to %" PRI_SIZE_T " entries\n",
                 handle->entry_bufmax * 2);
         buffer = realloc(handle->entry_buffer,
                 (handle->entry_bufmax * 2) * sizeof *(handle->entry_buffer));

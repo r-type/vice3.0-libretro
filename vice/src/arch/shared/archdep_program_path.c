@@ -9,10 +9,6 @@
  *  - Windows
  *  - MacOS
  *  - BeOS/Haiku (untested)
- *  - AmigaOS (untested)
- *  - OS/2 (untested)
- *  - MS-DOS (untested)
- *
  */
 
 /*
@@ -47,17 +43,13 @@
 #include "lib.h"
 #include "log.h"
 
-#ifdef ARCHDEP_OS_AMIGA
-/* some includes */
-#endif
-
 /* for readlink(2) */
 #if defined(ARCHDEP_OS_UNIX) || defined(ARCHDEP_OS_BEOS)
 # include <unistd.h>
 # ifdef ARCHDEP_OS_BSD_FREE
 #  include <sys/sysctl.h>
 # endif
-# ifdef ARCHDEP_OS_OSX
+# ifdef ARCHDEP_OS_MACOS
 #  include <libproc.h>
 # endif
 #endif
@@ -68,7 +60,7 @@
 # include <direct.h>
 #endif
 
-#include "archdep_atexit.h"
+#include "archdep_exit.h"
 #include "archdep_join_paths.h"
 #include "archdep_path_is_relative.h"
 
@@ -101,9 +93,6 @@ static char *argv0_ref = NULL;
  * Various OS calls use this buffer to store the path to the running binary, if
  * such a call exists. The buffer should be large enough (I think Linux
  * defines PATH_MAX as 4096 by default, but that can be changed).
- * The various function calls guard against writing past this buffer's end, but
- * should some idiotic OS or user actually need a path larger than 4095 bytes,
- * tell 'em to fuck off or update PATH_BUFSIZE.
  */
 static char buffer[PATH_BUFSIZE];
 
@@ -197,12 +186,7 @@ const char *archdep_program_path(void)
     memset(buffer, 0, PATH_BUFSIZE);
 
 
-#ifdef ARCHDEP_OS_AMIGA
-
-    /* do I need a header for this? */
-    GetProgramName(buffer, PATH_BUFSIZE - 1);
-
-#elif defined(ARCHDEP_OS_WINDOWS)
+#if defined(ARCHDEP_OS_WINDOWS)
 
     if (GetModuleFileName(NULL, buffer, PATH_BUFSIZE - 1) == PATH_BUFSIZE - 1) {
         log_error(LOG_ERR,
@@ -215,17 +199,18 @@ const char *archdep_program_path(void)
 
 #elif defined(ARCHDEP_OS_UNIX)
 
-    /* XXX: Only works on Linux and OSX, support for *BSD etc to be added later
+    /* XXX: Only works on Linux, OSX and FreeBSD/NetBSD, anyone wanting support
+     *      for OpenBSD or DragonflyBSD will have to add it.
      *
+     *      Linux:      readlink(/proc/self/exe)
      *      MacOS:      _NSGetExecutablePath()
-     *      Solaris:    getexecname()
      *      FreeBSD:    sysctl CTL_KERN_PROC KERN_PROC_PATHNAME - 1 (???)
-     *      NetBSD:     readlink /proc/curproc/exe
-     *      DFlyBSD:    readlink /proc/curproc/file
-     *      OpenBSD:    ???
+     *      NetBSD:     readlink(/proc/curproc/exe)
+     *      DFlyBSD:    ??? (errors out during build)
+     *      OpenBSD:    ??? (using argv[0] fallback)
      */
 
-# ifdef ARCHDEP_OS_OSX
+# ifdef ARCHDEP_OS_MACOS
 
     /* get path via libproc */
     pid_t pid = getpid();
@@ -237,8 +222,6 @@ const char *archdep_program_path(void)
             archdep_vice_exit(1);
         }
     }
-
-    /* TODO: other Unices */
 
 # elif defined(ARCHDEP_OS_LINUX)
 
@@ -317,7 +300,7 @@ const char *archdep_program_path(void)
     }
 
 #endif
-    program_path = lib_stralloc(buffer);
+    program_path = lib_strdup(buffer);
 #if 0
     printf("%s(): program_path = %s\n", __func__, program_path);
 #endif

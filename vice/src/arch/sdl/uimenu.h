@@ -36,13 +36,14 @@
 #include "types.h"
 
 extern int sdl_menu_state;
+extern int sdl_pause_state;
 
 typedef void* ui_callback_data_t;
 typedef const char *(*ui_callback_t)(int activated, ui_callback_data_t param);
 
 typedef enum {
     /* Text item (no operation): if data == 1 text colors are inverted */
-    MENU_ENTRY_TEXT,
+    MENU_ENTRY_TEXT = 0,
 
     /* Resource toggle: no UI needed, callback is used */
     MENU_ENTRY_RESOURCE_TOGGLE,
@@ -72,11 +73,18 @@ typedef enum {
     MENU_ENTRY_OTHER_TOGGLE
 } ui_menu_entry_type_t;
 
+typedef enum {
+    MENU_STATUS_ACTIVE = 0,
+    MENU_STATUS_INACTIVE = 1,
+    MENU_STATUS_NA = 2
+} ui_menu_status_type_t;
+
 typedef struct ui_menu_entry_s {
     char *string;
     ui_menu_entry_type_t type;
     ui_callback_t callback;
     ui_callback_data_t data;
+    ui_menu_status_type_t status;
 } ui_menu_entry_t;
 
 #define SDL_MENU_LIST_END { NULL, MENU_ENTRY_TEXT, NULL, NULL }
@@ -110,7 +118,7 @@ struct menu_draw_s {
 
     uint8_t color_cursor_back;
     uint8_t color_cursor_revers;
-    
+
     uint8_t color_active_green;
     uint8_t color_inactive_red;
 
@@ -189,5 +197,9 @@ extern int sdl_ui_set_default_colors(void);
 extern void sdl_ui_menu_shutdown(void);
 
 extern const char *sdl_ui_menu_video_slider_helper(int activated, ui_callback_data_t param, const char *resource_name, const int min, const int max);
+
+extern void sdl_ui_create_draw_buffer_backup(void);
+extern void sdl_ui_restore_draw_buffer_backup(void);
+extern void sdl_ui_destroy_draw_buffer_backup(void);
 
 #endif

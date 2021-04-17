@@ -30,6 +30,7 @@
 #include "types.h"
 #include "vicii.h"
 #include "vicii-chip-model.h"
+#include "vicii-color.h"
 #include "vicii-resources.h"
 #include "viciitypes.h"
 
@@ -716,7 +717,8 @@ static void vicii_chip_model_set(struct ViciiChipModel *cm)
 
             /* dump to log */
             log_verbose("VIC-II: %s $%03x %s %s %s %s %s %s", 
-                        cycle_str, xpos, visible_str, ba_str, fetch_str, border_str, gfx_str, sprite_str);
+                        cycle_str, (unsigned int)xpos, visible_str, ba_str,
+                        fetch_str, border_str, gfx_str, sprite_str);
         }
 
         xpos_phi[phi] = xpos;
@@ -838,4 +840,5 @@ void vicii_chip_model_init(void)
             log_error(LOG_DEFAULT, "vicii_chip_model_init: unknown VICII type.");
             break;
     }
+    vicii_color_update_palette(vicii.raster.canvas);
 }

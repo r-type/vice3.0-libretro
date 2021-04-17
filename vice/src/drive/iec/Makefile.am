@@ -3,11 +3,19 @@ SUBDIRS = \
 	plus4exp
 
 AM_CPPFLAGS = \
+	@VICE_CPPFLAGS@ \
 	@ARCH_INCLUDES@ \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/drive \
 	-I$(top_srcdir)/src/lib/p64
+
+AM_CFLAGS = @VICE_CFLAGS@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
 
 noinst_LIBRARIES = libdriveiec.a
 
@@ -15,6 +23,8 @@ libdriveiec_a_SOURCES = \
 	cia1571d.c \
 	cia1581d.c \
 	ciad.h \
+	cmdhd.c \
+	cmdhd.h \
 	fdd.c \
 	fdd.h \
 	glue1571.c \

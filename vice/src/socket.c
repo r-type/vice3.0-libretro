@@ -40,11 +40,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* hopefully fixed in configure */
+#if 0
+/* get rid of the asserts when compiling in non debug mode. somehow
+   configure fails to define NDEBUG instead */
+#ifndef DEBUG
+#undef assert
+#define assert(x)
+#endif
+#endif
+
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif
 
 #include "socketimpl.h"
+
+#include "archdep_defs.h"
 
 /* Fix Windows' definition of 'INVALID_SOCKET (SOCKET)(~0)', which breaks the
  * code further down. Any 'normal' OS uses -1, but Microsft had to use an
@@ -59,11 +71,11 @@
 # define INVALID_SOCKET -1
 #endif
 #else
-#ifdef WIN32_COMPILE
+#ifdef ARCHDEP_OS_WINDOWS
 # undef INVALID_SOCKET
 # define INVALID_SOCKET -1
 #endif
-#endif
+#endif /* __LIBRETRO__ */
 
 #include "archdep.h"
 #include "lib.h"
@@ -237,7 +249,7 @@ static int get_new_pool_entry(unsigned int * PoolUsage)
 {
     int next_free = -1;
 
-    static int nextentry[] = {
+    static const int nextentry[] = {
         0, 1, 0, 2, 0, 1, 0, 3,
         0, 1, 0, 2, 0, 1, 0, -1
     };
@@ -396,11 +408,9 @@ static vice_network_socket_address_t * vice_network_alloc_new_socket_address(voi
      socket to be used (IPv4, IPv6, Unix Domain Socket, ...)
      Thus, server_address must not be NULL.
 */
-vice_network_socket_t * vice_network_server(const vice_network_socket_address_t * server_address)
+vice_network_socket_t *vice_network_server(
+        const vice_network_socket_address_t * server_address)
 {
-#ifndef WATCOM_COMPILE
-    int socket_reuse_address = 1;
-#endif
     int sockfd = INVALID_SOCKET;
     int error = 1;
 
@@ -427,16 +437,6 @@ vice_network_socket_t * vice_network_server(const vice_network_socket_address_t 
         if ((server_address->domain == PF_INET) || (server_address->domain == PF_INET6)) {
 #else
         if ((server_address->domain == PF_INET)) {
-#endif
-#ifndef WATCOM_COMPILE
-#if defined(SO_REUSEPORT)
-          setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (const void*)&socket_reuse_address, sizeof(socket_reuse_address));
-#elif defined(SO_REUSEADDR)
-          setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&socket_reuse_address, sizeof(socket_reuse_address));
-#endif
-#if defined(TCP_NODELAY)
-          setsockopt(sockfd, SOL_TCP, TCP_NODELAY, (const void*)&error, sizeof(error)); /* just an integer with 1, not really an error */
-#endif
 #endif
         }
         if (bind(sockfd, &server_address->address.generic, server_address->len) < 0) {
@@ -489,10 +489,8 @@ vice_network_socket_t * vice_network_client(const vice_network_socket_address_t 
             break;
         }
 
-#ifndef WATCOM_COMPILE
 #if defined(TCP_NODELAY)
         setsockopt(sockfd, SOL_TCP, TCP_NODELAY, (const void*)&error, sizeof(error)); /* just an integer with 1, not really an error */
-#endif
 #endif
 
         if (connect(sockfd, &server_address->address.generic, server_address->len) < 0) {
@@ -540,9 +538,12 @@ vice_network_socket_t * vice_network_client(const vice_network_socket_address_t 
      and &lt;port&gt; being the port number. If the first form is used,
      the default port will be used.
 */
-static int vice_network_address_generate_ipv4(vice_network_socket_address_t * socket_address, const char * address_string, unsigned short port)
+static int vice_network_address_generate_ipv4(
+        vice_network_socket_address_t *socket_address,
+        const char *address_string,
+        unsigned short port)
 {
-    const char * address_part = address_string;
+    char * address_part = lib_strdup(address_string);
     int error = 1;
 
     do {
@@ -570,9 +571,10 @@ static int vice_network_address_generate_ipv4(vice_network_socket_address_t * so
                 unsigned long new_port;
 
                 /* yes, there is a port: Copy the part before, so we can modify it */
-                p = lib_stralloc(address_string);
+                p = lib_strdup(address_string);
 
                 p[port_part - address_string] = 0;
+                lib_free(address_part);
                 address_part = p;
 
                 ++port_part;
@@ -597,11 +599,14 @@ static int vice_network_address_generate_ipv4(vice_network_socket_address_t * so
                     /* something weird happened... SHOULD NOT HAPPEN! */
                     log_message(LOG_DEFAULT,
                                 "gethostbyname() returned an IPv4 address, "
-                                "but the length is wrong: %u", host_entry->h_length );
+                                "but the length is wrong: %d", 
+                                host_entry->h_length );
                     break;
                 }
 
-                memcpy(&socket_address->address.ipv4.sin_addr.s_addr, host_entry->h_addr_list[0], host_entry->h_length);
+                memcpy(&socket_address->address.ipv4.sin_addr.s_addr,
+                        host_entry->h_addr_list[0],
+                        host_entry->h_length);
             } else {
                 /* Assume it is an IP address */
 
@@ -615,7 +620,8 @@ static int vice_network_address_generate_ipv4(vice_network_socket_address_t * so
                      * Unfortunately, not all ports have inet_aton(), so, we must
                      * provide both implementations.
                      */
-                    if (inet_aton(address_part, &socket_address->address.ipv4.sin_addr.s_addr) == 0) {
+                    if (inet_aton(address_part,
+                                &socket_address->address.ipv4.sin_addr.s_addr) == 0) {
                         /* no valid IP address */
                         break;
                     }
@@ -635,14 +641,7 @@ static int vice_network_address_generate_ipv4(vice_network_socket_address_t * so
         }
     } while (0);
 
-    /* if we allocated memory for the address part
-     * because a port was specified,
-     * free that memory now.
-     */
-    if (address_part != address_string) {
-        lib_free(address_part);
-    }
-
+    lib_free(address_part);
     return error;
 }
 
@@ -781,8 +780,8 @@ static int vice_network_address_generate_local(vice_network_socket_address_t * s
 
         if (strlen(address_string) >= sizeof socket_address->address.local.sun_path) {
             log_message(LOG_DEFAULT,
-                        "Unix domain socket name of '%s' is too long; only %u chars are allowed.",
-                        address_string, sizeof socket_address->address.local.sun_path);
+                        "Unix domain socket name of '%s' is too long; only %lu chars are allowed.",
+                        address_string, sizeof(socket_address->address.local.sun_path));
             break;
         }
         strcpy(socket_address->address.local.sun_path, address_string);
@@ -973,14 +972,18 @@ int vice_network_socket_close(vice_network_socket_t * sockfd)
      the number of bytes send. For non-blocking sockets,
      this can be less than len. For blocking sockets (default),
      any return value different than len must be treated as an error.
+
+  \note Amazing there's docs on this, but send() returns size_t, not int, so
+        properly checking the return type could fail.
 */
-int vice_network_send(vice_network_socket_t * sockfd, const void * buffer, size_t buffer_length, int flags)
+int vice_network_send(vice_network_socket_t * sockfd, const void * buffer,
+                         size_t buffer_length, int flags)
 {
-    int ret;
+    size_t ret;
     signals_pipe_set();
     ret = send(sockfd->sockfd, buffer, buffer_length, flags);
     signals_pipe_unset();
-    return ret;
+    return (int)ret;
 }
 
 /*! \brief Receive data from a connected socket
@@ -1015,11 +1018,11 @@ int vice_network_send(vice_network_socket_t * sockfd, const void * buffer, size_
 */
 int vice_network_receive(vice_network_socket_t * sockfd, void * buffer, size_t buffer_length, int flags)
 {
-    int ret;
+    size_t ret;
     signals_pipe_set();
     ret = recv(sockfd->sockfd, buffer, buffer_length, flags);
     signals_pipe_unset();
-    return ret;
+    return (int)ret;
 }
 
 /*! \brief Check if a socket has incoming data to receive
@@ -1045,6 +1048,40 @@ int vice_network_select_poll_one(vice_network_socket_t * readsockfd)
     FD_SET(readsockfd->sockfd, &fdsockset);
 
     return select( readsockfd->sockfd + 1, &fdsockset, NULL, NULL, &timeout);
+}
+
+/*! \brief Monitor multiple sockets
+
+  This function blocks for many different connections and returns when any
+  has data.
+
+  \param readsockfd
+     NULL terminated list of sockets to monitor
+
+  \return
+     1 if the specified socket has data; 0 if it does not contain
+     any data, and -1 in case of an error.
+*/
+int vice_network_select_multiple(vice_network_socket_t ** readsockfd)
+{
+    fd_set fdsockset;
+    SOCKET max_sockfd = INVALID_SOCKET;
+    TIMEVAL time = {0, 250000};
+
+    FD_ZERO(&fdsockset);
+    while(*readsockfd != NULL) {
+        FD_SET((*readsockfd)->sockfd, &fdsockset);
+        if((*readsockfd)->sockfd > max_sockfd) {
+            max_sockfd = (*readsockfd)->sockfd;
+        }
+        readsockfd++;
+    }
+
+    if(max_sockfd == INVALID_SOCKET) {
+        return -1;
+    }
+
+    return select(max_sockfd + 1, &fdsockset, NULL, NULL, &time);
 }
 
 /*! \brief Get the error of the last socket operation

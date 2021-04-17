@@ -646,6 +646,7 @@ static void crtc_raster_draw_alarm_handler(CLOCK offset, void *data)
                               + ((crtc.prev_rl_len + 1 - crtc.prev_rl_sync
                                   - ((crtc.regs[CRTC_REG_SYNCWIDTH] & 0x0f) / 2))
                                  * 8 * crtc.hw_cols);
+    }
 
         /* FIXME: The 320 is the pixel width of a window with 40 cols.
            make that a define - or measure the visible line length?
@@ -658,7 +659,6 @@ static void crtc_raster_draw_alarm_handler(CLOCK offset, void *data)
                            - (crtc.sync_diff * 8 * crtc.hw_cols)) / 2)
                        + ((crtc.prev_rl_len + 1 - crtc.prev_rl_sync
                            - ((crtc.regs[CRTC_REG_SYNCWIDTH] & 0x0f) / 2)) * 8 * crtc.hw_cols);
-    }
 
     /* emulate the line */
     if (crtc.raster.current_line >=
@@ -720,6 +720,8 @@ static void crtc_raster_draw_alarm_handler(CLOCK offset, void *data)
 
     if (crtc.framelines == crtc.screen_yoffset) {
 */
+    vsync_do_end_of_line();
+    
     if ((crtc.framelines - crtc.current_line) == crtc.screen_yoffset) {
         crtc.raster.current_line = 0;
         raster_canvas_handle_end_of_frame(&crtc.raster);
@@ -1004,12 +1006,15 @@ int crtc_dump(void)
            );
     if ((regs[CRTC_REG_MODECTRL] & 4) == 0) {
         /* binary mode */
-        mon_out("\nDisplay start:     $%04x\n", 
-                ((int)regs[CRTC_REG_DISPSTARTH] * 256) + regs[CRTC_REG_DISPSTARTL]);
-        mon_out("Cursor position:   $%04x\n", 
-                ((int)regs[CRTC_REG_CURSORPOSH] * 256) + regs[CRTC_REG_CURSORPOSL]);
-        mon_out("Lightpen position: $%04x\n", 
-                ((int)regs[CRTC_REG_LPENH] * 256) + regs[CRTC_REG_LPENL]);
+        mon_out("\nDisplay start:     $%04x\n",
+                (unsigned int)((regs[CRTC_REG_DISPSTARTH] * 256)
+                    + regs[CRTC_REG_DISPSTARTL]));
+        mon_out("Cursor position:   $%04x\n",
+                (unsigned int)((regs[CRTC_REG_CURSORPOSH] * 256)
+                    + regs[CRTC_REG_CURSORPOSL]));
+        mon_out("Lightpen position: $%04x\n",
+                (unsigned int)((regs[CRTC_REG_LPENH] * 256)
+                    + regs[CRTC_REG_LPENL]));
     } else {
         /* row/column mode */
         mon_out("\nDisplay start:     %3d x %3d\n", 

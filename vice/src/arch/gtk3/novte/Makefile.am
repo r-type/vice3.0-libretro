@@ -5,15 +5,22 @@ GLIB_MKENUMS = glib-mkenums
 
 AM_CPPFLAGS = \
 	-DHAVE_ROUND \
-	\
-	@GTK_CFLAGS@ \
+	@VICE_CPPFLAGS@ \
 	@ARCH_INCLUDES@ \
-	@GLIB_CFLAGS@ \
 	$(extra_includes) \
+	@GTK_CFLAGS@ \
+	@GLIB_CFLAGS@ \
 	-I$(top_builddir)/src \
 	-I$(top_builddir)/src/arch/gtk3/novte \
 	-I$(top_srcdir)/src/arch/gtk3/novte \
 	-I$(top_srcdir)/src
+
+AM_CFLAGS = @VICE_CFLAGS@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@ @VTE_CXXFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
 
 noinst_LIBRARIES = libnovte.a
 

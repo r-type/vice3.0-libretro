@@ -95,49 +95,53 @@ static uint8_t read_petreu_ram(uint16_t addr);
 static void store_petreu_ram(uint16_t addr, uint8_t byte);
 static int petreu_dump(void);
 
+
 static io_source_t petreureg1_device = {
-    "PETREU REG 1",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0x8800, 0x88ff, 0x1f,
-    1, /* read is always valid */
-    store_petreu_reg,
-    read_petreu_reg,
-    NULL, /* no peek */
-    petreu_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "PETREU REG 1",       /* name of the device */
+    IO_DETACH_RESOURCE,   /* use resource to detach the device when involved in a read-collision */
+    "PETREU",             /* resource to set to '0' */
+    0x8800, 0x88ff, 0x1f, /* range for the device, regs:$8800-$881f, mirrors:$8820-$88ff */
+    1,                    /* read is always valid */
+    store_petreu_reg,     /* store function */
+    NULL,                 /* NO poke function */
+    read_petreu_reg,      /* read function */
+    NULL,                 /* TODO: peek function */
+    petreu_dump,          /* device state information dump function */
+    IO_CART_ID_NONE,      /* not a cartridge */
+    IO_PRIO_NORMAL,       /* normal priority, device read needs to be checked for collisions */
+    0                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t petreureg2_device = {
-    "PETREU REG 2",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0x8a00, 0x8aff, 0x1f,
-    1, /* read is always valid */
-    store_petreu2_reg,
-    read_petreu2_reg,
-    NULL, /* no peek */
-    petreu_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "PETREU REG 2",       /* name of the device */
+    IO_DETACH_RESOURCE,   /* use resource to detach the device when involved in a read-collision */
+    "PETREU",             /* resource to set to '0' */
+    0x8a00, 0x8aff, 0x1f, /* range for the device, regs:$8a00-$8a1f, mirrors:$8a20-$8aff */
+    1,                    /* read is always valid */
+    store_petreu2_reg,    /* store function */
+    NULL,                 /* NO poke function */
+    read_petreu2_reg,     /* read function */
+    NULL,                 /* TODO: peek function */
+    petreu_dump,          /* device state information dump function */
+    IO_CART_ID_NONE,      /* not a cartridge */
+    IO_PRIO_NORMAL,       /* normal priority, device read needs to be checked for collisions */
+    0                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t petreuram_device = {
-    "PETREU RAM",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0x8900, 0x89ff, 0xff,
-    1, /* read is always valid */
-    store_petreu_ram,
-    read_petreu_ram,
-    NULL, /* no peek */
-    petreu_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "PETREU RAM",         /* name of the device */
+    IO_DETACH_RESOURCE,   /* use resource to detach the device when involved in a read-collision */
+    "PETREU",             /* resource to set to '0' */
+    0x8900, 0x89ff, 0xff, /* range for the device, regs:$8900-$89ff */
+    1,                    /* read is always valid */
+    store_petreu_ram,     /* store function */
+    NULL,                 /* NO poke function */
+    read_petreu_ram,      /* read function */
+    NULL,                 /* TODO: peek function */
+    petreu_dump,          /* device state information dump function */
+    IO_CART_ID_NONE,      /* not a cartridge */
+    IO_PRIO_NORMAL,       /* normal priority, device read needs to be checked for collisions */
+    0                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *petreu_reg_1_list_item = NULL;
@@ -276,7 +280,7 @@ static const cmdline_option_t cmdline_options[] =
       "<Name>", "Specify name of PET Ram and Expansion Unit image" },
     { "-petreuramsize", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PETREUsize", NULL,
-      "<size in KB>", "Size of the PET Ram and Expansion Unit. (128/512/1024/2048)" },
+      "<size in KiB>", "Size of the PET Ram and Expansion Unit. (128/512/1024/2048)" },
     CMDLINE_LIST_END
 };
 
@@ -314,7 +318,7 @@ static int petreu_activate(void)
 
     old_petreu_ram_size = petreu_size;
 
-    log_message(petreu_log, "%dKB unit installed.", petreu_size >> 10);
+    log_message(petreu_log, "%dKiB unit installed.", petreu_size >> 10);
 
     if (!util_check_null_string(petreu_filename)) {
         if (util_file_load(petreu_filename, petreu_ram, (size_t)petreu_size,
@@ -572,7 +576,7 @@ static int petreu_dump(void)
         real_bank = (real_bank & ((petreu_size_kb >> 4) - 1));
     }
 
-    mon_out("RAM size: %dKB, Bank: %d\n", petreu_size_kb, real_bank);
+    mon_out("RAM size: %dKiB, Bank: %d\n", petreu_size_kb, real_bank);
 
     return 0;
 }

@@ -289,48 +289,51 @@ static uint8_t mmcreplay_clockport_peek(uint16_t io_address);
 static void mmcreplay_clockport_store(uint16_t io_address, uint8_t byte);
 
 static io_source_t mmcreplay_io1_device = {
-    CARTRIDGE_NAME_MMC_REPLAY,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    0,
-    mmcreplay_io1_store,
-    mmcreplay_io1_read,
-    NULL, /* TODO: peek */
-    mmcreplay_dump,
-    CARTRIDGE_MMC_REPLAY,
-    0,
-    0
+    CARTRIDGE_NAME_MMC_REPLAY, /* name of the device */
+    IO_DETACH_CART,            /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,     /* does not use a resource for detach */
+    0xde00, 0xdeff, 0xff,      /* range for the device, regs:$de00-$de01, possible ram:$de02-$deff */
+    0,                         /* read validity is determined by the device upon a read */
+    mmcreplay_io1_store,       /* store function */
+    NULL,                      /* NO poke function */
+    mmcreplay_io1_read,        /* read function */
+    NULL,                      /* TODO: peek function */
+    mmcreplay_dump,            /* device state information dump function */
+    CARTRIDGE_MMC_REPLAY,      /* cartridge ID */
+    IO_PRIO_NORMAL,            /* normal priority, device read needs to be checked for collisions */
+    0                          /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t mmcreplay_io2_device = {
-    CARTRIDGE_NAME_MMC_REPLAY,
-    IO_DETACH_CART,
-    NULL,
-    0xdf00, 0xdfff, 0xff,
-    0,
-    mmcreplay_io2_store,
-    mmcreplay_io2_read,
-    NULL, /* TODO: peek */
-    mmcreplay_dump,
-    CARTRIDGE_MMC_REPLAY,
-    0,
-    0
+    CARTRIDGE_NAME_MMC_REPLAY, /* name of the device */
+    IO_DETACH_CART,            /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,     /* does not use a resource for detach */
+    0xdf00, 0xdfff, 0xff,      /* range for the device, regs:$df10-$df13, mirrors:$df00-$df0f & $df14-$dfff */
+    0,                         /* read validity is determined by the device upon a read */
+    mmcreplay_io2_store,       /* store function */
+    NULL,                      /* NO poke function */
+    mmcreplay_io2_read,        /* read function */
+    NULL,                      /* TODO: peek function */
+    mmcreplay_dump,            /* device state information dump function */
+    CARTRIDGE_MMC_REPLAY,      /* cartridge ID */
+    IO_PRIO_NORMAL,            /* normal priority, device read needs to be checked for collisions */
+    0                          /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t mmcreplay_clockport_device = {
-    CARTRIDGE_NAME_MMC_REPLAY " Clockport",
-    IO_DETACH_RESOURCE,
-    "MMCRClockPort",
-    0xde02, 0xde0f, 0x0f,
-    0,
-    mmcreplay_clockport_store,
-    mmcreplay_clockport_read,
-    mmcreplay_clockport_peek,
-    mmcreplay_dump,
-    CARTRIDGE_MMC_REPLAY,
-    0,
-    0
+    CARTRIDGE_NAME_MMC_REPLAY " Clockport", /* name of the device */
+    IO_DETACH_RESOURCE,                     /* use resource to detach the device when involved in a read-collision */
+    "MMCRClockPort",                        /* resource to set to '0' */
+    0xde02, 0xde0f, 0x0f,                   /* range for the device, regs:$de02-$de0f */
+    0,                                      /* read validity is determined by the device upon a read */
+    mmcreplay_clockport_store,              /* store function */
+    NULL,                                   /* NO poke function */
+    mmcreplay_clockport_read,               /* read function */
+    mmcreplay_clockport_peek,               /* peek function */
+    mmcreplay_dump,                         /* device state information dump function */
+    CARTRIDGE_MMC_REPLAY,                   /* cartridge ID */
+    IO_PRIO_NORMAL,                         /* normal priority, device read needs to be checked for collisions */
+    0                                       /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *mmcreplay_io1_list_item = NULL;
@@ -349,8 +352,8 @@ void mmcreplay_dump_cfg(void)
     static char dumpstr1[0x100];
     static char dumpstr2[0x100];
     static char ndumpstr[0x100];
-    char *str_mapper[4] = { "MMCBIOS", "RR", "SUPER", "NORMAL" };
-    char *str_config[4] = { "off", "ultimax", "8K Game", "16K Game" };
+    static const char * const str_mapper[4] = { "MMCBIOS", "RR", "SUPER", "NORMAL" };
+    static const char * const str_config[4] = { "off", "ultimax", "8K Game", "16K Game" };
     int mapper, config;
 
     sprintf(ndumpstr,
@@ -2538,7 +2541,7 @@ static int set_mmcr_clockport_device(int val, void *param)
     }
 
     if (val != CLOCKPORT_DEVICE_NONE) {
-        clockport_device = clockport_open_device(val, (char *)STRING_MMC_REPLAY);
+        clockport_device = clockport_open_device(val, STRING_MMC_REPLAY);
         if (!clockport_device) {
             return -1;
         }
@@ -2557,7 +2560,7 @@ static int clockport_activate(void)
         return 0;
     }
 
-    clockport_device = clockport_open_device(clockport_device_id, (char *)STRING_MMC_REPLAY);
+    clockport_device = clockport_open_device(clockport_device_id, STRING_MMC_REPLAY);
     if (!clockport_device) {
         return -1;
     }
@@ -2601,31 +2604,24 @@ static int mmcreplay_common_attach(const char *filename)
     mmc_open_card_image(mmcr_card_filename, mmcr_card_rw);
     eeprom_open_image(mmcr_eeprom_filename, mmcr_eeprom_rw);
 
-    mmcr_filename = lib_stralloc(filename);
+    mmcr_filename = lib_strdup(filename);
     return 0;
 }
 
 int mmcreplay_bin_attach(const char *filename, uint8_t *rawcart)
 {
-    int len = 0;
-    FILE *fd;
-
     mmcr_filetype = 0;
     mmcr_filename = NULL;
 
     if (util_file_load(filename, rawcart, MMCREPLAY_FLASHROM_SIZE,
-                       UTIL_FILE_LOAD_SKIP_ADDRESS | UTIL_FILE_LOAD_FILL) < 0) {
-        return -1;
-    }
-
-    fd = fopen(filename, "rb");
-    len = util_file_length(fd);
-    fclose(fd);
-
-    if (len == 0x10000) {
-        if (util_file_load(filename, &rawcart[7 * 0x10000], 0x10000,
-                           UTIL_FILE_LOAD_SKIP_ADDRESS | UTIL_FILE_LOAD_FILL) < 0) {
+                       UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
+        /* also try loading one 64k bank */
+        if (util_file_load(filename, rawcart, 0x10000,
+                        UTIL_FILE_LOAD_SKIP_ADDRESS) < 0) {
             return -1;
+        } else {
+            memcpy(&rawcart[7 * 0x10000], &rawcart[0], 0x10000);
+            memset(&rawcart[0], 0xff, 0x10000);
         }
     }
 
@@ -3025,8 +3021,6 @@ int mmcreplay_cmdline_options_init(void)
 /* FIXME: implement snapshot support */
 int mmcreplay_snapshot_write_module(snapshot_t *s)
 {
-    return -1;
-#if 0
     snapshot_module_t *m;
 
     m = snapshot_module_create(s, SNAP_MODULE_NAME,
@@ -3035,6 +3029,9 @@ int mmcreplay_snapshot_write_module(snapshot_t *s)
         return -1;
     }
 
+    snapshot_set_error(SNAPSHOT_MODULE_NOT_IMPLEMENTED);
+    return -1;
+#if 0
     if (0) {
         snapshot_module_close(m);
         return -1;

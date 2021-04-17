@@ -2,6 +2,7 @@
  * \brief   Main Gtk3 UI code - header
  *
  * \author  Marco van den Heuvel <blackystardust68@yahoo.com>
+ * \author  Bas Wassink <b.wassink@ziggo.nl>
  */
 
 /*
@@ -36,11 +37,6 @@
 #include "palette.h"
 
 
-/** \brief  Number of drives we support in the UI
- */
-#define NUM_DRIVES 4
-
-
 /** \brief  Number of GtkWindow's in the ui_resources
  */
 #define NUM_WINDOWS 3
@@ -55,6 +51,24 @@ enum {
 };
 
 
+/** \brief  Number of drag-n-drop targets
+ */
+#define UI_DRAG_TARGETS_COUNT   3
+
+
+/** \brief  Drag-n-drop 'target' types
+ */
+enum {
+    DT_TEXT,        /**< simple text (text/plain) */
+    DT_URI,         /**< haven't seen this one get triggered (yet) */
+    DT_URI_LIST     /**< used by Windows Explorer / macOS Finder */
+};
+
+
+
+extern GtkTargetEntry ui_drag_targets[UI_DRAG_TARGETS_COUNT];
+
+
 /* ------------------------------------------------------------------------- */
 /* Prototypes */
 
@@ -67,21 +81,27 @@ void ui_create_main_window(video_canvas_t *canvas);
 void ui_display_main_window(int index);
 void ui_destroy_main_window(int index);
 
-void ui_display_paused(int flag);
 void ui_dispatch_events(void);
 void ui_exit(void);
-void ui_show_text(const char *title, const char *text, int width, int height);
 
-void ui_display_paused(int flag);
-void ui_pause_emulation(int flag);
-int  ui_emulation_is_paused(void);
+void ui_update_statusbars(void);
+
 int  ui_is_fullscreen(void);
 void ui_trigger_resize(void);
-void ui_fullscreen_callback(GtkWidget *widget, gpointer user_data);
-void ui_fullscreen_decorations_callback(GtkWidget *widget, gpointer user_data);
+gboolean ui_fullscreen_callback(GtkWidget *widget, gpointer user_data);
+gboolean ui_fullscreen_decorations_callback(GtkWidget *widget, gpointer user_data);
 
 GtkWindow *ui_get_active_window(void);
 video_canvas_t *ui_get_active_canvas(void);
+
+/*
+ * New pause 'API'
+ */
+int  ui_pause_active(void);
+void ui_pause_enable(void);
+void ui_pause_enter_monitor(void);
+void ui_pause_disable(void);
+void ui_pause_toggle(void);
 
 gboolean ui_toggle_pause(void);
 gboolean ui_advance_frame(void);
@@ -92,5 +112,32 @@ void ui_enable_crt_controls(int enabled);
 void ui_enable_mixer_controls(int enabled);
 
 GtkWidget *ui_get_window_by_index(int index);
+int ui_get_window_index(GtkWidget *widget);
+int ui_get_main_window_index(void);
+
+gboolean ui_get_autostart_on_doubleclick(void);
+
+#if 0
+#define UI_DRAG_TARGETS_COUNT   3
+
+extern GtkTargetEntry ui_drag_targets[UI_DRAG_TARGETS_COUNT];
+
+gboolean ui_on_drag_drop(
+        GtkWidget *widget,
+        GdkDragContext *context,
+        gint x,
+        gint y,
+        guint time,
+        gpointer data);
+
+void ui_on_drag_data_received(
+        GtkWidget *widget,
+        GdkDragContext *context,
+        int x,
+        int y,
+        GtkSelectionData *data,
+        guint info,
+        guint time);
+#endif
 
 #endif

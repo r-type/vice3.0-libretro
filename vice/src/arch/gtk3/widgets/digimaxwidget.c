@@ -31,17 +31,18 @@
  */
 
 #include "vice.h"
+
 #include <gtk/gtk.h>
 #include <stdlib.h>
 
-#include "machine.h"
-#include "resources.h"
-#include "debug_gtk3.h"
-#include "basewidgets.h"
-#include "widgethelpers.h"
 #include "basedialogs.h"
+#include "basewidgets.h"
 #include "cartio.h"
 #include "cartridge.h"
+#include "debug_gtk3.h"
+#include "machine.h"
+#include "resources.h"
+#include "widgethelpers.h"
 
 #include "digimaxwidget.h"
 
@@ -67,15 +68,14 @@ static void on_digimax_toggled(GtkWidget *widget, gpointer user_data)
  */
 static void on_combo_changed(GtkWidget *widget, gpointer user_data)
 {
-    int value;
+    long value;
     char *endptr;
     const char *id_str;
 
     id_str = gtk_combo_box_get_active_id(GTK_COMBO_BOX(widget));
-    value = (int)strtol(id_str, &endptr, 10);
+    value = strtol(id_str, &endptr, 10);
     if (*endptr == '\0') {
-        debug_gtk3("setting DIGIMAXbase to $%04X\n", value);
-        resources_set_int("DIGIMAXbase", value);
+        resources_set_int("DIGIMAXbase", (int)value);
     }
 }
 

@@ -2,9 +2,9 @@
 
 # VICE LIBRETRO
 
-Port of VICE, the Versatile Commodore Emulator 3.3
+Port of VICE, the Versatile Commodore Emulator 3.5
 
-Source base: [https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz](https://sourceforge.net/projects/vice-emu/files/releases/vice-3.3.tar.gz)
+Source base: [https://sourceforge.net/projects/vice-emu/files/releases/vice-3.5.tar.gz](https://sourceforge.net/projects/vice-emu/files/releases/vice-3.5.tar.gz)
 
 Supported platforms: Linux, Windows, Apple, Android, emscripten, Switch, Vita
 
@@ -198,6 +198,7 @@ Remember to run `make clean EMUTYPE=x` when building different EMUTYPEs.
 Currently working EMUTYPEs:
 
 - `x64`
+- `x64dtv`
 - `x64sc`
 - `x128`
 - `xcbm2`
@@ -242,11 +243,10 @@ cd jni
 ndk-build
 ```
 
-## Original readme
+## VICE readme
 
- ----------------------------------------------------------------------------
 
-  VICE  3.3                                                        Dec 2018
+  VICE  3.5                                                        Dec 2020
 
 
                  _______________
@@ -265,25 +265,18 @@ ndk-build
 
  ----------------------------------------------------------------------------
 
- This release stabilizes and introduces the GTK3 UI as the primary user 
- interface for all major ports. For "lesser" platforms we still have the SDL 
- based interface. All other user interfaces have been removed. RIP
-
- We are still looking for dedicated maintainers for the Windows- and macOS 
- ports, if you want to help improving these and/or want to provide binaries, 
+ We are still looking for dedicated maintainers for the Windows port, if you
+ want to help improving these and/or want to provide binaries,
  please get in touch.
 
  ----------------------------------------------------------------------------
 
- This is version 3.3 of VICE, the multi-platform C64, C128, VIC20,
+ This is version 3.5 of VICE, the multi-platform C64, C128, VIC20,
  PET, PLUS4 and CBM-II emulator.  This version can be compiled for
- MSDOS, Win32, OS/2, BeOS, QNX 4.x, QNX 6.x, AmigaOS, Dingoo,
- Syllable, SkyOS and for most Unix systems provided with
- the X Window System version 11, R5 or later.
+ Win32, macOS, Haiku and for most Unix systems provided with the X Window
+ System version 11, R5 or later.
 
  The following programs are included:
-
-   - x64, a C64 emulator;
 
    - x64sc, a C64 emulator focused on accuracy;
 
@@ -311,41 +304,32 @@ ndk-build
 
    - cartconv, a C64/C128 cartridge conversion program.
 
+   - x64, the old and less accurate C64 emulator, is no more built by default
+     and only included if explicitly enabled at configure time;
+
  Moreover, the following documents are provided in both source and
  binary distributions:
 
    - README, this file;
 
-   - COPYING, the GNU General Public License under which VICE is
-     distributed -- *please read it before using the program*;
-
-   - INSTALL, installation instructions;
-
    - NEWS, list of user-visible changes between this and older versions of VICE;
 
-   - FEEDBACK, something you should read before reporting bugs or sending mail 
-     to any of the authors;
+   - COPYING, the GNU General Public License under which VICE is
+     distributed -- *please read it before using the program*;
 
  The following documents are provided in the source distribution:
 
    - in the doc directory:
 
      - vice.texi, the complete documentation; documentation in various different
-       formats may be generated from it (vice.txt, vice.pdf, vice.chm, vice.hlp, 
-       vice.guide, vice.inf, vice.info)
+       formats may be generated from it (vice.txt, vice.pdf)
      - iec-bus.txt, overview of the VICE IEC bus emulation;
      - CIA-README.txt, overview of the VICE CIA emulation;
      - coding-guidelines.txt, description of VICE coding style
      - Documentation-Howto.txt, information on how to edit the documentation
      - Doxygen-Howto.txt, how to generate doxygen documentation
      - Release-Howto.txt, some hints and reminders on how to create a release
-       tarball (for maintainers)
-     - ffmpeg-support.txt, this document details the results of test compiles 
-       with regards to the included ffmpeg library.
-     - SDL-support.txt, this document details the results of test compiles with 
-       regards to the SDL 1 and SDL 2 support.
-     - hardware-sids.txt, this document details the hardware SIDs and how they 
-       are supported on the various platforms.
+       tarball (for maintainers) are supported on the various platforms.
 
    - in the doc/readmes directory:
 
@@ -355,13 +339,23 @@ ndk-build
 
    - in the doc/building directory:
 
-     - Windows-MinGW-GTK3-Howto.txt, how to compile the Windows port using MingGW/MSYS2
-     - Linux-GTK3-Howto.txt, how to compile the GTK3 port on Linux
-     - GTK3-macOS.txt, how to compile the Mac OSX port with GTK3 UI
-     - SDL-Howto.txt, how to compile the SDL port on various platforms
      - Android-Howto, how to compile the Android SDL port
      - FreeBSD-GTK3-Howto.txt, hints on compiling the GTK3 port on FreeBSD
+     - GTK3-cross-build-setup.md, (incomplete) instructions on how to set up
+       a windows crosscompiler on linux
+     - GTK3-debian-frankenvice.md, instructions on how to set up a windows
+       crosscompiler on debian using precompiled fedora mingw packages
+     - GTK3-Fedora-cross-build-setup.md, (incomplete) instructions on how to
+       set up a windows crosscompiler on Fedora linux
+     - Linux-GTK3-Howto.txt, how to compile the GTK3 port on Linux
+     - macOS-Distribution-Howto.txt, how to build the macOS binary distribution
+     - macOS-Howto.txt, how to build on macOS (might be deprecated)
+     - macOS-Xcode-Howto.txt, how to build the macOS port(s) using Xcode
+     - NetBSD-Gtk3-Wowto.txt, hints on compiling for NetBSD with Gtk3
      - NetBSD-howto.txt, hints on compiling for NetBSD
+     - SDL-Howto.txt, how to compile the SDL port on various platforms
+     - Windows-MinGW-GTK3-Howto.txt, how to compile the Windows port using
+       MingGW/MSYS2
 
  For the latest news, have a look at the VICE home page:
 
@@ -376,10 +370,66 @@ ndk-build
    - The list of known BUGS,
      http://vice-emu.sourceforge.net/wiki/index.php/Todo#Known_Issues
 
- New versions are made available quite often, so please stay tuned.
+ New versions are made available usually once per year, so please stay tuned.
+
+ You may also check out the automatic nightly builds, which are kindly provided
+ by the pokefinder crew: https://vice.pokefinder.org/
 
 
  Have fun!
+
+
+ Feedback
+ --------
+
+ It's always nice to receive feedback and/or bugreports about VICE, but please
+ read these few notes before sending mail to anybody in the team.
+
+ - Please don't send any HTML mail (we really hate that!).  Please make sure
+   you turn off the "rich text" (HTML) feature.
+
+ - Please don't send any binaries without asking first.
+
+ - Please read the following documents carefully before reporting a bug or a
+   problem you cannot solve:
+
+    - the VICE documentation (you should have received it with the main
+      distribution--if not, tell us);
+      Online version - http://vice-emu.sourceforge.net/vice_toc.html
+
+    - the VICE wiki at http://vice-emu.pokefinder.org/
+
+ - Before reporting a bug, please try a recent nightly build and check if your
+   issue is already fixed. You can fine nightly builds for windows here:
+   <SF-uploads via Travis-CI?>
+
+ - When you report a bug, please try to be as accurate as possible and describe
+   how it can be reproduced to the very detail. You should also tell us what
+   machine you are running on, what operating system you are using as well as
+   the version of Vice.
+
+ - Please don't ask us how to transfer original C64 disk or tapes to your PC. To
+   transfer disks, you can use the Star Commander (http://sta.c64.org/sc.html).
+
+ - Please don't ask us where to find games for the emulator on the Internet.
+
+ - Please don't ask us when the next version will be out, because we really
+   don't know. We are trying to make at least one release per year, around
+   christmas.
+
+ - Please write in English.
+
+ In any case, we would be really glad to receive your comments about VICE.
+
+ The central place for bug reports is the bug tracker at sourceforge:
+ https://sourceforge.net/p/vice-emu/bugs/
+
+ At sourceforge you can also submit feature requests:
+ https://sourceforge.net/p/vice-emu/feature-requests/
+
+ The email address for feedback is: vice-emu-mail@lists.sourceforge.net
+
+ Thanks!
 
 
  Copyright notice
@@ -388,27 +438,29 @@ ndk-build
  VICE, the Versatile Commodore Emulator
 
     Core Team Members:
-    2005-2018 Marco van den Heuvel
-    2007-2018 Fabrizio Gennari
-    2009-2018 Groepaz
-    2010-2018 Olaf Seibert
-    2011-2018 Marcus Sutton
-    2011-2018 Kajtar Zsolt
-    2016-2018 AreaScout
-    2016-2018 Bas Wassink
-    2017-2018 Michael C. Martin
+    1999-2020 Martin Pottendorfer
+    2005-2020 Marco van den Heuvel
+    2007-2020 Fabrizio Gennari
+    2009-2020 Groepaz
+    2009-2020 Errol Smith
+    2009-2020 Ingo Korb
+    2010-2020 Olaf Seibert
+    2011-2020 Marcus Sutton
+    2011-2020 Kajtar Zsolt
+    2016-2020 AreaScout
+    2016-2020 Bas Wassink
+    2017-2020 Michael C. Martin
+    2018-2020 Christopher Phillips
+    2019-2020 David Hogan
 
     Inactive/Ex Team Members:
-    1999-2017 Martin Pottendorfer
     2011-2016 Stefan Haubenthal
     2015-2016 BSzili
     1999-2016 Andreas Matthies
     2007-2015 Daniel Kahlin
-    2009-2015 Errol Smith
     2012-2014 Benjamin 'BeRo' Rosseaux
     2011-2014 Ulrich Schulz
     2011-2014 Thomas Giesel
-    2009-2014 Ingo Korb
     2008-2014 Antti S. Lankila
     2006-2014 Christian Vogelgsang
     1998-2014 Dag Lem
@@ -458,16 +510,16 @@ ndk-build
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
   02111-1307  USA
 
- The ROM files in the `C128`, `C64`, `CBM-II`, `DRIVES`, `PET`, `PLUS4`
- `PRINTER` and `VIC20` directories are Copyright C by Commodore
+ The ROM files in the 'C128', 'C64', 'CBM-II', 'DRIVES', 'PET', 'PLUS4'
+ 'PRINTER' and 'VIC20' directories are Copyright C by Commodore
  Business Machines.
 
- The ROM files in the `C64DTV` directory are Copyright C by Commodore
+ The ROM files in the 'C64DTV' directory are Copyright C by Commodore
  Business Machines, as well as Mammoth Toys, a division of nsi ltd.,
  Digital Concepts DC studios inc., Ironstone Partners ltd., and
  Toy:Lobster company ltd.
 
-### NIBTOOLS
+## NIBTOOLS
 
 (C) 2005 Pete Rittwage and the C64 Preservation Project team
 

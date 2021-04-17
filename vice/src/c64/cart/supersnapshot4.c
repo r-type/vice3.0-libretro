@@ -106,33 +106,35 @@ static uint8_t supersnapshot_v4_io2_read(uint16_t addr);
 static void supersnapshot_v4_io2_store(uint16_t addr, uint8_t value);
 
 static io_source_t ss4_io1_device = {
-    CARTRIDGE_NAME_SUPER_SNAPSHOT,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    1, /* read is always valid */
-    supersnapshot_v4_io1_store,
-    supersnapshot_v4_io1_read,
-    NULL,
-    NULL, /* TODO: dump */
-    CARTRIDGE_SUPER_SNAPSHOT,
-    0,
-    0
+    CARTRIDGE_NAME_SUPER_SNAPSHOT, /* name of the device */
+    IO_DETACH_CART,                /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,         /* does not use a resource for detach */
+    0xde00, 0xdeff, 0xff,          /* range for the device, regs:$de00-$deff */
+    1,                             /* read is always valid */
+    supersnapshot_v4_io1_store,    /* store function */
+    NULL,                          /* NO poke function */
+    supersnapshot_v4_io1_read,     /* read function */
+    NULL,                          /* TODO: peek function */
+    NULL,                          /* TODO: device state information dump function */
+    CARTRIDGE_SUPER_SNAPSHOT,      /* cartridge ID */
+    IO_PRIO_NORMAL,                /* normal priority, device read needs to be checked for collisions */
+    0                              /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t ss4_io2_device = {
-    CARTRIDGE_NAME_SUPER_SNAPSHOT,
-    IO_DETACH_CART,
-    NULL,
-    0xdf00, 0xdfff, 0xff,
-    0,
-    supersnapshot_v4_io2_store,
-    supersnapshot_v4_io2_read,
-    NULL,
-    NULL, /* TODO: dump */
-    CARTRIDGE_SUPER_SNAPSHOT,
-    0,
-    0
+    CARTRIDGE_NAME_SUPER_SNAPSHOT, /* name of the device */
+    IO_DETACH_CART,                /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,         /* does not use a resource for detach */
+    0xdf00, 0xdfff, 0xff,          /* range for the device, regs:$df00-$dfff */
+    1,                             /* read is always valid */
+    supersnapshot_v4_io2_store,    /* store function */
+    NULL,                          /* NO poke function */
+    supersnapshot_v4_io2_read,     /* read function */
+    NULL,                          /* TODO: peek function */
+    NULL,                          /* TODO: device state information dump function */
+    CARTRIDGE_SUPER_SNAPSHOT,      /* cartridge ID */
+    IO_PRIO_NORMAL,                /* normal priority, device read needs to be checked for collisions */
+    0                              /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *ss4_io1_list_item = NULL;
@@ -157,8 +159,6 @@ void supersnapshot_v4_io1_store(uint16_t addr, uint8_t value)
 
 uint8_t supersnapshot_v4_io2_read(uint16_t addr)
 {
-    ss4_io2_device.io_source_valid = 1;
-
     if ((addr & 0xff) == 1) {
         return ramconfig;
     }
@@ -331,7 +331,8 @@ int supersnapshot_v4_bin_attach(const char *filename, uint8_t *rawcart)
  */
 int supersnapshot_v4_crt_attach(FILE *fd, uint8_t *rawcart)
 {
-    int i, pos, banks, chips;
+    int i, banks, chips;
+    size_t pos;
     crt_chip_header_t chip;
 
     /* find out how many banks and chips are in the file */
@@ -409,7 +410,7 @@ void supersnapshot_v4_detach(void)
    ARRAY | RAM        | 8192 BYTES of RAM data
  */
 
-static char snap_module_name[] = "CARTSS4";
+static const char snap_module_name[] = "CARTSS4";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -448,7 +449,7 @@ int supersnapshot_v4_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

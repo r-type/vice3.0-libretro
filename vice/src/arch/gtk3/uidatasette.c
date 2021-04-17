@@ -28,6 +28,7 @@
 #include "vice.h"
 #include "uidatasette.h"
 #include "datasette.h"
+#include "resources.h"
 #include "uitapeattach.h"
 #include "uisettings.h"
 
@@ -44,11 +45,18 @@
 static void on_configure_activate(GtkWidget *widget, gpointer data)
 {
     ui_settings_dialog_create_and_activate_node(
-            "io-extensions/tapeport-devices");
+            "peripheral/tapeport-devices");
 }
 
 
-void ui_datasette_tape_action_cb(GtkWidget *widget, gpointer data)
+/** \brief  Datasette UI action callback
+ *
+ * \param[in]   widget  parent widget (unused)
+ * \param[in]   data    action value
+ *
+ * \return  TRUE to indicate the UI event was handled
+ */
+gboolean ui_datasette_tape_action_cb(GtkWidget *widget, gpointer data)
 {
     int val = GPOINTER_TO_INT(data);
     if (val >= DATASETTE_CONTROL_STOP && val <= DATASETTE_CONTROL_RESET_COUNTER) {
@@ -56,8 +64,14 @@ void ui_datasette_tape_action_cb(GtkWidget *widget, gpointer data)
     } else {
         fprintf(stderr, "Got an impossible Datasette Control action, code %ld (valid range %d-%d)\n", (long)val, DATASETTE_CONTROL_STOP, DATASETTE_CONTROL_RESET_COUNTER);
     }
+    return TRUE;
 }
 
+
+/** \brief  Create datasette control menu
+ *
+ * \return  GtkMenu with datasette controls
+ */
 GtkWidget *ui_create_datasette_control_menu(void)
 {
     GtkWidget *menu, *item, *menu_items[DATASETTE_CONTROL_RESET_COUNTER+1];
@@ -66,13 +80,13 @@ GtkWidget *ui_create_datasette_control_menu(void)
     menu = gtk_menu_new();
     item = gtk_menu_item_new_with_label("Attach tape image...");
     gtk_container_add(GTK_CONTAINER(menu), item);
-    g_signal_connect(item, "activate", G_CALLBACK(ui_tape_attach_callback), NULL);
+    g_signal_connect_unlocked(item, "activate", G_CALLBACK(ui_tape_attach_callback), NULL);
     item = gtk_menu_item_new_with_label("Detach tape image");
     gtk_container_add(GTK_CONTAINER(menu), item);
     g_signal_connect(item, "activate", G_CALLBACK(ui_tape_detach_callback), NULL);
     gtk_container_add(GTK_CONTAINER(menu), gtk_separator_menu_item_new());
     menu_items[0] = gtk_menu_item_new_with_label("Stop");
-    menu_items[1] = gtk_menu_item_new_with_label("Start");
+    menu_items[1] = gtk_menu_item_new_with_label("Play");
     menu_items[2] = gtk_menu_item_new_with_label("Forward");
     menu_items[3] = gtk_menu_item_new_with_label("Rewind");
     menu_items[4] = gtk_menu_item_new_with_label("Record");
@@ -92,4 +106,36 @@ GtkWidget *ui_create_datasette_control_menu(void)
 
     gtk_widget_show_all(menu);
     return menu;
+}
+
+
+/** \brief  Update sensitivity of the datasettet controls
+ *
+ * Disables/enables the datasette controls (keys), depending on whether the
+ * datasette is enabled.
+ *
+ * \param[in,out]   menu    tape menu
+ */
+void ui_datasette_update_sensitive(GtkWidget *menu)
+{
+    int datasette;
+    int y;
+    GList *children;
+    GList *controls;
+
+    resources_get_int("Datasette", &datasette);
+
+    /* get all children of the menu */
+    children = gtk_container_get_children(GTK_CONTAINER(menu));
+    /* skip 'Attach', 'Detach' and separator item */
+    controls = g_list_nth(children, 3);
+
+    for (y = 0; y <= DATASETTE_CONTROL_RESET_COUNTER; y++) {
+        GtkWidget *item = controls->data;
+        gtk_widget_set_sensitive(item, datasette);
+        controls = g_list_next(controls);
+    }
+
+    /* free list of children */
+    g_list_free(children);
 }

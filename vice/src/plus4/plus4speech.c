@@ -483,11 +483,7 @@ void speech_setup_context(machine_context_t *machine_ctx)
 
 /* Some prototypes are needed */
 static int speech_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec);
-static void speech_sound_machine_close(sound_t *psid);
 static int speech_sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr, int sound_output_channels, int sound_chip_channels, int *delta_t);
-static uint8_t speech_sound_machine_read(sound_t *psid, uint16_t addr);
-static void speech_sound_machine_store(sound_t *psid, uint16_t addr, uint8_t byte);
-static void speech_sound_machine_reset(sound_t *psid, CLOCK cpu_clk);
 
 static int speech_sound_machine_cycle_based(void)
 {
@@ -499,17 +495,18 @@ static int speech_sound_machine_channels(void)
     return 1;
 }
 
+/* V364 speech sound chip */
 static sound_chip_t speech_sound_chip = {
-    NULL, /* no open */
-    speech_sound_machine_init,
-    speech_sound_machine_close,
-    speech_sound_machine_calculate_samples,
-    speech_sound_machine_store,
-    speech_sound_machine_read,
-    speech_sound_machine_reset,
-    speech_sound_machine_cycle_based,
-    speech_sound_machine_channels,
-    0 /* chip enabled */
+    NULL,                                   /* NO sound chip open function */ 
+    speech_sound_machine_init,              /* sound chip init function */
+    NULL,                                   /* NO sound chip close function */
+    speech_sound_machine_calculate_samples, /* sound chip calculate samples function */
+    NULL,                                   /* NO sound chip store function */
+    NULL,                                   /* NO sound chip read function */
+    NULL,                                   /* NO sound chip reset function */
+    speech_sound_machine_cycle_based,       /* sound chip 'is_cycle_based()' function, chip is NOT cycle based */
+    speech_sound_machine_channels,          /* sound chip 'get_amount_of_channels()' function, sound chip has 1 channel */
+    0                                       /* sound chip enabled flag, toggled upon device (de-)activation */
 };
 
 static uint16_t speech_sound_chip_offset = 0;
@@ -526,21 +523,22 @@ int speech_cart_enabled(void)
 
 /* ------------------------------------------------------------------------- */
 
-char *speech_filename = NULL;
+const char *speech_filename = NULL;
 
 static io_source_t speech_device = {
-    "V364SPEECH",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xfd20, 0xfd22, 3,
-    1, /* read is always valid */
-    speech_store,
-    speech_read,
-    speech_peek,
-    speech_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "V364SPEECH",         /* name of the device */
+    IO_DETACH_RESOURCE,   /* use resource to detach the device when involved in a read-collision */
+    "SpeechEnabled",      /* resource to set to '0' */
+    0xfd20, 0xfd22, 0x03, /* range for the device, regs:$fd20-$fd22 */
+    1,                    /* read is always valid */
+    speech_store,         /* store function */
+    NULL,                 /* NO poke function */
+    speech_read,          /* read function */
+    speech_peek,          /* peek function */
+    speech_dump,          /* chip state information dump function */
+    IO_CART_ID_NONE,      /* not a cartridge */
+    IO_PRIO_NORMAL,       /* normal priority, device read needs to be checked for collisions */
+    0                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *speech_list_item = NULL;
@@ -555,18 +553,14 @@ static int set_speech_enabled(int value, void *param)
     }
 
     if (val) {
+        resources_get_string("c2loname", &speech_filename);
         if (speech_filename) {
             if (*speech_filename) {
-                if (plus4cart_load_c2lo(speech_filename) < 0) {
-                    return -1;
-                }
                 speech_sound_chip.chip_enabled = 1;
                 speech_list_item = io_source_register(&speech_device);
             }
         }
     } else {
-        speech_sound_chip.chip_enabled = 0;
-        memset(extromlo3, 0, PLUS4_CART16K_SIZE);
         speech_sound_chip.chip_enabled = 0;
         io_source_unregister(speech_list_item);
         speech_list_item = NULL;
@@ -576,36 +570,6 @@ static int set_speech_enabled(int value, void *param)
     return 0;
 }
 
-static int set_speech_filename(const char *name, void *param)
-{
-    int enabled;
-
-    if (name != NULL && *name != '\0') {
-        if (util_check_filename_access(name) < 0) {
-            return -1;
-        }
-    }
-
-    resources_get_int("SpeechEnabled", &enabled);
-    util_string_set(&speech_filename, name);
-
-    if (set_speech_enabled(enabled, NULL) < 0) {
-        lib_free (speech_filename);
-        speech_filename = NULL;
-        DBG(("speech_set_name: %d '%s'\n", speech_enabled, speech_filename));
-        return -1;
-    }
-    DBG(("speech_set_name: %d '%s'\n", speech_enabled, speech_filename));
-
-    return 0;
-}
-
-static const resource_string_t resources_string[] = {
-    { "SpeechImage", "", RES_EVENT_NO, NULL,
-      &speech_filename, set_speech_filename, NULL },
-    RESOURCE_STRING_LIST_END
-};
-
 static const resource_int_t resources_int[] = {
     { "SpeechEnabled", 0, RES_EVENT_STRICT, (resource_value_t)0,
       &speech_sound_chip.chip_enabled, set_speech_enabled, NULL },
@@ -614,15 +578,11 @@ static const resource_int_t resources_int[] = {
 
 int speech_resources_init(void)
 {
-    if (resources_register_string(resources_string) < 0) {
-        return -1;
-    }
     return resources_register_int(resources_int);
 }
 
 void speech_resources_shutdown(void)
 {
-    lib_free(speech_filename);
     speech_filename = NULL;
 }
 
@@ -634,13 +594,6 @@ void speech_shutdown(void)
     }
 }
 
-static int set_speech_rom(const char *name, void *param)
-{
-    resources_set_string("SpeechImage", name);
-    resources_set_int("SpeechEnabled", 1);
-    return 0;
-}
-
 static const cmdline_option_t cmdline_options[] =
 {
     { "-speech", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
@@ -649,9 +602,6 @@ static const cmdline_option_t cmdline_options[] =
     { "+speech", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "SpeechEnabled", (resource_value_t)0,
       NULL, "Disable the v364 speech add-on" },
-    { "-speechrom", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
-      set_speech_rom, NULL, NULL, NULL,
-      "<Name>", "Attach Speech ROM image" },
     CMDLINE_LIST_END
 };
 
@@ -664,19 +614,6 @@ int speech_cmdline_options_init(void)
 /* ---------------------------------------------------------------------*/
 
 /* FIXME: shutdown missing */
-
-/* FIXME: what are those two doing exactly ?! */
-static uint8_t speech_sound_machine_read(sound_t *psid, uint16_t addr)
-{
-    DBG(("SPEECH: speech_sound_machine_read\n"));
-
-    return 0; /* ? */
-}
-
-static void speech_sound_machine_store(sound_t *psid, uint16_t addr, uint8_t byte)
-{
-    DBG(("SPEECH: speech_sound_machine_store\n"));
-}
 
 /*
     called periodically for every sound fragment that is played
@@ -703,11 +640,6 @@ static int speech_sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf,
     return nr;
 }
 
-static void speech_sound_machine_reset(sound_t *psid, CLOCK cpu_clk)
-{
-    DBG(("SPEECH: speech_sound_machine_reset\n"));
-}
-
 static int speech_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec)
 {
     DBG(("SPEECH: speech_sound_machine_init: speed %d cycles/sec: %d\n", speed, cycles_per_sec));
@@ -718,9 +650,4 @@ static int speech_sound_machine_init(sound_t *psid, int speed, int cycles_per_se
     }
 
     return 1;
-}
-
-static void speech_sound_machine_close(sound_t *psid)
-{
-    DBG(("SPEECH: speech_sound_machine_close\n"));
 }

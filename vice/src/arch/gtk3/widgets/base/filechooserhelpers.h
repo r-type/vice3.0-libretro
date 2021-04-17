@@ -43,6 +43,7 @@ typedef struct ui_file_filter_s {
 extern const char *file_chooser_pattern_all[];
 extern const char *file_chooser_pattern_cart[];
 extern const char *file_chooser_pattern_disk[];
+extern const char *file_chooser_pattern_floppy[];
 extern const char *file_chooser_pattern_tape[];
 extern const char *file_chooser_pattern_sid[];
 extern const char *file_chooser_pattern_fliplist[];
@@ -64,5 +65,8 @@ extern const ui_file_filter_t file_chooser_filter_snapshot;
 
 GtkFileFilter *create_file_chooser_filter(const ui_file_filter_t filter,
                                           gboolean show_globs);
+
+gchar *file_chooser_convert_to_locale(const gchar *text);
+gchar *file_chooser_convert_from_locale(const gchar *text);
 
 #endif

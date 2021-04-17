@@ -36,7 +36,6 @@
 #include "lib.h"
 #include "joy-osx-hidlib.h"
 
-#ifdef HAS_JOYSTICK
 #ifdef HAS_HIDMGR
 
 /* ----- Statics ----- */
@@ -60,7 +59,7 @@ static Boolean IOHIDDevice_GetLongProperty( IOHIDDeviceRef inIOHIDDeviceRef, CFS
             // if this is a number
             if ( CFNumberGetTypeID() == CFGetTypeID( tCFTypeRef ) ) {
                 // get it's value
-                result = CFNumberGetValue( ( CFNumberRef ) tCFTypeRef, kCFNumberSInt32Type, outValue );
+                result = CFNumberGetValue((CFNumberRef)tCFTypeRef, kCFNumberLongType, outValue);
             }
         }
     }
@@ -232,9 +231,9 @@ void joy_hidlib_free_devices(joy_hid_device_array_t *devices)
         devices->internal_devices = NULL;
     }
 
-    if(devices != NULL) {
-        lib_free(devices);
-        devices = NULL;
+    if(devices->devices != NULL) {
+        lib_free(devices->devices);
+        devices->devices = NULL;
     }
 }
 
@@ -361,6 +360,5 @@ int  joy_hidlib_get_value(joy_hid_device_t *device,
 }
 
 #endif /* HAS_HIDMGR */
-#endif /* HAS_JOYSTICK */
 #endif
 

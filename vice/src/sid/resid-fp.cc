@@ -184,15 +184,16 @@ static void residfp_reset(sound_t *psid, CLOCK cpu_clk)
 static int residfp_calculate_samples(sound_t *psid, short *pbuf, int nr,
                                    int interleave, int *delta_t)
 {
-    int retval;
+    int retval = 0;
+
     if (psid->factor == 1000) {
         retval = psid->sid->clock(*delta_t, pbuf, nr, interleave);
-        *delta_t=0;
+        *delta_t = 0;
         return retval;
     }
     /* factor is always >= 1000 so buffer is always truncated and no temp buffer needed */
     retval = psid->sid->clock(*delta_t, pbuf, nr * psid->factor / 1000, interleave) * 1000 / psid->factor;
-    *delta_t=0;
+    *delta_t = 0;
     return retval;
 }
 
@@ -202,7 +203,7 @@ static void residfp_prevent_clk_overflow(sound_t *psid, CLOCK sub)
 
 static char *residfp_dump_state(sound_t *psid)
 {
-    return lib_stralloc("");
+    return lib_strdup("");
 }
 
 sid_engine_t residfp_hooks =

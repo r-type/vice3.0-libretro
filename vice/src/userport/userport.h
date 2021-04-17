@@ -34,22 +34,30 @@
 #define USERPORT_COLLISION_METHOD_DETACH_LAST   1
 #define USERPORT_COLLISION_METHOD_AND_WIRES     2
 
-#define USERPORT_DEVICE_PRINTER             0
-#define USERPORT_DEVICE_JOYSTICK_CGA        1
-#define USERPORT_DEVICE_JOYSTICK_PET        2
-#define USERPORT_DEVICE_JOYSTICK_HUMMER     3
-#define USERPORT_DEVICE_JOYSTICK_OEM        4
-#define USERPORT_DEVICE_JOYSTICK_HIT        5
-#define USERPORT_DEVICE_JOYSTICK_KINGSOFT   6
-#define USERPORT_DEVICE_JOYSTICK_STARBYTE   7
-#define USERPORT_DEVICE_DAC                 8
-#define USERPORT_DEVICE_DIGIMAX             9
-#define USERPORT_DEVICE_4BIT_SAMPLER        10
-#define USERPORT_DEVICE_8BSS                11
-#define USERPORT_DEVICE_RTC_58321A          12
-#define USERPORT_DEVICE_RTC_DS1307          13
-#define USERPORT_DEVICE_DIAG_586220_HARNESS 14
+/* #define USERPORT_EXPERIMENTAL_DEVICES */
 
+enum {
+    USERPORT_DEVICE_PRINTER = 0,
+    USERPORT_DEVICE_JOYSTICK_CGA,
+    USERPORT_DEVICE_JOYSTICK_PET,
+    USERPORT_DEVICE_JOYSTICK_HUMMER,
+    USERPORT_DEVICE_JOYSTICK_OEM,
+    USERPORT_DEVICE_JOYSTICK_HIT,
+    USERPORT_DEVICE_JOYSTICK_KINGSOFT,
+    USERPORT_DEVICE_JOYSTICK_STARBYTE,
+    USERPORT_DEVICE_DAC,
+    USERPORT_DEVICE_DIGIMAX,
+    USERPORT_DEVICE_4BIT_SAMPLER,
+    USERPORT_DEVICE_8BSS,
+    USERPORT_DEVICE_RTC_58321A,
+    USERPORT_DEVICE_RTC_DS1307,
+#ifdef USERPORT_EXPERIMENTAL_DEVICES
+    USERPORT_DEVICE_DIAG_586220_HARNESS,
+#endif
+    USERPORT_MAX_DEVICES
+};
+
+/* this structure is used by userport devices */
 typedef struct userport_device_s {
     /* ID of the device */
     int id;
@@ -99,19 +107,20 @@ typedef struct userport_device_s {
     /* validity mask of a read */
     uint8_t mask;
 
-    /* involved on collision */
+    /* involved in collision */
     int collision;
 
     /* a tag to indicate the order of insertion */
     unsigned int order;
 } userport_device_t;
 
+/* this structure is used by userport ports */
 typedef struct userport_port_props_s {
-    int has_pa2;
-    int has_pa3;
-    void (*set_flag)(uint8_t val);
-    int has_pc;
-    int has_sp12;
+    int has_pa2;                   /* port has the pa2 line */
+    int has_pa3;                   /* port has the pa3 line */
+    void (*set_flag)(uint8_t val); /* pointer to set flag function */
+    int has_pc;                    /* port has the pc line */
+    int has_sp12;                  /* port has the sp1 and sp2 lines */
 } userport_port_props_t;
 
 typedef struct userport_device_list_s {

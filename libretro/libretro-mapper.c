@@ -51,6 +51,15 @@ int vkbd_y_max = 0;
 /* Mouse D-Pad acceleration */
 #define MOUSE_DPAD_ACCEL
 
+extern unsigned int opt_mouse_speed;
+static void retro_mouse_move(int x, int y)
+{
+   mouse_move(
+      (x * (float)opt_mouse_speed / 100.0f),
+      (y * (float)opt_mouse_speed / 100.0f)
+   );
+}
+
 /* Core flags */
 int mapper_keys[RETRO_MAPPER_LAST] = {0};
 int vkflag[10] = {0};
@@ -70,7 +79,7 @@ extern short int retro_vkbd_ready;
 extern unsigned int retro_devices[RETRO_DEVICES];
 
 static unsigned retro_key_state[RETROK_LAST] = {0};
-static unsigned retro_key_event_state[RETROK_LAST] = {0};
+unsigned retro_key_event_state[RETROK_LAST] = {0};
 static int16_t joypad_bits[RETRO_DEVICES];
 extern bool libretro_supports_bitmasks;
 extern dc_storage *dc;
@@ -1573,7 +1582,7 @@ void retro_poll_event()
             if (retro_mouse_x[j] < -1 && mouse_value[retro_j] & 0x08)
                mouse_value[retro_j] &= ~0x08;
 
-            mouse_move(retro_mouse_x[j], retro_mouse_y[j]);
+            retro_mouse_move(retro_mouse_x[j], retro_mouse_y[j]);
          }
       }
    }

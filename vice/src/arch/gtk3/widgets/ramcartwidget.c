@@ -51,12 +51,12 @@
 #include "ramcartwidget.h"
 
 
-/** \brief  List of supported RAM sizes
+/** \brief  List of supported RAM sizes in KiB
  */
 static const vice_gtk3_radiogroup_entry_t ram_sizes[] = {
-    { "64KB", 64 },
-    { "128KB", 128 },
-    { NULL, -1 }
+    { "64KiB",  64 },
+    { "128KiB", 128 },
+    { NULL,     -1 }
 };
 
 
@@ -83,7 +83,7 @@ static GtkWidget *create_ramcart_readonly_widget(void)
 }
 
 
-/** \brief  Create radio button group to determine GEORAM RAM size
+/** \brief  Create radio button group to determine RAMCART size
  *
  * \return  GtkGrid
  */
@@ -102,7 +102,7 @@ static GtkWidget *create_ramcart_size_widget(void)
 }
 
 
-/** \brief  Create widget to load/save GEORAM image file
+/** \brief  Create widget to load/save RAMCART image file
  *
  * \return  GtkGrid
  */
@@ -111,6 +111,7 @@ static GtkWidget *create_ramcart_image_widget(GtkWidget *parent)
     return cart_image_widget_create(parent, "RAMCART image",
             "RAMCARTfilename", "RAMCARTImageWrite",
             carthelpers_save_func, carthelpers_flush_func,
+            carthelpers_can_save_func, carthelpers_can_flush_func,
             CARTRIDGE_NAME_RAMCART, CARTRIDGE_RAMCART);
 
 }
@@ -135,7 +136,7 @@ GtkWidget *ramcart_widget_create(GtkWidget *parent)
     gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
 
     ramcart_enable = create_ramcart_enable_widget();
-    gtk_grid_attach(GTK_GRID(grid), ramcart_enable, 0, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), ramcart_enable, 0, 0, 2, 1);
 
     ramcart_size = create_ramcart_size_widget();
     gtk_grid_attach(GTK_GRID(grid), ramcart_size, 0, 1, 1, 1);

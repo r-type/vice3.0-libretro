@@ -54,11 +54,11 @@ static driver_select_t driver_select[NUM_DRIVER_SELECT];
 /* Pointer to registered printer driver.  */
 static driver_select_list_t *driver_select_list = NULL;
 
-static char *userprinter_names[] = { "ascii", "nl10", "raw", NULL };
+static const char * const userprinter_names[] = { "ascii", "nl10", "raw", NULL };
 
-static char *printer_names[] = { "ascii", "mps803", "nl10", "raw", NULL };
+static const char * const printer_names[] = { "ascii", "mps803", "nl10", "raw", NULL };
 
-static char *plotter_names[] = { "1520", "raw", NULL };
+static const char * const plotter_names[] = { "1520", "raw", NULL };
 
 static int userprinter_name_is_valid(const char *name)
 {
@@ -140,8 +140,13 @@ static const resource_string_t resources_string[] = {
       (char **)&driver_select[0].drv_name, set_printer_driver, (void *)0 },
     { "Printer5Driver", "ascii", RES_EVENT_NO, NULL,
       (char **)&driver_select[1].drv_name, set_printer_driver, (void *)1 },
+#ifdef __LIBRETRO__
+    { "Printer6Driver", "raw", RES_EVENT_NO, NULL,
+#else
     { "Printer6Driver", "1520", RES_EVENT_NO, NULL,
+#endif
       (char **)&driver_select[2].drv_name, set_printer_driver, (void *)2 },
+
     RESOURCE_STRING_LIST_END
 };
 
@@ -264,7 +269,8 @@ int driver_select_getc(unsigned int prnr, unsigned int secondary, uint8_t *b)
 int driver_select_flush(unsigned int prnr, unsigned int secondary)
 {
 #ifdef DEBUG_PRINTER
-    log_message(driver_select_log, "Flush device #%i secondary %i.", prnr + 4, secondary);
+    log_message(driver_select_log, "Flush device #%u secondary %u.",
+            prnr + 4, secondary);
 #endif
     return driver_select[prnr].drv_flush(prnr, secondary);
 }
@@ -273,7 +279,7 @@ int driver_select_flush(unsigned int prnr, unsigned int secondary)
 int driver_select_formfeed(unsigned int prnr)
 {
 #ifdef DEBUG_PRINTER
-    log_message(driver_select_log, "Formfeed device #%i", prnr + 4);
+    log_message(driver_select_log, "Formfeed device #%u", prnr + 4);
 #endif
     return driver_select[prnr].drv_formfeed(prnr);
 }

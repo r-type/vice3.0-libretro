@@ -1,6 +1,4 @@
-
-
-- x128: Bring either VDC or VICII display to front depending on 40/80 col key## Makefile.am for the native GTK3 version of `libarch.a'.
+## Makefile.am for the native GTK3 version of `libarch.a'.
 
 if WIN32_COMPILE
 extra_includes = -I$(top_srcdir)/src/arch/mingw32-pcap/wpcap
@@ -11,11 +9,14 @@ endif
 SUBDIRS = data novte widgets
 
 AM_CPPFLAGS = \
+	@VICE_CPPFLAGS@ \
 	@ARCH_INCLUDES@ \
+	-I$(top_srcdir)/src/arch/shared \
 	$(extra_includes) \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/crtc \
+	-I$(top_srcdir)/src/datasette \
 	-I$(top_srcdir)/src/drive \
 	-I$(top_srcdir)/src/joyport \
 	-I$(top_srcdir)/src/lib/p64 \
@@ -42,22 +43,25 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/tapeport \
 	-I$(top_srcdir)/src/hvsc
 
+AM_CFLAGS = @VICE_CFLAGS@
 
-noinst_LIBRARIES = libarch.a
+AM_CXXFLAGS = @VICE_CXXFLAGS@
+
+AM_OBJCFLAGS = @VICE_OBJCFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
+
+noinst_LIBRARIES = libarch.a libtoolarch.a
 
 libarch_a_SOURCES = \
 	archdep.c \
-	blockdev.c \
 	c128ui.c \
 	c64dtvui.c \
 	c64scui.c \
 	c64ui.c \
-	cairo_renderer.c \
 	cbm2ui.c \
 	cbm5x0ui.c \
-	coproc.c \
-	dynlib.c \
-	fullscreen.c \
 	gtk3main.c \
 	joy-osx-hid.c \
 	joy-osx-hidmgr.c \
@@ -70,14 +74,11 @@ libarch_a_SOURCES = \
 	kbd.c \
 	linenoise.c \
 	mousedrv.c \
-	opengl_renderer.c \
 	petui.c \
 	plus4ui.c \
-	quartz_renderer.c \
-	rawnetarch.c \
-	rs232dev.c \
+	render_queue.c \
+	render_thread.c \
 	scpu64ui.c \
-	signals.c \
 	ui.c \
 	uiabout.c \
 	uicart.c \
@@ -91,14 +92,13 @@ libarch_a_SOURCES = \
 	uidiskcreate.c \
 	uiedit.c \
 	uifliplist.c \
+	uihotkeys.c \
 	uimachinemenu.c \
 	uimachinewindow.c \
 	uimedia.c \
 	uimenu.c \
 	uimon-fallback.c \
 	uimon.c \
-	uinetplay.c \
-	uinetplay_new.c \
 	uisettings.c \
 	uisidattach.c \
 	uismartattach.c \
@@ -110,21 +110,32 @@ libarch_a_SOURCES = \
 	uivsidmenu.c \
 	uivsidwindow.c \
 	vic20ui.c \
+	vice_gtk3_locking.c \
 	video.c \
 	vsidui.c \
 	vsyncarch.c
 
+if WIN32_COMPILE
+libarch_a_SOURCES += directx_renderer.c directx_renderer_impl.cc
+else
+libarch_a_SOURCES += opengl_renderer.c
+if UNIX_MACOSX_COMPILE
+libarch_a_SOURCES += opengl_renderer_macos.m
+else
+libarch_a_SOURCES += opengl_renderer_unix.c
+endif
+endif
+
+libtoolarch_a_SOURCES = \
+	archdep.c
+
 EXTRA_DIST = \
+	Resources/VICE.icns \
 	archdep.h \
-	archdep_unix.c \
-	archdep_unix.h \
-	archdep_win32.c \
-	archdep_win32.h \
-	cairo_renderer.h \
-	coproc.h \
+	unused_cairo_renderer.h \
 	debug_gtk3.h \
-	dynlib-unix.c \
-	dynlib-win32.c \
+	directx_renderer.h \
+	directx_renderer_impl.h \
 	joy-osx-hid.h \
 	joy-osx-hidlib.h \
 	joy-osx.h \
@@ -134,15 +145,13 @@ EXTRA_DIST = \
 	joy.h \
 	kbd.h \
 	linenoise.h \
+	macOS-ui-runtime.sh \
 	make-bindist_osx.sh \
 	make-bindist_win32.sh \
 	mousedrv.h \
 	opengl_renderer.h \
-	quartz_renderer.h \
-	rawnetarch_unix.c \
-	rawnetarch_win32.c \
-	rs232-unix-dev.c \
-	rs232-win32-dev.c \
+	render_queue.h \
+	render_thread.h \
 	ui.h \
 	uiabout.h \
 	uicart.h \
@@ -156,14 +165,13 @@ EXTRA_DIST = \
 	uidiskcreate.h \
 	uiedit.h \
 	uifliplist.h \
+	uihotkeys.h \
 	uimachinemenu.h \
 	uimachinewindow.h \
 	uimedia.h \
 	uimenu.h \
-	uimonarch.h \
 	uimon-fallback.h \
-	uinetplay.h \
-	uinetplay_new.h \
+	uimonarch.h \
 	uisettings.h \
 	uisidattach.h \
 	uismartattach.h \
@@ -174,9 +182,8 @@ EXTRA_DIST = \
 	uivideo.h \
 	uivsidmenu.h \
 	uivsidwindow.h \
+	vice_gtk3_locking.h \
+	vice-launcher.sh \
 	videoarch.h \
 	winjoy.h \
-	Info.plist \
-	Resources/VICE.icns \
-	vice-launcher.sh \
 	x11-launcher.sh

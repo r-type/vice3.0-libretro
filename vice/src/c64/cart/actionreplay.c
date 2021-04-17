@@ -33,14 +33,17 @@
 #define CARTRIDGE_INCLUDE_SLOTMAIN_API
 #include "c64cartsystem.h"
 #undef CARTRIDGE_INCLUDE_SLOTMAIN_API
+#include "c64mem.h"
 #include "cartio.h"
 #include "cartridge.h"
 #include "export.h"
+#include "log.h"
 #include "monitor.h"
 #include "snapshot.h"
 #include "types.h"
 #include "util.h"
 #include "crt.h"
+#include "vicii-phi1.h"
 
 /*
     Action Replay 4.2, 5, 6 (Hardware stayed the same)
@@ -70,6 +73,7 @@ static int ar_active;
 
 /* some prototypes are needed */
 static uint8_t actionreplay_io1_peek(uint16_t addr);
+static uint8_t actionreplay_io1_read(uint16_t addr);
 static void actionreplay_io1_store(uint16_t addr, uint8_t value);
 static uint8_t actionreplay_io2_read(uint16_t addr);
 static uint8_t actionreplay_io2_peek(uint16_t addr);
@@ -77,33 +81,35 @@ static void actionreplay_io2_store(uint16_t addr, uint8_t value);
 static int actionreplay_dump(void);
 
 static io_source_t action_replay_io1_device = {
-    CARTRIDGE_NAME_ACTION_REPLAY,
-    IO_DETACH_CART,
-    NULL,
-    0xde00, 0xdeff, 0xff,
-    0,
-    actionreplay_io1_store,
-    NULL,
-    actionreplay_io1_peek,
-    actionreplay_dump,
-    CARTRIDGE_ACTION_REPLAY,
-    0,
-    0
+    CARTRIDGE_NAME_ACTION_REPLAY, /* name of the device */
+    IO_DETACH_CART,               /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,        /* does not use a resource for detach */
+    0xde00, 0xdeff, 0xff,         /* range for the device, address is ignored by the write functions, reg:$de00, mirrors:$de01-$deff */
+    0,                            /* read is never valid */
+    actionreplay_io1_store,       /* store function */
+    NULL,                         /* NO poke function */
+    actionreplay_io1_read,        /* read function */
+    actionreplay_io1_peek,        /* peek function */
+    actionreplay_dump,            /* device state information dump function */
+    CARTRIDGE_ACTION_REPLAY,      /* cartridge ID */
+    IO_PRIO_NORMAL,               /* normal priority, device read needs to be checked for collisions */
+    0                             /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t action_replay_io2_device = {
-    CARTRIDGE_NAME_ACTION_REPLAY,
-    IO_DETACH_CART,
-    NULL,
-    0xdf00, 0xdfff, 0xff,
-    0,
-    actionreplay_io2_store,
-    actionreplay_io2_read,
-    actionreplay_io2_peek,
-    actionreplay_dump,
-    CARTRIDGE_ACTION_REPLAY,
-    0,
-    0
+    CARTRIDGE_NAME_ACTION_REPLAY, /* name of the device */
+    IO_DETACH_CART,               /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,        /* does not use a resource for detach */
+    0xdf00, 0xdfff, 0xff,         /* range for the device, address is ignored by the read/write functions, reg:$df00, mirrors:$df01-$dfff */
+    0,                            /* validity of the read is determined by the cartridge at read time */
+    actionreplay_io2_store,       /* store function */
+    NULL,                         /* NO poke function */
+    actionreplay_io2_read,        /* read function */
+    actionreplay_io2_peek,        /* peek function */
+    actionreplay_dump,            /* device state information dump function */
+    CARTRIDGE_ACTION_REPLAY,      /* cartridge ID */
+    IO_PRIO_NORMAL,               /* normal priority, device read needs to be checked for collisions */
+    0                             /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *action_replay_io1_list_item = NULL;
@@ -129,12 +135,41 @@ static void actionreplay_io1_store(uint16_t addr, uint8_t value)
         if (value & 0x20) {
             mode |= CMODE_EXPORT_RAM;
         }
-        cart_config_changed_slotmain((uint8_t)(value & 3), (uint8_t)((value & 3) | (((value >> 3) & 3) << CMODE_BANK_SHIFT)), (unsigned int)(mode | CMODE_WRITE));
-
         if (value & 4) {
             ar_active = 0;
         }
+        
+        /* mode 0x22 is broken in the original AR, we handle it here so we can
+           emit a warning on access */
+        if ((value & 0x23) == 0x22) {
+            cart_config_changed_slotmain(CMODE_8KGAME, 
+                CMODE_8KGAME | (((value >> 3) & 3) << CMODE_BANK_SHIFT), 
+                (unsigned int)(mode | CMODE_WRITE));
+        } else {
+            cart_config_changed_slotmain((uint8_t)(value & 3), 
+                (uint8_t)((value & 3) | (((value >> 3) & 3) << CMODE_BANK_SHIFT)), 
+                (unsigned int)(mode | CMODE_WRITE));
+        }
+
     }
+}
+
+static uint8_t actionreplay_io1_read(uint16_t addr)
+{
+    uint8_t value;
+    /* the read is really never valid */
+    action_replay_io1_device.io_source_valid = 0;
+    if (!ar_active) {
+        return 0;
+    }
+    /* since the r/w line is not decoded, a read still changes the register,
+       to whatever was on the bus before */
+    value = vicii_read_phi1();
+    actionreplay_io1_store(addr, value);
+    log_warning(LOG_DEFAULT, "AR5: reading IO1 area at 0xde%02x, this corrupts the register", 
+                addr & 0xffu);
+    
+    return value;
 }
 
 static uint8_t actionreplay_io1_peek(uint16_t addr)
@@ -230,10 +265,18 @@ static int actionreplay_dump(void)
 
 uint8_t actionreplay_roml_read(uint16_t addr)
 {
+    if ((regvalue & 0x23) == 0x22) {
+        log_warning(LOG_DEFAULT, 
+            "AR5: reading ROML area at 0x%04x in mode $22, this causes bus contention,", addr);
+        log_warning(LOG_DEFAULT, 
+            "     is unreliable, and may damage the hardware - do not do this!");    
+        /* in mode 0x22 both C64 and cartridge RAM is selected */
+        return mem_read_without_ultimax(addr) | export_ram0[addr & 0x1fff];
+    }
+
     if (export_ram) {
         return export_ram0[addr & 0x1fff];
     }
-
     return roml_banks[(addr & 0x1fff) + (roml_bank << 13)];
 }
 
@@ -255,12 +298,14 @@ void actionreplay_freeze(void)
 void actionreplay_config_init(void)
 {
     ar_active = 1;
+    regvalue = 0;
     cart_config_changed_slotmain(0, 0, CMODE_READ);
 }
 
 void actionreplay_reset(void)
 {
     ar_active = 1;
+    regvalue = 0;
 }
 
 void actionreplay_config_setup(uint8_t *rawcart)
@@ -336,7 +381,7 @@ void actionreplay_detach(void)
    ARRAY | RAM    | 8192 BYES of RAM data
  */
 
-static char snap_module_name[] = "CARTAR";
+static const char snap_module_name[] = "CARTAR";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -375,7 +420,7 @@ int actionreplay_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept higher versions than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }

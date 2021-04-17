@@ -1,6 +1,6 @@
 /** \file   linenoise.c
  *
- * \brief   uerrilla line editing library against the idea that a
+ * \brief   Guerrilla line editing library against the idea that a
  *          line editing lib needs to be 20,000 lines of C code.
  *
  * Modified for the VICE project by Fabrizio Gennari,
@@ -102,7 +102,6 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <gtk/gtk.h> /* for gtk_main_iteration() */
 
 #include "linenoise.h"
 #include "uimon.h"
@@ -119,7 +118,7 @@ static int history_len = 0;
 char **history = NULL;
 
 /* static void linenoiseAtExit(void); */
-int linenoiseHistoryAdd(const char *line);
+int vte_linenoiseHistoryAdd(const char *line);
 
 /* FIXME: unused -> memory leak
 static void freeHistory(void) {
@@ -240,42 +239,25 @@ static int completeLine(struct console_private_s *term, const char *prompt, char
     return c; /* Return last read character */
 }
 
-void linenoiseClearScreen(struct console_private_s *term) {
+void vte_linenoiseClearScreen(struct console_private_s *term) {
     const char clearseq[] = "\x1b[H\x1b[2J";
     uimon_write_to_terminal(term, clearseq, strlen(clearseq));
 }
 
 static int linenoisePrompt(struct console_private_s *term, char *buf, size_t buflen, const char *prompt) {
-    size_t plen = strlen(prompt);
     size_t pos = 0;
     size_t len = 0;
     size_t cols = uimon_get_columns(term);
     int history_index = 0;
-    int i;
 
     buf[0] = '\0';
     buflen--; /* Make sure there is always space for the nulterm */
 
     /* The latest history entry is always our current buffer, that
      * initially is just an empty string. */
-    linenoiseHistoryAdd("");
+    vte_linenoiseHistoryAdd("");
 
-    /* HACK HACK HACK
-
-       what we really want to do here is writing the prompt, and then tell VTE
-       to flush its buffers and redraw its terminal. (necessary to make the
-       initial prompt show up reliably, else it may be delayed until a key is
-       pressed, which is confusing and annoying) unfortunately there seems to be
-       no distinct way to do this, however.
-
-       the following loop seems to do the trick (using about 10 iterations, so
-       i am using 20 to be on the safe side). yes its ugly :(
-    */
-    for(i = 0; i < 20; i++) {
-        uimon_write_to_terminal(term, "\r", 1);
-        uimon_write_to_terminal(term, prompt, plen);
-        gtk_main_iteration();
-    }
+    uimon_out(prompt);
 
     while(1) {
         int c;
@@ -296,7 +278,7 @@ static int linenoisePrompt(struct console_private_s *term, char *buf, size_t buf
             c = completeLine(term, prompt, buf, buflen, &len, &pos, cols);
             /* Return on errors */
             if (c < 0) {
-                return len;
+                return (int)len;
             }
             /* Read next character when 0 */
             if (c == 0) {
@@ -447,13 +429,13 @@ up_down_arrow:
             refreshLine(term, prompt, buf, len, pos, cols);
             break;
         case 12: /* ctrl+l, clear screen */
-            linenoiseClearScreen(term);
+            vte_linenoiseClearScreen(term);
             refreshLine(term, prompt, buf, len, pos, cols);
         }
     }
 }
 
-char *linenoise(const char *prompt, struct console_private_s *term) {
+char *vte_linenoise(const char *prompt, struct console_private_s *term) {
     char buf[LINENOISE_MAX_LINE];
     int count;
 
@@ -466,11 +448,11 @@ char *linenoise(const char *prompt, struct console_private_s *term) {
 }
 
 /* Register a callback function to be called for tab-completion. */
-void linenoiseSetCompletionCallback(linenoiseCompletionCallback *fn) {
+void vte_linenoiseSetCompletionCallback(linenoiseCompletionCallback *fn) {
     completionCallback = fn;
 }
 
-void linenoiseAddCompletion(linenoiseCompletions *lc, char *str) {
+void vte_linenoiseAddCompletion(linenoiseCompletions *lc, char *str) {
     size_t len = strlen(str);
     char *copy = malloc(len+1);
     memcpy(copy,str,len+1);
@@ -479,7 +461,7 @@ void linenoiseAddCompletion(linenoiseCompletions *lc, char *str) {
 }
 
 /* Using a circular buffer is smarter, but a bit more complex to handle. */
-int linenoiseHistoryAdd(const char *line) {
+int vte_linenoiseHistoryAdd(const char *line) {
     char *linecopy;
 
     if (history_max_len == 0) {
@@ -506,7 +488,7 @@ int linenoiseHistoryAdd(const char *line) {
     return 1;
 }
 
-int linenoiseHistorySetMaxLen(int len) {
+int vte_linenoiseHistorySetMaxLen(int len) {
     char **new;
 
     if (len < 1) {

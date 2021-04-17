@@ -31,32 +31,34 @@
 #ifndef VICE_VICE_H
 #define VICE_VICE_H
 
-/* We use <config.h> instead of "config.h" so that a compilation using
-   -I. -I$srcdir will use ./config.h rather than $srcdir/config.h
-   (which it would do because vice.h was found in $srcdir).  Well,
-   actually automake barfs if the source directory was already
-   configured, so this should not be an issue anymore.  */
-
 #ifdef ANDROID_COMPILE
-#  include <config.android.h>
+#  include "config.android.h"
 #else
-#  include <config.h> /* Automagically created by the `configure' script.  */
+#  include "config.h" /* Automagically created by the `configure' script.  */
 #endif
 
 /* ------------------------------------------------------------------------- */
 
 /* Portability... */
 
-#if defined(__hpux) || defined(__IBMC__)
+/*
+ * I really wonder if we need this anymore, when was the last time VICE was
+ * compiled with anything not GCC or Clang?
+ */
+#if defined(__IBMC__)
 #ifndef _POSIX_SOURCE
 #define _POSIX_SOURCE
 #endif
 #ifndef _INCLUDE_POSIX_SOURCE
 #define _INCLUDE_POSIX_SOURCE
 #endif
-#endif  /* __hpux */
+#endif  /* __hpux, nope __IMBC__ at best */
 
 /* currently tested/testing for the following cpu types:
+ *
+ * (please let's get rid of this, I personally enjoy making stuff work on OS's
+ * I don't expect to support it, but VICE should just support OS's people
+ * actually use. (Windows, Linux, MacOS, BSD)
  *
  * cpu        4*u_char fetch   1*u_int32 fetch   define(s)
  * -----      --------------   ---------------   ---------
@@ -121,11 +123,8 @@ int yyparse (void);
 #undef __GNUC__
 #endif
 
-#ifdef MINIXVMD
-#undef vfork
-#endif
 
-#if (defined(__BEOS__) && defined(WORDS_BIGENDIAN)) || defined(__OS2__) || defined(__WATCOMC__)
+#if (defined(__BEOS__) && defined(WORDS_BIGENDIAN)) || defined(__OS2__)
 #ifndef __cplusplus
 #undef inline
 #define inline
@@ -151,6 +150,12 @@ static int noop;
 #if defined(USE_NATIVE_GTK3) && defined(WIN32_COMPILE) && !defined(__cplusplus)
 extern int vice_atexit(void (*function)(void));
 extern void vice_exit(int excode);
+#endif
+
+/* Avoid windows.h including too much garbage
+ */
+#ifdef WIN32_COMPILE
+# define WIN32_LEAN_AND_MEAN
 #endif
 
 #endif

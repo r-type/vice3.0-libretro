@@ -116,11 +116,15 @@ void reset_try_flags(void)
 
 int try_cartridge_attach(int c)
 {
+/* FIXME: whatever this was trying to do, it doesnt work. eg having a default
+          (generic) cartridge in vicerc doesnt work when this logic is active.
+*/
+/*
     cartres_flags ^= c;
     if (cartres_flags) {
         return 0;
     }
-
+*/
     return cartridge_attach_from_resource(vic20cart_type, cartfile);
 }
 
@@ -149,6 +153,7 @@ static int set_cartridge_type(int val, void *param)
         case CARTRIDGE_VIC20_16KB_2000:
         case CARTRIDGE_VIC20_16KB_4000:
         case CARTRIDGE_VIC20_16KB_6000:
+        case CARTRIDGE_VIC20_32KB_2000:
             break;
         default:
             return -1;
@@ -261,19 +266,19 @@ static const cmdline_option_t cmdline_options[] =
       NULL, "Do not reset machine if a cartridge is attached or detached" },
     { "-cart2", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       attach_cartridge_cmdline, (void *)CARTRIDGE_VIC20_16KB_2000, NULL, NULL,
-      "<Name>", "Specify 4/8/16K extension ROM name at $2000" },
+      "<Name>", "Specify 4/8/16KiB extension ROM name at $2000" },
     { "-cart4", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       attach_cartridge_cmdline, (void *)CARTRIDGE_VIC20_16KB_4000, NULL, NULL,
-      "<Name>", "Specify 4/8/16K extension ROM name at $4000" },
+      "<Name>", "Specify 4/8/16KiB extension ROM name at $4000" },
     { "-cart6", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       attach_cartridge_cmdline, (void *)CARTRIDGE_VIC20_16KB_6000, NULL, NULL,
-      "<Name>", "Specify 4/8/16K extension ROM name at $6000" },
+      "<Name>", "Specify 4/8/16KiB extension ROM name at $6000" },
     { "-cartA", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       attach_cartridge_cmdline, (void *)CARTRIDGE_VIC20_8KB_A000, NULL, NULL,
-      "<Name>", "Specify 4/8K extension ROM name at $A000" },
+      "<Name>", "Specify 4/8KiB extension ROM name at $A000" },
     { "-cartB", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       attach_cartridge_cmdline, (void *)CARTRIDGE_VIC20_4KB_B000, NULL, NULL,
-      "<Name>", "Specify 4K extension ROM name at $B000" },
+      "<Name>", "Specify 4KiB extension ROM name at $B000" },
     { "-cartbb", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       attach_cartridge_cmdline, (void *)CARTRIDGE_VIC20_BEHRBONZ, NULL, NULL,
       "<Name>", "Specify Behr Bonz extension ROM name" },
@@ -432,7 +437,6 @@ void cartridge_set_default(void)
         log_warning(LOG_DEFAULT, "Set as default disabled");
         return;
     }
-
     set_cartridge_type(vic20cart_type, NULL);
     set_cartridge_file((vic20cart_type == CARTRIDGE_NONE) ? "" : cartfile, NULL);
     /* special case handling for the multiple file generic type */
@@ -440,6 +444,16 @@ void cartridge_set_default(void)
 
     /* reset the try flags (we've only called the set function once each) */
     reset_try_flags();
+}
+
+/** \brief  Wipe "default cartidge"
+ */
+void cartridge_unset_default(void)
+{
+    util_string_set(&cartridge_file, "");
+    /* special case handling for the multiple file generic type */
+    generic_unset_default();
+    cartridge_type = CARTRIDGE_NONE;
 }
 
 const char *cartridge_get_file_name(int addr)
@@ -510,6 +524,41 @@ int cartridge_save_image(int type, const char *filename)
     }
 #endif
     return cartridge_bin_save(type, filename);
+}
+
+int cartridge_type_enabled(int crtid)
+{
+    if (crtid == vic20cart_type) {
+        return 1;
+    }
+    switch (crtid) {
+        case CARTRIDGE_VIC20_GEORAM:
+            return georam_cart_enabled();
+    }
+    return 0;
+}
+
+/* returns 1 when cartridge (ROM) image can be flushed */
+int cartridge_can_flush_image(int crtid)
+{
+    const char *p;
+    if (!cartridge_type_enabled(crtid)) {
+        return 0;
+    }
+    p = cartridge_get_file_name(crtid);
+    if ((p == NULL) || (*p == '\x0')) {
+        return 0;
+    }
+    return 1;
+}
+
+/* returns 1 when cartridge (ROM) image can be saved */
+int cartridge_can_save_image(int crtid)
+{
+    if (!cartridge_type_enabled(crtid)) {
+        return 0;
+    }
+    return 1;
 }
 
 /* ------------------------------------------------------------------------- */

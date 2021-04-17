@@ -1,4 +1,4 @@
-c64dir = $(VICEDIR)/C64
+c64dir = $(VICE_DATADIR)/C64
 
 roms = \
 	basic \
@@ -36,16 +36,24 @@ gtk3_keymaps = \
 	gtk3_sym.vkm \
 	gtk3_pos.vkm \
 	gtk3_pos_de.vkm \
+	gtk3_pos_se.vkm \
 	gtk3_sym_de.vkm \
 	gtk3_sym_nl.vkm \
+	gtk3_sym_da.vkm \
 	gtk3_keyrah.vkm \
-	gtk3_keyrah_de.vkm
+	gtk3_keyrah_de.vkm \
+	gtk3_the64_de.vkm \
+	gtk3_sym_it.vkm \
+	gtk3_sym_se.vkm
 
 sdl_keymaps = \
 	sdl_joymap_ps3.vjm \
+	sdl_joymap_thec64.vjm \
 	sdl_hotkeys.vkm \
 	sdl_hotkeys_vsid.vkm \
 	sdl_pos.vkm \
+	sdl_pos_bmc64.vkm \
+	sdl_pos_ch.vkm \
 	sdl_pos_da.vkm \
 	sdl_pos_de.vkm \
 	sdl_pos_fi.vkm \
@@ -57,7 +65,9 @@ sdl_keymaps = \
 	sdl_keyrah_combian.vkm \
 	sdl_sym.vkm \
 	sdl_sym_de.vkm \
-	sdl_sym_nl.vkm
+	sdl_sym_nl.vkm \
+	sdl_sym_it.vkm \
+	sdl_sym_da.vkm
 
 sym_file = \
 	c64mem.sym

@@ -90,10 +90,16 @@ static read_func_ptr_t _mem_peek_tab[0x101];
 
 read_func_ptr_t *_mem_read_tab_ptr;
 store_func_ptr_t *_mem_write_tab_ptr;
+read_func_ptr_t *_mem_read_tab_ptr_dummy;
+store_func_ptr_t *_mem_write_tab_ptr_dummy;
 static uint8_t **_mem_read_base_tab_ptr;
 static int *mem_read_limit_tab_ptr;
 
-/* Current watchpoint state. 1 = watchpoints active, 0 = no watchpoints */
+/* Current watchpoint state. 
+          0 = no watchpoints
+    bit0; 1 = watchpoints active
+    bit1; 2 = watchpoints trigger on dummy accesses
+*/
 static int watchpoints_active = 0;
 
 /* ------------------------------------------------------------------------- */
@@ -516,13 +522,23 @@ void mem_toggle_watchpoints(int flag, void *context)
     if (flag) {
         _mem_read_tab_ptr = _mem_read_tab_watch;
         _mem_write_tab_ptr = _mem_write_tab_watch;
+        if (flag > 1) {
+            /* enable watchpoints on dummy accesses */
+            _mem_read_tab_ptr_dummy = _mem_read_tab_watch;
+            _mem_write_tab_ptr_dummy = _mem_write_tab_watch;
+        } else {
+            _mem_read_tab_ptr_dummy = _mem_read_tab_nowatch;
+            _mem_write_tab_ptr_dummy = _mem_write_tab_nowatch;
+        }
     } else {
+        /* all watchpoints disabled */
         _mem_read_tab_ptr = _mem_read_tab_nowatch;
         _mem_write_tab_ptr = _mem_write_tab_nowatch;
+        _mem_read_tab_ptr_dummy = _mem_read_tab_nowatch;
+        _mem_write_tab_ptr_dummy = _mem_write_tab_nowatch;
     }
     watchpoints_active = flag;
 }
-
 /* ------------------------------------------------------------------------- */
 
 /* Initialize RAM for power-up.  */
@@ -562,10 +578,31 @@ int mem_rom_trap_allowed(uint16_t addr)
     return addr >= 0xe000;
 }
 
+/* this function should always read from the screen currently used by the kernal
+   for output, normally this does just return system ram - except when the 
+   videoram is not memory mapped.
+   used by autostart to "read" the kernal messages
+*/
+uint8_t mem_read_screen(uint16_t addr)
+{
+    return ram_read(addr);
+}
+
 void mem_inject(uint32_t addr, uint8_t value)
 {
     /* just call mem_store(), otherwise expansions might fail */
     mem_store((uint16_t)(addr & 0xffff), value);
+}
+
+/* In banked memory architectures this will always write to the bank that
+   contains the keyboard buffer and "number of keys in buffer", regardless of
+   what the CPU "sees" currently.
+   In all other cases this just writes to the first 64kb block, usually by
+   wrapping to mem_inject().
+*/
+void mem_inject_key(uint16_t addr, uint8_t value)
+{
+    mem_inject(addr, value);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -573,16 +610,25 @@ void mem_inject(uint32_t addr, uint8_t value)
 /* Banked memory access functions for the monitor */
 
 /* Exported banked memory access functions for the monitor */
+#define MAXBANKS (2)
 
-static const char *banknames[] = { "default", "cpu", NULL };
+/* by convention, a "bank array" has a 2-hex-digit bank index appended */
+static const char *banknames[MAXBANKS + 1] = { "default", "cpu", NULL };
 
-static const int banknums[] = { 0, 0 };
+static const int banknums[MAXBANKS + 1] = { 0, 0, -1 };
+static const int bankindex[MAXBANKS + 1] = { -1, -1, -1 };
+static const int bankflags[MAXBANKS + 1] = { 0, 0, -1 };
 
 const char **mem_bank_list(void)
 {
     return banknames;
 }
 
+const int *mem_bank_list_nos(void) {
+    return banknums;
+}
+
+/* return bank number for a given literal bank name */
 int mem_bank_from_name(const char *name)
 {
     int i = 0;
@@ -596,11 +642,39 @@ int mem_bank_from_name(const char *name)
     return -1;
 }
 
+/* return current index for a given bank */
+int mem_bank_index_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankindex[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+int mem_bank_flags_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankflags[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
 uint8_t mem_bank_read(int bank, uint16_t addr, void *context)
 {
     return mem_read(addr);
 }
 
+/* used by monitor if sfx off */
 uint8_t mem_bank_peek(int bank, uint16_t addr, void *context)
 {
     return mem_peek(addr);
@@ -609,6 +683,12 @@ uint8_t mem_bank_peek(int bank, uint16_t addr, void *context)
 void mem_bank_write(int bank, uint16_t addr, uint8_t byte, void *context)
 {
     mem_store(addr, byte);
+}
+
+/* used by monitor if sfx off */
+void mem_bank_poke(int bank, uint16_t addr, uint8_t byte, void *context)
+{
+    mem_bank_write(bank, addr, byte, context);
 }
 
 mem_ioreg_list_t *mem_ioreg_list_get(void *context)
@@ -626,4 +706,17 @@ void mem_get_screen_parameter(uint16_t *base, uint8_t *rows, uint8_t *columns, i
     *rows = (vic_peek(0x9003) & 0x7e) >> 1;
     *columns = vic_peek(0x9002) & 0x7f;
     *bank = 0;
+}
+
+/* used by autostart to locate and "read" kernal output on the current screen
+ * this function should return whatever the kernal currently uses, regardless
+ * what is currently visible/active in the UI 
+ */
+void mem_get_cursor_parameter(uint16_t *screen_addr, uint8_t *cursor_column, uint8_t *line_length, int *blinking)
+{
+    /* Cursor Blink enable: 1 = Flash Cursor, 0 = Cursor disabled, -1 = n/a */
+    *blinking = mem_ram[0xcc] ? 0 : 1;
+    *screen_addr = mem_ram[0xd1] + mem_ram[0xd2] * 256; /* Current Screen Line Address */
+    *cursor_column = mem_ram[0xd3];    /* Cursor Column on Current Line */
+    *line_length = mem_ram[0xd5] + 1;  /* Physical Screen Line Length */
 }

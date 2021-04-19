@@ -351,8 +351,13 @@ void vsyncarch_get_metrics(double *cpu_percent, double *emulated_fps, int *is_wa
     METRIC_UNLOCK();
 }
 
+#ifdef __LIBRETRO__
+#define MEASUREMENT_SMOOTH_FACTOR 0.49
+#define MEASUREMENT_FRAME_WINDOW  25
+#else
 #define MEASUREMENT_SMOOTH_FACTOR 0.99
 #define MEASUREMENT_FRAME_WINDOW  250
+#endif
 
 static void update_performance_metrics(unsigned long frame_time)
 {

@@ -141,7 +141,12 @@ static const resource_int_t resources_int[] = {
       &random_start, set_random_start, NULL },
     { "RAMInitRepeatRandom", 0, RES_EVENT_SAME, NULL,
       &random_repeat, set_random_repeat, NULL },
+#ifdef __LIBRETRO__
+    /* This slows down SuperCPU startup a lot, but is it really necessary at all..? */
+    { "RAMInitRandomChance", 0, RES_EVENT_SAME, NULL,
+#else
     { "RAMInitRandomChance", 1, RES_EVENT_SAME, NULL,
+#endif
       &random_chance, set_random_chance, NULL },
     RESOURCE_INT_LIST_END
 };

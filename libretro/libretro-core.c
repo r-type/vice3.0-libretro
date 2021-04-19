@@ -1813,7 +1813,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vic20_model",
          "Model",
-         "'Automatic' switches region per file path tags.",
+         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
          {
             { "VIC20 PAL auto", "VIC-20 PAL Automatic" },
             { "VIC20 NTSC auto", "VIC-20 NTSC Automatic" },
@@ -1843,7 +1843,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_plus4_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "C16 PAL", "C16 PAL" },
             { "C16 NTSC", "C16 NTSC" },
@@ -1859,7 +1859,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c128_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "C128 PAL", "C128 PAL" },
             { "C128 NTSC", "C128 NTSC" },
@@ -1897,7 +1897,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_pet_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "2001", "PET 2001" },
             { "3008", "PET 3008" },
@@ -1919,7 +1919,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_cbm2_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "610 PAL", "CBM 610 PAL" },
             { "610 NTSC", "CBM 610 NTSC" },
@@ -1938,7 +1938,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_cbm5x0_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "510 PAL", "CBM 510 PAL" },
             { "510 NTSC", "CBM 510 NTSC" },
@@ -1950,7 +1950,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c64dtv_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "DTV2 PAL", "DTV v2 PAL" },
             { "DTV2 NTSC", "DTV v2 NTSC" },
@@ -1965,7 +1965,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c64_model",
          "Model",
-         "'Automatic' switches region per file path tags.",
+         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
          {
             { "C64 PAL auto", "C64 PAL Automatic" },
             { "C64 NTSC auto", "C64 NTSC Automatic" },
@@ -3780,6 +3780,7 @@ static void update_variables(void)
       {
          vic20model_set(model);
          request_model_prev = -1;
+         request_restart = true;
          /* Memory expansion needs to be reseted to get updated */
          vice_opt.VIC20Memory = 0xff;
       }
@@ -3858,7 +3859,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "232 NTSC"))   model = PLUS4MODEL_232_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          plus4model_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -3877,7 +3881,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "C128 DCR NTSC")) model = C128MODEL_C128DCR_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          c128model_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -3944,6 +3951,7 @@ static void update_variables(void)
       if (retro_ui_finalized && vice_opt.Model != model)
       {
          petmodel_set(model);
+         request_restart = true;
          /* Keyboard layout refresh required. All models below 8032 except B models use graphics layout, others use business. */
          keyboard_init();
       }
@@ -3967,7 +3975,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "720PLUS NTSC")) model = CBM2MODEL_720PLUS_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          cbm2model_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -3982,7 +3993,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "510 NTSC")) model = CBM2MODEL_510_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          cbm2model_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -4000,7 +4014,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "HUMMER NTSC")) model = DTVMODEL_HUMMER_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          dtvmodel_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -4035,8 +4052,8 @@ static void update_variables(void)
       if (retro_ui_finalized && vice_opt.Model != model)
       {
          c64model_set(model);
+         request_restart = true;
          request_model_prev = -1;
-         reload_restart();
       }
 
       vice_opt.Model = model;

@@ -1156,6 +1156,8 @@ enum dc_image_type dc_get_image_type(const char* filename)
        strendswith(filename, "d82") ||
        strendswith(filename, "g64") ||
        strendswith(filename, "x64") ||
+       strendswith(filename, "d2m") ||
+       strendswith(filename, "d4m") ||
        strendswith(filename, "d6z") ||
        strendswith(filename, "d7z") ||
        strendswith(filename, "d8z") ||

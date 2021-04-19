@@ -195,6 +195,7 @@ struct vice_core_options
    int VirtualDevices;
    int DriveTrueEmulation;
    int DriveSoundEmulation;
+   int DatasetteSound;
    int AudioLeak;
    int SoundSampleRate;
    int SidEngine;

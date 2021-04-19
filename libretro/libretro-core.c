@@ -2571,6 +2571,36 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20%"
       },
+      {
+         "vice_datasette_sound",
+         "Audio > Datasette Sound",
+         "TAP tape image required.",
+         {
+            { "disabled", NULL },
+            { "5%", NULL },
+            { "10%", NULL },
+            { "15%", NULL },
+            { "20%", NULL },
+            { "25%", NULL },
+            { "30%", NULL },
+            { "35%", NULL },
+            { "40%", NULL },
+            { "45%", NULL },
+            { "50%", NULL },
+            { "55%", NULL },
+            { "60%", NULL },
+            { "65%", NULL },
+            { "70%", NULL },
+            { "75%", NULL },
+            { "80%", NULL },
+            { "85%", NULL },
+            { "90%", NULL },
+            { "95%", NULL },
+            { "100%", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
          "vice_audio_leak_emulation",
@@ -3728,6 +3758,29 @@ static void update_variables(void)
       if (retro_ui_finalized && vice_opt.DriveSoundEmulation &&
           (!vice_opt.DriveTrueEmulation || opt_autoloadwarp & AUTOLOADWARP_DISK))
          resources_set_int("DriveSoundEmulationVolume", 0);
+   }
+
+   var.key = "vice_datasette_sound";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int val = atoi(var.value) * 20;
+
+      if (retro_ui_finalized && vice_opt.DatasetteSound != val)
+      {
+         if (!strcmp(var.value, "disabled"))
+         {
+            log_resources_set_int("DatasetteSound", 0);
+            log_resources_set_int("DatasetteSoundVolume", 0);
+         }
+         else
+         {
+            log_resources_set_int("DatasetteSound", 1);
+            log_resources_set_int("DatasetteSoundVolume", val);
+         }
+      }
+
+      vice_opt.DatasetteSound = val;
    }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
@@ -5197,6 +5250,8 @@ static void update_variables(void)
    option_display.visible = opt_audio_options_display;
 
    option_display.key = "vice_drive_sound_emulation";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_datasette_sound";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_audio_leak_emulation";

@@ -1813,7 +1813,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_vic20_model",
          "Model",
-         "'Automatic' switches region per file path tags.",
+         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
          {
             { "VIC20 PAL auto", "VIC-20 PAL Automatic" },
             { "VIC20 NTSC auto", "VIC-20 NTSC Automatic" },
@@ -1843,7 +1843,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_plus4_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "C16 PAL", "C16 PAL" },
             { "C16 NTSC", "C16 NTSC" },
@@ -1859,7 +1859,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c128_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "C128 PAL", "C128 PAL" },
             { "C128 NTSC", "C128 NTSC" },
@@ -1897,7 +1897,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_pet_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "2001", "PET 2001" },
             { "3008", "PET 3008" },
@@ -1919,7 +1919,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_cbm2_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "610 PAL", "CBM 610 PAL" },
             { "610 NTSC", "CBM 610 NTSC" },
@@ -1938,7 +1938,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_cbm5x0_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "510 PAL", "CBM 510 PAL" },
             { "510 NTSC", "CBM 510 NTSC" },
@@ -1950,7 +1950,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c64dtv_model",
          "Model",
-         "",
+         "Changing while running resets the system!",
          {
             { "DTV2 PAL", "DTV v2 PAL" },
             { "DTV2 NTSC", "DTV v2 NTSC" },
@@ -1965,7 +1965,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_c64_model",
          "Model",
-         "'Automatic' switches region per file path tags.",
+         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
          {
             { "C64 PAL auto", "C64 PAL Automatic" },
             { "C64 NTSC auto", "C64 NTSC Automatic" },
@@ -2570,6 +2570,36 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "20%"
+      },
+      {
+         "vice_datasette_sound",
+         "Audio > Datasette Sound",
+         "TAP tape image required.",
+         {
+            { "disabled", NULL },
+            { "5%", NULL },
+            { "10%", NULL },
+            { "15%", NULL },
+            { "20%", NULL },
+            { "25%", NULL },
+            { "30%", NULL },
+            { "35%", NULL },
+            { "40%", NULL },
+            { "45%", NULL },
+            { "50%", NULL },
+            { "55%", NULL },
+            { "60%", NULL },
+            { "65%", NULL },
+            { "70%", NULL },
+            { "75%", NULL },
+            { "80%", NULL },
+            { "85%", NULL },
+            { "90%", NULL },
+            { "95%", NULL },
+            { "100%", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
       },
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
@@ -3730,6 +3760,29 @@ static void update_variables(void)
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
+   var.key = "vice_datasette_sound";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int val = atoi(var.value) * 20;
+
+      if (retro_ui_finalized && vice_opt.DatasetteSound != val)
+      {
+         if (!strcmp(var.value, "disabled"))
+         {
+            log_resources_set_int("DatasetteSound", 0);
+            log_resources_set_int("DatasetteSoundVolume", 0);
+         }
+         else
+         {
+            log_resources_set_int("DatasetteSound", 1);
+            log_resources_set_int("DatasetteSoundVolume", val);
+         }
+      }
+
+      vice_opt.DatasetteSound = val;
+   }
+
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    var.key = "vice_audio_leak_emulation";
    var.value = NULL;
@@ -3780,6 +3833,7 @@ static void update_variables(void)
       {
          vic20model_set(model);
          request_model_prev = -1;
+         request_restart = true;
          /* Memory expansion needs to be reseted to get updated */
          vice_opt.VIC20Memory = 0xff;
       }
@@ -3858,7 +3912,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "232 NTSC"))   model = PLUS4MODEL_232_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          plus4model_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -3877,7 +3934,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "C128 DCR NTSC")) model = C128MODEL_C128DCR_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          c128model_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -3944,6 +4004,7 @@ static void update_variables(void)
       if (retro_ui_finalized && vice_opt.Model != model)
       {
          petmodel_set(model);
+         request_restart = true;
          /* Keyboard layout refresh required. All models below 8032 except B models use graphics layout, others use business. */
          keyboard_init();
       }
@@ -3967,7 +4028,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "720PLUS NTSC")) model = CBM2MODEL_720PLUS_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          cbm2model_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -3982,7 +4046,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "510 NTSC")) model = CBM2MODEL_510_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          cbm2model_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -4000,7 +4067,10 @@ static void update_variables(void)
       else if (!strcmp(var.value, "HUMMER NTSC")) model = DTVMODEL_HUMMER_NTSC;
 
       if (retro_ui_finalized && vice_opt.Model != model)
+      {
          dtvmodel_set(model);
+         request_restart = true;
+      }
 
       vice_opt.Model = model;
    }
@@ -4035,8 +4105,8 @@ static void update_variables(void)
       if (retro_ui_finalized && vice_opt.Model != model)
       {
          c64model_set(model);
+         request_restart = true;
          request_model_prev = -1;
-         reload_restart();
       }
 
       vice_opt.Model = model;
@@ -5181,6 +5251,8 @@ static void update_variables(void)
 
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_datasette_sound";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_audio_leak_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -5722,9 +5794,9 @@ void retro_get_system_info(struct retro_system_info *info)
    info->library_name     = "VICE " CORE_NAME;
    info->library_version  = "3.5" GIT_VERSION;
 #if defined(__XVIC__)
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|20|40|60|a0|b0|rom";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|d2m|d4m|20|40|60|a0|b0|rom";
 #else
-   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz";
+   info->valid_extensions = "d64|d71|d80|d81|d82|g64|g41|x64|t64|tap|prg|p00|crt|bin|zip|7z|gz|d6z|d7z|d8z|g6z|g4z|x6z|cmd|m3u|vfl|vsf|nib|nbz|d2m|d4m";
 #endif
    info->need_fullpath    = true;
    info->block_extract    = true;

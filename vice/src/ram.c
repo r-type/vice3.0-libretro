@@ -38,6 +38,27 @@
 
 #ifdef __LIBRETRO__
 extern int mem_ram_size;
+extern long retro_ticks(void);
+static unsigned int g_seed;
+
+/* Used to seed the generator */
+static inline void fast_srand(int seed)
+{
+    g_seed = seed;
+}
+
+/* Compute a pseudorandom integer.
+ * Output value in range [0, 32767] */
+static inline int fast_rand(void)
+{
+    g_seed = (214013 * g_seed + 2531011);
+    return (g_seed >> 16) & 0x7FFF;
+}
+
+unsigned int lib_unsigned_rand_fast(unsigned int min, unsigned int max)
+{
+    return min + (fast_rand() / ((RAND_MAX / (max - min + 1)) + 1));
+}
 #endif
 
 static int start_value = 255;
@@ -114,6 +135,10 @@ static int set_random_repeat(int val, void *param)
 
 static int set_random_chance(int val, void *param)
 {
+#ifdef __LIBRETRO__
+    if (!random_chance)
+       fast_srand(retro_ticks());
+#endif
     random_chance = val;
     return 0;
 }
@@ -141,12 +166,7 @@ static const resource_int_t resources_int[] = {
       &random_start, set_random_start, NULL },
     { "RAMInitRepeatRandom", 0, RES_EVENT_SAME, NULL,
       &random_repeat, set_random_repeat, NULL },
-#ifdef __LIBRETRO__
-    /* This slows down SuperCPU startup a lot, but is it really necessary at all..? */
-    { "RAMInitRandomChance", 0, RES_EVENT_SAME, NULL,
-#else
     { "RAMInitRandomChance", 1, RES_EVENT_SAME, NULL,
-#endif
       &random_chance, set_random_chance, NULL },
     RESOURCE_INT_LIST_END
 };
@@ -216,6 +236,21 @@ void ram_init(uint8_t *memram, unsigned int ramsize)
         value = start_value ^ j ^ k;
         
         j = k = 0;
+#ifdef __LIBRETRO__
+        if (random_start && random_repeat) {
+            k = ((offset % random_repeat) < random_start) ? lib_unsigned_rand_fast(0, 0xff) : 0;
+        }
+        if (random_chance) {
+            j |= lib_unsigned_rand_fast(0, 0x1000) < random_chance ? 0x80 : 0;
+            j |= lib_unsigned_rand_fast(0, 0x1000) < random_chance ? 0x40 : 0;
+            j |= lib_unsigned_rand_fast(0, 0x1000) < random_chance ? 0x20 : 0;
+            j |= lib_unsigned_rand_fast(0, 0x1000) < random_chance ? 0x10 : 0;
+            j |= lib_unsigned_rand_fast(0, 0x1000) < random_chance ? 0x08 : 0;
+            j |= lib_unsigned_rand_fast(0, 0x1000) < random_chance ? 0x04 : 0;
+            j |= lib_unsigned_rand_fast(0, 0x1000) < random_chance ? 0x02 : 0;
+            j |= lib_unsigned_rand_fast(0, 0x1000) < random_chance ? 0x01 : 0;
+        }
+#else
         if (random_start && random_repeat) {
             k = ((offset % random_repeat) < random_start) ? lib_unsigned_rand(0, 0xff) : 0;
         }
@@ -229,6 +264,7 @@ void ram_init(uint8_t *memram, unsigned int ramsize)
             j |= lib_unsigned_rand(0, 0x1000) < random_chance ? 0x02 : 0;
             j |= lib_unsigned_rand(0, 0x1000) < random_chance ? 0x01 : 0;
         }
+#endif
         
         value ^= k ^ j;
         

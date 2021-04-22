@@ -29,6 +29,10 @@
 #include "sound.h"
 #include "maincpu.h"
 
+#ifdef __LIBRETRO__
+extern int opt_datasette_sound_volume;
+#endif
+
 static sound_chip_t datasette_sound;
 
 static CLOCK gap_circular_buffer[200];
@@ -38,7 +42,11 @@ static int gap_circular_buffer_start = 0;
 static int gap_circular_buffer_end = 0;
 static char last_was_split_in_two = 0;
 static CLOCK sound_start_maincpu_clk;
+#ifdef __LIBRETRO__
+static signed char datasette_square_sign = 1;
+#else
 static char datasette_square_sign = 1;
+#endif
 static char datasette_halfwaves;
 
 
@@ -160,8 +168,35 @@ static int datasette_sound_machine_calculate_samples(sound_t **psid,
                 }
             }
             for (j = 0; j < num_samples; j++) {
+#ifdef __LIBRETRO__
+                float volume_multiplier = 1;
+                if (opt_datasette_sound_volume > 0)
+                    volume_multiplier = (float)opt_datasette_sound_volume / 100;
+                int m = 
+                    datasette_sound_emulation_volume * datasette_square_sign * volume_multiplier;
+                switch (soc) {
+                    default:
+                    case 1:
+                        if (opt_datasette_sound_volume < 0)
+                            pbuf[i] = 0;
+
+                        pbuf[i] = sound_audio_mix(pbuf[i], m);
+                        break;
+                    case 2:
+                        if (opt_datasette_sound_volume < 0) {
+                            pbuf[i * 2] = 0;
+                            pbuf[i * 2 + 1] = 0;
+                        }
+
+                        pbuf[i * 2] = sound_audio_mix(pbuf[i * 2], m);
+                        pbuf[i * 2 + 1] = sound_audio_mix(pbuf[i * 2 + 1], m);
+                        break;
+                }
+                ++i;
+#else
                 pbuf[i++] =
                     datasette_sound_emulation_volume * datasette_square_sign;
+#endif
             }
         }
         if (must_flip)

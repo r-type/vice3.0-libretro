@@ -130,6 +130,7 @@ unsigned int opt_supercpu_kernal = 0;
 #endif
 static unsigned int sound_volume_counter = 3;
 unsigned int opt_audio_leak_volume = 0;
+int opt_datasette_sound_volume = 0;
 unsigned int opt_statusbar = 0;
 unsigned int opt_reset_type = 0;
 bool opt_keyrah_keypad = false;
@@ -2597,6 +2598,7 @@ void retro_set_environment(retro_environment_t cb)
             { "90%", NULL },
             { "95%", NULL },
             { "100%", NULL },
+            { "-1", "100% + Mute" },
             { NULL, NULL },
          },
          "disabled"
@@ -3764,20 +3766,15 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      int val = atoi(var.value) * 20;
+      int val = atoi(var.value);
+      opt_datasette_sound_volume = val;
 
       if (retro_ui_finalized && vice_opt.DatasetteSound != val)
       {
          if (!strcmp(var.value, "disabled"))
-         {
             log_resources_set_int("DatasetteSound", 0);
-            log_resources_set_int("DatasetteSoundVolume", 0);
-         }
          else
-         {
             log_resources_set_int("DatasetteSound", 1);
-            log_resources_set_int("DatasetteSoundVolume", val);
-         }
       }
 
       vice_opt.DatasetteSound = val;

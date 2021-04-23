@@ -1111,6 +1111,10 @@ int resources_read_item_from_file(FILE *f)
         return -1;
     }
 
+#ifdef __LIBRETRO__
+    char* token = strtok((char*)buf, " ### ");
+#endif
+
     resname_len = (int)(arg_ptr - buf);
     arg_ptr++;
     arg_len = strlen(arg_ptr);
@@ -1134,9 +1138,15 @@ int resources_read_item_from_file(FILE *f)
 
         switch (r->type) {
             case RES_INTEGER:
+#ifdef __LIBRETRO__
+                log_message(LOG_DEFAULT, "Read resource: %s => %d", r->name, atoi(arg_ptr));
+#endif
                 result = (*r->set_func_int)(atoi(arg_ptr), r->param);
                 break;
             case RES_STRING:
+#ifdef __LIBRETRO__
+                log_message(LOG_DEFAULT, "Read resource: %s => \"%s\"", r->name, arg_ptr);
+#endif
                 result = (*r->set_func_string)(arg_ptr, r->param);
                 break;
             default:
@@ -1312,7 +1322,8 @@ static char *string_resource_item(int num, const char *delim)
     switch (resources[num].type) {
         case RES_INTEGER:
             v = (resource_value_t) uint_to_void_ptr(*(int *)resources[num].value_ptr);
-            line = lib_msprintf("%s=%d ### %s%s", resources[num].name, vice_ptr_to_int(v), resources_get_description(resources[num].name), delim);
+            line = lib_msprintf("%s=%d ### %s%s", resources[num].name, vice_ptr_to_int(v),
+                                resources_get_description(resources[num].name), delim);
             break;
         case RES_STRING:
             v = *resources[num].value_ptr;
@@ -1320,7 +1331,8 @@ static char *string_resource_item(int num, const char *delim)
                 line = lib_msprintf("%s=\"%s\" ### %s%s", resources[num].name, (char *)v,
                                     resources_get_description(resources[num].name), delim);
             } else {
-                line = lib_msprintf("%s= ### %s%s", resources[num].name, resources_get_description(resources[num].name), delim);
+                line = lib_msprintf("%s= ### %s%s", resources[num].name,
+                                    resources_get_description(resources[num].name), delim);
             }
             break;
         default:

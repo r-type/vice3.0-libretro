@@ -3544,13 +3544,13 @@ void retro_set_environment(retro_environment_t cb)
 
 int log_resources_set_int(const char *name, int value)
 {
-    log_cb(RETRO_LOG_INFO, "Resource: %s => %d\n", name, value);
+    log_cb(RETRO_LOG_INFO, "Set resource: %s => %d\n", name, value);
     return resources_set_int(name, value);
 }
 
 int log_resources_set_string(const char *name, const char* value)
 {
-    log_cb(RETRO_LOG_INFO, "Resource: %s => \"%s\"\n", name, value);
+    log_cb(RETRO_LOG_INFO, "Set resource: %s => \"%s\"\n", name, value);
     return resources_set_string(name, value);
 }
 

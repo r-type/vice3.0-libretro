@@ -365,10 +365,7 @@ int ui_init_finalize(void)
       log_resources_set_int("DriveSoundEmulationVolume", 0);
 
    if (vice_opt.DatasetteSound)
-   {
-      log_resources_set_int("DatasetteSoundVolume", vice_opt.DatasetteSound);
       log_resources_set_int("DatasetteSound", 1);
-   }
    else
       log_resources_set_int("DatasetteSound", 0);
 

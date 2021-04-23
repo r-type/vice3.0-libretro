@@ -151,6 +151,23 @@ External ROM files required in `system/vice`:
 | **JiffyDOS_1571_repl310654.bin** | 32 768 | 41c6cc528e9515ffd0ed9b180f8467c0 |
 | **JiffyDOS_1581.bin**            | 32 768 | 20b6885c6dc2d42c38754a365b043d71 |
 
+## Custom vicerc
+
+Custom configs can be used globally and per-content for accessing VICE options that do not exist as core options.
+
+Config files are processed first found in this order:
+1. `saves/[content].vicerc`
+2. `saves/vicerc`
+3. `system/vice/vicerc`
+
+All available options are dumped in `system/vice/vicerc-dump-[corename]` for copy-pasteing to actual config.
+
+Options must be after the correct `[corename]` block, for example x64 fast:
+```
+[C64]
+GMod2FlashWrite=0
+```
+
 ## Command file operation
 
 VICE command line options are supported by placing the desired command line in a text file with `.cmd` file extension. The command line format is as documented in the [VICE manual](http://vice-emu.sourceforge.net/vice_6.html).

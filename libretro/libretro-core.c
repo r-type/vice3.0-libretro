@@ -1166,6 +1166,9 @@ static void autodetect_drivetype(int unit)
                 set_drive_type = DISK_IMAGE_TYPE_D64;
             else if (diskimg->type == DISK_IMAGE_TYPE_G71)
                 set_drive_type = DISK_IMAGE_TYPE_D71;
+            /* Force 1541 to 1541-II */
+            else if (diskimg->type == DRIVE_TYPE_1541)
+                set_drive_type = DRIVE_TYPE_1541II;
             else
                 set_drive_type = diskimg->type;
 
@@ -1177,6 +1180,7 @@ static void autodetect_drivetype(int unit)
                 log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
 
             /* Change from 1581 to 1541 will not detect disk properly without reattaching (?!) */
+            file_system_detach_disk(unit, 0);
             file_system_attach_disk(unit, 0, attached_image);
 
             /* Don't bother with drive sound muting when autoloadwarp is on */

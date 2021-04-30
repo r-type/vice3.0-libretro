@@ -130,8 +130,11 @@ static void display_joyport(void)
     sprintf(joy1, "%s", "1");
     sprintf(joy2, "%s", "2");
 
+    /* Lightpen/gun */
+    if (opt_joyport_type > 10 && cur_port == 1)
+        sprintf(tmpstr, "L%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Mouse */
-    if (opt_joyport_type > 2 && cur_port == 1)
+    else if (opt_joyport_type > 2 && cur_port == 1)
         sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Paddles */
     else if (opt_joyport_type == 2 && cur_port == 1)
@@ -140,8 +143,11 @@ static void display_joyport(void)
     else
         sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 
+    /* Lightpen/gun */
+    if (opt_joyport_type > 10 && cur_port == 2)
+        sprintf(tmpstr + strlen(tmpstr), "L%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
     /* Mouse */
-    if (opt_joyport_type > 2 && cur_port == 2)
+    else if (opt_joyport_type > 2 && cur_port == 2)
         sprintf(tmpstr + strlen(tmpstr), "M%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
     /* Paddles */
     else if (opt_joyport_type == 2 && cur_port == 2)
@@ -153,8 +159,11 @@ static void display_joyport(void)
     char joy1[2];
     sprintf(joy1, "%s", "1");
 
+    /* Lightpen/gun */
+    if (opt_joyport_type > 10)
+        sprintf(tmpstr, "L%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Mouse */
-    if (opt_joyport_type > 2)
+    else if (opt_joyport_type > 2)
        sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Paddles */
     else if (opt_joyport_type == 2)

@@ -77,8 +77,11 @@
 #define HAVE_MKSTEMP 1
 #endif
 
-/* Enable 1351 mouse support */
+/* Enable mouse support */
 #define HAVE_MOUSE 1
+
+/* Enable lightpen support */
+#define HAVE_LIGHTPEN 1
 
 /* FastSID */
 #define HAVE_FASTSID

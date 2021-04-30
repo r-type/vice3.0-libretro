@@ -6,6 +6,7 @@
 #include "vice.h"
 
 #include "kbdbuf.h"
+#include "lightpendrv.h"
 #include "ui.h"
 #include "uistatusbar.h"
 #include "vsyncapi.h"
@@ -70,6 +71,7 @@ void vsyncarch_presync(void)
     }
 
     retro_renderloop = 0;
+    retro_lightpen_update();
 }
 
 void vsyncarch_postsync(void)

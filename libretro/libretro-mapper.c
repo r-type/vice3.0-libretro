@@ -2,6 +2,7 @@
 #include "libretro-core.h"
 #include "libretro-mapper.h"
 #include "libretro-vkbd.h"
+#include "libretro-graph.h"
 
 #include "archdep.h"
 #include "joystick.h"
@@ -88,6 +89,7 @@ extern dc_storage *dc;
 extern unsigned int opt_retropad_options;
 extern unsigned int opt_joyport_type;
 static int opt_joyport_type_prev = -1;
+extern int opt_joyport_pointer_color;
 extern unsigned int opt_dpadmouse_speed;
 extern unsigned int opt_analogmouse;
 extern unsigned int opt_analogmouse_deadzone;
@@ -109,6 +111,42 @@ unsigned int turbo_fire_button = 0;
 unsigned int turbo_pulse = 6;
 unsigned int turbo_state[RETRO_DEVICES] = {0};
 unsigned int turbo_toggle[RETRO_DEVICES] = {0};
+
+int retro_ui_get_pointer_state(int *px, int *py, unsigned int *pbuttons)
+{
+   if (retro_vkbd)
+      return 0;
+
+   *pbuttons = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED);
+
+   *px = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
+   *py = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
+   *px = (int)((*px + 0x7fff) * retrow / 0xffff);
+   *py = (int)((*py + 0x7fff) * retroh / 0xffff);
+
+   if (opt_joyport_pointer_color > -1)
+   {
+      unsigned pointer_color = 0;
+      switch (opt_joyport_pointer_color)
+      {
+         case 0: pointer_color = RGB(  0,   0,   0); break; /* Black */
+         case 1: pointer_color = RGB(255, 255, 255); break; /* White */
+         case 2: pointer_color = RGB(255,   0,   0); break; /* Red */
+         case 3: pointer_color = RGB(  0, 255,   0); break; /* Green */
+         case 4: pointer_color = RGB(  0,   0, 255); break; /* Blue */
+         case 5: pointer_color = RGB(255, 255,   0); break; /* Yellow */
+         case 6: pointer_color = RGB(  0, 255, 255); break; /* Cyan */
+         case 7: pointer_color = RGB(255,   0, 255); break; /* Purple */
+      }
+
+      draw_hline(*px - 2, *py, 2, 1, pointer_color);
+      draw_hline(*px + 1, *py, 2, 1, pointer_color);
+      draw_vline(*px, *py - 2, 1, 2, pointer_color);
+      draw_vline(*px, *py + 1, 1, 2, pointer_color);
+   }
+
+   return 1;
+}
 
 enum EMU_FUNCTIONS
 {

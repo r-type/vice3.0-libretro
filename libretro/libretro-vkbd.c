@@ -375,7 +375,7 @@ void print_vkbd(void)
                         : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
 
 #ifdef POINTER_DEBUG
-   draw_hline(pointer_x, pointer_y, 1, 1, RGB565(255, 0, 255));
+   draw_hline(pointer_x, pointer_y, 1, 1, RGB(255, 0, 255));
 #endif
 }
 

@@ -471,10 +471,10 @@ void ui_display_drive_current_image(unsigned int unit_number, unsigned int drive
 
 /* Tape related UI */
 
-static int tape_counter = 0;
-static int tape_enabled = 0;
-static int tape_motor = 0;
+int tape_enabled = 0;
 int tape_control = 0;
+int tape_counter = 0;
+static int tape_motor = 0;
 
 static void display_tape(void)
 {

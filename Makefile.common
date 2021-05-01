@@ -155,6 +155,7 @@ SOURCES_C += \
 	$(RETRODEP)/c64ui.c \
 	$(RETRODEP)/console.c \
 	$(RETRODEP)/joy.c \
+	$(RETRODEP)/lightpendrv.c \
 	$(RETRODEP)/kbd.c \
 	$(RETRODEP)/main.c \
 	$(RETRODEP)/mousedrv.c \

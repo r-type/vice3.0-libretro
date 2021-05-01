@@ -11,6 +11,8 @@ extern unsigned int opt_vkbd_theme;
 extern libretro_graph_alpha_t opt_vkbd_alpha;
 extern unsigned int zoom_mode_id;
 
+extern int tape_enabled;
+extern int tape_counter;
 extern int tape_control;
 
 int RGB(int r, int g, int b)
@@ -251,6 +253,8 @@ void print_vkbd(void)
    {
       for (y = 0; y < VKBDY; y++)
       {
+         char text_str[4] = {0};
+
          /* Skip selected key */
          if (((vkey_pos_y * VKBDX) + vkey_pos_x + page) == ((y * VKBDX) + x + page))
             continue;
@@ -283,7 +287,9 @@ void print_vkbd(void)
          /* Key centering */
          BKG_PADDING_X = BKG_PADDING_X_DEFAULT;
          BKG_PADDING_Y = BKG_PADDING_Y_DEFAULT;
-         if (!shifted && strlen(vkeys[(y * VKBDX) + x + page].normal) > 1)
+         if (tape_enabled && !shifted && vkeys[(y * VKBDX) + x + page].value == -15) /* Datasette Reset */
+            BKG_PADDING_X = BKG_PADDING(3);
+         else if (!shifted && strlen(vkeys[(y * VKBDX) + x + page].normal) > 1)
             BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].normal));
          else if (shifted && strlen(vkeys[(y * VKBDX) + x + page].shift) > 1)
             BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].shift));
@@ -331,9 +337,15 @@ void print_vkbd(void)
                    BKG_COLOR, BKG_ALPHA);
 
          /* Key text */
+         if (tape_enabled && !shifted && vkeys[(y * VKBDX) + x + page].value == -15) /* Datasette Reset */
+            snprintf(text_str, sizeof(text_str), "%03d", tape_counter);
+         else
+            snprintf(text_str, sizeof(text_str), "%s",
+               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+
          draw_text(XTEXT, YTEXT, FONT_COLOR, BKG_COLOR, GRAPH_ALPHA_25,
                    (text_outline) ? GRAPH_BG_OUTLINE : GRAPH_BG_SHADOW, FONT_WIDTH, FONT_HEIGHT, FONT_MAX,
-                   (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+                   text_str);
       }
    }
 
@@ -375,7 +387,7 @@ void print_vkbd(void)
                         : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
 
 #ifdef POINTER_DEBUG
-   draw_hline(pointer_x, pointer_y, 1, 1, RGB565(255, 0, 255));
+   draw_hline(pointer_x, pointer_y, 1, 1, RGB(255, 0, 255));
 #endif
 }
 

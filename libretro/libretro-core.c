@@ -138,6 +138,7 @@ bool opt_keyboard_pass_through = false;
 unsigned int opt_keyboard_keymap = KBD_INDEX_POS;
 unsigned int opt_retropad_options = 0;
 unsigned int opt_joyport_type = 0;
+int opt_joyport_pointer_color = -1;
 unsigned int opt_dpadmouse_speed = 6;
 unsigned int opt_mouse_speed = 100;
 unsigned int opt_analogmouse = 0;
@@ -1165,6 +1166,9 @@ static void autodetect_drivetype(int unit)
                 set_drive_type = DISK_IMAGE_TYPE_D64;
             else if (diskimg->type == DISK_IMAGE_TYPE_G71)
                 set_drive_type = DISK_IMAGE_TYPE_D71;
+            /* Force 1541 to 1541-II */
+            else if (diskimg->type == DRIVE_TYPE_1541)
+                set_drive_type = DRIVE_TYPE_1541II;
             else
                 set_drive_type = diskimg->type;
 
@@ -1176,6 +1180,7 @@ static void autodetect_drivetype(int unit)
                 log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
 
             /* Change from 1581 to 1541 will not detect disk properly without reattaching (?!) */
+            file_system_detach_disk(unit, 0);
             file_system_attach_disk(unit, 0, attached_image);
 
             /* Don't bother with drive sound muting when autoloadwarp is on */
@@ -2366,6 +2371,23 @@ void retro_set_environment(retro_environment_t cb)
          },
          "16bit"
       },
+      {
+         "vice_joyport_pointer_color",
+         "Video > Light Pen/Gun Pointer Color",
+         "Color for light guns and pens.",
+         {
+            { "disabled", NULL },
+            { "black", "Black" },
+            { "white", "White" },
+            { "red", "Red" },
+            { "green", "Green" },
+            { "blue", "Blue" },
+            { "yellow", "Yellow" },
+            { "purple", "Purple" },
+            { NULL, NULL },
+         },
+         "blue"
+      },
 #if defined(__XVIC__)
       {
          "vice_vic20_external_palette",
@@ -2376,7 +2398,7 @@ void retro_set_environment(retro_environment_t cb)
             { "colodore_vic", "Colodore" },
             { "mike-pal", "Mike (PAL)" },
             { "mike-ntsc", "Mike (NTSC)" },
-            { "vice", "Vice" },
+            { "vice", "VICE" },
             { NULL, NULL },
          },
          "colodore_vic"
@@ -3330,6 +3352,12 @@ void retro_set_environment(retro_environment_t cb)
             { "8", "Mouse (SmartMouse)" },
             { "9", "Mouse (Micromys)" },
             { "10", "Koalapad" },
+            { "11", "Light Pen (Up trigger)" },
+            { "12", "Light Pen (Left trigger)" },
+            { "13", "Light Pen (Datel)" },
+            { "16", "Light Pen (Inkwell)" },
+            { "14", "Light Gun (Magnum Light Phaser)" },
+            { "15", "Light Gun (Stack Light Rifle)" },
             { NULL, NULL },
          },
          "1"
@@ -4690,6 +4718,25 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       opt_joyport_type = atoi(var.value);
+
+      /* Light guns/pens only possible in port 1 */
+      if (opt_joyport_type > 10)
+         cur_port = 1;
+   }
+
+   var.key = "vice_joyport_pointer_color";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if      (!strcmp(var.value, "disabled")) opt_joyport_pointer_color = -1;
+      else if (!strcmp(var.value, "black"))    opt_joyport_pointer_color = 0;
+      else if (!strcmp(var.value, "white"))    opt_joyport_pointer_color = 1;
+      else if (!strcmp(var.value, "red"))      opt_joyport_pointer_color = 2;
+      else if (!strcmp(var.value, "green"))    opt_joyport_pointer_color = 3;
+      else if (!strcmp(var.value, "blue"))     opt_joyport_pointer_color = 4;
+      else if (!strcmp(var.value, "yellow"))   opt_joyport_pointer_color = 5;
+      else if (!strcmp(var.value, "cyan"))     opt_joyport_pointer_color = 6;
+      else if (!strcmp(var.value, "purple"))   opt_joyport_pointer_color = 7;
    }
 
    var.key = "vice_analogmouse_deadzone";
@@ -5289,6 +5336,8 @@ static void update_variables(void)
    option_display.key = "vice_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_gfx_colors";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_joyport_pointer_color";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_zoom_mode";

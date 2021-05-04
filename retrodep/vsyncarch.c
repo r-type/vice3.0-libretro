@@ -16,14 +16,6 @@
 
 #include "libretro-core.h"
 
-#if defined(VITA)
-#include <psp2/kernel/threadmgr.h>
-#endif
-
-extern struct video_canvas_s *retro_canvas;
-
-#include <time.h>
-
 /*#define TICKSPERSECOND  1000000L*/     /* Microseconds resolution. */
 #ifdef HAVE_NANOSLEEP
 #define TICKSPERSECOND  1000000000L  /* Nanoseconds resolution. */
@@ -58,14 +50,6 @@ void vsyncarch_init(void)
 
 void vsyncarch_presync(void)
 {
-    video_canvas_render(
-        retro_canvas, (BYTE *)&retro_bmp,
-        retrow, retroh,
-        retroXS, retroYS,
-        0, 0, /*xi, yi,*/
-        retrow*pix_bytes, 8*pix_bytes
-    );
-                        
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_draw();
     }

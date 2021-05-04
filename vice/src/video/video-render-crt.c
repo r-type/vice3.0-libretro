@@ -120,6 +120,7 @@ static void video_render_crt_main(video_render_config_t *config,
                 }
             }
             break;
+#ifndef __LIBRETRO__
         case VIDEO_RENDER_CRT_1X2:
             if (delayloop && depth != 8) {
                 switch (depth) {
@@ -253,6 +254,7 @@ static void video_render_crt_main(video_render_config_t *config,
                 }
             }
             break;
+#endif /* __LIBRETRO__ */
     }
     if (rendermode_error != rendermode) {
         log_error(LOG_DEFAULT, "video_render_crt_main: unsupported rendermode (%d)", rendermode);

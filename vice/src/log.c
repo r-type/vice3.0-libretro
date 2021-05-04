@@ -497,7 +497,12 @@ int log_debug(const char *format, ...)
     int rc;
 
     va_start(ap, format);
+#if 1
+    printf(format, ap);
+    printf("\n");
+#else
     rc = log_helper(RETRO_LOG_DEBUG, 0, format, ap);
+#endif
     va_end(ap);
 
     return rc;
@@ -521,7 +526,6 @@ int log_verbose(const char *format, ...)
 int log_resources_init(void) {return 0;}
 void log_resources_shutdown(void) {}
 int log_cmdline_options_init(void) {return 0;}
-//int log_init(void) {return 0;}
 int log_init_with_fd(FILE *f) {return 0;}
 int log_set_verbose(int n) {verbose=n?1:0;return 0;}
 int log_verbose_init(int argc, char **argv) {return 0;}
@@ -531,7 +535,6 @@ int log_init(void)
 {
     return (log_cb == NULL) ? -1 : 0;
 }
-
 
 void log_enable(int on)
 {

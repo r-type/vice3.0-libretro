@@ -1267,7 +1267,7 @@ extern cmdline_option_ram_t *options;
 static char* disabled_resources[] =
 {
     /* Core options */
-    "Mouse", "AutostartPrgMode", "AutostartDelayRandom", "VirtualDevices", "CrtcFilter", "CrtcStretchVertical",
+    "Mouse", "AutostartPrgMode", "AutostartDelayRandom", "VirtualDevices", "CrtcStretchVertical", "VDCStretchVertical",
     "VICExternalPalette", "VICPaletteFile", "TEDExternalPalette", "TEDPaletteFile",
     "CrtcExternalPalette", "CrtcPaletteFile", "VICIIExternalPalette", "VICIIPaletteFile",
     "VICColorGamma", "VICColorSaturation", "VICColorContrast", "VICColorBrightness", "VICColorTint",
@@ -1287,8 +1287,8 @@ static char* disabled_resources[] =
     "SDLStatusbar", "ExitScreenshotName", "ExitScreenshotName1", "RefreshRate", "SoundRecordDeviceName", "SoundRecordDeviceArg",
     "SoundDeviceName", "Sound", "SoundSampleRate", "SoundBufferSize", "SoundFragmentSize", "SoundDeviceArg",
     "SoundSuspendTime", "SoundSpeedAdjustment", "SoundVolume", "SoundOutput", "MachineVideoStandard",
-    "VICIIVideoCache", "VICIIDoubleScan", "VICIIHwScale", "VICIIDoubleSize", "VICIIBorderMode",
-    "VICIIPALScanLineShade", "VICIIPALBlur", "VICIIPALOddLinePhase", "VICIIPALOddLineOffset", "VICIIFilter",
+    "VICIIDoubleScan", "VICIIDoubleSize", "VICIIHwScale", "VICIIFilter", "VICIIBorderMode",
+    "VICDoubleSize", "VICFilter", "VICBorderMode",  "TEDDoubleSize", "TEDFilter", "TEDBorderMode", 
     "EventSnapshotDir", "EventStartSnapshot", "EventEndSnapshot", "EventStartMode", "EventImageInclude",
 
     /* Stubbed resources */

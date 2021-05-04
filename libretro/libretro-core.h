@@ -66,7 +66,7 @@ typedef uint8_t uint8;
 #endif
 #define RETRO_BMP_SIZE (WINDOW_WIDTH * WINDOW_HEIGHT * 2)
 extern unsigned short int retro_bmp[RETRO_BMP_SIZE];
-extern unsigned int pix_bytes;
+extern unsigned short int pix_bytes;
 
 #define MANUAL_CROP_OPTIONS \
    { \
@@ -209,6 +209,7 @@ struct vice_core_options
    int SidResid8580FilterBias;
    int SFXSoundExpanderChip;
    char ExternalPalette[RETRO_PATH_MAX];
+   int Filter;
    int ColorGamma;
    int ColorTint;
    int ColorSaturation;

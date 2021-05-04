@@ -394,10 +394,15 @@ SOURCES_C += \
     $(EMU)/vicii/vicii-timing.c \
     $(EMU)/vicii/vicii.c \
     $(EMU)/video/render1x1.c \
+    $(EMU)/video/render1x1crt.c \
+    $(EMU)/video/render1x1ntsc.c \
+    $(EMU)/video/render1x1pal.c \
     $(EMU)/video/video-canvas.c \
     $(EMU)/video/video-cmdline-options.c \
     $(EMU)/video/video-color.c \
     $(EMU)/video/video-render.c \
+    $(EMU)/video/video-render-crt.c \
+    $(EMU)/video/video-render-pal.c \
     $(EMU)/video/video-resources.c \
     $(EMU)/video/video-sound.c \
     $(EMU)/video/video-viewport.c \
@@ -423,6 +428,4 @@ SOURCES_C += \
     $(RETRODEP)/samplerdrv/sampler.c \
     $(RETRODEP)/video/video-render-1x2.c \
     $(RETRODEP)/video/video-render-2x2.c \
-    $(RETRODEP)/video/video-render-crt.c \
-    $(RETRODEP)/video/video-render-pal.c \
 

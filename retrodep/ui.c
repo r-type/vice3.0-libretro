@@ -186,8 +186,13 @@ int ui_init_finalize(void)
    log_resources_set_int("FileSystemDevice8", 0);
    log_resources_set_int("FSDevice8ConvertP00", 0);
 
+   /* Machine specific defaults */
 #if defined(__X64DTV__)
    log_resources_set_int("Drive8Type", 0);
+#elif defined(__X128__)
+   log_resources_set_int("VDCStretchVertical", 0);
+#elif defined(__XPET__) || defined(__XCBM2__)
+   log_resources_set_int("CrtcStretchVertical", 0);
 #endif
 
    /*** Core options ***/
@@ -233,6 +238,20 @@ int ui_init_finalize(void)
       log_resources_set_string("VICIIPaletteFile", vice_opt.ExternalPalette);
       log_resources_set_int("VICIIExternalPalette", 1);
    }
+#endif
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+   log_resources_set_int("VICIIFilter", (vice_opt.Filter > 0) ? 1 : 0);
+   log_resources_set_int("VICIIPALBlur", vice_opt.Filter);
+#elif defined(__XVIC__)
+   log_resources_set_int("VICFilter", (vice_opt.Filter > 0) ? 1 : 0);
+   log_resources_set_int("VICPALBlur", vice_opt.Filter);
+#elif defined(__XPLUS4__)
+   log_resources_set_int("TEDFilter", (vice_opt.Filter > 0) ? 1 : 0);
+   log_resources_set_int("TEDPALBlur", vice_opt.Filter);
+#elif defined(__XPET__) || defined(__XCBM2__)
+   log_resources_set_int("CrtcFilter", (vice_opt.Filter > 0) ? 1 : 0);
+   log_resources_set_int("CrtcPALBlur", vice_opt.Filter);
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)

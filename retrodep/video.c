@@ -22,8 +22,6 @@
 
 #include "libretro-core.h"
 
-struct video_canvas_s *retro_canvas;
-
 int machine_ui_done = 0;
 
 static const cmdline_option_t cmdline_options[] = {
@@ -40,7 +38,7 @@ int video_arch_cmdline_options_init(void)
    return cmdline_register_options(cmdline_options);
 }
 
-void video_canvas_resize(struct video_canvas_s *canvas,  char resizecv)
+void video_canvas_resize(struct video_canvas_s *canvas, char resize_canvas)
 {
 }
 
@@ -81,7 +79,7 @@ int video_canvas_set_palette(struct video_canvas_s *canvas,
       if (pix_bytes == 2)
          col = RGB565(palette->entries[i].red, palette->entries[i].green, palette->entries[i].blue);
       else
-         col = palette->entries[i].red<<16 | palette->entries[i].green<<8 | palette->entries[i].blue;
+         col = palette->entries[i].red << 16 | palette->entries[i].green << 8 | palette->entries[i].blue;
 
       video_render_setphysicalcolor(canvas->videoconfig, i, col, canvas->depth);
    }
@@ -90,7 +88,7 @@ int video_canvas_set_palette(struct video_canvas_s *canvas,
       if (pix_bytes == 2)
          video_render_setrawrgb(i, RGB565(i, 0, 0), RGB565(0, i, 0), RGB565(0, 0, i));
       else
-         video_render_setrawrgb(i, i, i, i);
+         video_render_setrawrgb(i, i << 16, i << 8, i);
    }
    video_render_initraw(canvas->videoconfig);
 
@@ -105,7 +103,14 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
 #ifdef RETRO_DEBUG
    printf("XS:%d YS:%d XI:%d YI:%d W:%d H:%d\n",xs,ys,xi,yi,w,h);
 #endif
-   retro_canvas = canvas;
+
+   video_canvas_render(
+         canvas, (uint8_t *)&retro_bmp,
+         retrow, retroh,
+         retroXS, retroYS,
+         0, 0, /*xi, yi,*/
+         retrow*pix_bytes, 8*pix_bytes
+   );
 }
 
 int video_init()

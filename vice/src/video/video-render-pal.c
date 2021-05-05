@@ -134,6 +134,7 @@ static void video_render_pal_main(video_render_config_t *config,
                 }
             }
             return;
+#ifndef __LIBRETRO__
         case VIDEO_RENDER_PAL_2X2:
             if (delayloop && depth != 8) {
                 switch (video) {
@@ -215,6 +216,7 @@ static void video_render_pal_main(video_render_config_t *config,
                         return;
                 }
             }
+#endif /* __LIBRETRO__ */
     }
     log_debug("video_render_pal_main unsupported rendermode (%d)\n", rendermode);
 }

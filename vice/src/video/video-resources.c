@@ -99,12 +99,15 @@ typedef struct video_resource_chip_mode_s video_resource_chip_mode_t;
 
 static int set_double_size_enabled(int value, void *param)
 {
-#ifndef __LIBRETRO__
     cap_render_t *cap_render;
     video_canvas_t *canvas = (video_canvas_t *)param;
     int old_scalex, old_scaley;
     video_chip_cap_t *video_chip_cap = canvas->videoconfig->cap;
     int val = value ? 1 : 0;
+
+#ifdef __LIBRETRO__
+    val = 0;
+#endif
 
     if (val) {
         cap_render = &video_chip_cap->double_mode;
@@ -149,7 +152,6 @@ static int set_double_size_enabled(int value, void *param)
     }
 
     canvas->videoconfig->double_size_enabled = val;
-#endif /* __LIBRETRO__ */
     return 0;
 }
 
@@ -270,11 +272,7 @@ static const char *vname_chip_rendermode[] = { "Filter", NULL };
 
 static resource_int_t resources_chip_rendermode[] =
 {
-#ifdef __LIBRETRO__
-    { NULL, VIDEO_FILTER_NONE, RES_EVENT_NO, NULL,
-#else
     { NULL, VIDEO_FILTER_CRT, RES_EVENT_NO, NULL,
-#endif
       NULL, set_chip_rendermode, NULL },
     RESOURCE_INT_LIST_END
 };

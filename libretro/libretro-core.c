@@ -84,7 +84,7 @@ unsigned int retroh = WINDOW_HEIGHT;
 unsigned int lastw = 0;
 unsigned int lasth = 0;
 
-unsigned int pix_bytes = 2;
+unsigned short int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
 unsigned short int retro_bmp[RETRO_BMP_SIZE] = {0};
 
@@ -2374,7 +2374,7 @@ void retro_set_environment(retro_environment_t cb)
       {
          "vice_joyport_pointer_color",
          "Video > Light Pen/Gun Pointer Color",
-         "Color for light guns and pens.",
+         "Crosshair color for light pens and guns.",
          {
             { "disabled", NULL },
             { "black", "Black" },
@@ -2387,6 +2387,29 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL },
          },
          "blue"
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_filter",
+         "Video > VIC-II Filter",
+#elif defined(__XVIC__)
+         "vice_vic_filter",
+         "Video > VIC Filter",
+#elif defined(__XPLUS4__)
+         "vice_ted_filter",
+         "Video > TED Filter",
+#elif defined(__XPET__) || defined(__XCBM2__)
+         "vice_crtc_filter",
+         "Video > CRTC Filter",
+#endif
+         "CRT emulation filter with custom horizontal blur.",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { "enabled_medblur", "50% blur" },
+            { "enabled_lowblur", "10% blur" },
+         },
+         "disabled"
       },
 #if defined(__XVIC__)
       {
@@ -4457,6 +4480,48 @@ static void update_variables(void)
       }
    }
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+   var.key = "vice_vicii_filter";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_filter";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_filter";
+#elif defined(__XPET__) || defined(__XCBM2__)
+   var.key = "vice_crtc_filter";
+#endif
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int filter = strcmp(var.value, "disabled");
+      int blur = 0;
+
+      if (filter)
+      {
+         if      (strstr(var.value, "lowblur")) blur = 50;
+         else if (strstr(var.value, "medblur")) blur = 250;
+         else                                   blur = 500;
+      }
+
+      if (retro_ui_finalized && vice_opt.Filter != blur)
+      {
+#if defined(__XPET__) || defined(__XCBM2__)
+         log_resources_set_int("CrtcFilter", filter);
+         log_resources_set_int("CrtcPALBlur", blur);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDFilter", filter);
+         log_resources_set_int("TEDPALBlur", blur);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICFilter", filter);
+         log_resources_set_int("VICPALBlur", blur);
+#else
+         log_resources_set_int("VICIIFilter", filter);
+         log_resources_set_int("VICIIPALBlur", blur);
+#endif
+      }
+
+      vice_opt.Filter = blur;
+   }
+
 #if defined(__XVIC__)
    var.key = "vice_vic20_external_palette";
    var.value = NULL;
@@ -5358,6 +5423,8 @@ static void update_variables(void)
 #if defined(__XVIC__)
    option_display.key = "vice_vic20_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vic_filter",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_vic_color_gamma",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_vic_color_tint",
@@ -5370,6 +5437,8 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #elif defined(__XPLUS4__)
    option_display.key = "vice_plus4_external_palette";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_ted_filter",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_ted_color_gamma",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -5384,11 +5453,17 @@ static void update_variables(void)
 #elif defined(__XPET__)
    option_display.key = "vice_pet_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_crtc_filter",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #elif defined(__XCBM2__)
    option_display.key = "vice_cbm2_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_crtc_filter",
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #else
    option_display.key = "vice_external_palette";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vicii_filter",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_vicii_color_gamma",
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);

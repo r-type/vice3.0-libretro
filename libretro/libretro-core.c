@@ -803,8 +803,12 @@ static int process_cmdline(const char* argv)
                     }
                     fclose(fd);
 
-                    argv = fullpath;
-                    type = vic20_autodetect_cartridge_type(argv);
+                    /* Only replace 'argv' with memory types */
+                    if (dc_get_image_type(fullpath) == DC_IMAGE_TYPE_MEM)
+                    {
+                        argv = fullpath;
+                        type = vic20_autodetect_cartridge_type(argv);
+                    }
                 }
 
                 switch (type)
@@ -1359,6 +1363,8 @@ void update_from_vice()
     {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
         if ((attachedImage = cartridge_get_file_name(cart_getid_slotmain())) != NULL)
+#elif defined(__XVIC__)
+        if ((attachedImage = generic_get_file_name(0)) != NULL)
 #else
         if ((attachedImage = cartridge_get_file_name(0)) != NULL)
 #endif

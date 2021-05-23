@@ -262,6 +262,7 @@ struct vice_cart_info
 #include "vic20mem.h"
 #include "vic20model.h"
 #include "vic20cart.h"
+#include "vic20-generic.h"
 #elif defined(__XPLUS4__)
 #include "plus4.h"
 #include "plus4model.h"

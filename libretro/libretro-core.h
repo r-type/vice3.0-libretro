@@ -247,7 +247,7 @@ struct vice_cart_info
 #include "c64model.h"
 #elif defined(__XSCPU64__)
 #include "scpu64.h"
-#include "c64mem.h"
+#include "scpu64mem.h"
 #include "c64model.h"
 #elif defined(__X64DTV__)
 #include "c64dtv.h"

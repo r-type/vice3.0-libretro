@@ -37,7 +37,6 @@
 #include "types.h"
 
 #ifdef __LIBRETRO__
-extern int mem_ram_size;
 extern long retro_ticks(void);
 static unsigned int g_seed;
 
@@ -270,9 +269,6 @@ void ram_init(uint8_t *memram, unsigned int ramsize)
         
         memram[offset] = value;
     }
-#ifdef __LIBRETRO__
-    mem_ram_size = ramsize;
-#endif
 }
 
 /* create a preview of the RAM init pattern - this should be as fast as

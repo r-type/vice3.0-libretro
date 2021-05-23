@@ -70,7 +70,25 @@ bool prev_ui_finalized = false;
 #endif
 
 extern uint8_t mem_ram[];
-int mem_ram_size;
+#if defined(__X64__) || defined(__X64SC__)
+int mem_ram_size = C64_RAM_SIZE;
+#elif defined(__X64DTV__)
+int mem_ram_size = 0x200000;
+#elif defined(__XSCPU64__)
+int mem_ram_size = SCPU64_RAM_SIZE;
+#elif defined(__X128__)
+int mem_ram_size = C128_RAM_SIZE;
+#elif defined(__XPLUS4__)
+int mem_ram_size = 0x10000;
+#elif defined(__XVIC__)
+int mem_ram_size = 0x8000;
+#elif defined(__CBM2__) || defined(__CBM5x0__)
+int mem_ram_size = CBM2_RAM_SIZE;
+#elif defined(__XPET__)
+int mem_ram_size = 0x20000;
+#else
+int mem_ram_size = 0;
+#endif
 
 /* Core geometry */
 unsigned int retroXS = 0;
@@ -6446,6 +6464,16 @@ bool retro_load_game(const struct retro_game_info *info)
       runstate = RUNSTATE_LOADED_CONTENT;
    }
 
+   struct retro_memory_descriptor memdesc[] = {
+      {RETRO_MEMDESC_SYSTEM_RAM, mem_ram, 0, 0, 0, 0, mem_ram_size, NULL}
+   };
+
+   struct retro_memory_map mmap = {
+      memdesc,
+      sizeof(memdesc) / sizeof(memdesc[0])
+   };
+
+   environ_cb(RETRO_ENVIRONMENT_SET_MEMORY_MAPS, &mmap);
    return true;
 }
 

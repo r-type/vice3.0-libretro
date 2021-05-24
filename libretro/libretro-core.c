@@ -6594,6 +6594,7 @@ size_t retro_serialize_size(void)
          else
          {
             log_cb(RETRO_LOG_INFO, "Failed to calculate snapshot size\n");
+            snapshot_display_error();
          }
          snapshot_fclose(snapshot_stream);
          snapshot_stream = NULL;
@@ -6636,6 +6637,7 @@ bool retro_serialize(void *data_, size_t size)
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to serialize snapshot\n");
+      snapshot_display_error();
    }
    return false;
 }
@@ -6662,6 +6664,7 @@ bool retro_unserialize(const void *data_, size_t size)
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");
+      snapshot_display_error();
    }
    return false;
 }

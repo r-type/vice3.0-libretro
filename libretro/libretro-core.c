@@ -6599,6 +6599,20 @@ size_t retro_serialize_size(void)
          snapshot_stream = NULL;
       }
    }
+   else
+   {
+      /* Guesstimation size for rewind init, because core is not running yet.
+       * Size depends on the inserted disk format, thus */
+      snapshot_size = mem_ram_size + (mem_ram_size * 0.5);
+
+      /* Some non-EF cartridges allocate a ridiculous amount of memory,
+       * and at this moment the only way to play safe is to overestimate, because
+       * even a 64k sized cart (Badlands) will have a 592452 sized snapshot !? */
+      if ((full_path && strendswith(full_path, "crt")) ||
+          (dc && dc->files[dc->index] && strendswith(dc->files[dc->index], "crt")))
+         snapshot_size = 592452;
+   }
+
    return snapshot_size;
 }
 

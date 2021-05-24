@@ -1494,6 +1494,10 @@ void update_from_vice()
 #endif
             }
          }
+         else
+            /* Due to a bug in 3.5, some carts (Up 'n Down) get stuck in black screen when
+             * launched via cmdline, but continue with reset and subsequent attaches.. */
+            request_restart = true;
       }
    }
 
@@ -6421,8 +6425,9 @@ void retro_run(void)
       retroYS_offset = zoomed_YS_offset;
    }
 
-   /* retro_reset() postponed here for proper JiffyDOS+vicerc core option refresh operation */
-   if (request_restart)
+   /* retro_reset() postponed here for proper JiffyDOS+vicerc core option refresh operation
+    * Restart does nothing if done too early, therefore only allow it after the first frame */
+   if (request_restart && retro_now > 20000)
    {
       request_restart = false;
       emu_reset(0);

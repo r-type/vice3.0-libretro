@@ -1273,7 +1273,11 @@ static void display_error_with_vice_version(char *text, char *filename)
             strcat(vmessage, message);
         }
     }
+#if 0
     sprintf(message, "%s\n\n%s.", text, vmessage);
+#else
+    sprintf(message, "%s, %s.", text, vmessage);
+#endif
     ui_error(message, filename);
     lib_free(message);
     lib_free(vmessage);

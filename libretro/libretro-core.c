@@ -70,7 +70,25 @@ bool prev_ui_finalized = false;
 #endif
 
 extern uint8_t mem_ram[];
-int mem_ram_size;
+#if defined(__X64__) || defined(__X64SC__)
+int mem_ram_size = C64_RAM_SIZE;
+#elif defined(__X64DTV__)
+int mem_ram_size = 0x200000;
+#elif defined(__XSCPU64__)
+int mem_ram_size = SCPU64_RAM_SIZE;
+#elif defined(__X128__)
+int mem_ram_size = C128_RAM_SIZE;
+#elif defined(__XPLUS4__)
+int mem_ram_size = 0x10000;
+#elif defined(__XVIC__)
+int mem_ram_size = 0x8000;
+#elif defined(__CBM2__) || defined(__CBM5x0__)
+int mem_ram_size = CBM2_RAM_SIZE;
+#elif defined(__XPET__)
+int mem_ram_size = 0x20000;
+#else
+int mem_ram_size = 0;
+#endif
 
 /* Core geometry */
 unsigned int retroXS = 0;
@@ -315,1281 +333,1279 @@ static void parse_cmdline(const char *argv)
 
 static int check_joystick_control(const char* filename)
 {
-    int port = 0;
-    if (filename != NULL)
-    {
-        if (strcasestr(filename, "_j1.") || strcasestr(filename, "(j1)."))
-            port = 1;
-        else if (strcasestr(filename, "_j2.") || strcasestr(filename, "(j2)."))
-            port = 2;
-    }
-    return port;
+   int port = 0;
+   if (filename != NULL)
+   {
+      if (strcasestr(filename, "_j1.") || strcasestr(filename, "(j1)."))
+         port = 1;
+      else if (strcasestr(filename, "_j2.") || strcasestr(filename, "(j2)."))
+         port = 2;
+   }
+   return port;
 }
 
 static int retro_disk_get_image_unit()
 {
-    int unit = dc->unit;
-    if (dc->index < dc->count)
-    {
-        if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_TAPE)
-            dc->unit = 1;
-        else if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_FLOPPY)
-            dc->unit = 8;
-        else if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_MEM)
-            dc->unit = 0;
-        else
-            dc->unit = 8;
-    }
-    else
-        unit = 8;
+   int unit = dc->unit;
+   if (dc->index < dc->count)
+   {
+      if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_TAPE)
+         dc->unit = 1;
+      else if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_FLOPPY)
+         dc->unit = 8;
+      else if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_MEM)
+         dc->unit = 0;
+      else
+         dc->unit = 8;
+   }
+   else
+      unit = 8;
 
-    return unit;
+   return unit;
 }
 
 /* ReSID 6581 init pop mute shenanigans */
 void sound_volume_counter_reset()
 {
-    resources_set_int("SoundVolume", 0);
-    sound_volume_counter = 3;
+   resources_set_int("SoundVolume", 0);
+   sound_volume_counter = 3;
 }
 
 #if defined(__XVIC__)
 static int vic20_cart_is_multipart(int prev_type, const char* argv)
 {
-    int mp_type = prev_type;
+   int mp_type = prev_type;
 
-    if (strcasestr(argv, "-2000.") || strcasestr(argv, "-4000.")
-     || strcasestr(argv, "-6000.") || strcasestr(argv, "-a000."))
-        mp_type = -1;
-    else if (strcasestr(argv, "[2000]") || strcasestr(argv, "[4000]")
-          || strcasestr(argv, "[6000]") || strcasestr(argv, "[A000]"))
-        mp_type = -2;
-    else if (strcasestr(argv, "$2000") || strcasestr(argv, "$4000")
-          || strcasestr(argv, "$6000") || strcasestr(argv, "$A000"))
-        mp_type = -3;
+   if (strcasestr(argv, "-2000.") || strcasestr(argv, "-4000.")
+    || strcasestr(argv, "-6000.") || strcasestr(argv, "-a000."))
+      mp_type = -1;
+   else if (strcasestr(argv, "[2000]") || strcasestr(argv, "[4000]")
+         || strcasestr(argv, "[6000]") || strcasestr(argv, "[A000]"))
+      mp_type = -2;
+   else if (strcasestr(argv, "$2000") || strcasestr(argv, "$4000")
+         || strcasestr(argv, "$6000") || strcasestr(argv, "$A000"))
+      mp_type = -3;
 
-    return mp_type;
+   return mp_type;
 }
 
 static int vic20_autodetect_cartridge_type(const char* argv)
 {
-    FILE *fd;
-    int addr = 0, len = 0, type = 0;
-    char buf[RETRO_PATH_MAX] = {0};
+   FILE *fd;
+   int addr = 0, len = 0, type = 0;
+   char buf[RETRO_PATH_MAX] = {0};
 
-    fd = fopen(argv, MODE_READ);
-    fseek(fd, 0, SEEK_END);
-    len = ftell(fd);
-    fseek(fd, 0, SEEK_SET);
-    switch (len & 0xfff)
-    {
-        case 0: /* plain binary */
-            addr = 0;
-            type = CARTRIDGE_VIC20_GENERIC;
-            break;
-        case 2: /* load address */
-            addr = fgetc(fd);
-            addr = (addr & 0xff) | ((fgetc(fd) << 8) & 0xff00);
-            len -= 2; /* remove load address from length */
-            type = CARTRIDGE_VIC20_GENERIC;
-            break;
-        default: /* not a valid file */
-            /* M3U analyzing */
-            if (strcasestr(argv, ".m3u"))
+   fd = fopen(argv, MODE_READ);
+   fseek(fd, 0, SEEK_END);
+   len = ftell(fd);
+   fseek(fd, 0, SEEK_SET);
+   switch (len & 0xfff)
+   {
+      case 0: /* plain binary */
+         addr = 0;
+         type = CARTRIDGE_VIC20_GENERIC;
+         break;
+      case 2: /* load address */
+         addr = fgetc(fd);
+         addr = (addr & 0xff) | ((fgetc(fd) << 8) & 0xff00);
+         len -= 2; /* remove load address from length */
+         type = CARTRIDGE_VIC20_GENERIC;
+         break;
+      default: /* not a valid file */
+         /* M3U analyzing */
+         if (strcasestr(argv, ".m3u"))
+         {
+            fseek(fd, 0, SEEK_SET);
+            if (fgets(buf, sizeof(buf), fd) != NULL)
             {
-                fseek(fd, 0, SEEK_SET);
-                if (fgets(buf, sizeof(buf), fd) != NULL)
-                {
-                    buf[strcspn(buf, "\r\n")] = 0;
-                    argv = buf;
-                }
+               buf[strcspn(buf, "\r\n")] = 0;
+               argv = buf;
             }
-            break;
-    }
-    fclose(fd);
+         }
+         break;
+   }
+   fclose(fd);
 
-    if (type > 0)
-    {
-        if (len == 0)
-            type = -1;
-        else if (len == 0x200000 && addr == 0)
-            type = CARTRIDGE_VIC20_MEGACART;
-        else if ((addr == 0x6000 || addr == 0x7000) && (len <= 0x4000))
-            type = CARTRIDGE_VIC20_16KB_6000;
-        else if ((addr == 0x4000 || addr == 0x5000) && (len <= 0x4000))
-            type = CARTRIDGE_VIC20_16KB_4000;
-        else if ((addr == 0x2000 || addr == 0x3000) && (len <= 0x4000))
-            type = CARTRIDGE_VIC20_16KB_2000;
-        else if ((addr == 0xA000) && (len <= 0x2000))
-            type = CARTRIDGE_VIC20_8KB_A000;
-        else if ((addr == 0xB000) && (len <= 0x1000))
-            type = CARTRIDGE_VIC20_4KB_B000;
-        else if (len <= 0x2000)
-            type = CARTRIDGE_VIC20_8KB_A000;
-    }
+   if (type > 0)
+   {
+      if (len == 0)
+         type = -1;
+      else if (len == 0x200000 && addr == 0)
+         type = CARTRIDGE_VIC20_MEGACART;
+      else if ((addr == 0x6000 || addr == 0x7000) && (len <= 0x4000))
+         type = CARTRIDGE_VIC20_16KB_6000;
+      else if ((addr == 0x4000 || addr == 0x5000) && (len <= 0x4000))
+         type = CARTRIDGE_VIC20_16KB_4000;
+      else if ((addr == 0x2000 || addr == 0x3000) && (len <= 0x4000))
+         type = CARTRIDGE_VIC20_16KB_2000;
+      else if ((addr == 0xA000) && (len <= 0x2000))
+         type = CARTRIDGE_VIC20_8KB_A000;
+      else if ((addr == 0xB000) && (len <= 0x1000))
+         type = CARTRIDGE_VIC20_4KB_B000;
+      else if (len <= 0x2000)
+         type = CARTRIDGE_VIC20_8KB_A000;
+   }
 
-    if (strcasestr(argv, ".20"))
-        type = CARTRIDGE_VIC20_16KB_2000;
-    else if (strcasestr(argv, ".40"))
-        type = CARTRIDGE_VIC20_16KB_4000;
-    else if (strcasestr(argv, ".60"))
-        type = CARTRIDGE_VIC20_16KB_6000;
-    else if (strcasestr(argv, ".70"))
-        type = CARTRIDGE_VIC20_4KB_6000;
-    else if (strcasestr(argv, ".a0"))
-        type = CARTRIDGE_VIC20_8KB_A000;
-    else if (strcasestr(argv, ".b0"))
-        type = CARTRIDGE_VIC20_4KB_B000;
+   if (strcasestr(argv, ".20"))
+      type = CARTRIDGE_VIC20_16KB_2000;
+   else if (strcasestr(argv, ".40"))
+      type = CARTRIDGE_VIC20_16KB_4000;
+   else if (strcasestr(argv, ".60"))
+      type = CARTRIDGE_VIC20_16KB_6000;
+   else if (strcasestr(argv, ".70"))
+      type = CARTRIDGE_VIC20_4KB_6000;
+   else if (strcasestr(argv, ".a0"))
+      type = CARTRIDGE_VIC20_8KB_A000;
+   else if (strcasestr(argv, ".b0"))
+      type = CARTRIDGE_VIC20_4KB_B000;
 
-    /* Multipart ROM combinations (type < 0) */
-    type = vic20_cart_is_multipart(type, argv);
+   /* Multipart ROM combinations (type < 0) */
+   type = vic20_cart_is_multipart(type, argv);
 
-    return type;
+   return type;
 }
 
 static void vic20_mem_force(const char* argv)
 {
-    char buf[6]       = {0};
-    int vic20mem      = 0;
-    int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
+   char buf[6]      = {0};
+   int vic20mem     = 0;
+   int vic20mems[6] = {0, 3, 8, 16, 24, 35};
 
-    for (int i = 0; i < sizeof(vic20mems)/sizeof(vic20mems[0]); i++)
-    {
-        vic20mem = vic20mems[i];
+   for (int i = 0; i < sizeof(vic20mems)/sizeof(vic20mems[0]); i++)
+   {
+      vic20mem = vic20mems[i];
 
-        snprintf(buf, sizeof(buf), "%c%d%c", '(', vic20mem, 'k');
-        if (strcasestr(argv, buf))
-        {
-            vic20mem_forced = i;
-            log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
-            break;
-        }
+      snprintf(buf, sizeof(buf), "%c%d%c", '(', vic20mem, 'k');
+      if (strcasestr(argv, buf))
+      {
+         vic20mem_forced = i;
+         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
+         break;
+      }
 
-        snprintf(buf, sizeof(buf), "%c%d%c", '[', vic20mem, 'k');
-        if (strcasestr(argv, buf))
-        {
-            vic20mem_forced = i;
-            log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
-            break;
-        }
+      snprintf(buf, sizeof(buf), "%c%d%c", '[', vic20mem, 'k');
+      if (strcasestr(argv, buf))
+      {
+         vic20mem_forced = i;
+         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in filename '%s': %dkB\n", argv, vic20mem);
+         break;
+      }
 
-        snprintf(buf, sizeof(buf), "%c%d%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k');
-        if (strcasestr(argv, buf))
-        {
-            vic20mem_forced = i;
-            log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dkB\n", argv, vic20mem);
-            break;
-        }
-    }
+      snprintf(buf, sizeof(buf), "%c%d%c", FSDEV_DIR_SEP_CHR, vic20mem, 'k');
+      if (strcasestr(argv, buf))
+      {
+         vic20mem_forced = i;
+         log_cb(RETRO_LOG_INFO, "VIC-20 memory expansion force found in path '%s': %dkB\n", argv, vic20mem);
+         break;
+      }
+   }
 }
 
 static void vic20_autosys_run(const char* full_path)
 {
-    if (!strcasestr(full_path, "(SYS ") && !strcasestr(full_path, "[SYS "))
-        return;
+   if (!strcasestr(full_path, "(SYS ") && !strcasestr(full_path, "[SYS "))
+      return;
 
-    char command[20] = {0};
-    char tmp_path[RETRO_PATH_MAX] = {0};
-    snprintf(tmp_path, sizeof(tmp_path), "%s", path_basename(full_path));
-    char *token = strtok((char*)tmp_path, " ");
-    char *token_prev = token;
-    while (token != NULL)
-    {
-        token = strtok(NULL, " ");
-        if (strendswith(token_prev, "SYS"))
-        {
-            snprintf(command, sizeof(command), "%s", token);
-            token = NULL;
-        }
-        token_prev = token;
-    }
+   char command[20] = {0};
+   char tmp_path[RETRO_PATH_MAX] = {0};
+   snprintf(tmp_path, sizeof(tmp_path), "%s", path_basename(full_path));
+   char *token = strtok((char*)tmp_path, " ");
+   char *token_prev = token;
+   while (token != NULL)
+   {
+      token = strtok(NULL, " ");
+      if (strendswith(token_prev, "SYS"))
+      {
+         snprintf(command, sizeof(command), "%s", token);
+         token = NULL;
+      }
+      token_prev = token;
+   }
 
-    if (!string_is_empty(command))
-    {
-        if (strcasestr(full_path, "(SYS"))
-            token = strtok((char*)command, ")");
-        else if (strcasestr(full_path, "[SYS"))
-            token = strtok((char*)command, "]");
+   if (!string_is_empty(command))
+   {
+      if (strcasestr(full_path, "(SYS"))
+         token = strtok((char*)command, ")");
+      else if (strcasestr(full_path, "[SYS"))
+         token = strtok((char*)command, "]");
 
-        log_cb(RETRO_LOG_INFO, "Executing 'SYS %s'\n", command);
-        kbdbuf_feed("SYS ");
-        kbdbuf_feed(command);
-        kbdbuf_feed("\r");
-    }
+      log_cb(RETRO_LOG_INFO, "Executing 'SYS %s'\n", command);
+      kbdbuf_feed("SYS ");
+      kbdbuf_feed(command);
+      kbdbuf_feed("\r");
+   }
 
-    token = NULL;
-    token_prev = NULL;
+   token = NULL;
+   token_prev = NULL;
 }
-
-#endif
+#endif /* __XVIC__ */
 
 static int process_cmdline(const char* argv)
 {
-    int i = 0;
-    bool is_fliplist = false;
-    int joystick_control = 0;
+   int i = 0;
+   bool is_fliplist = false;
+   int joystick_control = 0;
 
 #if defined(__XPLUS4__)
-    /* Do not reset noautostart if already set, PLUS/4 has issues with starting carts via autostart (?!) */
-    noautostart = (noautostart) ? noautostart : !opt_autostart;
+   /* Do not reset noautostart if already set, PLUS/4 has issues with starting carts via autostart (?!) */
+   noautostart = (noautostart) ? noautostart : !opt_autostart;
 #else
-    noautostart = !opt_autostart;
+   noautostart = !opt_autostart;
 #endif
-    PARAMCOUNT = 0;
-    dc_reset(dc);
-    snprintf(full_path, sizeof(full_path), "%s", argv);
+   PARAMCOUNT = 0;
+   dc_reset(dc);
+   snprintf(full_path, sizeof(full_path), "%s", argv);
 
-    cur_port_locked = false;
-    free(autostartString);
-    autostartString = NULL;
-    free(autostartProgram);
-    autostartProgram = NULL;
+   cur_port_locked = false;
+   free(autostartString);
+   autostartString = NULL;
+   free(autostartProgram);
+   autostartProgram = NULL;
 
-    /* Load command line arguments from cmd file */
-    if (strendswith(argv, ".cmd"))
-    {
-        if (loadcmdfile(argv))
-        {
-            log_cb(RETRO_LOG_INFO, "Starting game from command line '%s'\n", argv);
-            vice_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
-        }
-        else
-        {
-            log_cb(RETRO_LOG_ERROR, "Failed to load command line from '%s'\n", argv);
-        }
-        parse_cmdline(CMDFILE);
-    }
-    else
-        parse_cmdline(argv);
+   /* Load command line arguments from cmd file */
+   if (strendswith(argv, ".cmd"))
+   {
+      if (loadcmdfile(argv))
+      {
+         log_cb(RETRO_LOG_INFO, "Starting game from command line '%s'\n", argv);
+         vice_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
+      }
+      else
+      {
+         log_cb(RETRO_LOG_ERROR, "Failed to load command line from '%s'\n", argv);
+      }
+      parse_cmdline(CMDFILE);
+   }
+   else
+      parse_cmdline(argv);
 
-    /* Core command line is now parsed to ARGUV, ARGUC. */
-    /* Build command file for VICE in XARGV, PARAMCOUNT. */
-    bool single_image = strcmp(ARGUV[0], CORE_NAME) != 0;
+   /* Core command line is now parsed to ARGUV, ARGUC. */
+   /* Build command file for VICE in XARGV, PARAMCOUNT. */
+   bool single_image = strcmp(ARGUV[0], CORE_NAME) != 0;
 
-    /* Allow using command lines without CORE_NAME by not allowing single_image */
-    if (strendswith(argv, ".cmd"))
-       single_image = false;
+   /* Allow using command lines without CORE_NAME by not allowing single_image */
+   if (strendswith(argv, ".cmd"))
+      single_image = false;
 
-    /* If first command line argument is CORE_NAME, it's an extended command line
-     * otherwise it's just image filename */
-    if (single_image)
-    {
-        /* Command doesn't start with core name, so add it first */
-        Add_Option(CORE_NAME);
+   /* If first command line argument is CORE_NAME, it's an extended command line
+    * otherwise it's just image filename */
+   if (single_image)
+   {
+      /* Command doesn't start with core name, so add it first */
+      Add_Option(CORE_NAME);
 
-        /* Ignore parsed arguments, read filename directly from argv */
+      /* Ignore parsed arguments, read filename directly from argv */
 
-        /* Check original filename for joystick control,
-         * not the first name from M3U or VFL */
-        joystick_control = check_joystick_control(argv);
-        if (joystick_control)
-        {
-            cur_port = joystick_control;
-            cur_port_locked = true;
-        }
+      /* Check original filename for joystick control,
+       * not the first name from M3U or VFL */
+      joystick_control = check_joystick_control(argv);
+      if (joystick_control)
+      {
+         cur_port = joystick_control;
+         cur_port_locked = true;
+      }
 
-        /* "Browsed" file in ZIP */
-        char browsed_file[RETRO_PATH_MAX] = {0};
-        if (strstr(argv, ".zip#") || strstr(argv, ".7z#"))
-        {
-            char *token = strtok((char*)argv, "#");
-            while (token != NULL)
+      /* "Browsed" file in ZIP */
+      char browsed_file[RETRO_PATH_MAX] = {0};
+      if (strstr(argv, ".zip#") || strstr(argv, ".7z#"))
+      {
+         char *token = strtok((char*)argv, "#");
+         while (token != NULL)
+         {
+            snprintf(browsed_file, sizeof(browsed_file), "%s", token);
+            token = strtok(NULL, "#");
+         }
+      }
+      snprintf(full_path, sizeof(full_path), "%s", argv);
+
+      /* ZIP + NIB vars, use the same temp directory for single NIBs */
+      char zip_basename[RETRO_PATH_MAX] = {0};
+      snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
+      path_remove_extension(zip_basename);
+
+      char nib_input[RETRO_PATH_MAX] = {0};
+      char nib_output[RETRO_PATH_MAX] = {0};
+
+      /* NIB convert to G64 */
+      if (dc_get_image_type(argv) == DC_IMAGE_TYPE_NIBBLER)
+      {
+         snprintf(nib_input, sizeof(nib_input), "%s", argv);
+         snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+         path_mkdir(retro_temp_directory);
+         nib_convert(nib_input, nib_output);
+         argv = nib_output;
+      }
+
+      /* ZIP */
+      if (strendswith(argv, "zip") || strendswith(argv, "7z"))
+      {
+         path_mkdir(retro_temp_directory);
+         if (strendswith(argv, "zip"))
+            zip_uncompress(full_path, retro_temp_directory, NULL);
+         else if (strendswith(argv, "7z"))
+            sevenzip_uncompress(full_path, retro_temp_directory, NULL);
+
+         /* Default to directory mode */
+         int zip_mode = 0;
+         snprintf(full_path, sizeof(full_path), "%s", retro_temp_directory);
+
+         FILE *zip_m3u;
+         char zip_m3u_list[DC_MAX_SIZE][RETRO_PATH_MAX] = {0};
+         char zip_m3u_path[RETRO_PATH_MAX] = {0};
+         snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+         int zip_m3u_num = 0;
+
+         DIR *zip_dir;
+         struct dirent *zip_dirp;
+
+         /* Convert all NIBs to G64 */
+         zip_dir = opendir(retro_temp_directory);
+         while ((zip_dirp = readdir(zip_dir)) != NULL)
+         {
+            if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
             {
-                snprintf(browsed_file, sizeof(browsed_file), "%s", token);
-                token = strtok(NULL, "#");
+               snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+               snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
+               nib_convert(nib_input, nib_output);
             }
-        }
-        snprintf(full_path, sizeof(full_path), "%s", argv);
+         }
+         closedir(zip_dir);
 
-        /* ZIP + NIB vars, use the same temp directory for single NIBs */
-        char zip_basename[RETRO_PATH_MAX] = {0};
-        snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
-        path_remove_extension(zip_basename);
+         zip_dir = opendir(retro_temp_directory);
+         while ((zip_dirp = readdir(zip_dir)) != NULL)
+         {
+            if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1 || browsed_file[0] != '\0')
+               continue;
 
-        char nib_input[RETRO_PATH_MAX] = {0};
-        char nib_output[RETRO_PATH_MAX] = {0};
-
-        /* NIB convert to G64 */
-        if (dc_get_image_type(argv) == DC_IMAGE_TYPE_NIBBLER)
-        {
-            snprintf(nib_input, sizeof(nib_input), "%s", argv);
-            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
-            path_mkdir(retro_temp_directory);
-            nib_convert(nib_input, nib_output);
-            argv = nib_output;
-        }
-
-        /* ZIP */
-        if (strendswith(argv, "zip") || strendswith(argv, "7z"))
-        {
-            path_mkdir(retro_temp_directory);
-            if (strendswith(argv, "zip"))
-               zip_uncompress(full_path, retro_temp_directory, NULL);
-            else if (strendswith(argv, "7z"))
-               sevenzip_uncompress(full_path, retro_temp_directory, NULL);
-
-            /* Default to directory mode */
-            int zip_mode = 0;
-            snprintf(full_path, sizeof(full_path), "%s", retro_temp_directory);
-
-            FILE *zip_m3u;
-            char zip_m3u_list[DC_MAX_SIZE][RETRO_PATH_MAX] = {0};
-            char zip_m3u_path[RETRO_PATH_MAX] = {0};
-            snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
-            int zip_m3u_num = 0;
-
-            DIR *zip_dir;
-            struct dirent *zip_dirp;
-
-            /* Convert all NIBs to G64 */
-            zip_dir = opendir(retro_temp_directory);
-            while ((zip_dirp = readdir(zip_dir)) != NULL)
+            /* Multi file mode, generate playlist */
+            if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
+             || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
+             || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM
+            )
             {
-                if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
-                {
-                    snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
-                    snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
-                    nib_convert(nib_input, nib_output);
-                }
+               zip_mode = 1;
+               zip_m3u_num++;
+               snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_dirp->d_name);
             }
-            closedir(zip_dir);
+         }
+         closedir(zip_dir);
 
-            zip_dir = opendir(retro_temp_directory);
-            while ((zip_dirp = readdir(zip_dir)) != NULL)
-            {
-                if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1 || browsed_file[0] != '\0')
-                    continue;
+         switch (zip_mode)
+         {
+            case 0: /* Extracted path */
+               if (browsed_file[0] != '\0')
+               {
+                  if (dc_get_image_type(browsed_file) == DC_IMAGE_TYPE_NIBBLER)
+                     snprintf(full_path, sizeof(full_path), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(browsed_file));
+                  else
+                     snprintf(full_path, sizeof(full_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, browsed_file);
+               }
+               break;
+            case 1: /* Generated playlist */
+               zip_m3u = fopen(zip_m3u_path, "w");
+               qsort(zip_m3u_list, zip_m3u_num, RETRO_PATH_MAX, qstrcmp);
+               for (int l = 0; l < zip_m3u_num; l++)
+                  fprintf(zip_m3u, "%s\n", zip_m3u_list[l]);
+               fclose(zip_m3u);
+               snprintf(full_path, sizeof(full_path), "%s", zip_m3u_path);
+               break;
+         }
 
-                /* Multi file mode, generate playlist */
-                if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
-                 || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
-                 || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM
-                )
-                {
-                    zip_mode = 1;
-                    zip_m3u_num++;
-                    snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_dirp->d_name);
-                }
-            }
-            closedir(zip_dir);
-
-            switch (zip_mode)
-            {
-                case 0: /* Extracted path */
-                    if (browsed_file[0] != '\0')
-                    {
-                        if (dc_get_image_type(browsed_file) == DC_IMAGE_TYPE_NIBBLER)
-                            snprintf(full_path, sizeof(full_path), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(browsed_file));
-                        else
-                            snprintf(full_path, sizeof(full_path), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, browsed_file);
-                    }
-                    break;
-                case 1: /* Generated playlist */
-                    zip_m3u = fopen(zip_m3u_path, "w");
-                    qsort(zip_m3u_list, zip_m3u_num, RETRO_PATH_MAX, qstrcmp);
-                    for (int l = 0; l < zip_m3u_num; l++)
-                        fprintf(zip_m3u, "%s\n", zip_m3u_list[l]);
-                    fclose(zip_m3u);
-                    snprintf(full_path, sizeof(full_path), "%s", zip_m3u_path);
-                    break;
-            }
-
-            argv = full_path;
-        }
+         argv = full_path;
+      }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
-        /* Do not allow JiffyDOS with non-floppies */
-        if (dc_get_image_type(argv) == DC_IMAGE_TYPE_TAPE
-         || dc_get_image_type(argv) == DC_IMAGE_TYPE_MEM)
-            opt_jiffydos_allow = 0;
-        else
-            opt_jiffydos_allow = 1;
+      /* Do not allow JiffyDOS with non-floppies */
+      if (dc_get_image_type(argv) == DC_IMAGE_TYPE_TAPE
+       || dc_get_image_type(argv) == DC_IMAGE_TYPE_MEM)
+         opt_jiffydos_allow = 0;
+      else
+         opt_jiffydos_allow = 1;
 
-        /* REU image check */
-        if (path_is_valid(argv))
-        {
-            char reu_path[RETRO_PATH_MAX] = {0};
-            char reu_base[RETRO_PATH_MAX] = {0};
-            char reu_name[RETRO_PATH_MAX] = {0};
+      /* REU image check */
+      if (path_is_valid(argv))
+      {
+         char reu_path[RETRO_PATH_MAX] = {0};
+         char reu_base[RETRO_PATH_MAX] = {0};
+         char reu_name[RETRO_PATH_MAX] = {0};
 
-            snprintf(reu_base, sizeof(reu_base), "%s", argv);
-            path_basedir(reu_base);
+         snprintf(reu_base, sizeof(reu_base), "%s", argv);
+         path_basedir(reu_base);
 
-            snprintf(reu_name, sizeof(reu_name), "%s", argv);
-            snprintf(reu_name, sizeof(reu_name), "%s", path_basename(reu_name));
-            path_remove_extension(reu_name);
+         snprintf(reu_name, sizeof(reu_name), "%s", argv);
+         snprintf(reu_name, sizeof(reu_name), "%s", path_basename(reu_name));
+         path_remove_extension(reu_name);
 
-            snprintf(reu_path, sizeof(reu_path), "%s%s%s",
-                     reu_base, reu_name, ".reu");
+         snprintf(reu_path, sizeof(reu_path), "%s%s%s", reu_base, reu_name, ".reu");
 
-            if (path_is_valid(reu_path))
-            {
-                char reu_size[6] = {0};
-                struct stat reu_stat;
-                stat(reu_path, &reu_stat);
-                snprintf(reu_size, sizeof(reu_size), "%u", (unsigned)reu_stat.st_size / 1024);
+         if (path_is_valid(reu_path))
+         {
+            char reu_size[6] = {0};
+            struct stat reu_stat;
+            stat(reu_path, &reu_stat);
+            snprintf(reu_size, sizeof(reu_size), "%u", (unsigned)reu_stat.st_size / 1024);
 
-                Add_Option("-reu");
-                Add_Option("-reusize");
-                Add_Option(reu_size);
-                Add_Option("+reuimagerw");
-                Add_Option("-reuimage");
-                Add_Option(reu_path);
-            }
-        }
+            Add_Option("-reu");
+            Add_Option("-reusize");
+            Add_Option(reu_size);
+            Add_Option("+reuimagerw");
+            Add_Option("-reuimage");
+            Add_Option(reu_path);
+         }
+      }
 #endif
 
 #if defined(__XVIC__)
-        /* Pretend to launch cartridge if using core option cartridge while launching
-         * without content, because XVIC does not care about CartridgeFile resource */
-        if (string_is_empty(argv) && !string_is_empty(vice_opt.CartridgeFile))
-            argv = vice_opt.CartridgeFile;
+      /* Pretend to launch cartridge if using core option cartridge while launching
+       * without content, because XVIC does not care about CartridgeFile resource */
+      if (string_is_empty(argv) && !string_is_empty(vice_opt.CartridgeFile))
+         argv = vice_opt.CartridgeFile;
 
-        if (strendswith(argv, ".20"))
-        {
-            Add_Option("-cart2");
-            /* For some unknown reason single cart at
-             * $2000 also has to be in $6000.. */
-            Add_Option(argv);
-            Add_Option("-cart6");
-        }
-        else if (strendswith(argv, ".40"))
-            Add_Option("-cart4");
-        else if (strendswith(argv, ".60")
-              || strendswith(argv, ".70"))
-            Add_Option("-cart6");
-        else if (strendswith(argv, ".a0"))
-            Add_Option("-cartA");
-        else if (strendswith(argv, ".b0"))
-            Add_Option("-cartB");
-        else if (strendswith(argv, ".prg")
-              || strendswith(argv, ".crt")
-              || strendswith(argv, ".rom")
-              || strendswith(argv, ".bin")
-              || strendswith(argv, ".m3u"))
-        {
-            /* There are PRGs that are actually carts, so we need to save the hassle
-             * of mass renaming by differentiating them from regular program-PRGs.
-             * Also separated cart PRGs meant to be assigned to specific memory
-             * addresses require special care for hassle-free usage. */
-            if (path_is_valid(argv))
+      if (strendswith(argv, ".20"))
+      {
+         Add_Option("-cart2");
+         /* For some unknown reason single cart at
+          * $2000 also has to be in $6000.. */
+         Add_Option(argv);
+         Add_Option("-cart6");
+      }
+      else if (strendswith(argv, ".40"))
+         Add_Option("-cart4");
+      else if (strendswith(argv, ".60")
+            || strendswith(argv, ".70"))
+         Add_Option("-cart6");
+      else if (strendswith(argv, ".a0"))
+         Add_Option("-cartA");
+      else if (strendswith(argv, ".b0"))
+         Add_Option("-cartB");
+      else if (strendswith(argv, ".prg")
+            || strendswith(argv, ".crt")
+            || strendswith(argv, ".rom")
+            || strendswith(argv, ".bin")
+            || strendswith(argv, ".m3u"))
+      {
+         /* There are PRGs that are actually carts, so we need to save the hassle
+          * of mass renaming by differentiating them from regular program-PRGs.
+          * Also separated cart PRGs meant to be assigned to specific memory
+          * addresses require special care for hassle-free usage. */
+         if (path_is_valid(argv))
+         {
+            char cart_base[RETRO_PATH_MAX] = {0};
+            char cart_2000[RETRO_PATH_MAX] = {0};
+            char cart_4000[RETRO_PATH_MAX] = {0};
+            char cart_6000[RETRO_PATH_MAX] = {0};
+            char cart_A000[RETRO_PATH_MAX] = {0};
+
+            char cartmega_base[RETRO_PATH_MAX] = {0};
+            char cartmega_nvram[RETRO_PATH_MAX] = {0};
+
+            int type = vic20_autodetect_cartridge_type(argv);
+
+            /* Need to examine the first playlist entry */
+            if (strcasestr(argv, ".m3u"))
             {
-                char cart_base[RETRO_PATH_MAX] = {0};
-                char cart_2000[RETRO_PATH_MAX] = {0};
-                char cart_4000[RETRO_PATH_MAX] = {0};
-                char cart_6000[RETRO_PATH_MAX] = {0};
-                char cart_A000[RETRO_PATH_MAX] = {0};
+               FILE *fd;
+               char buf[RETRO_PATH_MAX] = {0};
+               char basepath[RETRO_PATH_MAX] = {0};
+               char fullpath[RETRO_PATH_MAX] = {0};
+               snprintf(basepath, sizeof(basepath), "%s", argv);
+               path_basedir(basepath);
 
-                char cartmega_base[RETRO_PATH_MAX] = {0};
-                char cartmega_nvram[RETRO_PATH_MAX] = {0};
+               fd = fopen(argv, MODE_READ);
+               if (fgets(buf, sizeof(buf), fd) != NULL)
+               {
+                  buf[strcspn(buf, "\r\n")] = 0;
+                  snprintf(fullpath, sizeof(fullpath), "%s%s", basepath, buf);
+               }
+               fclose(fd);
 
-                int type = vic20_autodetect_cartridge_type(argv);
-
-                /* Need to examine the first playlist entry */
-                if (strcasestr(argv, ".m3u"))
-                {
-                    FILE *fd;
-                    char buf[RETRO_PATH_MAX] = {0};
-                    char basepath[RETRO_PATH_MAX] = {0};
-                    char fullpath[RETRO_PATH_MAX] = {0};
-                    snprintf(basepath, sizeof(basepath), "%s", argv);
-                    path_basedir(basepath);
-
-                    fd = fopen(argv, MODE_READ);
-                    if (fgets(buf, sizeof(buf), fd) != NULL)
-                    {
-                        buf[strcspn(buf, "\r\n")] = 0;
-                        snprintf(fullpath, sizeof(fullpath), "%s%s", basepath, buf);
-                    }
-                    fclose(fd);
-
-                    argv = fullpath;
-                    type = vic20_autodetect_cartridge_type(argv);
-                }
-
-                switch (type)
-                {
-                    case CARTRIDGE_VIC20_16KB_2000:
-                        Add_Option("-cart2");
-                        Add_Option(argv);
-                        Add_Option("-cart6");
-                        break;
-                    case CARTRIDGE_VIC20_8KB_2000:
-                    case CARTRIDGE_VIC20_4KB_2000:
-                        Add_Option("-cart2");
-                        break;
-                    case CARTRIDGE_VIC20_16KB_4000:
-                    case CARTRIDGE_VIC20_8KB_4000:
-                    case CARTRIDGE_VIC20_4KB_4000:
-                        Add_Option("-cart4");
-                        break;
-                    case CARTRIDGE_VIC20_16KB_6000:
-                    case CARTRIDGE_VIC20_8KB_6000:
-                    case CARTRIDGE_VIC20_4KB_6000:
-                        Add_Option("-cart6");
-                        break;
-                    case CARTRIDGE_VIC20_8KB_A000:
-                    case CARTRIDGE_VIC20_4KB_A000:
-                        Add_Option("-cartA");
-                        break;
-                    case CARTRIDGE_VIC20_4KB_B000:
-                        Add_Option("-cartB");
-                        break;
-                    case CARTRIDGE_VIC20_GENERIC:
-                        Add_Option("-cartgeneric");
-                        break;
-                    case CARTRIDGE_VIC20_MEGACART:
-                        snprintf(cartmega_base, sizeof(cartmega_base), "%s", path_basename(argv));
-                        path_remove_extension(cartmega_base);
-                        snprintf(cartmega_nvram, sizeof(cartmega_nvram), "%s%s%s%s",
-                                 retro_save_directory, FSDEV_DIR_SEP_STR, cartmega_base, ".nvr");
-                        Add_Option("-mcnvramfile");
-                        Add_Option(cartmega_nvram);
-                        Add_Option("-cartmega");
-                        break;
-                    /* Separate ROM combination shenanigans */
-                    case -1:
-                    case -2:
-                    case -3:
-                        switch (type)
-                        {
-                            case -1: /* Gamebase */
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "-2000", ""));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "-4000", ""));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "-6000", ""));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "-a000", ""));
-
-                                snprintf(cart_2000, sizeof(cart_2000), "%s%s%s", cart_base, "-2000", ".prg");
-                                snprintf(cart_4000, sizeof(cart_4000), "%s%s%s", cart_base, "-4000", ".prg");
-                                snprintf(cart_6000, sizeof(cart_6000), "%s%s%s", cart_base, "-6000", ".prg");
-                                snprintf(cart_A000, sizeof(cart_A000), "%s%s%s", cart_base, "-a000", ".prg");
-                                break;
-
-                            case -2: /* TOSEC */
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[4000]", "[2000]"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[6000]", "[2000]"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[A000]", "[2000]"));
-                                snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_base, ".crt");
-
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[2000]", "[4000]"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[6000]", "[4000]"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[A000]", "[4000]"));
-                                snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_base, ".crt");
-
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[2000]", "[6000]"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[4000]", "[6000]"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[A000]", "[6000]"));
-                                snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_base, ".crt");
-
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[2000]", "[A000]"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[4000]", "[A000]"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[6000]", "[A000]"));
-                                snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_base, ".crt");
-                                break;
-
-                            case -3: /* No-Intro */
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$4000", "$2000"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$6000", "$2000"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$A000", "$2000"));
-                                snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_base, ".20");
-
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$2000", "$4000"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$6000", "$4000"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$A000", "$4000"));
-                                snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_base, ".40");
-
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$2000", "$6000"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$4000", "$6000"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$A000", "$6000"));
-                                snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_base, ".60");
-
-                                snprintf(cart_base, sizeof(cart_base), "%s", argv);
-                                path_remove_extension(cart_base);
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$2000", "$A000"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$4000", "$A000"));
-                                snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$6000", "$A000"));
-                                snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_base, ".a0");
-                                break;
-                        }
-
-                        if (path_is_valid(cart_2000))
-                        {
-                            Add_Option("-cart2");
-                            Add_Option(cart_2000);
-
-                            if (!path_is_valid(cart_6000))
-                            {
-                                Add_Option("-cart6");
-                                Add_Option(cart_2000);
-                            }
-                        }
-                        if (path_is_valid(cart_4000))
-                        {
-                            Add_Option("-cart4");
-                            Add_Option(cart_4000);
-                        }
-                        if (path_is_valid(cart_6000))
-                        {
-                            Add_Option("-cart6");
-                            Add_Option(cart_6000);
-                        }
-                        if (path_is_valid(cart_A000))
-                        {
-                            Add_Option("-cartA");
-                            Add_Option(cart_A000);
-                        }
-
-                        argv = "";
-                        break;
-                    default:
-                        break;
-                }
+               /* Only replace 'argv' with memory types */
+               if (dc_get_image_type(fullpath) == DC_IMAGE_TYPE_MEM)
+               {
+                  argv = fullpath;
+                  type = vic20_autodetect_cartridge_type(argv);
+               }
             }
-        }
 
-        /* Memory expansion force:
-         * First from content path,
-         * then from playlist entry after m3u parsing */
-        vic20_mem_force(argv);
+            switch (type)
+            {
+               case CARTRIDGE_VIC20_16KB_2000:
+                  Add_Option("-cart2");
+                  Add_Option(argv);
+                  Add_Option("-cart6");
+                  break;
+               case CARTRIDGE_VIC20_8KB_2000:
+               case CARTRIDGE_VIC20_4KB_2000:
+                  Add_Option("-cart2");
+                  break;
+               case CARTRIDGE_VIC20_16KB_4000:
+               case CARTRIDGE_VIC20_8KB_4000:
+               case CARTRIDGE_VIC20_4KB_4000:
+                  Add_Option("-cart4");
+                  break;
+               case CARTRIDGE_VIC20_16KB_6000:
+               case CARTRIDGE_VIC20_8KB_6000:
+               case CARTRIDGE_VIC20_4KB_6000:
+                  Add_Option("-cart6");
+                  break;
+               case CARTRIDGE_VIC20_8KB_A000:
+               case CARTRIDGE_VIC20_4KB_A000:
+                  Add_Option("-cartA");
+                  break;
+               case CARTRIDGE_VIC20_4KB_B000:
+                  Add_Option("-cartB");
+                  break;
+               case CARTRIDGE_VIC20_GENERIC:
+                  Add_Option("-cartgeneric");
+                  break;
+               case CARTRIDGE_VIC20_MEGACART:
+                  snprintf(cartmega_base, sizeof(cartmega_base), "%s", path_basename(argv));
+                  path_remove_extension(cartmega_base);
+                  snprintf(cartmega_nvram, sizeof(cartmega_nvram), "%s%s%s%s",
+                           retro_save_directory, FSDEV_DIR_SEP_STR, cartmega_base, ".nvr");
+                  Add_Option("-mcnvramfile");
+                  Add_Option(cartmega_nvram);
+                  Add_Option("-cartmega");
+                  break;
+               /* Separate ROM combination shenanigans */
+               case -1:
+               case -2:
+               case -3:
+                  switch (type)
+                  {
+                     case -1: /* Gamebase */
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
 
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "-2000", ""));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "-4000", ""));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "-6000", ""));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "-a000", ""));
+
+                        snprintf(cart_2000, sizeof(cart_2000), "%s%s%s", cart_base, "-2000", ".prg");
+                        snprintf(cart_4000, sizeof(cart_4000), "%s%s%s", cart_base, "-4000", ".prg");
+                        snprintf(cart_6000, sizeof(cart_6000), "%s%s%s", cart_base, "-6000", ".prg");
+                        snprintf(cart_A000, sizeof(cart_A000), "%s%s%s", cart_base, "-a000", ".prg");
+                        break;
+
+                     case -2: /* TOSEC */
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[4000]", "[2000]"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[6000]", "[2000]"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[A000]", "[2000]"));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_base, ".crt");
+
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[2000]", "[4000]"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[6000]", "[4000]"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[A000]", "[4000]"));
+                        snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_base, ".crt");
+
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[2000]", "[6000]"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[4000]", "[6000]"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[A000]", "[6000]"));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_base, ".crt");
+
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[2000]", "[A000]"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[4000]", "[A000]"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "[6000]", "[A000]"));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_base, ".crt");
+                        break;
+
+                     case -3: /* No-Intro */
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$4000", "$2000"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$6000", "$2000"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$A000", "$2000"));
+                        snprintf(cart_2000, sizeof(cart_2000), "%s%s", cart_base, ".20");
+
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$2000", "$4000"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$6000", "$4000"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$A000", "$4000"));
+                        snprintf(cart_4000, sizeof(cart_4000), "%s%s", cart_base, ".40");
+
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$2000", "$6000"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$4000", "$6000"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$A000", "$6000"));
+                        snprintf(cart_6000, sizeof(cart_6000), "%s%s", cart_base, ".60");
+
+                        snprintf(cart_base, sizeof(cart_base), "%s", argv);
+                        path_remove_extension(cart_base);
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$2000", "$A000"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$4000", "$A000"));
+                        snprintf(cart_base, sizeof(cart_base), "%s", string_replace_substring(cart_base, "$6000", "$A000"));
+                        snprintf(cart_A000, sizeof(cart_A000), "%s%s", cart_base, ".a0");
+                        break;
+                  }
+
+                  if (path_is_valid(cart_2000))
+                  {
+                     Add_Option("-cart2");
+                     Add_Option(cart_2000);
+
+                     /* If there is no proper $6000, single $2000 must be also inserted there.. */
+                     if (!path_is_valid(cart_6000))
+                     {
+                        Add_Option("-cart6");
+                        Add_Option(cart_2000);
+                     }
+                  }
+                  if (path_is_valid(cart_4000))
+                  {
+                     Add_Option("-cart4");
+                     Add_Option(cart_4000);
+                  }
+                  if (path_is_valid(cart_6000))
+                  {
+                     Add_Option("-cart6");
+                     Add_Option(cart_6000);
+                  }
+                  if (path_is_valid(cart_A000))
+                  {
+                     Add_Option("-cartA");
+                     Add_Option(cart_A000);
+                  }
+
+                  argv = "";
+                  break;
+
+               default:
+                  break;
+            }
+         }
+      }
+
+      /* Memory expansion force:
+       * First from content path,
+       * then from playlist entry after m3u parsing */
+      vic20_mem_force(argv);
 #elif defined(__XPLUS4__)
-        if (strendswith(argv, ".crt") || strendswith(argv, ".bin"))
-            Add_Option("-cart");
+      if (strendswith(argv, ".crt") || strendswith(argv, ".bin"))
+         Add_Option("-cart");
 #endif
 
-        if (strendswith(argv, "m3u"))
-        {
-            /* Parse the m3u file */
-            dc_parse_m3u(dc, argv);
-            is_fliplist = true;
+      if (strendswith(argv, "m3u"))
+      {
+         /* Parse the m3u file */
+         dc_parse_m3u(dc, argv);
+         is_fliplist = true;
 #if defined(__XVIC__)
-            /* Memory expansion force */
-            if (vic20mem_forced < 0)
-                vic20_mem_force(dc->files[0]);
+         /* Memory expansion force */
+         if (vic20mem_forced < 0)
+            vic20_mem_force(dc->files[0]);
 #endif
-        }
-        else if (strendswith(argv, "vfl"))
-        {
-            /* Parse the vfl file */
-            dc_parse_vfl(dc, argv);
+      }
+      else if (strendswith(argv, "vfl"))
+      {
+         /* Parse the vfl file */
+         dc_parse_vfl(dc, argv);
+         is_fliplist = true;
+      }
+
+      if (!is_fliplist)
+      {
+         /* Add image name as autostart parameter */
+         if (argv[0])
+            Add_Option(argv);
+      }
+      else
+      {
+         /* Some debugging */
+         log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
+
+         if (!dc->command)
+         {
+            char option[RETRO_PATH_MAX] = {0};
+            if (!string_is_empty(dc->load[0]))
+               snprintf(option, sizeof(option), "%s:%s", dc->files[0], dc->load[0]);
+            else
+               snprintf(option, sizeof(option), "%s", dc->files[0]);
+
+            /* Add first disk from list as autostart parameter */
+            if (dc->count != 0)
+               Add_Option(option);
+         }
+         else
+         {
+            /* Re-parse command line from M3U #COMMAND: */
+            log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", dc->command);
+            vice_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
+            parse_cmdline(dc->command);
+            /* Reset parameters list for VICE */
+            PARAMCOUNT = 0;
+            single_image = false;
+         }
+      }
+   }
+
+   /* It might be single_image initially, but changed by M3U file #COMMAND line */
+   if (!single_image)
+   {
+      /* Command doesn't start with core name, so add it first */
+      if (ARGUC == 0 || strcmp(ARGUV[0], CORE_NAME) != 0)
+         Add_Option(CORE_NAME);
+
+      bool is_flipname_param = false;
+      /* Scan vice arguments for special processing */
+      for (i = 0; i < ARGUC; i++)
+      {
+         const char* arg = ARGUV[i];
+
+         /* Previous arg was '-flipname' */
+         if (is_flipname_param)
+         {
+            is_flipname_param = false;
+            /* Parse the vfl file, don't pass to vice */
+            dc_parse_vfl(dc, arg);
+            /* Don't pass -flipname argument to vice - it has no use of it */
+            /* and we won't have to take care of cleaning it up */
             is_fliplist = true;
-        }
-
-        if (!is_fliplist)
-        {
-            /* Add image name as autostart parameter */
-            if (argv[0])
-                Add_Option(argv);
-        }
-        else
-        {
-            /* Some debugging */
-            log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
-
-            if (!dc->command)
+         }
+         else if (!strcmp(arg, "-j1"))
+         {
+            cur_port = 1;
+            cur_port_locked = true;
+         }
+         else if (!strcmp(arg, "-j2"))
+         {
+            cur_port = 2;
+            cur_port_locked = true;
+         }
+         else if (strendswith(arg, "m3u"))
+         {
+            /* Parse the m3u file, don't pass to vice */
+            dc_parse_m3u(dc, arg);
+            is_fliplist = true;
+         }
+         else if (!strcmp(arg, "-flipname"))
+         {
+            /* Set flag for next arg */
+            is_flipname_param = true;
+         }
+         else if (!strcmp(arg, "-noautostart"))
+         {
+            /* User ask to not automatically start image in drive */
+            noautostart = true;
+         }
+         else if (!strcmp(arg, "-autostart"))
+         {
+            /* User ask to automatically start image in drive */
+            noautostart = false;
+         }
+         else
+         {
+            /* Fill cmd arg path from argv if there is none */
+            if (strstr(arg, ".") && !strstr(arg, FSDEV_DIR_SEP_STR))
             {
-                char option[RETRO_PATH_MAX] = {0};
-                if (!string_is_empty(dc->load[0]))
-                    snprintf(option, sizeof(option), "%s:%s", dc->files[0], dc->load[0]);
-                else
-                    snprintf(option, sizeof(option), "%s", dc->files[0]);
-
-                /* Add first disk from list as autostart parameter */
-                if (dc->count != 0)
-                    Add_Option(option);
+               char arg_path[RETRO_PATH_MAX] = {0};
+               char arg_full[RETRO_PATH_MAX] = {0};
+               strcpy(arg_path, argv);
+               path_basedir(arg_path);
+               strcpy(arg_full, arg_path);
+               strcat(arg_full, arg);
+               Add_Option(arg_full);
             }
             else
-            {
-                /* Re-parse command line from M3U #COMMAND: */
-                log_cb(RETRO_LOG_INFO, "Starting game from command line: %s\n", dc->command);
-                vice_opt.Model = 99; /* set model to unknown for custom settings - prevents overriding of command line options */
-                parse_cmdline(dc->command);
-                /* Reset parameters list for VICE */
-                PARAMCOUNT = 0;
-                single_image = false;
-            }
-        }
-    }
+               Add_Option(arg);
+         }
+      }
 
-    /* It might be single_image initially, but changed by M3U file #COMMAND line */
-    if (!single_image)
-    {
-        /* Command doesn't start with core name, so add it first */
-        if (ARGUC == 0 || strcmp(ARGUV[0], CORE_NAME) != 0)
-            Add_Option(CORE_NAME);
-
-        bool is_flipname_param = false;
-        /* Scan vice arguments for special processing */
-        for (i = 0; i < ARGUC; i++)
-        {
-            const char* arg = ARGUV[i];
-
-            /* Previous arg was '-flipname' */
-            if (is_flipname_param)
-            {
-                is_flipname_param = false;
-                /* Parse the vfl file, don't pass to vice */
-                dc_parse_vfl(dc, arg);
-                /* Don't pass -flipname argument to vice - it has no use of it */
-                /* and we won't have to take care of cleaning it up */
-                is_fliplist = true;
-            }
-            else if (!strcmp(arg, "-j1"))
-            {
-                cur_port = 1;
-                cur_port_locked = true;
-            }
-            else if (!strcmp(arg, "-j2"))
-            {
-                cur_port = 2;
-                cur_port_locked = true;
-            }
-            else if (strendswith(arg, "m3u"))
-            {
-                /* Parse the m3u file, don't pass to vice */
-                dc_parse_m3u(dc, arg);
-                is_fliplist = true;
-            }
-            else if (!strcmp(arg, "-flipname"))
-            {
-                /* Set flag for next arg */
-                is_flipname_param = true;
-            }
-            else if (!strcmp(arg, "-noautostart"))
-            {
-                /* User ask to not automatically start image in drive */
-                noautostart = true;
-            }
-            else if (!strcmp(arg, "-autostart"))
-            {
-                /* User ask to automatically start image in drive */
-                noautostart = false;
-            }
-            else
-            {
-                /* Fill cmd arg path from argv if there is none */
-                if (strstr(arg, ".") && !strstr(arg, FSDEV_DIR_SEP_STR))
-                {
-                    char arg_path[RETRO_PATH_MAX] = {0};
-                    char arg_full[RETRO_PATH_MAX] = {0};
-                    strcpy(arg_path, argv);
-                    path_basedir(arg_path);
-                    strcpy(arg_full, arg_path);
-                    strcat(arg_full, arg);
-                    Add_Option(arg_full);
-                }
-                else
-                    Add_Option(arg);
-            }
-        }
-
-        if (is_fliplist)
-        {
-            /* Some debugging */
-            log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
-        }
-    }
+      if (is_fliplist)
+      {
+         /* Some debugging */
+         log_cb(RETRO_LOG_INFO, "M3U/VFL parsed, %d file(s) found\n", dc->count);
+      }
+   }
 
 #if defined(__XVIC__) || defined(__XPLUS4__)
-     /* Disable floppy drive when using carts with cores that won't disable it via autostart */
-     for (int i = 0; i < PARAMCOUNT; i++)
-     {
-         if (strstr(XARGV[i], "-cart") && XARGV[i][0] == '-')
-         {
-             Add_Option("-drive8type");
-             Add_Option("0");
-             break;
-         }
-     }
+   /* Disable floppy drive when using carts with cores that won't disable it via autostart */
+   for (int i = 0; i < PARAMCOUNT; i++)
+   {
+      if (strstr(XARGV[i], "-cart") && XARGV[i][0] == '-')
+      {
+         Add_Option("-drive8type");
+         Add_Option("0");
+         break;
+      }
+   }
 #endif
-    return 0;
+   return 0;
 }
 
 static void autodetect_drivetype(int unit)
 {
-    int drive_type, set_drive_type;
-    char drive_type_resource_var[20] = {0};
-    snprintf(drive_type_resource_var, sizeof(drive_type_resource_var), "Drive%dType", unit);
-    resources_get_int(drive_type_resource_var, &drive_type);
-    const char* attached_image = NULL;
-    attached_image = file_system_get_disk_name(unit, 0);
+   int drive_type = 0;
+   int set_drive_type = 0;
+   char drive_type_resource_var[20] = {0};
+   const char* attached_image = NULL;
 
-    /* Autodetect drive type */
-    vdrive_t *vdrive;
-    struct disk_image_s *diskimg;
+   snprintf(drive_type_resource_var, sizeof(drive_type_resource_var), "Drive%dType", unit);
+   resources_get_int(drive_type_resource_var, &drive_type);
+   attached_image = file_system_get_disk_name(unit, 0);
 
-    vdrive = file_system_get_vdrive(unit, 0);
-    if (vdrive == NULL)
-        log_cb(RETRO_LOG_ERROR, "Failed to get vdrive reference for unit %d.\n", unit);
-    else
-    {
-        diskimg = vdrive->image;
-        if (diskimg == NULL)
-            log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit %d.\n", unit);
-        else
-        {
-            /* G64/G71 exceptions for preventing unwanted drive type sets */
-            if (diskimg->type == DISK_IMAGE_TYPE_G64)
-                set_drive_type = DISK_IMAGE_TYPE_D64;
-            else if (diskimg->type == DISK_IMAGE_TYPE_G71)
-                set_drive_type = DISK_IMAGE_TYPE_D71;
-            /* Force 1541 to 1541-II */
-            else if (diskimg->type == DRIVE_TYPE_1541)
-                set_drive_type = DRIVE_TYPE_1541II;
-            else
-                set_drive_type = diskimg->type;
+   /* Autodetect drive type */
+   vdrive_t *vdrive;
+   struct disk_image_s *diskimg;
 
-            if (set_drive_type == drive_type)
-                return;
+   vdrive = file_system_get_vdrive(unit, 0);
+   if (vdrive == NULL)
+      log_cb(RETRO_LOG_ERROR, "Failed to get vdrive reference for unit %d.\n", unit);
+   else
+   {
+      diskimg = vdrive->image;
+      if (diskimg == NULL)
+         log_cb(RETRO_LOG_ERROR, "Failed to get disk image for unit %d.\n", unit);
+      else
+      {
+         /* G64/G71 exceptions for preventing unwanted drive type sets */
+         if (diskimg->type == DISK_IMAGE_TYPE_G64)
+            set_drive_type = DRIVE_TYPE_1541II;
+         else if (diskimg->type == DISK_IMAGE_TYPE_G71)
+            set_drive_type = DRIVE_TYPE_1571;
+         /* Force 1541 to 1541-II */
+         else if (diskimg->type == DRIVE_TYPE_1541)
+            set_drive_type = DRIVE_TYPE_1541II;
+         else
+            set_drive_type = diskimg->type;
 
-            log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
-            if (log_resources_set_int(drive_type_resource_var, set_drive_type) < 0)
-                log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
+         if (set_drive_type == drive_type)
+            return;
 
-            /* Change from 1581 to 1541 will not detect disk properly without reattaching (?!) */
-            file_system_detach_disk(unit, 0);
-            file_system_attach_disk(unit, 0, attached_image);
+         log_cb(RETRO_LOG_INFO, "Autodetected image type %u.\n", diskimg->type);
+         if (log_resources_set_int(drive_type_resource_var, set_drive_type) < 0)
+            log_cb(RETRO_LOG_ERROR, "Failed to set drive type.\n");
 
-            /* Don't bother with drive sound muting when autoloadwarp is on */
-            if (opt_autoloadwarp & AUTOLOADWARP_DISK)
-               return;
-            /* Drive motor sound keeps on playing if the drive type is changed while the motor is running */
-            /* Also happens when toggling TDE */
-            switch (set_drive_type)
-            {
-                case DISK_IMAGE_TYPE_G64:
-                case DISK_IMAGE_TYPE_G71:
-                case DISK_IMAGE_TYPE_D64:
-                case DISK_IMAGE_TYPE_D71:
-                    resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
-                    break;
-                default:
-                    resources_set_int("DriveSoundEmulationVolume", 0);
-                    break;
-            }
-        }
-    }
+         /* Change from 1581 to 1541 will not detect disk properly without reattaching (?!) */
+         file_system_detach_disk(unit, 0);
+         file_system_attach_disk(unit, 0, attached_image);
+
+         /* Don't bother with drive sound muting when autoloadwarp is on */
+         if (opt_autoloadwarp & AUTOLOADWARP_DISK)
+            return;
+         /* Drive motor sound keeps on playing if the drive type is changed while the motor is running */
+         /* Also happens when toggling TDE */
+         switch (set_drive_type)
+         {
+            case DISK_IMAGE_TYPE_G64:
+            case DISK_IMAGE_TYPE_G71:
+            case DISK_IMAGE_TYPE_D64:
+            case DISK_IMAGE_TYPE_D71:
+               resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
+               break;
+            default:
+               resources_set_int("DriveSoundEmulationVolume", 0);
+               break;
+         }
+      }
+   }
 }
 
 void update_work_disk()
 {
-    request_update_work_disk = false;
-    const char* attached_image = NULL;
+   request_update_work_disk = false;
+   const char* attached_image = NULL;
 
-    /* Skip if device unit collides with autostart */
-    if (!string_is_empty(full_path) && opt_work_disk_unit == 8)
-        opt_work_disk_type = 0;
-    if (opt_work_disk_type)
-    {
-        /* Path vars */
-        char opt_work_disk_filename[RETRO_PATH_MAX] = {0};
-        char opt_work_disk_filepath[RETRO_PATH_MAX] = {0};
-        char opt_work_disk_extension[4] = {0};
-        switch (opt_work_disk_type)
-        {
-            default:
-            case DISK_IMAGE_TYPE_D64:
-                snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d64");
-                break;
-            case DISK_IMAGE_TYPE_D71:
-                snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d71");
-                break;
-            case DISK_IMAGE_TYPE_D81:
-                snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d81");
-                break;
-        }
-        snprintf(opt_work_disk_filename, sizeof(opt_work_disk_filename), "vice_work.%s", opt_work_disk_extension);
-        path_join((char*)&opt_work_disk_filepath, retro_save_directory, opt_work_disk_filename);
+   /* Skip if device unit collides with autostart */
+   if (!string_is_empty(full_path) && opt_work_disk_unit == 8)
+      opt_work_disk_type = 0;
+   if (opt_work_disk_type)
+   {
+      /* Path vars */
+      char opt_work_disk_filename[RETRO_PATH_MAX] = {0};
+      char opt_work_disk_filepath[RETRO_PATH_MAX] = {0};
+      char opt_work_disk_extension[4] = {0};
+      switch (opt_work_disk_type)
+      {
+         default:
+         case DISK_IMAGE_TYPE_D64:
+            snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d64");
+            break;
+         case DISK_IMAGE_TYPE_D71:
+            snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d71");
+            break;
+         case DISK_IMAGE_TYPE_D81:
+            snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d81");
+            break;
+      }
+      snprintf(opt_work_disk_filename, sizeof(opt_work_disk_filename), "vice_work.%s", opt_work_disk_extension);
+      path_join((char*)&opt_work_disk_filepath, retro_save_directory, opt_work_disk_filename);
 
-        /* Create disk */
-        if (!path_is_valid(opt_work_disk_filepath))
-        {
-            /* Label format */
-            char format_name[28];
-            snprintf(format_name, sizeof(format_name), "%s-%s", "work", opt_work_disk_extension);
-            charset_petconvstring((uint8_t *)format_name, 0);
+      /* Create disk */
+      if (!path_is_valid(opt_work_disk_filepath))
+      {
+         /* Label format */
+         char format_name[28];
+         snprintf(format_name, sizeof(format_name), "%s-%s", "work", opt_work_disk_extension);
+         charset_petconvstring((uint8_t *)format_name, 0);
 
-            if (vdrive_internal_create_format_disk_image(opt_work_disk_filepath, format_name, opt_work_disk_type))
-                log_cb(RETRO_LOG_INFO, "Work disk creation failed: '%s'\n", opt_work_disk_filepath);
-            else
-                log_cb(RETRO_LOG_INFO, "Work disk created: '%s'\n", opt_work_disk_filepath);
-        }
+         if (vdrive_internal_create_format_disk_image(opt_work_disk_filepath, format_name, opt_work_disk_type))
+            log_cb(RETRO_LOG_INFO, "Work disk creation failed: '%s'\n", opt_work_disk_filepath);
+         else
+            log_cb(RETRO_LOG_INFO, "Work disk created: '%s'\n", opt_work_disk_filepath);
+      }
 
-        /* Attach disk */
-        if (path_is_valid(opt_work_disk_filepath))
-        {
-            /* Detach previous disks */
-            if ((attached_image = file_system_get_disk_name(8, 0)) != NULL)
-                file_system_detach_disk(8, 0);
+      /* Attach disk */
+      if (path_is_valid(opt_work_disk_filepath))
+      {
+         /* Detach previous disks */
+         if ((attached_image = file_system_get_disk_name(8, 0)) != NULL)
+            file_system_detach_disk(8, 0);
 
-            if ((attached_image = file_system_get_disk_name(9, 0)) != NULL)
-            {
-                file_system_detach_disk(9, 0);
-                log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
-            }
-
-            if (opt_work_disk_unit == 9)
-                log_resources_set_int("Drive9Type", opt_work_disk_type);
-            file_system_attach_disk(opt_work_disk_unit, 0, opt_work_disk_filepath);
-            autodetect_drivetype(opt_work_disk_unit);
-            log_cb(RETRO_LOG_INFO, "Work disk '%s' attached in drive #%d\n", opt_work_disk_filepath, opt_work_disk_unit);
-            display_current_image(opt_work_disk_filename, true);
-        }
-    }
-    else
-    {
-        /* Detach work disk if disabled while running */
-        if ((attached_image = file_system_get_disk_name(8, 0)) != NULL && strstr(attached_image, "vice_work"))
-        {
-            if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, "vice_work")))
-            {
-                log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
-                file_system_detach_disk(8, 0);
-                log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
-                display_current_image(attached_image, false);
-            }
-        }
-
-        if ((attached_image = file_system_get_disk_name(9, 0)) != NULL && strstr(attached_image, "vice_work"))
-        {
-            log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 9);
+         if ((attached_image = file_system_get_disk_name(9, 0)) != NULL)
+         {
             file_system_detach_disk(9, 0);
             log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
-        }
-    }
+         }
+
+         if (opt_work_disk_unit == 9)
+            log_resources_set_int("Drive9Type", opt_work_disk_type);
+         file_system_attach_disk(opt_work_disk_unit, 0, opt_work_disk_filepath);
+         autodetect_drivetype(opt_work_disk_unit);
+         log_cb(RETRO_LOG_INFO, "Work disk '%s' attached in drive #%d\n", opt_work_disk_filepath, opt_work_disk_unit);
+         display_current_image(opt_work_disk_filename, true);
+      }
+   }
+   else
+   {
+      /* Detach work disk if disabled while running */
+      if ((attached_image = file_system_get_disk_name(8, 0)) != NULL && strstr(attached_image, "vice_work"))
+      {
+         if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, "vice_work")))
+         {
+            log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
+            file_system_detach_disk(8, 0);
+            log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
+            display_current_image(attached_image, false);
+         }
+      }
+
+      if ((attached_image = file_system_get_disk_name(9, 0)) != NULL && strstr(attached_image, "vice_work"))
+      {
+         log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 9);
+         file_system_detach_disk(9, 0);
+         log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
+      }
+   }
 }
 
 /* Update autostart image from vice and add disk in drive to fliplist */
 void update_from_vice()
 {
-    const char* attachedImage = NULL;
+   const char* attachedImage = NULL;
 
-    /* Get autostart string from vice, handle carts differently */
-    if (dc->unit == 0 && autostartString != NULL)
-    {
-        free(autostartProgram);
-        autostartProgram = NULL;
-        free(autostartString);
-        autostartString = NULL;
-        attachedImage = dc->files[dc->index];
-        /* Disable AutostartWarp & WarpMode, otherwise warp gets stuck with PRGs in M3Us */
-        resources_set_int("AutostartWarp", 0);
-        resources_set_int("WarpMode", 0);
-    }
-    else
-    {
-        free(autostartProgram);
-        autostartProgram = x_strdup(dc->load[dc->index]);
-        free(autostartString);
-        autostartString = x_strdup(cmdline_get_autostart_string());
-        if (!autostartString && !string_is_empty(full_path))
-            autostartString = x_strdup(full_path);
-    }
+   /* Get autostart string from vice, handle carts differently */
+   if (dc->unit == 0 && autostartString != NULL)
+   {
+      free(autostartProgram);
+      autostartProgram = NULL;
+      free(autostartString);
+      autostartString = NULL;
+      attachedImage = dc->files[dc->index];
+      /* Disable AutostartWarp & WarpMode, otherwise warp gets stuck with PRGs in M3Us */
+      resources_set_int("AutostartWarp", 0);
+      resources_set_int("WarpMode", 0);
+   }
+   else
+   {
+      free(autostartProgram);
+      autostartProgram = x_strdup(dc->load[dc->index]);
+      free(autostartString);
+      autostartString = x_strdup(cmdline_get_autostart_string());
+      if (!autostartString && !string_is_empty(full_path))
+         autostartString = x_strdup(full_path);
+   }
 
-    if (autostartString)
-        log_cb(RETRO_LOG_INFO, "Image for autostart: '%s'\n", autostartString);
-    else
-        log_cb(RETRO_LOG_INFO, "No image for autostart\n");
+   if (autostartString)
+      log_cb(RETRO_LOG_INFO, "Image for autostart: '%s'\n", autostartString);
+   else
+      log_cb(RETRO_LOG_INFO, "No image for autostart\n");
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
-    /* Automatic model request */
-    if (opt_model_auto && !string_is_empty(full_path))
-    {
-        if (strstr(full_path, "NTSC") ||
-            strstr(full_path, "(USA)") ||
-            strstr(full_path, "(Japan)") ||
-            strstr(full_path, "(Japan, USA)"))
-        {
+   /* Automatic model request */
+   if (opt_model_auto && !string_is_empty(full_path))
+   {
+      if (strstr(full_path, "NTSC") ||
+          strstr(full_path, "(USA)") ||
+          strstr(full_path, "(Japan)") ||
+          strstr(full_path, "(Japan, USA)"))
+      {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-            request_model_set = C64MODEL_C64_NTSC;
-            if (vice_opt.Model == C64MODEL_C64C_PAL || vice_opt.Model == C64MODEL_C64C_NTSC)
-                request_model_set = C64MODEL_C64C_NTSC;
+         request_model_set = C64MODEL_C64_NTSC;
+         if (vice_opt.Model == C64MODEL_C64C_PAL || vice_opt.Model == C64MODEL_C64C_NTSC)
+            request_model_set = C64MODEL_C64C_NTSC;
 #elif defined(__XVIC__)
-            request_model_set = VIC20MODEL_VIC20_NTSC;
+         request_model_set = VIC20MODEL_VIC20_NTSC;
 #endif
-        }
+      }
 
-        if (strstr(full_path, "PAL") ||
-            strstr(full_path, "(Europe)") ||
-            strstr(full_path, "(Finland)") ||
-            strstr(full_path, "(France)") ||
-            strstr(full_path, "(Germany)") ||
-            strstr(full_path, "(Netherlands)") ||
-            strstr(full_path, "(Sweden)"))
-        {
+      if (strstr(full_path, "PAL") ||
+          strstr(full_path, "(Europe)") ||
+          strstr(full_path, "(Finland)") ||
+          strstr(full_path, "(France)") ||
+          strstr(full_path, "(Germany)") ||
+          strstr(full_path, "(Netherlands)") ||
+          strstr(full_path, "(Sweden)"))
+      {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-            request_model_set = C64MODEL_C64_PAL;
-            if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
-                request_model_set = C64MODEL_C64C_PAL;
+         request_model_set = C64MODEL_C64_PAL;
+         if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
+            request_model_set = C64MODEL_C64C_PAL;
 #elif defined(__XVIC__)
-            request_model_set = VIC20MODEL_VIC20_PAL;
+         request_model_set = VIC20MODEL_VIC20_PAL;
 #endif
-        }
+      }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-        if (strstr(full_path, "(GS)"))
-            request_model_set = C64MODEL_C64_GS;
-        else if (strstr(full_path, "(MAX)"))
-            request_model_set = C64MODEL_ULTIMAX;
+      if (strstr(full_path, "(GS)"))
+         request_model_set = C64MODEL_C64_GS;
+      else if (strstr(full_path, "(MAX)"))
+         request_model_set = C64MODEL_ULTIMAX;
 #endif
-    }
-    else
-        request_model_set = -1;
+   }
+   else
+      request_model_set = -1;
 #endif
 
-    /* If flip list is empty, get current tape or floppy image name and add to the list */
-    if (dc->count == 0)
-    {
+   /* If flip list is empty, get current tape or floppy image name and add to the list */
+   if (dc->count == 0)
+   {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
-        if ((attachedImage = cartridge_get_file_name(cart_getid_slotmain())) != NULL)
+      if ((attachedImage = cartridge_get_file_name(cart_getid_slotmain())) != NULL)
+#elif defined(__XVIC__)
+      if ((attachedImage = generic_get_file_name(0)) != NULL)
 #else
-        if ((attachedImage = cartridge_get_file_name(0)) != NULL)
+      if ((attachedImage = cartridge_get_file_name(0)) != NULL)
 #endif
-        {
-            dc->unit = 0;
+      {
+         dc->unit = 0;
+         dc_add_file(dc, attachedImage, NULL, NULL, NULL);
+      }
+      else if ((attachedImage = tape_get_file_name()) != NULL)
+      {
+         dc->unit = 1;
+         dc_add_file(dc, attachedImage, NULL, NULL, NULL);
+      }
+      else
+      {
+         /* Only add images to the list from device 8, otherwise leads to confusion when other devices have disks,
+          * because Disk Control operates only on device 8 for now. */
+         int unit = 8;
+         if ((attachedImage = file_system_get_disk_name(unit, 0)) != NULL)
+         {
+            dc->unit = unit;
             dc_add_file(dc, attachedImage, NULL, NULL, NULL);
-        }
-        else if ((attachedImage = tape_get_file_name()) != NULL)
-        {
-            dc->unit = 1;
-            dc_add_file(dc, attachedImage, NULL, NULL, NULL);
-        }
-        else
-        {
-#if 0
-            int unit;
-            for (unit = 8; unit <= 11; ++unit)
-            {
-                if ((attachedImage = file_system_get_disk_name(unit, 0)) != NULL)
-                {
-                    dc->unit = unit;
-                    dc_add_file(dc, attachedImage, NULL, NULL, NULL);
-                    break;
-                }
-            }
-#else
-            /* Only add images to the list from device 8, otherwise leads to confusion when other devices have disks,
-             * because Disk Control operates only on device 8 for now. */
-            int unit = 8;
-            if ((attachedImage = file_system_get_disk_name(unit, 0)) != NULL)
-            {
-                dc->unit = unit;
-                dc_add_file(dc, attachedImage, NULL, NULL, NULL);
-            }
-#endif
-        }
-    }
+         }
+      }
+   }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
-    /* Disable JiffyDOS with tapes and carts */
-    if (opt_jiffydos && dc->unit <= 1 && dc->count > 0)
-    {
-        opt_jiffydos_allow = 0;
-        opt_jiffydos = 0;
-        reload_restart();
-    }
+   /* Disable JiffyDOS with tapes and carts */
+   if (opt_jiffydos && dc->unit <= 1 && dc->count > 0)
+   {
+      opt_jiffydos_allow = 0;
+      opt_jiffydos = 0;
+      reload_restart();
+   }
 #endif
 
-    /* Logging */
-    if (dc->count > 0)
-    {
-        if (dc->unit == 1)
-            log_cb(RETRO_LOG_INFO, "Tape image list has %d file(s)\n", dc->count);
-        else if (dc->unit >= 8 && dc->unit <= 11)
-            log_cb(RETRO_LOG_INFO, "Drive #%d image list has %d file(s)\n", dc->unit, dc->count);
-        else if (dc->unit == 0)
-            log_cb(RETRO_LOG_INFO, "Cartridge image list has %d file(s)\n", dc->count);
+   /* Logging */
+   if (dc->count > 0)
+   {
+      if (dc->unit == 1)
+         log_cb(RETRO_LOG_INFO, "Tape image list has %d file(s)\n", dc->count);
+      else if (dc->unit >= 8 && dc->unit <= 11)
+         log_cb(RETRO_LOG_INFO, "Drive #%d image list has %d file(s)\n", dc->unit, dc->count);
+      else if (dc->unit == 0)
+         log_cb(RETRO_LOG_INFO, "Cartridge image list has %d file(s)\n", dc->count);
 
-        for(unsigned i = 0; i < dc->count; i++)
-            log_cb(RETRO_LOG_DEBUG, "File %d: %s\n", i+1, dc->files[i]);
-    }
+      for (unsigned i = 0; i < dc->count; i++)
+         log_cb(RETRO_LOG_DEBUG, "File %d: %s\n", i+1, dc->files[i]);
+   }
 
-    /* Scan for save disk 0, append if exists */
-    if (dc->count && dc->unit == 8)
-    {
-        bool file_check = dc_save_disk_toggle(dc, true, false);
-        if (file_check)
-            dc_save_disk_toggle(dc, false, false);
-    }
+   /* Scan for save disk 0, append if exists */
+   if (dc->count && dc->unit == 8)
+   {
+      bool file_check = dc_save_disk_toggle(dc, true, false);
+      if (file_check)
+         dc_save_disk_toggle(dc, false, false);
+   }
 
-    /* If flip list is not empty, but there is no image attached to drive, attach the first one from list.
-     * This can only happen if flip list was loaded via cmd file or from m3u with #COMMAND */
-    if (dc->count != 0)
-    {
-        if (dc->unit == 1)
-        {
-            if ((attachedImage = tape_get_file_name()) == NULL)
+   /* If flip list is not empty, but there is no image attached to drive, attach the first one from list.
+    * This can only happen if flip list was loaded via cmd file or from m3u with #COMMAND */
+   if (dc->count != 0)
+   {
+      if (dc->unit == 1)
+      {
+         if ((attachedImage = tape_get_file_name()) == NULL)
+         {
+            attachedImage = dc->files[0];
+            autostartProgram = x_strdup(dc->load[0]);
+            /* Don't attach if we will autostart from it just in a moment */
+            if (autostartString != NULL || noautostart)
             {
-                attachedImage = dc->files[0];
-                autostartProgram = x_strdup(dc->load[0]);
-                /* Don't attach if we will autostart from it just in a moment */
-                if (autostartString != NULL || noautostart)
-                {
-                    log_cb(RETRO_LOG_INFO, "Attaching first tape '%s'\n", attachedImage);
-                    tape_image_attach(dc->unit, attachedImage);
-                }
+               log_cb(RETRO_LOG_INFO, "Attaching first tape '%s'\n", attachedImage);
+               tape_image_attach(dc->unit, attachedImage);
             }
-        }
-        else if (dc->unit == 8)
-        {
-            if ((attachedImage = file_system_get_disk_name(dc->unit, 0)) == NULL)
+         }
+      }
+      else if (dc->unit == 8)
+      {
+         if ((attachedImage = file_system_get_disk_name(dc->unit, 0)) == NULL)
+         {
+            attachedImage = dc->files[0];
+            autostartProgram = x_strdup(dc->load[0]);
+            /* Don't attach if we will autostart from it just in a moment */
+            if (autostartString != NULL || noautostart)
             {
-                attachedImage = dc->files[0];
-                autostartProgram = x_strdup(dc->load[0]);
-                /* Don't attach if we will autostart from it just in a moment */
-                if (autostartString != NULL || noautostart)
-                {
-                    log_cb(RETRO_LOG_INFO, "Attaching first disk '%s' to drive #%d\n", attachedImage, dc->unit);
-                    file_system_attach_disk(dc->unit, 0, attachedImage);
-                }
+               log_cb(RETRO_LOG_INFO, "Attaching first disk '%s' to drive #%d\n", attachedImage, dc->unit);
+               file_system_attach_disk(dc->unit, 0, attachedImage);
             }
-        }
-        if (dc->unit == 0)
-        {
-            if (attachedImage == NULL)
+         }
+      }
+      else if (dc->unit == 0)
+      {
+         if (attachedImage == NULL)
+         {
+            attachedImage = dc->files[0];
+            autostartProgram = NULL;
+            /* Don't attach if we will autostart from it just in a moment */
+            if (autostartString != NULL || noautostart)
             {
-                attachedImage = dc->files[0];
-                autostartProgram = NULL;
-                /* Don't attach if we will autostart from it just in a moment */
-                if (autostartString != NULL || noautostart)
-                {
-                    log_cb(RETRO_LOG_INFO, "Attaching first cart '%s'\n", attachedImage);
+               log_cb(RETRO_LOG_INFO, "Attaching first cart '%s'\n", attachedImage);
 #if defined(__XVIC__)
-                    cartridge_attach_image(vic20_autodetect_cartridge_type(attachedImage), attachedImage);
+               cartridge_attach_image(vic20_autodetect_cartridge_type(attachedImage), attachedImage);
 #elif defined(__XPLUS4__)
-                    cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, attachedImage);
-                    /* No autostarting carts, otherwise gfx gets corrupted (?!) */
-                    noautostart = true;
+               cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, attachedImage);
+               /* No autostarting carts, otherwise gfx gets corrupted (?!) */
+               noautostart = true;
 #else
-                    cartridge_attach_image(dc->unit, attachedImage);
+               cartridge_attach_image(dc->unit, attachedImage);
 #endif
-                }
             }
-        }
-    }
+         }
+         else
+            /* Due to a bug in 3.5, some carts (Up 'n Down) get stuck in black screen when
+             * launched via cmdline, but continue with reset and subsequent attaches.. */
+            request_restart = true;
+      }
+   }
 
-    /* Disable autostart only with disks or tapes */
-    if (!string_is_empty(attachedImage))
-    {
-        if (noautostart)
-            autostart_disable();
-        else if (!noautostart && !string_is_empty(autostartString) &&
-                 strcmp(autostartString, attachedImage) &&
-                 string_is_empty(autostartProgram) &&
-                 dc_get_image_type(attachedImage) != DC_IMAGE_TYPE_MEM)
-            autostartString = NULL;
-    }
+   /* Disable autostart only with disks or tapes */
+   if (!string_is_empty(attachedImage))
+   {
+      if (noautostart)
+         autostart_disable();
+      else if (!noautostart && !string_is_empty(autostartString) &&
+            strcmp(autostartString, attachedImage) &&
+            string_is_empty(autostartProgram) &&
+            dc_get_image_type(attachedImage) != DC_IMAGE_TYPE_MEM)
+         autostartString = NULL;
+   }
 
-    /* If there an image attached, but autostart is empty, autostart from the image */
-    if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart && !CMDFILE[0])
-    {
-        log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image '%s'\n", attachedImage);
-        autostartString = x_strdup(attachedImage);
-        if (!string_is_empty(autostartProgram))
-            charset_petconvstring((uint8_t *)autostartProgram, 0);
+   /* If there an image attached, but autostart is empty, autostart from the image */
+   if (string_is_empty(autostartString) && !string_is_empty(attachedImage) && !noautostart && !CMDFILE[0])
+   {
+      log_cb(RETRO_LOG_INFO, "Autostarting from attached or first image '%s'\n", attachedImage);
+      autostartString = x_strdup(attachedImage);
+      if (!string_is_empty(autostartProgram))
+         charset_petconvstring((uint8_t *)autostartProgram, 0);
 
-        autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_RUN);
-    }
+      autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_RUN);
+   }
 
-    /* If vice has image attached to drive, tell libretro that the 'tray' is closed */
-    if (!string_is_empty(attachedImage))
-    {
-        dc->eject_state = false;
-        display_current_image(dc->labels[dc->index], true);
-    }
-    else
-    {
-        dc->eject_state = true;
-        display_current_image("", false);
-    }
+   /* If vice has image attached to drive, tell libretro that the 'tray' is closed */
+   if (!string_is_empty(attachedImage))
+   {
+      dc->eject_state = false;
+      display_current_image(dc->labels[dc->index], true);
+   }
+   else
+   {
+      dc->eject_state = true;
+      display_current_image("", false);
+   }
 }
 
 void build_params()
 {
-    int i;
+   int i;
 
-    if (PARAMCOUNT == 0)
-    {
-        /* No game loaded - set command line to 'x64' */
-        Add_Option(CORE_NAME);
-    }
+   if (PARAMCOUNT == 0)
+   {
+      /* No game loaded - set command line to core name */
+      Add_Option(CORE_NAME);
+   }
 
-    for (i = 0; i < PARAMCOUNT; i++)
-    {
-        xargv_cmd[i] = (char*)(XARGV[i]);
-        log_cb(RETRO_LOG_INFO, "Arg%d: %s\n",i,XARGV[i]);
-    }
+   for (i = 0; i < PARAMCOUNT; i++)
+   {
+      xargv_cmd[i] = (char*)(XARGV[i]);
+      log_cb(RETRO_LOG_INFO, "Arg%d: %s\n", i, XARGV[i]);
+   }
 
-    xargv_cmd[PARAMCOUNT] = NULL;
+   xargv_cmd[PARAMCOUNT] = NULL;
 }
 
 extern char archdep_startup_error[];
 
 static void archdep_startup_error_log_lines()
 {
-    /* Message may contain several lines, log them separately for better readbility. */
-    for (char *p=archdep_startup_error, *p_end;strlen(p);p=p_end)
-    {
-        if (!(p_end=strchr(p,'\n')))
-            p_end=p+strlen(p);
-        else
-            *(p_end++)=0;
-        log_cb(RETRO_LOG_WARN, "VICE: %s\n", p);
-    }
+   /* Message may contain several lines, log them separately for better readability. */
+   for (char *p = archdep_startup_error, *p_end; strlen(p); p = p_end)
+   {
+      if (!(p_end = strchr(p, '\n')))
+         p_end = p+strlen(p);
+      else
+         *(p_end++) = 0;
+      log_cb(RETRO_LOG_WARN, "VICE: %s\n", p);
+   }
 }
 
 int pre_main()
 {
-    int argc = PARAMCOUNT;
+   int argc = PARAMCOUNT;
 
-    /* start core with full params */
-    build_params();
+   /* start core with full params */
+   build_params();
 
-    *archdep_startup_error = 0;
-    if (skel_main(argc, (char**)xargv_cmd) < 0)
-    {
-        log_cb(RETRO_LOG_WARN, "Core startup failed with error:\n");
-        archdep_startup_error_log_lines();
-        log_cb(RETRO_LOG_INFO, "Core startup retry without parameters.\n");
+   *archdep_startup_error = 0;
+   if (skel_main(argc, (char**)xargv_cmd) < 0)
+   {
+      log_cb(RETRO_LOG_WARN, "Core startup failed with error:\n");
+      archdep_startup_error_log_lines();
+      log_cb(RETRO_LOG_INFO, "Core startup retry without parameters.\n");
 
-        /* Show only first line in message to indicate something went wrong. */
-        struct retro_message rmsg;
-        rmsg.msg = archdep_startup_error;
-        rmsg.frames = 500;
-        environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &rmsg);
+      /* Show only first line in message to indicate something went wrong. */
+      struct retro_message rmsg;
+      rmsg.msg = archdep_startup_error;
+      rmsg.frames = 500;
+      environ_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &rmsg);
 
-        /* start core with empty params */
-        xargv_cmd[0] = CORE_NAME;
-        xargv_cmd[1] = NULL;
-        argc = 1;
+      /* start core with empty params */
+      xargv_cmd[0] = CORE_NAME;
+      xargv_cmd[1] = NULL;
+      argc = 1;
 
-        *archdep_startup_error = 0;
-        if (skel_main(argc, (char**)xargv_cmd) < 0)
-        {
-            log_cb(RETRO_LOG_ERROR, "Core startup without parameters failed with error:\n");
-            archdep_startup_error_log_lines();
-            environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
-        }
-    }
+      *archdep_startup_error = 0;
+      if (skel_main(argc, (char**)xargv_cmd) < 0)
+      {
+         log_cb(RETRO_LOG_ERROR, "Core startup without parameters failed with error:\n");
+         archdep_startup_error_log_lines();
+         environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+      }
+   }
 
-    return 0;
+   return 0;
 }
 
 static void update_variables(void);
@@ -1597,33 +1613,33 @@ extern int ui_init_finalize(void);
 
 void reload_restart(void)
 {
-    /* Clear request */
-    request_reload_restart = false;
+   /* Clear request */
+   request_reload_restart = false;
 
-    /* Reset Datasette */
-    datasette_control(DATASETTE_CONTROL_RESET);
+   /* Reset Datasette */
+   datasette_control(DATASETTE_CONTROL_RESET);
 
-    /* Cleanup after previous content and reset resources */
-    initcmdline_cleanup();
+   /* Cleanup after previous content and reset resources */
+   initcmdline_cleanup();
 
-    /* Update resources from environment just like on fresh start of core */
-    sound_volume_counter_reset();
-    request_model_prev = -1;
-    retro_ui_finalized = false;
-    update_variables();
-    /* Some resources are not set until we call this */
-    ui_init_finalize();
+   /* Update resources from environment just like on fresh start of core */
+   sound_volume_counter_reset();
+   request_model_prev = -1;
+   retro_ui_finalized = false;
+   update_variables();
+   /* Some resources are not set until we call this */
+   ui_init_finalize();
 
-    /* And process command line */
-    build_params();
-    if (initcmdline_restart(PARAMCOUNT, (char**)xargv_cmd) < 0)
-    {
-        log_cb(RETRO_LOG_ERROR, "Restart failed\n");
-        /* Nevermind, the core is already running */
-    }
+   /* And process command line */
+   build_params();
+   if (initcmdline_restart(PARAMCOUNT, (char**)xargv_cmd) < 0)
+   {
+      log_cb(RETRO_LOG_ERROR, "Restart failed\n");
+      /* Nevermind, the core is already running */
+   }
 
-    /* Now read disk image and autostart file (may be the same or not) from vice */
-    update_from_vice();
+   /* Now read disk image and autostart file (may be the same or not) from vice */
+   update_from_vice();
 }
 
 /* FPS counter + mapper tick */
@@ -2601,6 +2617,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20%"
       },
+#if !defined(__X64DTV__)
       {
          "vice_datasette_sound",
          "Audio > Datasette Sound",
@@ -2632,6 +2649,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
          "vice_audio_leak_emulation",
@@ -3022,6 +3040,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#if !defined(__X64DTV__)
       {
          "vice_datasette_hotkeys",
          "Input > Datasette Hotkeys",
@@ -3033,6 +3052,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
+#endif
       {
          "vice_mapping_options_display",
          "Show Mapping Options",
@@ -3098,6 +3118,7 @@ void retro_set_environment(retro_environment_t cb)
          "---"
       },
 #endif
+#if !defined(__X64DTV__)
       /* Datasette controls */
       {
          "vice_mapper_datasette_toggle_hotkeys",
@@ -3141,6 +3162,7 @@ void retro_set_environment(retro_environment_t cb)
          {{ NULL, NULL }},
          "---"
       },
+#endif
       /* Button mappings */
       {
          "vice_mapper_select",
@@ -3574,14 +3596,14 @@ void retro_set_environment(retro_environment_t cb)
 
 int log_resources_set_int(const char *name, int value)
 {
-    log_cb(RETRO_LOG_INFO, "Set resource: %s => %d\n", name, value);
-    return resources_set_int(name, value);
+   log_cb(RETRO_LOG_INFO, "Set resource: %s => %d\n", name, value);
+   return resources_set_int(name, value);
 }
 
 int log_resources_set_string(const char *name, const char* value)
 {
-    log_cb(RETRO_LOG_INFO, "Set resource: %s => \"%s\"\n", name, value);
-    return resources_set_string(name, value);
+   log_cb(RETRO_LOG_INFO, "Set resource: %s => \"%s\"\n", name, value);
+   return resources_set_string(name, value);
 }
 
 static void update_variables(void)
@@ -3792,6 +3814,7 @@ static void update_variables(void)
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
+#if !defined(__X64DTV__)
    var.key = "vice_datasette_sound";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -3809,6 +3832,7 @@ static void update_variables(void)
 
       vice_opt.DatasetteSound = val;
    }
+#endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    var.key = "vice_audio_leak_emulation";
@@ -5207,6 +5231,7 @@ static void update_variables(void)
       mapper_keys[RETRO_MAPPER_WARP_MODE] = retro_keymap_id(var.value);
    }
 
+#if !defined(__X64DTV__)
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -5256,6 +5281,7 @@ static void update_variables(void)
    {
       mapper_keys[RETRO_MAPPER_DATASETTE_RESET] = retro_keymap_id(var.value);
    }
+#endif
 
 
    /*** Options display ***/
@@ -5321,6 +5347,7 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_warp_mode";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#if !defined(__X64DTV__)
    option_display.key = "vice_mapper_datasette_toggle_hotkeys";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_datasette_start";
@@ -5333,14 +5360,17 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_datasette_reset";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
 
    /* Audio options */
    option_display.visible = opt_audio_options_display;
 
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#if !defined(__X64DTV__)
    option_display.key = "vice_datasette_sound";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_audio_leak_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -6395,8 +6425,9 @@ void retro_run(void)
       retroYS_offset = zoomed_YS_offset;
    }
 
-   /* retro_reset() postponed here for proper JiffyDOS+vicerc core option refresh operation */
-   if (request_restart)
+   /* retro_reset() postponed here for proper JiffyDOS+vicerc core option refresh operation
+    * Restart does nothing if done too early, therefore only allow it after the first frame */
+   if (request_restart && retro_now > 20000)
    {
       request_restart = false;
       emu_reset(0);
@@ -6438,6 +6469,16 @@ bool retro_load_game(const struct retro_game_info *info)
       runstate = RUNSTATE_LOADED_CONTENT;
    }
 
+   struct retro_memory_descriptor memdesc[] = {
+      {RETRO_MEMDESC_SYSTEM_RAM, mem_ram, 0, 0, 0, 0, mem_ram_size, NULL}
+   };
+
+   struct retro_memory_map mmap = {
+      memdesc,
+      sizeof(memdesc) / sizeof(memdesc[0])
+   };
+
+   environ_cb(RETRO_ENVIRONMENT_SET_MEMORY_MAPS, &mmap);
    return true;
 }
 
@@ -6488,24 +6529,24 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info, 
 
 static void dc_sync_index(void)
 {
-    unsigned dc_index;
-    char* filename = strdup(dc_savestate_filename);
-    drive_t *drive = diskunit_context[0]->drives[0];
-    if (drive == NULL || string_is_empty(filename))
-        return;
+   unsigned dc_index;
+   char* filename = strdup(dc_savestate_filename);
+   drive_t *drive = diskunit_context[0]->drives[0];
+   if (drive == NULL || string_is_empty(filename))
+      return;
 
-    if (!drive->GCR_image_loaded)
-        return;
+   if (!drive->GCR_image_loaded)
+      return;
 
-    for (dc_index = 0; dc_index < dc->count; dc_index++)
-    {
-        if (strcasestr(dc->files[dc_index], filename) && dc->index != dc_index)
-        {
-            dc->index = dc_index;
-            retro_disk_set_eject_state(true);
-            retro_disk_set_eject_state(false);
-        }
-    }
+   for (dc_index = 0; dc_index < dc->count; dc_index++)
+   {
+      if (strcasestr(dc->files[dc_index], filename) && dc->index != dc_index)
+      {
+         dc->index = dc_index;
+         retro_disk_set_eject_state(true);
+         retro_disk_set_eject_state(false);
+      }
+   }
 }
 
 /* CPU traps ensure we are never saving snapshots or loading them in the middle of a cpu instruction.
@@ -6558,11 +6599,26 @@ size_t retro_serialize_size(void)
          else
          {
             log_cb(RETRO_LOG_INFO, "Failed to calculate snapshot size\n");
+            snapshot_display_error();
          }
          snapshot_fclose(snapshot_stream);
          snapshot_stream = NULL;
       }
    }
+   else
+   {
+      /* Guesstimation size for rewind init, because core is not running yet.
+       * Size depends on the inserted disk format, thus */
+      snapshot_size = mem_ram_size + (mem_ram_size * 0.5);
+
+      /* Some non-EF cartridges allocate a ridiculous amount of memory,
+       * and at this moment the only way to play safe is to overestimate, because
+       * even a 64k sized cart (Badlands) will have a 592452 sized snapshot !? */
+      if ((full_path && strendswith(full_path, "crt")) ||
+          (dc && dc->files[dc->index] && strendswith(dc->files[dc->index], "crt")))
+         snapshot_size = 592452;
+   }
+
    return snapshot_size;
 }
 
@@ -6586,6 +6642,7 @@ bool retro_serialize(void *data_, size_t size)
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to serialize snapshot\n");
+      snapshot_display_error();
    }
    return false;
 }
@@ -6612,6 +6669,7 @@ bool retro_unserialize(const void *data_, size_t size)
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");
+      snapshot_display_error();
    }
    return false;
 }

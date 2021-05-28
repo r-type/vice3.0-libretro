@@ -1197,10 +1197,9 @@ static void autodetect_drivetype(int unit)
          /* Also happens when toggling TDE */
          switch (set_drive_type)
          {
-            case DISK_IMAGE_TYPE_G64:
-            case DISK_IMAGE_TYPE_G71:
-            case DISK_IMAGE_TYPE_D64:
-            case DISK_IMAGE_TYPE_D71:
+            case DRIVE_TYPE_1541:
+            case DRIVE_TYPE_1541II:
+            case DRIVE_TYPE_1571:
                resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
                break;
             default:
@@ -1285,7 +1284,7 @@ void update_work_disk()
          {
             log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
             file_system_detach_disk(8, 0);
-            log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
+            log_resources_set_int("Drive8Type", DRIVE_TYPE_DEFAULT);
             display_current_image(attached_image, false);
          }
       }
@@ -6557,8 +6556,11 @@ static void save_trap(uint16_t addr, void *success)
 {
    int save_disks;
    int drive_type;
+   /* Only do 'save_disks' with the usual suspect which has disk swapping needs
+    * It does not really save disk data, but filename instead,
+    * for syncing disk index on state load */
    resources_get_int("Drive8Type", &drive_type);
-   save_disks = (drive_type == 1541) ? 1 : 0;
+   save_disks = (drive_type == DRIVE_TYPE_1541II) ? 1 : 0;
 
    /* params: stream, save_roms, save_disks, event_mode */
    if (machine_write_snapshot_to_stream(snapshot_stream, 0, save_disks, 0) >= 0)

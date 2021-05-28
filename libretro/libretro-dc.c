@@ -1109,7 +1109,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             case 8:
                /* Detach & disable tape, enable drive 8 */
                tape_deinstall();
-               log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
+               log_resources_set_int("Drive8Type", DRIVE_TYPE_DEFAULT);
                break;
 
             case 0:

@@ -428,13 +428,19 @@ int ui_init_finalize(void)
    log_resources_set_int("SidResid8580Gain", vice_opt.SidResidGain);
    log_resources_set_int("SidResid8580FilterBias", vice_opt.SidResid8580FilterBias);
 
-   if (vice_opt.SidExtra)
+   int sid_stereo;
+   resources_get_int("SidStereo", &sid_stereo);
+   /* Do not override if SidStereo is set in vicerc */
+   if (sid_stereo == 0)
    {
-      log_resources_set_int("Sid2AddressStart", vice_opt.SidExtra);
-      log_resources_set_int("SidStereo", 1);
+      if (vice_opt.SidExtra)
+      {
+         log_resources_set_int("Sid2AddressStart", vice_opt.SidExtra);
+         log_resources_set_int("SidStereo", 1);
+      }
+      else
+         log_resources_set_int("SidStereo", 0);
    }
-   else
-      log_resources_set_int("SidStereo", 0);
 #else
    log_resources_set_int("SidEngine", 0);
 #endif

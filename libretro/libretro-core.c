@@ -2616,7 +2616,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20%"
       },
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
       {
          "vice_datasette_sound",
          "Audio > Datasette Sound",
@@ -3039,7 +3039,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
       {
          "vice_datasette_hotkeys",
          "Input > Datasette Hotkeys",
@@ -3117,7 +3117,7 @@ void retro_set_environment(retro_environment_t cb)
          "---"
       },
 #endif
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
       /* Datasette controls */
       {
          "vice_mapper_datasette_toggle_hotkeys",
@@ -3599,7 +3599,7 @@ int log_resources_set_int(const char *name, int value)
    return resources_set_int(name, value);
 }
 
-int log_resources_set_string(const char *name, const char* value)
+int log_resources_set_string(const char *name, const char *value)
 {
    log_cb(RETRO_LOG_INFO, "Set resource: %s => \"%s\"\n", name, value);
    return resources_set_string(name, value);
@@ -3813,7 +3813,7 @@ static void update_variables(void)
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    var.key = "vice_datasette_sound";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -5230,7 +5230,7 @@ static void update_variables(void)
       mapper_keys[RETRO_MAPPER_WARP_MODE] = retro_keymap_id(var.value);
    }
 
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -5346,7 +5346,7 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_warp_mode";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    option_display.key = "vice_mapper_datasette_toggle_hotkeys";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_datasette_start";
@@ -5366,7 +5366,7 @@ static void update_variables(void)
 
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    option_display.key = "vice_datasette_sound";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif

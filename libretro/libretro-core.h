@@ -183,6 +183,7 @@ enum
 /* Functions */
 extern long retro_ticks(void);
 extern void reload_restart(void);
+extern void emu_reset(int type);
 extern int RGB(int r, int g, int b);
 
 /* VICE options */

@@ -96,7 +96,6 @@ extern unsigned int opt_analogmouse_deadzone;
 extern float opt_analogmouse_speed;
 bool datasette_hotkeys = false;
 
-extern void emu_reset(int type);
 extern unsigned int zoom_mode_id;
 extern int zoom_mode_id_prev;
 extern unsigned int opt_zoom_mode_id;

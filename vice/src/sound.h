@@ -65,8 +65,6 @@
 #ifdef __LIBRETRO__
 #define SOUND_SAMPLE_RATE 48000
 #define SOUND_SAMPLE_BUFFER_SIZE 20
-#define SOUND_CHANNELS_MAX 2
-#define SOUND_SIDS_MAX 2
 
 #else
 
@@ -78,10 +76,10 @@
 #define SOUND_SAMPLE_BUFFER_SIZE 26
 #endif
 
-#define SOUND_CHANNELS_MAX 2
-#define SOUND_SIDS_MAX 8
 #endif /* __LIBRETRO__ */
 
+#define SOUND_CHANNELS_MAX 2
+#define SOUND_SIDS_MAX 8
 #define SOUND_CHIPS_MAX 20
 
 

@@ -183,6 +183,7 @@ enum
 /* Functions */
 extern long retro_ticks(void);
 extern void reload_restart(void);
+extern void emu_reset(int type);
 extern int RGB(int r, int g, int b);
 
 /* VICE options */
@@ -242,34 +243,42 @@ struct vice_cart_info
 
 /* VICE includes */
 #if defined(__X64__) || defined(__X64SC__)
+#define DRIVE_TYPE_DEFAULT 1542
 #include "c64.h"
 #include "c64mem.h"
 #include "c64model.h"
 #elif defined(__XSCPU64__)
+#define DRIVE_TYPE_DEFAULT 1542
 #include "scpu64.h"
 #include "scpu64mem.h"
 #include "c64model.h"
 #elif defined(__X64DTV__)
+#define DRIVE_TYPE_DEFAULT 0
 #include "c64dtv.h"
 #include "c64dtvmem.h"
 #include "c64dtvmodel.h"
 #elif defined(__X128__)
+#define DRIVE_TYPE_DEFAULT 1571
 #include "c128.h"
 #include "c128mem.h"
 #include "c128model.h"
 #elif defined(__XVIC__)
+#define DRIVE_TYPE_DEFAULT 1540
 #include "vic20.h"
 #include "vic20mem.h"
 #include "vic20model.h"
 #include "vic20cart.h"
 #include "vic20-generic.h"
 #elif defined(__XPLUS4__)
+#define DRIVE_TYPE_DEFAULT 1551
 #include "plus4.h"
 #include "plus4model.h"
 #elif defined(__XCBM2__) || defined(__XCBM5x0__)
+#define DRIVE_TYPE_DEFAULT 2031
 #include "cbm2.h"
 #include "cbm2model.h"
 #elif defined(__XPET__)
+#define DRIVE_TYPE_DEFAULT 2031
 #include "pet.h"
 #include "petmodel.h"
 #endif

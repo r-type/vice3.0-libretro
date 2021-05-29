@@ -312,6 +312,7 @@ int ui_init_finalize(void)
    }
 #endif
 
+   /* JiffyDOS */
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
    /* Replace kernal always from backup, because kernal loading replaces the embedded variable */
 #if defined(__X64__) || defined(__X64SC__)
@@ -323,6 +324,16 @@ int ui_init_finalize(void)
    char tmp_str[RETRO_PATH_MAX] = {0};
    if (opt_jiffydos)
    {
+      int drive_type;
+      resources_get_int("Drive8Type", &drive_type);
+
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1541-II.bin");
+      log_resources_set_string("DosName1541ii", (const char*)tmp_str);
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1571_repl310654.bin");
+      log_resources_set_string("DosName1571", (const char*)tmp_str);
+      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1581.bin");
+      log_resources_set_string("DosName1581", (const char*)tmp_str);
+
 #if defined(__X64__) || defined(__X64SC__)
       snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_C64.bin");
       log_resources_set_string("KernalName", (const char*)tmp_str);
@@ -332,24 +343,23 @@ int ui_init_finalize(void)
       snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_C128.bin");
       log_resources_set_string("KernalIntName", (const char*)tmp_str);
 #endif
-      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1541-II.bin");
-      log_resources_set_string("DosName1541", (const char*)tmp_str);
-      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1571_repl310654.bin");
-      log_resources_set_string("DosName1571", (const char*)tmp_str);
-      snprintf(tmp_str, sizeof(tmp_str), "%s%c%s", retro_system_data_directory, FSDEV_DIR_SEP_CHR, "JiffyDOS_1581.bin");
-      log_resources_set_string("DosName1581", (const char*)tmp_str);
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+      /* 1541-II ROM will not work unless drive type is set back to whatever it already is ?! */
+      log_resources_set_int("Drive8Type", drive_type);
+#endif
    }
    else
    {
+      log_resources_set_string("DosName1541ii", "d1541II");
+      log_resources_set_string("DosName1571", "dos1571");
+      log_resources_set_string("DosName1581", "dos1581");
 #if defined(__X64__) || defined(__X64SC__)
       log_resources_set_string("KernalName", "kernal");
 #elif defined(__X128__)
       log_resources_set_string("Kernal64Name", "kernal64");
       log_resources_set_string("KernalIntName", "kernal");
 #endif
-      log_resources_set_string("DosName1541", "dos1541");
-      log_resources_set_string("DosName1571", "dos1571");
-      log_resources_set_string("DosName1581", "dos1581");
    }
 #endif
 
@@ -383,10 +393,12 @@ int ui_init_finalize(void)
    if (opt_autoloadwarp & AUTOLOADWARP_DISK)
       log_resources_set_int("DriveSoundEmulationVolume", 0);
 
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    if (vice_opt.DatasetteSound)
       log_resources_set_int("DatasetteSound", 1);
    else
       log_resources_set_int("DatasetteSound", 0);
+#endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)
    log_resources_set_int("VICIIAudioLeak", vice_opt.AudioLeak);
@@ -418,13 +430,19 @@ int ui_init_finalize(void)
    log_resources_set_int("SidResid8580Gain", vice_opt.SidResidGain);
    log_resources_set_int("SidResid8580FilterBias", vice_opt.SidResid8580FilterBias);
 
-   if (vice_opt.SidExtra)
+   int sid_stereo;
+   resources_get_int("SidStereo", &sid_stereo);
+   /* Do not override if SidStereo is set in vicerc */
+   if (sid_stereo == 0)
    {
-      log_resources_set_int("Sid2AddressStart", vice_opt.SidExtra);
-      log_resources_set_int("SidStereo", 1);
+      if (vice_opt.SidExtra)
+      {
+         log_resources_set_int("Sid2AddressStart", vice_opt.SidExtra);
+         log_resources_set_int("SidStereo", 1);
+      }
+      else
+         log_resources_set_int("SidStereo", 0);
    }
-   else
-      log_resources_set_int("SidStereo", 0);
 #else
    log_resources_set_int("SidEngine", 0);
 #endif

@@ -33,5 +33,6 @@ char* path_join_dup(const char* basedir, const char* filename);
 
 /* VICE helpers */
 extern int log_resources_set_int(const char *name, int value);
+extern int log_resources_set_string(const char *name, const char *value);
 
 #endif /* LIBRETRO_GLUE_H */

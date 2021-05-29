@@ -1197,10 +1197,9 @@ static void autodetect_drivetype(int unit)
          /* Also happens when toggling TDE */
          switch (set_drive_type)
          {
-            case DISK_IMAGE_TYPE_G64:
-            case DISK_IMAGE_TYPE_G71:
-            case DISK_IMAGE_TYPE_D64:
-            case DISK_IMAGE_TYPE_D71:
+            case DRIVE_TYPE_1541:
+            case DRIVE_TYPE_1541II:
+            case DRIVE_TYPE_1571:
                resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
                break;
             default:
@@ -1285,7 +1284,7 @@ void update_work_disk()
          {
             log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
             file_system_detach_disk(8, 0);
-            log_resources_set_int("Drive8Type", DRIVE_TYPE_1541);
+            log_resources_set_int("Drive8Type", DRIVE_TYPE_DEFAULT);
             display_current_image(attached_image, false);
          }
       }
@@ -2617,7 +2616,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "20%"
       },
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
       {
          "vice_datasette_sound",
          "Audio > Datasette Sound",
@@ -3040,7 +3039,7 @@ void retro_set_environment(retro_environment_t cb)
          },
          "disabled"
       },
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
       {
          "vice_datasette_hotkeys",
          "Input > Datasette Hotkeys",
@@ -3118,7 +3117,7 @@ void retro_set_environment(retro_environment_t cb)
          "---"
       },
 #endif
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
       /* Datasette controls */
       {
          "vice_mapper_datasette_toggle_hotkeys",
@@ -3600,7 +3599,7 @@ int log_resources_set_int(const char *name, int value)
    return resources_set_int(name, value);
 }
 
-int log_resources_set_string(const char *name, const char* value)
+int log_resources_set_string(const char *name, const char *value)
 {
    log_cb(RETRO_LOG_INFO, "Set resource: %s => \"%s\"\n", name, value);
    return resources_set_string(name, value);
@@ -3814,7 +3813,7 @@ static void update_variables(void)
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    var.key = "vice_datasette_sound";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -5231,7 +5230,7 @@ static void update_variables(void)
       mapper_keys[RETRO_MAPPER_WARP_MODE] = retro_keymap_id(var.value);
    }
 
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -5347,7 +5346,7 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_warp_mode";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    option_display.key = "vice_mapper_datasette_toggle_hotkeys";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_datasette_start";
@@ -5367,7 +5366,7 @@ static void update_variables(void)
 
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-#if !defined(__X64DTV__)
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
    option_display.key = "vice_datasette_sound";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
@@ -6557,8 +6556,11 @@ static void save_trap(uint16_t addr, void *success)
 {
    int save_disks;
    int drive_type;
+   /* Only do 'save_disks' with the usual suspect which has disk swapping needs
+    * It does not really save disk data, but filename instead,
+    * for syncing disk index on state load */
    resources_get_int("Drive8Type", &drive_type);
-   save_disks = (drive_type == 1541) ? 1 : 0;
+   save_disks = (drive_type == DRIVE_TYPE_1541II) ? 1 : 0;
 
    /* params: stream, save_roms, save_disks, event_mode */
    if (machine_write_snapshot_to_stream(snapshot_stream, 0, save_disks, 0) >= 0)

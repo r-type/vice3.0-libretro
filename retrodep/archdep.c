@@ -254,7 +254,14 @@ char *archdep_default_sysfile_pathlist(const char *emu_id)
                                    home_path, "\\DRIVES", ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                    home_path, "\\PRINTER", NULL);
 
-#else 
+#elif 1
+        default_path = util_concat(LIBDIR, "/", emu_id,
+                                   ARCHDEP_FINDPATH_SEPARATOR_STRING,
+                                   LIBDIR, "/DRIVES",
+                                   ARCHDEP_FINDPATH_SEPARATOR_STRING,
+                                   LIBDIR, "/PRINTER",
+                                   NULL);
+#else
         default_path = util_concat(LIBDIR, "/", emu_id,
                                    ARCHDEP_FINDPATH_SEPARATOR_STRING,
                                    home_path, "/", VICEUSERDIR, "/", emu_id,

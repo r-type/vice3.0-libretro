@@ -65,9 +65,6 @@ static double retro_refresh = 0;
 static unsigned int prev_sound_sample_rate = 0;
 
 bool retro_ui_finalized = false;
-#ifdef RETRO_DEBUG
-bool prev_ui_finalized = false;
-#endif
 
 extern uint8_t mem_ram[];
 #if defined(__X64__) || defined(__X64SC__)
@@ -253,7 +250,7 @@ static unsigned char ARGUC = 0;
 /* Args for Core */
 static char XARGV[64][1024];
 static const char* xargv_cmd[64];
-int PARAMCOUNT = 0;
+static int PARAMCOUNT = 0;
 
 /* Display message on next retro_run */
 bool retro_message = false;
@@ -264,7 +261,7 @@ extern int skel_main(int argc, char *argv[]);
 
 static void Add_Option(const char* option)
 {
-   sprintf(XARGV[PARAMCOUNT++],"%s",option);
+   sprintf(XARGV[PARAMCOUNT++], "%s", option);
 }
 
 static void parse_cmdline(const char *argv)
@@ -1743,7 +1740,8 @@ void retro_set_paths(void)
    /* Use system directory for data files such as JiffyDOS and keymaps */
    snprintf(retro_system_data_directory, sizeof(retro_system_data_directory), "%s%s%s",
             retro_system_directory, FSDEV_DIR_SEP_STR, "vice");
-   if (!path_is_directory(retro_system_data_directory))
+
+   if (retro_system_data_directory[0] != '.' && !path_is_directory(retro_system_data_directory))
       archdep_mkdir(retro_system_data_directory, 0);
 }
 
@@ -5872,8 +5870,11 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-   /* VICE shutdown */
+#if 0
+   /* VICE shutdown
+    * Doing this will break static build reloads */
    machine_shutdown();
+#endif
 
    /* Clean Disc Control context */
    if (dc)
@@ -5881,7 +5882,10 @@ void retro_deinit(void)
 
    /* Clean legacy strings */
    if (core_options_legacy_strings)
+   {
       free(core_options_legacy_strings);
+      core_options_legacy_strings = NULL;
+   }
 
    /* Clean dynamic cartridge info */
    free_vice_carts();
@@ -6317,14 +6321,6 @@ void retro_run(void)
       }
    }
 
-#ifdef RETRO_DEBUG
-   if (retro_ui_finalized && !prev_ui_finalized)
-   {
-      log_cb(RETRO_LOG_INFO, "UI finalized now\n");
-      prev_ui_finalized = true;
-   }
-#endif
-
    if (retro_message)
    {
       struct retro_message msg;
@@ -6336,15 +6332,10 @@ void retro_run(void)
 
    if (runstate == RUNSTATE_FIRST_START)
    {
-      /* this is only done once after just loading the core from scratch and starting it */
+      /* This is only done once after loading the core from scratch and starting it */
       runstate = RUNSTATE_RUNNING;
-      pre_main();
-      reload_restart();
+      /* Geometry has to get updated here in retro_run after retro_load_game */
       update_geometry(0);
-#ifdef RETRO_DEBUG
-      log_cb(RETRO_LOG_INFO, "First time we return from retro_run()!\n");
-#endif
-      return;
    } 
    else if (runstate == RUNSTATE_LOADED_CONTENT)
    {
@@ -6459,7 +6450,12 @@ bool retro_load_game(const struct retro_game_info *info)
    cur_port_locked = true;
 #endif
 
-   if (runstate == RUNSTATE_RUNNING)
+   if (runstate == RUNSTATE_FIRST_START)
+   {
+      pre_main();
+      reload_restart();
+   }
+   else if (runstate == RUNSTATE_RUNNING)
    {
       /* load game was called while core is already running */
       /* so we update runstate and do the deferred autostart_reset in retro_run */

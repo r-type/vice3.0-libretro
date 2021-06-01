@@ -287,7 +287,7 @@ void print_vkbd(void)
          /* Key centering */
          BKG_PADDING_X = BKG_PADDING_X_DEFAULT;
          BKG_PADDING_Y = BKG_PADDING_Y_DEFAULT;
-         if (tape_enabled && !shifted && vkeys[(y * VKBDX) + x + page].value == -15) /* Datasette Reset */
+         if (tape_enabled && vkeys[(y * VKBDX) + x + page].value == -15) /* Datasette Reset */
             BKG_PADDING_X = BKG_PADDING(3);
          else if (!shifted && strlen(vkeys[(y * VKBDX) + x + page].normal) > 1)
             BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].normal));
@@ -309,9 +309,9 @@ void print_vkbd(void)
           ||(retro_capslock && vkeys[(y * VKBDX) + x + page].value == -10)
           ||(vkflag[RETRO_DEVICE_ID_JOYPAD_START] && vkeys[(y * VKBDX) + x + page].value == RETROK_RETURN)
           ||(vkflag[RETRO_DEVICE_ID_JOYPAD_X]     && vkeys[(y * VKBDX) + x + page].value == RETROK_SPACE)
-          ||(tape_control == 1 && vkeys[(y * VKBDX) + x + page].value == -12)  /* Datasette Play */
-          ||(tape_control == 2 && vkeys[(y * VKBDX) + x + page].value == -13)  /* Datasette FWD */
-          ||(tape_control == 3 && vkeys[(y * VKBDX) + x + page].value == -14)) /* Datasette RWD */
+          ||(tape_enabled && tape_control == 1 && vkeys[(y * VKBDX) + x + page].value == -12)  /* Datasette Play */
+          ||(tape_enabled && tape_control == 2 && vkeys[(y * VKBDX) + x + page].value == -13)  /* Datasette FWD */
+          ||(tape_enabled && tape_control == 3 && vkeys[(y * VKBDX) + x + page].value == -14)) /* Datasette RWD */
           && BKG_COLOR != BKG_COLOR_EXTRA && vkeys[(y * VKBDX) + x + page].value != -2)
          {
             FONT_COLOR = FONT_COLOR_NORMAL;
@@ -337,7 +337,7 @@ void print_vkbd(void)
                    BKG_COLOR, BKG_ALPHA);
 
          /* Key text */
-         if (tape_enabled && !shifted && vkeys[(y * VKBDX) + x + page].value == -15) /* Datasette Reset */
+         if (tape_enabled && vkeys[(y * VKBDX) + x + page].value == -15) /* Datasette Reset */
             snprintf(text_str, sizeof(text_str), "%03d", tape_counter);
          else
             snprintf(text_str, sizeof(text_str), "%s",

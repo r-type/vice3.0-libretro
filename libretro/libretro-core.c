@@ -6576,6 +6576,16 @@ static void load_trap(uint16_t addr, void *success)
    load_trap_happened = 1;
 }
 
+static void retro_unserialize_post(void)
+{
+   /* Disable warp */
+   resources_set_int("WarpMode", 0);
+   /* Dismiss possible restart request */
+   request_restart = false;
+   /* Sync Disc Control index for D64 multidisks */
+   dc_sync_index();
+}
+
 size_t retro_serialize_size(void)
 {
    long snapshot_size = 0;
@@ -6662,8 +6672,7 @@ bool retro_unserialize(const void *data_, size_t size)
       }
       if (success)
       {
-         resources_set_int("WarpMode", 0);
-         dc_sync_index();
+         retro_unserialize_post();
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");

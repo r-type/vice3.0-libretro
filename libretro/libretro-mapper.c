@@ -63,6 +63,7 @@ static void retro_mouse_move(int x, int y)
 
 /* Core flags */
 int mapper_keys[RETRO_MAPPER_LAST] = {0};
+static int mapper_flag[3][128] = {0};
 int vkflag[10] = {0};
 int retro_capslock = false;
 unsigned int cur_port = 2;
@@ -609,6 +610,22 @@ void update_input(unsigned disable_keys)
                   mouse_speed[j] |= MOUSE_SPEED_SLOWER;
                else if (mapper_keys[i] == MOUSE_FASTER)
                   mouse_speed[j] |= MOUSE_SPEED_FASTER;
+               else if (mapper_keys[i] == JOYSTICK_FIRE)
+                  mapper_flag[cur_port][JOYPAD_FIRE] = 1;
+               else if (mapper_keys[i] == JOYSTICK_FIRE2)
+                  mapper_flag[cur_port][JOYPAD_FIRE2] = 1;
+               else if (mapper_keys[i] == JOYSTICK_FIRE3)
+                  mapper_flag[cur_port][JOYPAD_FIRE3] = 1;
+               else if (mapper_keys[i] == OTHERJOY_FIRE)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_FIRE] = 1;
+               else if (mapper_keys[i] == OTHERJOY_UP)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_N] = 1;
+               else if (mapper_keys[i] == OTHERJOY_DOWN)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_S] = 1;
+               else if (mapper_keys[i] == OTHERJOY_LEFT)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_W] = 1;
+               else if (mapper_keys[i] == OTHERJOY_RIGHT)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_E] = 1;
                else if (mapper_keys[i] == TOGGLE_VKBD)
                   emu_function(EMU_VKBD);
                else if (mapper_keys[i] == TOGGLE_STATUSBAR)
@@ -654,6 +671,22 @@ void update_input(unsigned disable_keys)
                   mouse_speed[j] &= ~MOUSE_SPEED_SLOWER;
                else if (mapper_keys[i] == MOUSE_FASTER)
                   mouse_speed[j] &= ~MOUSE_SPEED_FASTER;
+               else if (mapper_keys[i] == JOYSTICK_FIRE)
+                  mapper_flag[cur_port][JOYPAD_FIRE] = 0;
+               else if (mapper_keys[i] == JOYSTICK_FIRE2)
+                  mapper_flag[cur_port][JOYPAD_FIRE2] = 0;
+               else if (mapper_keys[i] == JOYSTICK_FIRE3)
+                  mapper_flag[cur_port][JOYPAD_FIRE3] = 0;
+               else if (mapper_keys[i] == OTHERJOY_FIRE)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_FIRE] = 0;
+               else if (mapper_keys[i] == OTHERJOY_UP)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_N] = 0;
+               else if (mapper_keys[i] == OTHERJOY_DOWN)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_S] = 0;
+               else if (mapper_keys[i] == OTHERJOY_LEFT)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_W] = 0;
+               else if (mapper_keys[i] == OTHERJOY_RIGHT)
+                  mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_E] = 0;
                else if (mapper_keys[i] == TOGGLE_VKBD)
                   ; /* nop */
                else if (mapper_keys[i] == TOGGLE_STATUSBAR)
@@ -1178,10 +1211,12 @@ void retro_poll_event()
                   )
                )
             )
+         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_N])
          )
-            joy_value |= (!retro_vkbd) ? 0x01 : joy_value;
-         else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))
-            joy_value &= ~0x01;
+            joy_value |= (!retro_vkbd) ? JOYPAD_N : joy_value;
+         else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP))
+              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_N]))
+            joy_value &= ~JOYPAD_N;
 
          /* Down */
          if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN))
@@ -1199,10 +1234,12 @@ void retro_poll_event()
                   )
                )
             )
+         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_S])
          )
-            joy_value |= (!retro_vkbd) ? 0x02 : joy_value;
-         else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))
-            joy_value &= ~0x02;
+            joy_value |= (!retro_vkbd) ? JOYPAD_S : joy_value;
+         else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN))
+              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_S]))
+            joy_value &= ~JOYPAD_S;
 
          /* Left */
          if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))
@@ -1220,10 +1257,12 @@ void retro_poll_event()
                   )
                )
             )
+         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_W])
          )
-            joy_value |= (!retro_vkbd) ? 0x04 : joy_value;
-         else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)))
-            joy_value &= ~0x04;
+            joy_value |= (!retro_vkbd) ? JOYPAD_W : joy_value;
+         else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))
+              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_W]))
+            joy_value &= ~JOYPAD_W;
 
          /* Right */
          if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))
@@ -1241,10 +1280,12 @@ void retro_poll_event()
                   )
                )
             )
+         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_E])
          )
-            joy_value |= (!retro_vkbd) ? 0x08 : joy_value;
-         else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
-            joy_value &= ~0x08;
+            joy_value |= (!retro_vkbd) ? JOYPAD_E : joy_value;
+         else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))
+              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_E]))
+            joy_value &= ~JOYPAD_E;
 
          /* Fire button */
          int fire_button = RETRO_DEVICE_ID_JOYPAD_B;
@@ -1270,10 +1311,12 @@ void retro_poll_event()
                   (vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP5))
                )
             )
+         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_FIRE])
          )
-            joy_value |= (!retro_vkbd) ? 0x10 : joy_value;
-         else
-            joy_value &= ~0x10;
+            joy_value |= (!retro_vkbd) ? JOYPAD_FIRE : joy_value;
+         else if (!(joypad_bits[retro_port] & (1 << fire_button))
+              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_FIRE]))
+            joy_value &= ~JOYPAD_FIRE;
 
          /* Jump button */
          int jump_button = -1;
@@ -1295,8 +1338,8 @@ void retro_poll_event()
 
          if (jump_button > -1 && (joypad_bits[retro_port] & (1 << jump_button)))
          {
-            joy_value |= (!retro_vkbd) ? 0x01 : joy_value;
-            joy_value &= ~0x02;
+            joy_value |= (!retro_vkbd) ? JOYPAD_N : joy_value;
+            joy_value &= ~JOYPAD_S;
          }
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP))
          && (opt_keyrah_keypad && vice_port < 3
@@ -1311,7 +1354,18 @@ void retro_poll_event()
                )
             )
          )
-            joy_value &= ~0x01;
+            joy_value &= ~JOYPAD_N;
+
+         /* Extra fire buttons */
+         if (vice_port < 3 && mapper_flag[vice_port][JOYPAD_FIRE2])
+            joy_value |= (!retro_vkbd) ? JOYPAD_FIRE2 : joy_value;
+         else if (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_FIRE2])
+            joy_value &= ~JOYPAD_FIRE2;
+
+         if (vice_port < 3 && mapper_flag[vice_port][JOYPAD_FIRE3])
+            joy_value |= (!retro_vkbd) ? JOYPAD_FIRE3 : joy_value;
+         else if (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_FIRE3])
+            joy_value &= ~JOYPAD_FIRE3;
 
          /* Turbo fire */
          if (retro_devices[retro_port] == RETRO_DEVICE_JOYPAD
@@ -1328,20 +1382,28 @@ void retro_poll_event()
                      turbo_toggle[vice_port]++;
 
                   if (turbo_toggle[vice_port] > (turbo_pulse / 2))
-                     joy_value &= ~0x10;
+                  {
+                     joy_value &= ~JOYPAD_FIRE;
+                     mapper_flag[vice_port][JOYPAD_FIRE] = 0;
+                  }
                   else
-                     joy_value |= (!retro_vkbd) ? 0x10 : joy_value;
+                  {
+                     joy_value |= (!retro_vkbd) ? JOYPAD_FIRE : joy_value;
+                     mapper_flag[vice_port][JOYPAD_FIRE] = 1;
+                  }
                }
                else
                {
                   turbo_state[vice_port] = 1;
-                  joy_value |= (!retro_vkbd) ? 0x10 : joy_value;
+                  joy_value |= (!retro_vkbd) ? JOYPAD_FIRE : joy_value;
+                  mapper_flag[vice_port][JOYPAD_FIRE] = 1;
                }
             }
             else
             {
                turbo_state[vice_port] = 0;
                turbo_toggle[vice_port] = 0;
+               mapper_flag[vice_port][JOYPAD_FIRE] = 0;
             }
          }
 
@@ -1561,64 +1623,64 @@ void retro_poll_event()
          if (retro_mouse_l[j] && !vice_mouse_l[j])
          {
             mouse_button(0, 1);
-            mouse_value[retro_j] |= 0x10;
+            mouse_value[retro_j] |= JOYPAD_FIRE;
             vice_mouse_l[j] = 1;
          }
          else if (!retro_mouse_l[j] && vice_mouse_l[j])
          {
             mouse_button(0, 0);
-            mouse_value[retro_j] &= ~0x10;
+            mouse_value[retro_j] &= ~JOYPAD_FIRE;
             vice_mouse_l[j] = 0;
          }
 
          if (retro_mouse_r[j] && !vice_mouse_r[j])
          {
             mouse_button(1, 1);
-            mouse_value[retro_j] |= 0x20;
+            mouse_value[retro_j] |= JOYPAD_FIRE2;
             vice_mouse_r[j] = 1;            
          }
          else if (!retro_mouse_r[j] && vice_mouse_r[j])
          {
             mouse_button(1, 0);
-            mouse_value[retro_j] &= ~0x20;
+            mouse_value[retro_j] &= ~JOYPAD_FIRE2;
             vice_mouse_r[j] = 0;            
          }
 
          if (retro_mouse_m[j] && !vice_mouse_m[j])
          {
             mouse_button(2, 1);
-            mouse_value[retro_j] |= 0x40;
+            mouse_value[retro_j] |= JOYPAD_FIRE3;
             vice_mouse_m[j] = 1;
          }
          else if (!retro_mouse_m[j] && vice_mouse_m[j])
          {
             mouse_button(2, 0);
-            mouse_value[retro_j] &= ~0x40;
+            mouse_value[retro_j] &= ~JOYPAD_FIRE3;
             vice_mouse_m[j] = 0;
          }
 
          /* Movement */
          if (retro_mouse_x[j] || retro_mouse_y[j])
          {
-            if (retro_mouse_y[j] < 0 && !(mouse_value[retro_j] & 0x01))
-               mouse_value[retro_j] |= 0x01;
-            if (retro_mouse_y[j] > -1 && mouse_value[retro_j] & 0x01)
-               mouse_value[retro_j] &= ~0x01;
+            if (retro_mouse_y[j] < 0 && !(mouse_value[retro_j] & JOYPAD_N))
+               mouse_value[retro_j] |= JOYPAD_N;
+            if (retro_mouse_y[j] > -1 && mouse_value[retro_j] & JOYPAD_N)
+               mouse_value[retro_j] &= ~JOYPAD_N;
 
-            if (retro_mouse_y[j] > 0 && !(mouse_value[retro_j] & 0x02))
-               mouse_value[retro_j] |= 0x02;
-            if (retro_mouse_y[j] < -1 && mouse_value[retro_j] & 0x02)
-               mouse_value[retro_j] &= ~0x02;
+            if (retro_mouse_y[j] > 0 && !(mouse_value[retro_j] & JOYPAD_S))
+               mouse_value[retro_j] |= JOYPAD_S;
+            if (retro_mouse_y[j] < -1 && mouse_value[retro_j] & JOYPAD_S)
+               mouse_value[retro_j] &= ~JOYPAD_S;
 
-            if (retro_mouse_x[j] < 0 && !(mouse_value[retro_j] & 0x04))
-               mouse_value[retro_j] |= 0x04;
-            if (retro_mouse_x[j] > -1 && mouse_value[retro_j] & 0x04)
-               mouse_value[retro_j] &= ~0x04;
+            if (retro_mouse_x[j] < 0 && !(mouse_value[retro_j] & JOYPAD_W))
+               mouse_value[retro_j] |= JOYPAD_W;
+            if (retro_mouse_x[j] > -1 && mouse_value[retro_j] & JOYPAD_W)
+               mouse_value[retro_j] &= ~JOYPAD_W;
 
-            if (retro_mouse_x[j] > 0 && !(mouse_value[retro_j] & 0x08))
-               mouse_value[retro_j] |= 0x08;
-            if (retro_mouse_x[j] < -1 && mouse_value[retro_j] & 0x08)
-               mouse_value[retro_j] &= ~0x08;
+            if (retro_mouse_x[j] > 0 && !(mouse_value[retro_j] & JOYPAD_E))
+               mouse_value[retro_j] |= JOYPAD_E;
+            if (retro_mouse_x[j] < -1 && mouse_value[retro_j] & JOYPAD_E)
+               mouse_value[retro_j] &= ~JOYPAD_E;
 
             retro_mouse_move(retro_mouse_x[j], retro_mouse_y[j]);
          }

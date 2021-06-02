@@ -39,6 +39,22 @@
 #define SWITCH_JOYPORT                  -13
 #define MOUSE_SLOWER                    -5
 #define MOUSE_FASTER                    -6
+#define JOYSTICK_FIRE                   -7
+#define JOYSTICK_FIRE2                  -8
+#define JOYSTICK_FIRE3                  -9
+#define OTHERJOY_FIRE                   -21
+#define OTHERJOY_UP                     -22
+#define OTHERJOY_DOWN                   -23
+#define OTHERJOY_LEFT                   -24
+#define OTHERJOY_RIGHT                  -25
+
+#define JOYPAD_N                        0x01
+#define JOYPAD_S                        0x02
+#define JOYPAD_W                        0x04
+#define JOYPAD_E                        0x08
+#define JOYPAD_FIRE                     0x10
+#define JOYPAD_FIRE2                    0x20
+#define JOYPAD_FIRE3                    0x40
 
 extern int mapper_keys[RETRO_MAPPER_LAST];
 extern void retro_poll_event();
@@ -57,6 +73,14 @@ static retro_keymap retro_keys[RETROK_LAST] =
    {TOGGLE_VKBD,        "TOGGLE_VKBD",         "Toggle Virtual Keyboard"},
    {TOGGLE_STATUSBAR,   "TOGGLE_STATUSBAR",    "Toggle Statusbar"},
    {SWITCH_JOYPORT,     "SWITCH_JOYPORT",      "Switch Joyport"},
+   {JOYSTICK_FIRE,      "JOYSTICK_FIRE",       "Joystick Fire"},
+   {JOYSTICK_FIRE2,     "JOYSTICK_FIRE2",      "Joystick Fire 2"},
+   {JOYSTICK_FIRE3,     "JOYSTICK_FIRE3",      "Joystick Fire 3"},
+   {OTHERJOY_FIRE,      "OTHERJOY_FIRE",       "Other Joyport Fire"},
+   {OTHERJOY_UP,        "OTHERJOY_UP",         "Other Joyport Up"},
+   {OTHERJOY_DOWN,      "OTHERJOY_DOWN",       "Other Joyport Down"},
+   {OTHERJOY_LEFT,      "OTHERJOY_LEFT",       "Other Joyport Left"},
+   {OTHERJOY_RIGHT,     "OTHERJOY_RIGHT",      "Other Joyport Right"},
    {MOUSE_SLOWER,       "MOUSE_SLOWER",        "Mouse Slower"},
    {MOUSE_FASTER,       "MOUSE_FASTER",        "Mouse Faster"},
    {RETROK_BACKSPACE,   "RETROK_BACKSPACE",    "Keyboard Backspace"},

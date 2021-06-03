@@ -2876,6 +2876,19 @@ void retro_set_environment(retro_environment_t cb)
       },
 #if !defined(__XPET__) && !defined(__XCBM2__)
       {
+         "vice_analogmouse",
+         "Input > Analog Stick Mouse",
+         "Override analog stick remappings when non-joysticks are used. 'OFF' controls mouse/paddles with both analogs when remappings are empty.",
+         {
+            { "disabled", NULL },
+            { "left", "Left Analog" },
+            { "right", "Right Analog" },
+            { "both", "Both Analogs" },
+            { NULL, NULL },
+         },
+         "left"
+      },
+      {
          "vice_analogmouse_deadzone",
          "Input > Analog Stick Mouse Deadzone",
          "",
@@ -4802,6 +4815,16 @@ static void update_variables(void)
       else if (!strcmp(var.value, "yellow"))   opt_joyport_pointer_color = 5;
       else if (!strcmp(var.value, "cyan"))     opt_joyport_pointer_color = 6;
       else if (!strcmp(var.value, "purple"))   opt_joyport_pointer_color = 7;
+   }
+
+   var.key = "vice_analogmouse";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if      (!strcmp(var.value, "disabled")) opt_analogmouse = 0;
+      else if (!strcmp(var.value, "left"))     opt_analogmouse = 1;
+      else if (!strcmp(var.value, "right"))    opt_analogmouse = 2;
+      else if (!strcmp(var.value, "both"))     opt_analogmouse = 3;
    }
 
    var.key = "vice_analogmouse_deadzone";

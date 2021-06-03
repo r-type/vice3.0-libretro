@@ -498,9 +498,15 @@ void update_input(unsigned disable_keys)
          RX = input_state_cb(j, RETRO_DEVICE_ANALOG, 1, 0);
          RY = input_state_cb(j, RETRO_DEVICE_ANALOG, 1, 1);
 
-         /* No left analog remappings with non-joysticks */
+         /* No analog remappings with non-joysticks and stick overrides */
          if (opt_joyport_type > 1)
-            LX = LY = 0;
+         {
+            if (opt_analogmouse == 1 || opt_analogmouse == 3)
+               LX = LY = 0;
+
+            if (opt_analogmouse == 2 || opt_analogmouse == 3)
+               RX = RY = 0;
+         }
 
          for (i = 0; i < RETRO_DEVICE_ID_JOYPAD_LAST; i++)
          {
@@ -1427,7 +1433,7 @@ void retro_poll_event()
       }
    }
    /* Other than a joystick, set only cur_port */
-   else if (opt_joyport_type > 1 && !retro_vkbd)
+   else if (opt_joyport_type > 1)
    {
       if (opt_joyport_type_prev != opt_joyport_type || cur_port_prev != cur_port)
       {
@@ -1470,6 +1476,7 @@ void retro_poll_event()
       /* Paddles (opt_joyport_type = 2) share the same joyport, but are meant for 2 players.
          Therefore treat retroport0 vertical axis as retroport1 horizontal axis, and second fire as retroport1 fire. */
 
+      /* No Joypad and real mouse analog control when VKBD is open */
       /* Joypad buttons */
       if (!retro_vkbd)
       {
@@ -1491,19 +1498,16 @@ void retro_poll_event()
             else
                retro_mouse_r[j] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_A));
          }
-      }
 
-      /* Real mouse buttons */
-      if (!retro_mouse_l[j] && !retro_mouse_r[j] && !retro_mouse_m[j])
-      {
-         retro_mouse_l[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
-         retro_mouse_r[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
-         retro_mouse_m[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE);
-      }
+         /* Real mouse buttons */
+         if (!retro_mouse_l[j] && !retro_mouse_r[j] && !retro_mouse_m[j])
+         {
+            retro_mouse_l[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_LEFT);
+            retro_mouse_r[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
+            retro_mouse_m[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE);
+         }
 
-      /* Joypad movement */
-      if (!retro_vkbd)
-      {
+         /* Joypad movement */
          for (retro_j = 0; retro_j < 2; retro_j++)
          {
             /* Digital mouse speed modifiers */
@@ -1566,49 +1570,107 @@ void retro_poll_event()
 #endif
       }
 
-      /* Left analog movement */
-      analog_left[0] = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
-      /* Paddles split */
-      if (opt_joyport_type == 2)
-         analog_left[1] = -input_state_cb(1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
-      else
-         analog_left[1] = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
-      analog_left_magnitude = sqrt((analog_left[0]*analog_left[0]) + (analog_left[1]*analog_left[1]));
-      if (analog_left_magnitude <= analog_deadzone)
+      /* Analog sticks depending on core options */
+      if (!retro_mouse_x[j] && !retro_mouse_y[j]
+            && ((opt_analogmouse == 1 || opt_analogmouse == 3) ||
+                !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LR] && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LL] &&
+                !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LD] && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LU]
+               )
+         )
       {
-         analog_left[0] = 0;
-         analog_left[1] = 0;
+         /* Left analog movement */
+         analog_left[0] = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+         /* Paddles split */
+         if (opt_joyport_type == 2)
+            analog_left[1] = -input_state_cb(1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
+         else
+            analog_left[1] = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_Y);
+         analog_left_magnitude = sqrt((analog_left[0]*analog_left[0]) + (analog_left[1]*analog_left[1]));
+         if (analog_left_magnitude <= analog_deadzone)
+         {
+            analog_left[0] = 0;
+            analog_left[1] = 0;
+         }
+
+         for (retro_j = 0; retro_j < 2; retro_j++)
+         {
+            /* Analog stick speed modifiers */
+            mouse_multiplier[retro_j] = 1;
+            if (mouse_speed[retro_j] & MOUSE_SPEED_FASTER)
+               mouse_multiplier[retro_j] = mouse_multiplier[retro_j] * MOUSE_SPEED_FAST;
+            if (mouse_speed[retro_j] & MOUSE_SPEED_SLOWER)
+               mouse_multiplier[retro_j] = mouse_multiplier[retro_j] / MOUSE_SPEED_SLOW;
+         }
+
+         if (abs(analog_left[0]) > 0)
+         {
+            retro_mouse_x[j] = analog_left[0] * 10 * (opt_analogmouse_speed * opt_analogmouse_speed * 0.7) / (32768 / mouse_multiplier[0]);
+            if (retro_mouse_x[j] == 0 && abs(analog_left[0]) > analog_deadzone)
+               retro_mouse_x[j] = (analog_left[0] > 0) ? 1 : -1;
+         }
+
+         if (abs(analog_left[1]) > 0)
+         {
+            retro_mouse_y[j] = analog_left[1] * 10 * (opt_analogmouse_speed * opt_analogmouse_speed * 0.7) / (32768 / mouse_multiplier[(opt_joyport_type == 2) ? 1 : 0]);
+            if (retro_mouse_y[j] == 0 && abs(analog_left[1]) > analog_deadzone)
+               retro_mouse_y[j] = (analog_left[1] > 0) ? 1 : -1;
+         }
       }
 
-      for (retro_j = 0; retro_j < 2; retro_j++)
+      if (!retro_mouse_x[j] && !retro_mouse_y[j]
+            && ((opt_analogmouse == 2 || opt_analogmouse == 3) ||
+                !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RR] && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RL] &&
+                !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RD] && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RU]
+               )
+         )
       {
-         /* Analog stick speed modifiers */
-         mouse_multiplier[retro_j] = 1;
-         if (mouse_speed[retro_j] & MOUSE_SPEED_FASTER)
-            mouse_multiplier[retro_j] = mouse_multiplier[retro_j] * MOUSE_SPEED_FAST;
-         if (mouse_speed[retro_j] & MOUSE_SPEED_SLOWER)
-            mouse_multiplier[retro_j] = mouse_multiplier[retro_j] / MOUSE_SPEED_SLOW;
+         /* Right analog movement */
+         analog_right[0] = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X);
+         /* Paddles split */
+         if (opt_joyport_type == 2)
+            analog_right[1] = -input_state_cb(1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X);
+         else
+            analog_right[1] = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y);
+         analog_right_magnitude = sqrt((analog_right[0]*analog_right[0]) + (analog_right[1]*analog_right[1]));
+         if (analog_right_magnitude <= analog_deadzone)
+         {
+            analog_right[0] = 0;
+            analog_right[1] = 0;
+         }
+
+         for (retro_j = 0; retro_j < 2; retro_j++)
+         {
+            /* Analog stick speed modifiers */
+            mouse_multiplier[retro_j] = 1;
+            if (mouse_speed[retro_j] & MOUSE_SPEED_FASTER)
+               mouse_multiplier[retro_j] = mouse_multiplier[retro_j] * MOUSE_SPEED_FAST;
+            if (mouse_speed[retro_j] & MOUSE_SPEED_SLOWER)
+               mouse_multiplier[retro_j] = mouse_multiplier[retro_j] / MOUSE_SPEED_SLOW;
+         }
+
+         if (abs(analog_right[0]) > 0)
+         {
+            retro_mouse_x[j] = analog_right[0] * 10 * (opt_analogmouse_speed * opt_analogmouse_speed * 0.7) / (32768 / mouse_multiplier[0]);
+            if (retro_mouse_x[j] == 0 && abs(analog_right[0]) > analog_deadzone)
+               retro_mouse_x[j] = (analog_right[0] > 0) ? 1 : -1;
+         }
+
+         if (abs(analog_right[1]) > 0)
+         {
+            retro_mouse_y[j] = analog_right[1] * 10 * (opt_analogmouse_speed * opt_analogmouse_speed * 0.7) / (32768 / mouse_multiplier[(opt_joyport_type == 2) ? 1 : 0]);
+            if (retro_mouse_y[j] == 0 && abs(analog_right[1]) > analog_deadzone)
+               retro_mouse_y[j] = (analog_right[1] > 0) ? 1 : -1;
+         }
       }
 
-      if (abs(analog_left[0]) > 0)
+      if (!retro_vkbd)
       {
-         retro_mouse_x[j] = analog_left[0] * 10 * (opt_analogmouse_speed * opt_analogmouse_speed * 0.7) / (32768 / mouse_multiplier[0]);
-         if (retro_mouse_x[j] == 0 && abs(analog_left[0]) > analog_deadzone)
-            retro_mouse_x[j] = (analog_left[0] > 0) ? 1 : -1;
-      }
-
-      if (abs(analog_left[1]) > 0)
-      {
-         retro_mouse_y[j] = analog_left[1] * 10 * (opt_analogmouse_speed * opt_analogmouse_speed * 0.7) / (32768 / mouse_multiplier[(opt_joyport_type == 2) ? 1 : 0]);
-         if (retro_mouse_y[j] == 0 && abs(analog_left[1]) > analog_deadzone)
-            retro_mouse_y[j] = (analog_left[1] > 0) ? 1 : -1;
-      }
-
-      /* Real mouse movement */
-      if (!retro_mouse_x[j] && !retro_mouse_y[j])
-      {
-         retro_mouse_x[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
-         retro_mouse_y[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+         /* Real mouse movement only without VKBD */
+         if (!retro_mouse_x[j] && !retro_mouse_y[j])
+         {
+            retro_mouse_x[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+            retro_mouse_y[j] = input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_Y);
+         }
       }
 
       /* Ports 1 & 2 to VICE */

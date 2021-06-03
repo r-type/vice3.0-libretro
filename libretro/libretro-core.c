@@ -2876,6 +2876,19 @@ void retro_set_environment(retro_environment_t cb)
       },
 #if !defined(__XPET__) && !defined(__XCBM2__)
       {
+         "vice_analogmouse",
+         "Input > Analog Stick Mouse",
+         "Override analog stick remappings when non-joysticks are used. 'OFF' controls mouse/paddles with both analogs when remappings are empty.",
+         {
+            { "disabled", NULL },
+            { "left", "Left Analog" },
+            { "right", "Right Analog" },
+            { "both", "Both Analogs" },
+            { NULL, NULL },
+         },
+         "left"
+      },
+      {
          "vice_analogmouse_deadzone",
          "Input > Analog Stick Mouse Deadzone",
          "",
@@ -4804,6 +4817,16 @@ static void update_variables(void)
       else if (!strcmp(var.value, "purple"))   opt_joyport_pointer_color = 7;
    }
 
+   var.key = "vice_analogmouse";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if      (!strcmp(var.value, "disabled")) opt_analogmouse = 0;
+      else if (!strcmp(var.value, "left"))     opt_analogmouse = 1;
+      else if (!strcmp(var.value, "right"))    opt_analogmouse = 2;
+      else if (!strcmp(var.value, "both"))     opt_analogmouse = 3;
+   }
+
    var.key = "vice_analogmouse_deadzone";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -6576,6 +6599,16 @@ static void load_trap(uint16_t addr, void *success)
    load_trap_happened = 1;
 }
 
+static void retro_unserialize_post(void)
+{
+   /* Disable warp */
+   resources_set_int("WarpMode", 0);
+   /* Dismiss possible restart request */
+   request_restart = false;
+   /* Sync Disc Control index for D64 multidisks */
+   dc_sync_index();
+}
+
 size_t retro_serialize_size(void)
 {
    long snapshot_size = 0;
@@ -6662,8 +6695,7 @@ bool retro_unserialize(const void *data_, size_t size)
       }
       if (success)
       {
-         resources_set_int("WarpMode", 0);
-         dc_sync_index();
+         retro_unserialize_post();
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");

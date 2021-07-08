@@ -1340,8 +1340,6 @@ void update_from_vice()
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
          request_model_set = C64MODEL_C64_NTSC;
-         if (vice_opt.Model == C64MODEL_C64C_PAL || vice_opt.Model == C64MODEL_C64C_NTSC)
-            request_model_set = C64MODEL_C64C_NTSC;
 #elif defined(__XVIC__)
          request_model_set = VIC20MODEL_VIC20_NTSC;
 #endif
@@ -1357,8 +1355,6 @@ void update_from_vice()
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
          request_model_set = C64MODEL_C64_PAL;
-         if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
-            request_model_set = C64MODEL_C64C_PAL;
 #elif defined(__XVIC__)
          request_model_set = VIC20MODEL_VIC20_PAL;
 #endif
@@ -3895,8 +3891,8 @@ static void update_variables(void)
       if (retro_ui_finalized && vice_opt.Model != model)
       {
          vic20model_set(model);
-         request_model_prev = -1;
          request_restart = true;
+         request_model_prev = -1;
          /* Memory expansion needs to be reseted to get updated */
          vice_opt.VIC20Memory = 0xff;
       }
@@ -6328,26 +6324,49 @@ void retro_run(void)
          if (request_model_prev != request_model_set)
          {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-             if (request_model_set == C64MODEL_C64_NTSC || request_model_set == C64MODEL_C64C_NTSC)
-                log_cb(RETRO_LOG_INFO, "Forcing NTSC mode\n");
-             else if (request_model_set == C64MODEL_C64_PAL || request_model_set == C64MODEL_C64C_PAL)
-                log_cb(RETRO_LOG_INFO, "Forcing PAL mode\n");
-             else if (request_model_set == C64MODEL_C64_GS)
-                log_cb(RETRO_LOG_INFO, "Forcing C64GS mode\n");
-             else if (request_model_set == C64MODEL_ULTIMAX)
-                log_cb(RETRO_LOG_INFO, "Forcing ULTIMAX mode\n");
+            switch (request_model_set)
+            {
+               case C64MODEL_C64_PAL:
+               case C64MODEL_C64C_PAL:
+                  if (vice_opt.Model == C64MODEL_C64_NTSC || vice_opt.Model == C64MODEL_C64_PAL)
+                     request_model_set = C64MODEL_C64_PAL;
+                  else if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
+                     request_model_set = C64MODEL_C64C_PAL;
+                  break;
+               case C64MODEL_C64_NTSC:
+               case C64MODEL_C64C_NTSC:
+                  if (vice_opt.Model == C64MODEL_C64_NTSC || vice_opt.Model == C64MODEL_C64_PAL)
+                     request_model_set = C64MODEL_C64_NTSC;
+                  else if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
+                     request_model_set = C64MODEL_C64C_NTSC;
+                  break;
+            }
 
-             c64model_set(request_model_set);
+            if (request_model_set == C64MODEL_C64_NTSC)
+               log_cb(RETRO_LOG_INFO, "Forcing C64 NTSC mode\n");
+            else if (request_model_set == C64MODEL_C64C_NTSC)
+               log_cb(RETRO_LOG_INFO, "Forcing C64C NTSC mode\n");
+            else if (request_model_set == C64MODEL_C64_PAL)
+               log_cb(RETRO_LOG_INFO, "Forcing C64 PAL mode\n");
+            else if (request_model_set == C64MODEL_C64C_PAL)
+               log_cb(RETRO_LOG_INFO, "Forcing C64C PAL mode\n");
+            else if (request_model_set == C64MODEL_C64_GS)
+               log_cb(RETRO_LOG_INFO, "Forcing C64GS mode\n");
+            else if (request_model_set == C64MODEL_ULTIMAX)
+               log_cb(RETRO_LOG_INFO, "Forcing ULTIMAX mode\n");
+
+            c64model_set(request_model_set);
 #elif defined(__XVIC__)
-             if (request_model_set == VIC20MODEL_VIC20_NTSC)
-                log_cb(RETRO_LOG_INFO, "Forcing NTSC mode\n");
-             else if (request_model_set == VIC20MODEL_VIC20_PAL)
-                log_cb(RETRO_LOG_INFO, "Forcing PAL mode\n");
+            if (request_model_set == VIC20MODEL_VIC20_NTSC)
+               log_cb(RETRO_LOG_INFO, "Forcing NTSC mode\n");
+            else if (request_model_set == VIC20MODEL_VIC20_PAL)
+               log_cb(RETRO_LOG_INFO, "Forcing PAL mode\n");
 
-             vic20model_set(request_model_set);
+            vic20model_set(request_model_set);
 #endif
-             request_model_prev = request_model_set;
+            request_model_prev = request_model_set;
          }
+
          opt_model_auto = 2;
       }
 #endif

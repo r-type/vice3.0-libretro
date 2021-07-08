@@ -252,7 +252,7 @@ static void display_joyport(void)
 
     int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
 
-    snprintf(statusbar_memory, sizeof(statusbar_memory), "%2dkB", vic20mems[memory]);
+    snprintf(statusbar_memory, sizeof(statusbar_memory), "%5dkB", vic20mems[memory]);
     snprintf(statusbar_model, sizeof(statusbar_model), "%-5s", tmpstr);
 #endif
 
@@ -681,10 +681,19 @@ void uistatusbar_draw(void)
 
     /* Basic mode statusbar background */
     if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)
-        bkg_x = led_x;
+    {
+        bkg_width = led_width;
+        bkg_x     = led_x;
+    }
 
     /* Black background paint */
     draw_fbox(bkg_x, bkg_y, bkg_width, bkg_height, 0, GRAPH_ALPHA_100);
+
+    /* Update FPS */
+    ui_display_speed();
+
+    /* Update joyports + misc */
+    display_joyport();
 
     /* Inserted/Ejected image */
     if (imagename_timer > 0)
@@ -692,16 +701,12 @@ void uistatusbar_draw(void)
         draw_text(bkg_x + char_offset, y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, 1, 1, 100, statusbar_text);
         draw_fbox(led_x, bkg_y, led_width, bkg_height, 0, GRAPH_ALPHA_100);
     }
-    else
+    else if (!(opt_statusbar & STATUSBAR_BASIC))
     {
-        display_joyport();
         draw_text(bkg_x + (max_width / 2) - (20), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, 1, 1, 10, statusbar_resolution);
         draw_text(bkg_x + (max_width / 2) + (30), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, 1, 1, 10, statusbar_memory);
         draw_text(bkg_x + (max_width / 2) + (80), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, 1, 1, 10, statusbar_model);
     }
-
-    /* Update FPS */
-    ui_display_speed();
 
     /* Tape indicator + drive & power LEDs */
     for (i = 0; i < MAX_STATUSBAR_LEN; ++i)

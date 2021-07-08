@@ -61,7 +61,7 @@ unsigned int opt_video_options_display = 0;
 unsigned int opt_audio_options_display = 0;
 unsigned int opt_mapping_options_display = 1;
 unsigned int retro_region = 0;
-static double retro_refresh = 0;
+static float retro_refresh = 0;
 static unsigned int prev_sound_sample_rate = 0;
 
 bool retro_ui_finalized = false;
@@ -102,6 +102,7 @@ unsigned int lasth = 0;
 unsigned short int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
 unsigned short int retro_bmp[RETRO_BMP_SIZE] = {0};
+unsigned int retro_bmp_offset = 0;
 
 /* Core options */
 struct vice_core_options vice_opt;
@@ -116,8 +117,8 @@ unsigned int opt_zoom_mode_id = 0;
 unsigned int zoom_mode_crop_id = 0;
 unsigned int zoomed_width = 0;
 unsigned int zoomed_height = 0;
-unsigned int zoomed_XS_offset = 0;
-unsigned int zoomed_YS_offset = 0;
+int zoomed_XS_offset = 0;
+int zoomed_YS_offset = 0;
 unsigned int opt_aspect_ratio = 0;
 bool opt_aspect_ratio_locked = false;
 static unsigned int manual_crop_top = 0;
@@ -5959,11 +5960,11 @@ void retro_get_system_info(struct retro_system_info *info)
    info->block_extract    = true;
 }
 
-double retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixel_aspect)
+float retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixel_aspect)
 {
-   static double ar;
-   static double par;
-   static int region = 0;
+   float ar;
+   float par;
+   int region = 0;
    region = retro_region;
    switch (opt_aspect_ratio)
    {
@@ -5983,47 +5984,47 @@ double retro_get_aspect_ratio(unsigned int width, unsigned int height, bool pixe
       switch (region)
       {
          case RETRO_REGION_NTSC:
-            par = (double)0.75000000;
+            par = (float)0.75000000;
             break;
          case RETRO_REGION_PAL:
-            par = (double)0.93650794;
+            par = (float)0.93650794;
             break;
       }
-      ar = ((double)width / (double)height) * par;
+      ar = ((float)width / (float)height) * par;
 #if defined(__X128__)
       if (vice_opt.C128ColumnKey == 0)
-         ar = ((double)width / (double)height) / (double)2.0;
+         ar = ((float)width / (float)height) / (float)2.0;
 #endif
 #elif defined(__XVIC__)
       switch (region)
       {
          case RETRO_REGION_NTSC:
-            par = ((double)1.50411479 / (double)2.0);
+            par = ((float)1.50411479 / (float)2.0);
             break;
          case RETRO_REGION_PAL:
-            par = ((double)1.66574035 / (double)2.0);
+            par = ((float)1.66574035 / (float)2.0);
             break;
       }
-      ar = ((double)width / (double)height) * par;
+      ar = ((float)width / (float)height) * par;
 #elif defined(__XPLUS4__)
       switch (region)
       {
          case RETRO_REGION_NTSC:
-            par = (double)0.85760931;
+            par = (float)0.85760931;
             break;
          case RETRO_REGION_PAL:
-            par = (double)1.03743478;
+            par = (float)1.03743478;
             break;
       }
-      ar = ((double)width / (double)height) * par;
+      ar = ((float)width / (float)height) * par;
 #else
-      ar = (double)4 / (double)3;
+      ar = (float)4 / (float)3;
 #endif
 
    if (pixel_aspect)
       return par;
    if (opt_aspect_ratio == 3) /* 1:1 */
-      return ((double)width / (double)height);
+      return ((float)width / (float)height);
    return ar;
 }
 
@@ -6048,6 +6049,7 @@ void update_geometry(int mode)
          zoomed_YS_offset   = 0;
          retroXS_offset     = 0;
          retroYS_offset     = 0;
+         retro_bmp_offset   = 0;
 
          system_av_info.geometry.base_width   = retrow;
          system_av_info.geometry.base_height  = retroh;
@@ -6087,8 +6089,8 @@ void update_geometry(int mode)
             int zoom_border_width   = 0;
             int zoom_border_height  = 0;
 
-            double zoom_dar = 0;
-            double zoom_par = retro_get_aspect_ratio(0, 0, true);
+            float zoom_dar = 0;
+            float zoom_par = retro_get_aspect_ratio(0, 0, true);
 
             switch (zoom_mode_id)
             {
@@ -6123,26 +6125,26 @@ void update_geometry(int mode)
                         zoom_crop_height = 0;
                         break;
                      case 3: /* 16:9 */
-                        zoom_dar = (double)16/9;
+                        zoom_dar = (float)16/9;
                         break;
                      case 4: /* 16:10 */
-                        zoom_dar = (double)16/10;
+                        zoom_dar = (float)16/10;
                         break;
                      case 5: /* 4:3 */
-                        zoom_dar = (double)4/3;
+                        zoom_dar = (float)4/3;
                         break;
                      case 6: /* 5:4 */
-                        zoom_dar = (double)5/4;
+                        zoom_dar = (float)5/4;
                         break;
                   }
 
                   if (zoom_dar > 0)
                   {
                      if (zoom_mode_crop_id > 4)
-                        zoom_crop_height = retroh - zoom_height_max - ((double)zoom_border_height * (double)zoom_dar / (double)zoom_par);
-                     zoom_crop_width = retrow - ((double)(retroh - zoom_crop_height) * (double)zoom_dar / (double)zoom_par);
+                        zoom_crop_height = retroh - zoom_height_max - ((float)zoom_border_height * (float)zoom_dar / (float)zoom_par);
+                     zoom_crop_width = retrow - ((float)(retroh - zoom_crop_height) * (float)zoom_dar / (float)zoom_par);
                      if (retrow - zoom_crop_width <= zoom_width_max)
-                        zoom_crop_height = retroh - ((double)(zoom_width_max) / (double)zoom_dar * (double)zoom_par);
+                        zoom_crop_height = retroh - ((float)zoom_width_max / (float)zoom_dar * (float)zoom_par);
                   }
 
                   if (retrow - zoom_crop_width < zoom_width_max)
@@ -6155,47 +6157,65 @@ void update_geometry(int mode)
                   if (zoom_crop_height < 0)
                      zoom_crop_height = 0;
 
-                  zoomed_width        = retrow - zoom_crop_width;
-                  zoomed_height       = retroh - zoom_crop_height;
-#if 0
-                  printf("zoom: dar:%f par:%f - x-%3d y-%3d = %3dx%3d = %f * %f = %f\n", zoom_dar, zoom_par, zoom_crop_width, zoom_crop_height, zoomed_width, zoomed_height, ((double)zoomed_width / (double)zoomed_height), zoom_par, ((double)zoomed_width / (double)zoomed_height * zoom_par));
-#endif
+                  zoomed_width     = retrow - zoom_crop_width;
+                  zoomed_height    = retroh - zoom_crop_height;
+
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-                  zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
-                  zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 1 : 0) : 0;
+                  zoomed_XS_offset = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
+                  zoomed_YS_offset = (zoom_crop_height > 1) ? (zoom_crop_height / 2) : 0;
+                  zoomed_YS_offset -= (retro_region == RETRO_REGION_PAL) ? 1 : 0;
 #elif defined(__XVIC__)
-                  zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) - ((retro_region == RETRO_REGION_PAL) ? 0 : -8) : 0;
-                  zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 2 : 3) : 0;
+                  zoomed_XS_offset = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
+                  zoomed_XS_offset -= (retro_region == RETRO_REGION_PAL) ? 0 : -8;
+                  zoomed_YS_offset = (zoom_crop_height > 1) ? (zoom_crop_height / 2) : 0;
+                  zoomed_YS_offset -= (retro_region == RETRO_REGION_PAL) ? 2 : 3;
 #elif defined(__XPLUS4__)
-                  zoomed_XS_offset    = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
-                  zoomed_YS_offset    = (zoom_crop_height > 1) ? (zoom_crop_height / 2) - ((retro_region == RETRO_REGION_PAL) ? 4 : 3) : 0;
+                  zoomed_XS_offset = (zoom_crop_width > 1) ? (zoom_crop_width / 2) : 0;
+                  zoomed_YS_offset = (zoom_crop_height > 1) ? (zoom_crop_height / 2) : 0;
+                  zoomed_YS_offset -= (retro_region == RETRO_REGION_PAL) ? 4 : 3;
+#endif
+                  /* No negative offsets */
+                  zoomed_XS_offset = (zoomed_XS_offset > 0) ? zoomed_XS_offset : 0;
+                  zoomed_YS_offset = (zoomed_YS_offset > 0) ? zoomed_YS_offset : 0;
+#if 0
+                  printf("zoom: dar=%f par=%f - x=%3d y=%3d, osx=%2d osy=%2d, = %3dx%3d = %f * %f = %f\n",
+                        zoom_dar, zoom_par,
+                        zoom_crop_width, zoom_crop_height,
+                        zoomed_XS_offset, zoomed_YS_offset,
+                        zoomed_width, zoomed_height,
+                        ((float)zoomed_width / (float)zoomed_height),
+                        zoom_par,
+                        ((float)zoomed_width / (float)zoomed_height * zoom_par));
 #endif
                   break;
 
                case 4:
-                  zoom_crop_width    = manual_crop_left + manual_crop_right;
-                  zoom_crop_height   = manual_crop_top + manual_crop_bottom;
+                  zoom_crop_width  = manual_crop_left + manual_crop_right;
+                  zoom_crop_height = manual_crop_top + manual_crop_bottom;
 
-                  zoomed_width       = retrow - zoom_crop_width;
-                  zoomed_height      = retroh - zoom_crop_height;
-                  zoomed_XS_offset   = manual_crop_left;
-                  zoomed_YS_offset   = manual_crop_top;
+                  zoomed_width     = retrow - zoom_crop_width;
+                  zoomed_height    = retroh - zoom_crop_height;
+                  zoomed_XS_offset = manual_crop_left;
+                  zoomed_YS_offset = manual_crop_top;
                   break;
 
                default:
-                  zoomed_width        = retrow;
-                  zoomed_height       = retroh;
-                  zoomed_XS_offset    = 0;
-                  zoomed_YS_offset    = 0;
-                  retroXS_offset      = 0;
-                  retroYS_offset      = 0;
+                  zoomed_width     = retrow;
+                  zoomed_height    = retroh;
+                  zoomed_XS_offset = 0;
+                  zoomed_YS_offset = 0;
                   break;
             }
+
+            retroXS_offset   = zoomed_XS_offset;
+            retroYS_offset   = zoomed_YS_offset;
+            retro_bmp_offset = (retroXS_offset * (pix_bytes >> 1)) + (retroYS_offset * (retrow << (pix_bytes >> 2)));
 
             system_av_info.geometry.base_width   = zoomed_width;
             system_av_info.geometry.base_height  = zoomed_height;
             system_av_info.geometry.max_width    = defaultw;
             system_av_info.geometry.max_height   = defaulth;
+
             system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(zoomed_width, zoomed_height, false);
          }
 #endif
@@ -6428,20 +6448,13 @@ void retro_run(void)
       imagename_timer--;
 
    /* Video output */
-   video_cb(retro_bmp+(retroXS_offset*pix_bytes/2)+(retroYS_offset*(retrow<<(pix_bytes/4))), zoomed_width, zoomed_height, retrow<<(pix_bytes/2));
+   video_cb(retro_bmp + retro_bmp_offset, zoomed_width, zoomed_height, retrow << (pix_bytes >> 1));
 
    /* Update geometry if model or zoom mode changes */
    if ((lastw == retrow && lasth == retroh) && zoom_mode_id != zoom_mode_id_prev)
       update_geometry(1);
    else if (lastw != retrow || lasth != retroh)
       update_geometry(0);
-
-   /* Finalize zoom offsets */
-   if (zoomed_XS_offset != retroXS_offset || zoomed_YS_offset != retroYS_offset)
-   {
-      retroXS_offset = zoomed_XS_offset;
-      retroYS_offset = zoomed_YS_offset;
-   }
 
    /* retro_reset() postponed here for proper JiffyDOS+vicerc core option refresh operation
     * Restart does nothing if done too early, therefore only allow it after the first frame */

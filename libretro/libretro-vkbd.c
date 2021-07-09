@@ -23,19 +23,26 @@ int RGB(int r, int g, int b)
       return RGB565(r, g, b);
 }
 
-static int BKG_PADDING(int len)
+static int BKG_PADDING(const char* str)
 {
-   unsigned font_width = 6;
-   switch (len)
+   unsigned font_width_default = 6;
+   unsigned len = strlen(str);
+   unsigned padding = 0;
+   unsigned i = 0;
+
+   for (i = 0; i < len; i++)
    {
-      case 2:
-         return -font_width;
-         break;
-      case 3:
-         return -((font_width / 2) * 3);
-         break;
+      unsigned font_width;
+
+      if (str[i] >= 'a' && str[i] <= 'z')
+         font_width = font_width_default - 2;
+      else
+         font_width = font_width_default;
+
+      padding -= (font_width / 2);
    }
-   return 0;
+
+   return padding;
 }
 
 void print_vkbd(void)
@@ -288,11 +295,11 @@ void print_vkbd(void)
          BKG_PADDING_X = BKG_PADDING_X_DEFAULT;
          BKG_PADDING_Y = BKG_PADDING_Y_DEFAULT;
          if (tape_enabled && vkeys[(y * VKBDX) + x + page].value == -15) /* Datasette Reset */
-            BKG_PADDING_X = BKG_PADDING(3);
+            BKG_PADDING_X = BKG_PADDING("000");
          else if (!shifted && strlen(vkeys[(y * VKBDX) + x + page].normal) > 1)
-            BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].normal));
+            BKG_PADDING_X = BKG_PADDING(vkeys[(y * VKBDX) + x + page].normal);
          else if (shifted && strlen(vkeys[(y * VKBDX) + x + page].shift) > 1)
-            BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(y * VKBDX) + x + page].shift));
+            BKG_PADDING_X = BKG_PADDING(vkeys[(y * VKBDX) + x + page].shift);
 
          /* Key positions */
          XKEY  = XOFFSET + XBASEKEY + (x * XSIDE);
@@ -353,9 +360,9 @@ void print_vkbd(void)
    BKG_PADDING_X = BKG_PADDING_X_DEFAULT;
    BKG_PADDING_Y = BKG_PADDING_Y_DEFAULT;
    if (!shifted && strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal) > 1)
-      BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal));
+      BKG_PADDING_X = BKG_PADDING(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].normal);
    else if (shifted && strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift) > 1)
-      BKG_PADDING_X = BKG_PADDING(strlen(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift));
+      BKG_PADDING_X = BKG_PADDING(vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
 
    /* Selected key position */
    XKEY  = XOFFSET + XBASEKEY + (vkey_pos_x * XSIDE);

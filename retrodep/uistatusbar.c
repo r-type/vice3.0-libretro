@@ -77,12 +77,16 @@ extern int vic20mem_forced;
 #define STATUSBAR_SPEED_POS         61
 #define MAX_STATUSBAR_LEN           64
 
-unsigned char statusbar_text[MAX_STATUSBAR_LEN] = {0};
+unsigned char statusbar_text[RETRO_PATH_MAX] = {0};
+unsigned char statusbar_chars[MAX_STATUSBAR_LEN] = {0};
+unsigned char statusbar_resolution[10] = {0};
+unsigned char statusbar_model[10] = {0};
+unsigned char statusbar_memory[10] = {0};
 
 static unsigned char* joystick_value_human(char val, int vice_device)
 {
     static unsigned char str[6] = {0};
-    sprintf(str, "%3s", "   ");
+    snprintf(str, sizeof(str), "%3s", "   ");
 
     if (val & 0x01) /* UP */
         str[1] = 30;
@@ -111,88 +115,76 @@ static unsigned char* joystick_value_human(char val, int vice_device)
 static void display_joyport(void)
 {
     unsigned char tmpstr[25] = {0};
-    unsigned int width_offset = 0;
-
-    int zoomed_centering = (retrow - zoomed_width + width_offset) / 12;
-#if defined(__XVIC__)
-    /* PAL offset */
-    zoomed_centering -= 5;
-    /* NTSC offset */
-    if (retrow == 400)
-       zoomed_centering += 4;
-#endif
-    if (zoomed_centering > STATUSBAR_RESOLUTION_POS)
-       zoomed_centering = 0;
 
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
     unsigned char joy1[2];
     unsigned char joy2[2];
-    sprintf(joy1, "%s", "1");
-    sprintf(joy2, "%s", "2");
+    snprintf(joy1, sizeof(joy1), "%s", "1");
+    snprintf(joy2, sizeof(joy2), "%s", "2");
 
     /* Lightpen/gun */
     if (opt_joyport_type > 10 && cur_port == 1)
-        sprintf(tmpstr, "L%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+        snprintf(tmpstr, sizeof(tmpstr), "L%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Mouse */
     else if (opt_joyport_type > 2 && cur_port == 1)
-        sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+        snprintf(tmpstr, sizeof(tmpstr), "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Paddles */
     else if (opt_joyport_type == 2 && cur_port == 1)
-        sprintf(tmpstr, "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+        snprintf(tmpstr, sizeof(tmpstr), "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Joystick */
     else
-        sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
+        snprintf(tmpstr, sizeof(tmpstr), "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 
     /* Lightpen/gun */
     if (opt_joyport_type > 10 && cur_port == 2)
-        sprintf(tmpstr + strlen(tmpstr), "L%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "L%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
     /* Mouse */
     else if (opt_joyport_type > 2 && cur_port == 2)
-        sprintf(tmpstr + strlen(tmpstr), "M%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "M%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
     /* Paddles */
     else if (opt_joyport_type == 2 && cur_port == 2)
-        sprintf(tmpstr + strlen(tmpstr), "P%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "P%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
     /* Joystick */
     else
-        sprintf(tmpstr + strlen(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2], 0));
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "J%s%3s ", joy2, joystick_value_human(joystick_value[2], 0));
 #elif defined(__XVIC__)
     char joy1[2];
-    sprintf(joy1, "%s", "1");
+    snprintf(joy1, sizeof(joy1), "%s", "1");
 
     /* Lightpen/gun */
     if (opt_joyport_type > 10)
-        sprintf(tmpstr, "L%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+        snprintf(tmpstr, sizeof(tmpstr), "L%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Mouse */
     else if (opt_joyport_type > 2)
-       sprintf(tmpstr, "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+       snprintf(tmpstr, sizeof(tmpstr), "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Paddles */
     else if (opt_joyport_type == 2)
-       sprintf(tmpstr, "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
+       snprintf(tmpstr, sizeof(tmpstr), "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Joystick */
     else
-       sprintf(tmpstr, "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
+       snprintf(tmpstr, sizeof(tmpstr), "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 #endif
 
     if (vice_opt.UserportJoyType != -1)
     {
-        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3], 0));
-        sprintf(tmpstr + strlen(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4], 0));
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3], 0));
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "J%d%3s ", 4, joystick_value_human(joystick_value[4], 0));
     }
     else
     {
-        sprintf(tmpstr + strlen(tmpstr), "%5s", "");
-        sprintf(tmpstr + strlen(tmpstr), "%5s", "");
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%5s", "");
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%5s", "");
     }
 
     if (opt_statusbar & STATUSBAR_BASIC)
         snprintf(tmpstr, sizeof(tmpstr), "%24s", "");
 
-    sprintf(&statusbar_text[STATUSBAR_JOY_POS], "%-55s", tmpstr);
+    snprintf(&statusbar_chars[STATUSBAR_JOY_POS], sizeof(statusbar_chars), "%-55s", tmpstr);
 
     if (opt_statusbar & STATUSBAR_BASIC)
         return;
 
-    sprintf(&statusbar_text[STATUSBAR_RESOLUTION_POS-zoomed_centering], "%dx%d", zoomed_width, zoomed_height);
+    snprintf(statusbar_resolution, sizeof(statusbar_resolution), "%dx%d", zoomed_width, zoomed_height);
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
     /* Model */
@@ -208,10 +200,10 @@ static void display_joyport(void)
         case C64MODEL_C64_OLD_PAL:
         case C64MODEL_C64_NTSC:
         case C64MODEL_C64_OLD_NTSC:
-            strcpy(tmpstr, "C64"); break;
+            strcpy(tmpstr, "  C64"); break;
         case C64MODEL_C64C_PAL:
         case C64MODEL_C64C_NTSC:
-            strcpy(tmpstr, "C64C"); break;
+            strcpy(tmpstr, " C64C"); break;
         case C64MODEL_C64SX_PAL:
         case C64MODEL_C64SX_NTSC:
             strcpy(tmpstr, "SX-64"); break;
@@ -223,9 +215,8 @@ static void display_joyport(void)
         case C64MODEL_C64_JAP:
             strcpy(tmpstr, "C64JP"); break;
         case C64MODEL_ULTIMAX:
-            strcpy(tmpstr, "MAX"); break;
+            strcpy(tmpstr, "  MAX"); break;
     }
-    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-zoomed_centering], "%-5s", tmpstr);
 
     /* Memory */
     unsigned memory = 0;
@@ -235,9 +226,8 @@ static void display_joyport(void)
     memory = vice_opt.REUsize;
 #endif
 
-    tmpstr[0] = '\0';
-    snprintf(tmpstr, sizeof(tmpstr), "%5dkB", memory);
-    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-9-zoomed_centering], "%7s", tmpstr);
+    snprintf(statusbar_memory, sizeof(statusbar_memory), "%5dkB", memory);
+    snprintf(statusbar_model, sizeof(statusbar_model), "%-5s", tmpstr);
 #elif defined(__XVIC__)
     /* Model */
     unsigned model = vice_opt.Model;
@@ -253,7 +243,6 @@ static void display_joyport(void)
         case VIC20MODEL_VIC21:
             strcpy(tmpstr, "VIC21"); break;
     }
-    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-zoomed_centering], "%-5s", tmpstr);
 
     /* Memory */
     unsigned memory = 0;
@@ -261,10 +250,10 @@ static void display_joyport(void)
     if (!memory && vice_opt.Model == VIC20MODEL_VIC21)
         memory = 3;
 
-    tmpstr[0] = '\0';
     int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
-    snprintf(tmpstr, sizeof(tmpstr), "%2dkB", vic20mems[memory]);
-    sprintf(&statusbar_text[STATUSBAR_MODEL_POS-8-zoomed_centering], "%5s", tmpstr);
+
+    snprintf(statusbar_memory, sizeof(statusbar_memory), "%5dkB", vic20mems[memory]);
+    snprintf(statusbar_model, sizeof(statusbar_model), "%-5s", tmpstr);
 #endif
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
@@ -280,7 +269,7 @@ static int paused = 0;
 
 static void display_speed(void)
 {
-    sprintf(&statusbar_text[STATUSBAR_SPEED_POS], "%2s", fps_str);
+    sprintf(&statusbar_chars[STATUSBAR_SPEED_POS], "%2s", fps_str);
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -300,19 +289,19 @@ void display_current_image(const char *image, bool inserted)
     if (strcmp(image, ""))
     {
         drive_empty = (inserted) ? 0 : 1;
-        snprintf(imagename, sizeof(imagename), "%.56s", image);
-        snprintf(imagename_prev, sizeof(imagename_prev), "%.56s", imagename);
+        snprintf(imagename, sizeof(imagename), "%.100s", image);
+        snprintf(imagename_prev, sizeof(imagename_prev), "%.100s", imagename);
     }
     else
     {
         drive_empty = 1;
         if (strcmp(imagename_prev, ""))
-            snprintf(imagename, sizeof(imagename), "%.56s", imagename_prev);
+            snprintf(imagename, sizeof(imagename), "%.100s", imagename_prev);
     }
 
     if (strcmp(imagename, ""))
     {
-        snprintf(&statusbar_text[STATUSBAR_JOY_POS], sizeof(statusbar_text), "%2s%-54s", "  ", imagename);
+        snprintf(statusbar_text, sizeof(statusbar_text), "%s%.98s", "  ", imagename);
         imagename_timer = 150;
 
         if (inserted)
@@ -323,13 +312,13 @@ void display_current_image(const char *image, bool inserted)
 
     if (drive_empty)
     {
-        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = ' ';
-        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = ' ';
+        statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS] = ' ';
+        statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1] = ' ';
     }
     else if (drive_enabled)
     {
-        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = '0';
-        statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = '0';
+        statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS] = '0';
+        statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1] = '0';
     }
 }
 
@@ -352,13 +341,13 @@ static void ui_display_speed(void)
     if (fps > 999) {
         fps /= 1000;
         fps = (fps > 9) ? 9 : fps;
-        sprintf(fps_str, "%dK", fps);
+        snprintf(fps_str, sizeof(fps_str), "%dK", fps);
     } else if (fps > 99) {
         fps /= 100;
         fps = (fps > 9) ? 9 : fps;
-        sprintf(fps_str, "%dC", fps);
+        snprintf(fps_str, sizeof(fps_str), "%dC", fps);
     } else {
-        sprintf(fps_str, "%2d", fps);
+        snprintf(fps_str, sizeof(fps_str), "%2d", fps);
     }
 
     warp = vsync_metric_warp_enabled;
@@ -395,7 +384,7 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
         if (drive_state & 1) {
             ui_display_drive_led(drive_number, 0, 0, 0);
         } else {
-            statusbar_text[STATUSBAR_DRIVE_POS + drive_number] = ' ';
+            statusbar_chars[STATUSBAR_DRIVE_POS + drive_number] = ' ';
         }
         drive_state >>= 1;
     }
@@ -418,21 +407,21 @@ void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, 
 
     switch (drive_number) {
         case 1:
-            statusbar_text[STATUSBAR_DRIVE9_TRACK_POS] = (track_number / 10) + '0';
-            statusbar_text[STATUSBAR_DRIVE9_TRACK_POS + 1] = (track_number % 10) + '0';
+            statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS] = (track_number / 10) + '0';
+            statusbar_chars[STATUSBAR_DRIVE9_TRACK_POS + 1] = (track_number % 10) + '0';
             break;
         case 2:
-            statusbar_text[STATUSBAR_DRIVE10_TRACK_POS] = (track_number / 10) + '0';
-            statusbar_text[STATUSBAR_DRIVE10_TRACK_POS + 1] = (track_number % 10) + '0';
+            statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS] = (track_number / 10) + '0';
+            statusbar_chars[STATUSBAR_DRIVE10_TRACK_POS + 1] = (track_number % 10) + '0';
             break;
         case 3:
-            statusbar_text[STATUSBAR_DRIVE11_TRACK_POS] = (track_number / 10) + '0';
-            statusbar_text[STATUSBAR_DRIVE11_TRACK_POS + 1] = (track_number % 10) + '0';
+            statusbar_chars[STATUSBAR_DRIVE11_TRACK_POS] = (track_number / 10) + '0';
+            statusbar_chars[STATUSBAR_DRIVE11_TRACK_POS + 1] = (track_number % 10) + '0';
             break;
         default:
         case 0:
-            statusbar_text[STATUSBAR_DRIVE8_TRACK_POS] = (track_number / 10) + '0';
-            statusbar_text[STATUSBAR_DRIVE8_TRACK_POS + 1] = (track_number % 10) + '0';
+            statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS] = (track_number / 10) + '0';
+            statusbar_chars[STATUSBAR_DRIVE8_TRACK_POS + 1] = (track_number % 10) + '0';
             break;
     }
 
@@ -454,8 +443,8 @@ void ui_display_drive_led(unsigned int drive_number, unsigned int drive_base, un
 #endif
 
     c = "8901"[drive_number] | ((pwm1 > 500) ? 0x80 : 0);
-    statusbar_text[STATUSBAR_DRIVE_POS + (drive_number * 5)] = c;
-    statusbar_text[STATUSBAR_DRIVE_POS + (drive_number * 5) + 1] = 'T';
+    statusbar_chars[STATUSBAR_DRIVE_POS + (drive_number * 5)] = c;
+    statusbar_chars[STATUSBAR_DRIVE_POS + (drive_number * 5) + 1] = 'T';
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -505,9 +494,9 @@ static void display_tape(void)
     }
 
     if (tape_enabled)
-        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "%c%03d", tape_chars[tape_control], tape_counter);
+        sprintf(&(statusbar_chars[STATUSBAR_TAPE_POS]), "%c%03d", tape_chars[tape_control], tape_counter);
     else
-        sprintf(&(statusbar_text[STATUSBAR_TAPE_POS]), "    ");
+        sprintf(&(statusbar_chars[STATUSBAR_TAPE_POS]), "    ");
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
@@ -679,32 +668,56 @@ void uistatusbar_draw(void)
     /* Right alignment offset */
     int x_align_offset = 2;
 
+    /* LED section position */
+    int led_width = 0;
+    int led_x = 0;
+    if (drive_enabled)
+        led_width = (char_width * 5) - x_align_offset + 1;
+    else if (tape_enabled)
+        led_width = (char_width * 8) - x_align_offset - 4;
+    else
+        led_width = (char_width * 3) - x_align_offset - 1;
+    led_x = retroXS_offset + x + max_width - led_width - 1;
+
     /* Basic mode statusbar background */
     if (opt_statusbar & STATUSBAR_BASIC && imagename_timer == 0)
     {
-        if (drive_enabled)
-            bkg_width = (char_width * 5) - x_align_offset + 1;
-        else if (tape_enabled)
-            bkg_width = (char_width * 8) - x_align_offset - 4;
-        else
-            bkg_width = (char_width * 3) - x_align_offset - 1;
-
-        bkg_x = retroXS_offset + x + max_width - bkg_width - 1;
+        bkg_width = led_width;
+        bkg_x     = led_x;
     }
 
+    /* Black background paint */
     draw_fbox(bkg_x, bkg_y, bkg_width, bkg_height, 0, GRAPH_ALPHA_100);
 
+    /* Update FPS */
     ui_display_speed();
 
-    if (imagename_timer == 0)
-        display_joyport();
+    /* Update joyports + misc */
+    display_joyport();
 
+    /* Inserted/Ejected image */
+    if (imagename_timer > 0)
+    {
+        draw_text(bkg_x + char_offset, y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, 1, 1, 100, statusbar_text);
+        draw_fbox(led_x, bkg_y, led_width, bkg_height, 0, GRAPH_ALPHA_100);
+    }
+    else if (!(opt_statusbar & STATUSBAR_BASIC))
+    {
+        draw_text(bkg_x + (max_width / 2) - (20), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, 1, 1, 10, statusbar_resolution);
+        draw_text(bkg_x + (max_width / 2) + (30), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, 1, 1, 10, statusbar_memory);
+        draw_text(bkg_x + (max_width / 2) + (80), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, 1, 1, 10, statusbar_model);
+    }
+
+    /* Tape indicator + drive & power LEDs */
     for (i = 0; i < MAX_STATUSBAR_LEN; ++i)
     {
-        c = statusbar_text[i];
+        c = statusbar_chars[i];
         if (c == 0)
             continue;
         
+        if (imagename_timer > 0 && i < STATUSBAR_TAPE_POS - 1)
+            continue;
+
         /* Default background */
         color_b = color_black;
 

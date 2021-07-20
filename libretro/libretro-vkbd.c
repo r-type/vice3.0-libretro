@@ -15,7 +15,7 @@ extern int tape_enabled;
 extern int tape_counter;
 extern int tape_control;
 
-int RGB(int r, int g, int b)
+int RGBc(int r, int g, int b)
 {
    if (pix_bytes == 4) 
       return ARGB888(255, r, g, b);
@@ -122,45 +122,45 @@ void print_vkbd(void)
    {
       default:
       case 1: /* C64 brown */
-         BKG_COLOR_NORMAL  = RGB( 68,  59,  58);
-         BKG_COLOR_ALT     = RGB(123, 127, 130);
-         BKG_COLOR_EXTRA   = RGB(143, 140, 129);
-         BKG_COLOR_TAPE    = RGB( 89,  79,  78);
-         BKG_COLOR_SEL     = RGB(160, 160, 160);
-         BKG_COLOR_ACTIVE  = RGB( 48,  44,  45);
+         BKG_COLOR_NORMAL  = RGBc( 68,  59,  58);
+         BKG_COLOR_ALT     = RGBc(123, 127, 130);
+         BKG_COLOR_EXTRA   = RGBc(143, 140, 129);
+         BKG_COLOR_TAPE    = RGBc( 89,  79,  78);
+         BKG_COLOR_SEL     = RGBc(160, 160, 160);
+         BKG_COLOR_ACTIVE  = RGBc( 48,  44,  45);
          FONT_COLOR_NORMAL = COLOR_WHITE;
          FONT_COLOR_SEL    = COLOR_BLACK;
          break;
       
       case 2: /* C64C beige */
-         BKG_COLOR_NORMAL  = RGB(208, 208, 202);
-         BKG_COLOR_ALT     = RGB(154, 154, 150);
-         BKG_COLOR_EXTRA   = RGB(132, 132, 132);
-         BKG_COLOR_TAPE    = RGB( 89,  79,  78);
-         BKG_COLOR_SEL     = RGB( 40,  40,  40);
-         BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
+         BKG_COLOR_NORMAL  = RGBc(208, 208, 202);
+         BKG_COLOR_ALT     = RGBc(154, 154, 150);
+         BKG_COLOR_EXTRA   = RGBc(132, 132, 132);
+         BKG_COLOR_TAPE    = RGBc( 89,  79,  78);
+         BKG_COLOR_SEL     = RGBc( 40,  40,  40);
+         BKG_COLOR_ACTIVE  = RGBc(250, 250, 250);
          FONT_COLOR_NORMAL = COLOR_BLACK;
          FONT_COLOR_SEL    = COLOR_WHITE;
          break;
       
       case 3: /* Dark */
-         BKG_COLOR_NORMAL  = RGB( 32,  32,  32);
-         BKG_COLOR_ALT     = RGB( 70,  70,  70);
-         BKG_COLOR_EXTRA   = RGB( 14,  14,  14);
-         BKG_COLOR_TAPE    = RGB( 50,  50,  50);
-         BKG_COLOR_SEL     = RGB(140, 140, 140);
-         BKG_COLOR_ACTIVE  = RGB( 16,  16,  16);
+         BKG_COLOR_NORMAL  = RGBc( 32,  32,  32);
+         BKG_COLOR_ALT     = RGBc( 70,  70,  70);
+         BKG_COLOR_EXTRA   = RGBc( 14,  14,  14);
+         BKG_COLOR_TAPE    = RGBc( 50,  50,  50);
+         BKG_COLOR_SEL     = RGBc(140, 140, 140);
+         BKG_COLOR_ACTIVE  = RGBc( 16,  16,  16);
          FONT_COLOR_NORMAL = COLOR_WHITE;
          FONT_COLOR_SEL    = COLOR_BLACK;
          break;
       
       case 4: /* Light */
-         BKG_COLOR_NORMAL  = RGB(200, 204, 206);
-         BKG_COLOR_ALT     = RGB(160, 160, 160);
-         BKG_COLOR_EXTRA   = RGB(132, 132, 132);
-         BKG_COLOR_TAPE    = RGB(180, 180, 180);
-         BKG_COLOR_SEL     = RGB( 40,  40,  40);
-         BKG_COLOR_ACTIVE  = RGB(250, 250, 250);
+         BKG_COLOR_NORMAL  = RGBc(200, 204, 206);
+         BKG_COLOR_ALT     = RGBc(160, 160, 160);
+         BKG_COLOR_EXTRA   = RGBc(132, 132, 132);
+         BKG_COLOR_TAPE    = RGBc(180, 180, 180);
+         BKG_COLOR_SEL     = RGBc( 40,  40,  40);
+         BKG_COLOR_ACTIVE  = RGBc(250, 250, 250);
          FONT_COLOR_NORMAL = COLOR_BLACK;
          FONT_COLOR_SEL    = COLOR_WHITE;
          break;
@@ -272,7 +272,7 @@ void print_vkbd(void)
 
          /* Reset key color */
          if (vkeys[(y * VKBDX) + x].value == -2)
-            BKG_COLOR = RGB(128, 0, 0);
+            BKG_COLOR = RGBc(128, 0, 0);
          else
          {
             /* Alternate key color */
@@ -394,7 +394,7 @@ void print_vkbd(void)
                         : vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + page].shift);
 
 #ifdef POINTER_DEBUG
-   draw_hline(pointer_x, pointer_y, 1, 1, RGB(255, 0, 255));
+   draw_hline(pointer_x, pointer_y, 1, 1, RGBc(255, 0, 255));
 #endif
 }
 

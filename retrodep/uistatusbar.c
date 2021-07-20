@@ -50,7 +50,7 @@ extern unsigned int opt_joyport_type;
 extern unsigned int opt_autoloadwarp;
 extern unsigned int retro_warpmode;
 extern int retro_warp_mode_enabled();
-extern int RGB(int r, int g, int b);
+extern int RGBc(int r, int g, int b);
 
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
@@ -641,13 +641,13 @@ void uistatusbar_draw(void)
             color_red, color_greenb, color_green, color_greend,
             color_brown, color_brownd;
     color_black  = 0;
-    color_white  = RGB(255, 255, 255);
-    color_red    = RGB(204,   0,   0);
-    color_greenb = RGB(  0, 204,   0);
-    color_green  = RGB(  0,  85,   0);
-    color_greend = RGB(  0,  34,   0);
-    color_brown  = RGB(143, 140, 129);
-    color_brownd = RGB( 89,  79,  78);
+    color_white  = RGBc(255, 255, 255);
+    color_red    = RGBc(204,   0,   0);
+    color_greenb = RGBc(  0, 204,   0);
+    color_green  = RGBc(  0,  85,   0);
+    color_greend = RGBc(  0,  34,   0);
+    color_brown  = RGBc(143, 140, 129);
+    color_brownd = RGBc( 89,  79,  78);
     color_f      = color_white;
     color_b      = color_black;
 

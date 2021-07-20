@@ -66,15 +66,18 @@ int align_delay;
 int cap_min_ignore;
 int increase_sync = 0;
 int presync = 0;
-BYTE fillbyte = 0x55;
+BYTE fillbyte = 0xfe;
 BYTE drive = 8;
 char * cbm_adapter = "";
 int use_floppycode_srq = 0;
+int override_srq = 0;
 int extra_capacity_margin=5;
 int sync_align_buffer=0;
 int fattrack=0;
 int track_match=0;
 int old_g64=0;
+int read_killer=1;
+int backwards=0;
 
 unsigned char md5_hash_result[16];
 unsigned char md5_dir_hash_result[16];
@@ -101,13 +104,12 @@ main(int argc, char *argv[])
 	reduce_sync = 4;
 	reduce_badgcr = 0;
 	reduce_gap = 0;
-	rpm_real = 296;
 	verbose = 1;
 	cap_min_ignore = 0;
 
 	fprintf(stdout,
 		"\nnibscan - Commodore disk image scanner / comparator\n"
-		AUTHOR "Revision %d - " VERSION "\n\n", SVN);
+		AUTHOR VERSION "\n\n");
 
 	/* we can do nothing with no switches */
 	if (argc < 2)
@@ -120,7 +122,7 @@ main(int argc, char *argv[])
 	memset(track_buffer2, 0x00, sizeof(track_buffer2));
 
 	/* default is to reduce sync */
-	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541+2);
+	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541+1);
 
 	while (--argc && (*(++argv)[0] == '-'))
 		parseargs(argv);
@@ -138,7 +140,7 @@ main(int argc, char *argv[])
 	if (mode == 1) 	// compare images
 	{
 		if(!(load_image(file1, track_buffer, track_density, track_length))) exit(0);
-		if(!(load_image(file2,  track_buffer2, track_density2, track_length2))) exit(0);
+		if(!(load_image(file2, track_buffer2, track_density2, track_length2))) exit(0);
 
 		compare_disks();
 
@@ -246,7 +248,7 @@ int load_image(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *
 	else if (compare_extension(filename, "G64"))
 	{
 		if(!(read_g64(filename, track_buffer, track_density, track_length))) return 0;
-		if(sync_align_buffer)	sync_tracks(track_buffer, track_density, track_length, track_alignment);
+		if(sync_align_buffer) sync_tracks(track_buffer, track_density, track_length, track_alignment);
 	}
 	else if (compare_extension(filename, "NBZ"))
 	{
@@ -255,20 +257,20 @@ int load_image(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *
 		if(!(file_buffer_size = LZ_Uncompress(compressed_buffer, file_buffer, file_buffer_size))) return 0;
 		if(!(read_nib(file_buffer, file_buffer_size, track_buffer, track_density, track_length))) return 0;
 		align_tracks(track_buffer, track_density, track_length, track_alignment);
-		search_fat_tracks(track_buffer, track_density, track_length);
+		if(fattrack!=99) search_fat_tracks(track_buffer, track_density, track_length);
 	}
 	else if (compare_extension(filename, "NIB"))
 	{
 		if(!(file_buffer_size = load_file(filename, file_buffer))) return 0;
 		if(!(read_nib(file_buffer, file_buffer_size, track_buffer, track_density, track_length))) return 0;
 		align_tracks(track_buffer, track_density, track_length, track_alignment);
-		search_fat_tracks(track_buffer, track_density, track_length);
+		if(fattrack!=99) search_fat_tracks(track_buffer, track_density, track_length);
 	}
 	else if (compare_extension(filename, "NB2"))
 	{
 		if(!(read_nb2(filename, track_buffer, track_density, track_length))) return 0;
 		align_tracks(track_buffer, track_density, track_length, track_alignment);
-		search_fat_tracks(track_buffer, track_density, track_length);
+		if(fattrack!=99) search_fat_tracks(track_buffer, track_density, track_length);
 	}
 	else
 	{
@@ -501,8 +503,10 @@ scandisk(void)
 	for (track = start_track; track <= end_track; track ++)
 	{
 		if(!check_formatted(track_buffer + (track * NIB_TRACK_LENGTH), track_length[track]))
-			//printf("UNFORMATTED");
+		{
+			//printf(":UNFORMATTED\n");
 			continue;
+		}
 		else
 			printf("%4.1f: %d",(float) track/2, track_length[track]);
 
@@ -511,7 +515,7 @@ scandisk(void)
 			track_density[track] = check_sync_flags(track_buffer + (track * NIB_TRACK_LENGTH),
 				track_density[track]&3, track_length[track]);
 
-			printf("(%d", track_density[track]&3);
+			printf(" (density:%d", track_density[track]&3);
 
 			if (track_density[track] & BM_NO_SYNC)
 				printf(":NOSYNC");
@@ -540,16 +544,13 @@ scandisk(void)
 			}
 
 			// detect bad GCR '000' bits
-			//if (fix_gcr)
-			{
-				badgcr_tracks[track] =
-				  check_bad_gcr(track_buffer + (NIB_TRACK_LENGTH * track), track_length[track]);
+			badgcr_tracks[track] =
+			  check_bad_gcr(track_buffer + (NIB_TRACK_LENGTH * track), track_length[track]);
 
-				if (badgcr_tracks[track])
-				{
-					//printf("weak:%d ", badgcr_tracks[track]);
-					totalgcr += badgcr_tracks[track];
-				}
+			if (badgcr_tracks[track])
+			{
+				//printf("weak:%d ", badgcr_tracks[track]);
+				totalgcr += badgcr_tracks[track];
 			}
 
 			/* check for rapidlok track
@@ -564,10 +565,13 @@ scandisk(void)
 			*/
 
 			/* check for FAT track */
-			if (track < end_track - track_inc)
+			if(fattrack!=99)
 			{
-				fat_tracks[track] = check_fat(track);
-				if (fat_tracks[track]) totalfat++;
+				if (track < end_track - track_inc)
+				{
+					fat_tracks[track] = check_fat(track);
+					if (fat_tracks[track]) totalfat++;
+				}
 			}
 
 			/* check for regular disk errors
@@ -600,6 +604,11 @@ scandisk(void)
 					dump_headers(track_buffer + (NIB_TRACK_LENGTH * track), track_length[track]);
 					raw_track_info(track_buffer + (NIB_TRACK_LENGTH * track), track_length[track]);
 			}
+		}
+		else
+		{
+			printf("(%d", track_density[track]&3);
+			printf(":UNFORMATTED");
 		}
 		printf("\n");
 
@@ -641,7 +650,7 @@ dump_headers(BYTE * gcrdata, size_t length)
 		convert_4bytes_from_GCR(gcr_ptr + 5, header + 4);
 
 		if(header[0] == 0x08) // only parse headers
-			printf("\n%.2x %.2x %.2x %.2x = typ:%.2x -- blh:%.2x -- trk:%.2x -- sec:%.2x -- id:%c%c",
+			printf("\n%.2x %.2x %.2x %.2x = typ:%.2x -- blh:%.2x -- trk:%d -- sec:%d -- id:%c%c",
 				*gcr_ptr, *(gcr_ptr+1), *(gcr_ptr+2), *(gcr_ptr+3), header[0], header[1], header[3], header[2], header[5], header[4]);
 		else // data block should follow
 			printf("\n%.2x %.2x %.2x %.2x = typ:%.2x",
@@ -764,12 +773,12 @@ size_t check_fat(int track)
 
 		if (diff<=10)
 		{
-			printf("*FAT diff=%d*",track/2,(int)diff);
+			printf("*FAT diff=%d*",(int)diff);
 			return 1;
 		}
-		else if (diff<=35)
+		else if (diff<34) /* 34 happens on empty formatted disks */
 		{
-			printf("*Possible FAT diff=%d*",track/2,(int)diff);
+			printf("*Possible FAT diff=%d*",(int)diff);
 			return 1;
 		}
 		else
@@ -859,7 +868,7 @@ size_t check_rapidlok(int track)
 void
 usage(void)
 {
-	fprintf(stderr, "usage: nibscan [options] <filename1> [filename2]\n\n");
+	printf("usage: nibscan [options] <filename1> [filename2]\n\n");
 	switchusage();
 	exit(1);
 }

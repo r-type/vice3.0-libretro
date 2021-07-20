@@ -335,6 +335,7 @@ read_floppy(CBM_FILE fd, BYTE *track_buffer, BYTE *track_density, size_t *track_
 
 	if(!rawmode) get_disk_id(fd);
 
+	//for (track = end_track; track >= start_track; track -= track_inc)
 	for (track = start_track; track <= end_track; track += track_inc)
 		track_density[track] = paranoia_read_halftrack(fd, track, track_buffer + (track * NIB_TRACK_LENGTH));
 
@@ -357,7 +358,7 @@ int write_nb2(CBM_FILE fd, char * filename)
 	/* create output file */
 	if ((fpout = fopen(filename, "wb")) == NULL)
 	{
-		fprintf(stderr, "Couldn't create output file %s!\n", filename);
+		printf("Couldn't create output file %s!\n", filename);
 		return 0;
 	}
 
@@ -393,10 +394,10 @@ int write_nb2(CBM_FILE fd, char * filename)
 			printf("%4.1f: (%d) ", (float) track / 2, pass_density);
 			fprintf(fplog, "%4.1f: (%d) ", (float) track / 2, pass_density);
 
+			set_density(fd, pass_density);
+
 			for(pass = 0; pass < 4; pass ++)
 			{
-				set_density(fd, pass_density);
-
 				for (i = 0; i < 10; i++)
 				{
 					send_mnib_cmd(fd, FL_READWOSYNC, NULL, 0);
@@ -457,7 +458,7 @@ void get_disk_id(CBM_FILE fd)
 		printf("\nCosmetic Disk ID: ");
 
 		if(!extract_cosmetic_id(buffer, diskid))
-			fprintf(stderr, "[Cannot find directory sector!]\n");
+			printf("[Cannot find directory sector!]\n");
 		else
 		{
 			printf("'%c%c'\n", diskid[0], diskid[1]);
@@ -469,7 +470,7 @@ void get_disk_id(CBM_FILE fd)
 		printf("Format Disk ID: ");
 
 		if (!extract_id(buffer, diskid))
-			fprintf(stderr, "[Cannot find directory sector!]\n");
+			printf("[Cannot find directory sector!]\n");
 		else
 		{
 			printf("'%c%c'\n", diskid[0], diskid[1]);
@@ -489,7 +490,7 @@ scan_track(CBM_FILE fd, int track)
 	BYTE count;
 	BYTE density_major[4], iMajorMax; /* 50% majorities for bit rate */
 	BYTE density_stats[4], iStatsMax; /* total occurrences */
-	int bin, i;
+	int bin, i, passes = 10;
 
 	/* Scan for killer track */
 	density = set_default_bitrate(fd, track);
@@ -499,8 +500,12 @@ scan_track(CBM_FILE fd, int track)
 	if (killer_info & BM_FF_TRACK)
 			return (density | killer_info);
 
+	if (killer_info & BM_NO_SYNC)
+			passes = 1;
+
+
 	/* Floppy sends statistic data in reverse bit-rate order */
-	for(i=0; i<10; i++)
+	for(i=0; i<passes; i++)
 	{
 		memset(density_major, 0, sizeof(density_major));
 		memset(density_stats, 0, sizeof(density_stats));

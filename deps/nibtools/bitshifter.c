@@ -15,6 +15,9 @@ BYTE find_end_of_bitshifted_sync(BYTE **pt, BYTE *gcr_end);
 BYTE find_bitshifted_sync(BYTE **pt, BYTE *gcr_end);
 int  isImageAligned(BYTE *track_buffer);
 
+#ifndef min
+#define min(a,b)  (((a) < (b))? (a) : (b))
+#endif
 
 // Determine if a track is bitshifted (sectors not sync aligned).
 //
@@ -183,8 +186,8 @@ int align_bitshifted_track(BYTE *track_start, int track_length, BYTE **aligned_t
 	BYTE *pt, *p1, *p2;
 	BYTE *gcr_end, *gcr_end2, *sync_start, *sync_end;
 	BYTE p1bit, p2bit, first_sync;
-	int SSB, LSB;
-	int NumDataBits, NumPadBits, NumSyncBits;
+	size_t SSB, LSB;
+	size_t NumDataBits, NumPadBits, NumSyncBits;
 
 	// Allocate & init memory for target (sync aligned) track data.
 	// Source is 'track_length' long (bitshifted track data).
@@ -252,7 +255,7 @@ int align_bitshifted_track(BYTE *track_start, int track_length, BYTE **aligned_t
 				// >>> (SSB-1) data bits in first sync byte, may be 0.
 				//
 				// Hence number of data bits before sync start:
-				NumDataBits = (sync_start - p1 - 1)*8 + (SSB-1) + (9-p1bit);
+				NumDataBits = ((sync_start - p1 - 1)*8) + (SSB-1) + (9-p1bit);
 			}
 			else
 			{
@@ -264,7 +267,7 @@ int align_bitshifted_track(BYTE *track_start, int track_length, BYTE **aligned_t
 			}
 
 			// Determine number of sync bits between sync_start.SSB and sync_end.LSB
-			NumSyncBits = (sync_end - sync_start - 1)*8 + LSB + (9-SSB);
+			NumSyncBits = ((sync_end - sync_start - 1)*8 + LSB) + (9-SSB);
 
 			// Determine number of required '0' pad bits to insert before sync start for sync
 			// to end on byte alignment:
@@ -347,7 +350,7 @@ int align_bitshifted_track(BYTE *track_start, int track_length, BYTE **aligned_t
 			// >>> 8 data bits in last track byte.
 			//
 			// Hence number of data bits before end of track:
-			NumDataBits = (gcr_end - p1 - 1)*8 + 8 + (9-p1bit);
+			NumDataBits = ((gcr_end - p1 - 1)*8) + 8 + (9-p1bit);
 
 			// Bit shift and copy NumDataBits data bits (mode=99) before end of track
 			// from source position p1.p1bit to target position p2.p2bit :
@@ -439,13 +442,13 @@ ShiftCopyXBitsFromPBtoQC(BYTE **p, BYTE *b, BYTE **q, BYTE *c, int NumDataBits, 
 		// > 0 <= C <= 7 (see above)
 		// > *b = Next bit position to be copied from 'db' (1 <= B <= 8)
 		// > [ ((Q << C) & 0xff00) + new bits from db ] >> C
-		**q = ( ( (uint32)((**q) >> (8-*c)) << 8) | (((uint32)db << (*b-1)) & 0xff) ) >> *c;
+		**q = ( ( (int)((**q) >> (8-*c)) << 8) | (((int)db << (*b-1)) & 0xff) ) >> *c;
 
 		// Determine number 'd' of copied bits (lowest value of following):
 		// - At most (8-*c) free bits in Q were filled
 		// - At most (9-*b) bits could be copied from db
 		// - At most NumDataBits were left to be copied
-		d = fmin(fmin(8-*c, 9-*b), NumDataBits);
+		d = min(min(8-*c, 9-*b), NumDataBits);
 		// Now: 1 <= d <= 8
 
 		// Update source position P.B

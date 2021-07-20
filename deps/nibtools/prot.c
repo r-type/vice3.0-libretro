@@ -14,17 +14,17 @@ extern int fattrack;
 /* I don't like this kludge, but it is necessary to fix old files that lacked halftracks */
 void search_fat_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length)
 {
-	int track;
-	size_t diff = 0;
+	int track, numfats=0;
+	size_t diff=0;
 	char errorstring[0x1000];
-
-	if(verbose) printf("Searching for fat tracks...\n");
 
 	if(!fattrack) /* autodetect fat tracks */
 	{
-		for (track=2; track<=MAX_HALFTRACKS_1541+1; track+=2)
+		//printf("Searching for fat tracks...\n");
+		for (track=2; track<=MAX_HALFTRACKS_1541-1; track+=2)
 		{
-			if (track_length[track] > 0 && track_length[track+2] > 0 && track_length[track] != 8192 && track_length[track+2] != 8192)
+			if (track_length[track] > 0 && track_length[track+2] > 0 &&
+				track_length[track] != 8192 && track_length[track+2] != 8192)
 			{
 				diff = compare_tracks(
 				  track_buffer + (track * NIB_TRACK_LENGTH),
@@ -32,9 +32,11 @@ void search_fat_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_le
 				  track_length[track],
 				  track_length[track+2], 1, errorstring);
 
-				if (diff<=10)
+				if(verbose>1) printf("%4.1f: %d\n",(float)track/2,diff);
+
+				if (diff<2) /* 34 happens on empty formatted disks */
 				{
-					if(verbose) printf("Fat track found on T%d (diff=%d)\n",track/2,(int)diff);
+					printf("Likely fat track found on T%d/%d (diff=%d)\n",track/2,(track/2)+1,(int)diff);
 
 					memcpy(track_buffer + ((track+1) * NIB_TRACK_LENGTH),
 						track_buffer + (track * NIB_TRACK_LENGTH),
@@ -42,13 +44,22 @@ void search_fat_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_le
 
 					track_length[track+1] = track_length[track];
 					track_density[track+1] = track_density[track];
+
+					if(!numfats)
+						fattrack=track;
+					else
+					{
+						printf("These are likely not fat tracks, just repeat data - Ignoring\n");
+						//fattrack=0;
+					}
+					numfats++;
 				}
 			}
 		}
 	}
-	else	if(fattrack!=99) /* manually overridden */
+	else if(fattrack!=99) /* manually overridden */
 	{
-		if(verbose) printf("Handle FAT track on %d\n",fattrack);
+		printf("Handle FAT track on %d\n",fattrack/2);
 
 		memcpy(track_buffer + ((fattrack+1) * NIB_TRACK_LENGTH),
 			track_buffer + (fattrack * NIB_TRACK_LENGTH),
@@ -67,20 +78,20 @@ size_t sync_align(BYTE *buffer, int length)
     int i, j;
     int bytes, bits;
 	BYTE temp_buffer[NIB_TRACK_LENGTH];
-	BYTE *marker_pos;
+	//BYTE *marker_pos;
 
 	memset(temp_buffer, 0x00, NIB_TRACK_LENGTH);
 
     // first align buffer to a sync, shuffling
     i=0;
-    while(!((buffer[i]==0xff) && (buffer[i+1]&0x80)))
+    while(!((buffer[i]==0xff)&&(buffer[i+1]&0x80)))
 	{
     	i++;
     	if(i==length) break;
 	}
 	if(i<15) // header, skip that also
 	{
-		while(!((buffer[i]==0xff) && (buffer[i+1]&0x80)))
+		while(!((buffer[i]==0xff)&&(buffer[i+1]&0x80)))
 		{
 		    	i++;
 		    	if(i==length) break;
@@ -90,7 +101,7 @@ size_t sync_align(BYTE *buffer, int length)
 	memcpy(temp_buffer, buffer+i, length-i);
 	memcpy(temp_buffer+length-i, buffer, i);
     memcpy(buffer, temp_buffer, length);
-    if(verbose) printf("{shuff:%d}", i);
+    if(verbose>1) printf("{shuff:%d}", i);
 
     // shift buffer left to edge of sync marks
     for (i=0; i<length; i++)
@@ -107,7 +118,7 @@ size_t sync_align(BYTE *buffer, int length)
 				bytes++;
 				if(i+bytes>length) break;
 			}
-			if(verbose) printf("(%d)", bytes);
+			if(verbose>1) printf("(%d)", bytes);
 
 			//shift left until MSB cleared
 			while(buffer[i] & 0x80)
@@ -125,7 +136,7 @@ size_t sync_align(BYTE *buffer, int length)
 				}
 				//buffer[i+j] |= 0x1;
 			}
-			if(verbose) printf("[bits:%d]",bits);
+			if(verbose>1) printf("[bits:%d]",bits);
 		}
     }
     return 1;
@@ -772,10 +783,10 @@ auto_gap(BYTE * work_buffer, size_t tracklen)
 
 	/* last 5 bytes of gap */
 	// printf("gapbyte: %x, len: %d\n",gapbyte,longest);
-	if(key >= work_buffer + 5)
-		return(key - 5);
-	else
-		return(key);
+	//if(key >= work_buffer + 5)
+	//	return(key - 5);
+	//else
+	return key;
 }
 
 // The idea behind this is that bad GCR commonly occurs
@@ -817,7 +828,7 @@ find_bad_gap(BYTE * work_buffer, size_t tracklen)
 	}
 
 	/* first byte after bad run */
-	return (key);
+	return key;
 }
 
 // Line up the track cycle to the start of the longest sync mark

@@ -31,6 +31,7 @@ int use_floppycode_srq=2;
 int use_floppycode_ihs=0;
 int override_srq=0;
 int drivetype=1571;
+int extended_parallel_test=0;
 CBM_FILE fd;
 
 FILE *fplog;
@@ -44,7 +45,7 @@ main(int argc, char *argv[])
 	size_t l,m;
 
 	fprintf(stdout,"\nnibsrqtest - tests SRQ communication code (with 1571 drive)\n"
-	AUTHOR "Revision %d - " VERSION "\n\n", SVN);
+		AUTHOR VERSION "\n\n");
 
 	if(cbm_driver_open_ex(&fd, cbm_adapter) != 0)
 	{

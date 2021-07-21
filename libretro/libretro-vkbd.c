@@ -47,6 +47,8 @@ static int BKG_PADDING(const char* str)
 
 void print_vkbd(void)
 {
+   libretro_graph_alpha_t ALPHA      = opt_vkbd_alpha;
+   libretro_graph_alpha_t BKG_ALPHA  = ALPHA;
    bool shifted                      = false;
    bool text_outline                 = false;
    int page                          = 0;
@@ -63,8 +65,9 @@ void print_vkbd(void)
    int YPADDING                      = 0;
    int XKEYSPACING                   = 1;
    int YKEYSPACING                   = 1;
-   libretro_graph_alpha_t ALPHA      = opt_vkbd_alpha;
-   libretro_graph_alpha_t BKG_ALPHA  = ALPHA;
+
+   int BKG_PADDING_X_DEFAULT         = -3;
+   int BKG_PADDING_Y_DEFAULT         = -3;
    int BKG_PADDING_X                 = 0;
    int BKG_PADDING_Y                 = 0;
    int BKG_COLOR                     = 0;
@@ -74,15 +77,13 @@ void print_vkbd(void)
    int BKG_COLOR_TAPE                = 0;
    int BKG_COLOR_SEL                 = 0;
    int BKG_COLOR_ACTIVE              = 0;
+
    int FONT_MAX                      = 3;
    int FONT_WIDTH                    = 1;
    int FONT_HEIGHT                   = 1;
    int FONT_COLOR                    = 0;
    int FONT_COLOR_NORMAL             = 0;
    int FONT_COLOR_SEL                = 0;
-
-   unsigned COLOR_BLACK              = (pix_bytes == 4) ? COLOR_BLACK_32 : COLOR_BLACK_16;
-   unsigned COLOR_WHITE              = (pix_bytes == 4) ? COLOR_WHITE_32 : COLOR_WHITE_16;
 
    unsigned theme                    = opt_vkbd_theme;
    if (theme & 0x80)
@@ -122,52 +123,49 @@ void print_vkbd(void)
    {
       default:
       case 1: /* C64 brown */
-         BKG_COLOR_NORMAL  = RGBc( 68,  59,  58);
-         BKG_COLOR_ALT     = RGBc(123, 127, 130);
-         BKG_COLOR_EXTRA   = RGBc(143, 140, 129);
-         BKG_COLOR_TAPE    = RGBc( 89,  79,  78);
-         BKG_COLOR_SEL     = RGBc(160, 160, 160);
-         BKG_COLOR_ACTIVE  = RGBc( 48,  44,  45);
-         FONT_COLOR_NORMAL = COLOR_WHITE;
-         FONT_COLOR_SEL    = COLOR_BLACK;
+         BKG_COLOR_NORMAL  = (pix_bytes == 4) ? COLOR_BROWN_32 : COLOR_BROWN_16;
+         BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_BROWNGRAY_32 : COLOR_BROWNGRAY_16;
+         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_BROWNLITE_32 : COLOR_BROWNLITE_16;
+         BKG_COLOR_TAPE    = (pix_bytes == 4) ? COLOR_TAPE_32 : COLOR_TAPE_16;
+         BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_160_32 : COLOR_160_16;
+         BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_BROWNDARK_32 : COLOR_BROWNDARK_16;
+         FONT_COLOR_NORMAL = (pix_bytes == 4) ? COLOR_WHITE_32 : COLOR_WHITE_16;
+         FONT_COLOR_SEL    = (pix_bytes == 4) ? COLOR_BLACK_32 : COLOR_BLACK_16;
          break;
       
       case 2: /* C64C beige */
-         BKG_COLOR_NORMAL  = RGBc(208, 208, 202);
-         BKG_COLOR_ALT     = RGBc(154, 154, 150);
-         BKG_COLOR_EXTRA   = RGBc(132, 132, 132);
-         BKG_COLOR_TAPE    = RGBc( 89,  79,  78);
-         BKG_COLOR_SEL     = RGBc( 40,  40,  40);
-         BKG_COLOR_ACTIVE  = RGBc(250, 250, 250);
-         FONT_COLOR_NORMAL = COLOR_BLACK;
-         FONT_COLOR_SEL    = COLOR_WHITE;
+         BKG_COLOR_NORMAL  = (pix_bytes == 4) ? COLOR_BEIGE_32 : COLOR_BEIGE_16;
+         BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_BEIGEDARK_32 : COLOR_BEIGEDARK_16;
+         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_132_32 : COLOR_132_16;
+         BKG_COLOR_TAPE    = (pix_bytes == 4) ? COLOR_TAPE_32 : COLOR_TAPE_16;
+         BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_40_32 : COLOR_40_16;
+         BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_250_32 : COLOR_250_16;
+         FONT_COLOR_NORMAL = (pix_bytes == 4) ? COLOR_BLACK_32 : COLOR_BLACK_16;
+         FONT_COLOR_SEL    = (pix_bytes == 4) ? COLOR_WHITE_32 : COLOR_WHITE_16;
          break;
       
       case 3: /* Dark */
-         BKG_COLOR_NORMAL  = RGBc( 32,  32,  32);
-         BKG_COLOR_ALT     = RGBc( 70,  70,  70);
-         BKG_COLOR_EXTRA   = RGBc( 14,  14,  14);
-         BKG_COLOR_TAPE    = RGBc( 50,  50,  50);
-         BKG_COLOR_SEL     = RGBc(140, 140, 140);
-         BKG_COLOR_ACTIVE  = RGBc( 16,  16,  16);
-         FONT_COLOR_NORMAL = COLOR_WHITE;
-         FONT_COLOR_SEL    = COLOR_BLACK;
+         BKG_COLOR_NORMAL  = (pix_bytes == 4) ? COLOR_32_32 : COLOR_32_16;
+         BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_64_32 : COLOR_64_16;
+         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_10_32 : COLOR_10_16;
+         BKG_COLOR_TAPE    = (pix_bytes == 4) ? COLOR_40_32 : COLOR_40_16;
+         BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_140_32 : COLOR_140_16;
+         BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_16_32 : COLOR_16_16;
+         FONT_COLOR_NORMAL = (pix_bytes == 4) ? COLOR_WHITE_32 : COLOR_WHITE_16;
+         FONT_COLOR_SEL    = (pix_bytes == 4) ? COLOR_BLACK_32 : COLOR_BLACK_16;
          break;
       
       case 4: /* Light */
-         BKG_COLOR_NORMAL  = RGBc(200, 204, 206);
-         BKG_COLOR_ALT     = RGBc(160, 160, 160);
-         BKG_COLOR_EXTRA   = RGBc(132, 132, 132);
-         BKG_COLOR_TAPE    = RGBc(180, 180, 180);
-         BKG_COLOR_SEL     = RGBc( 40,  40,  40);
-         BKG_COLOR_ACTIVE  = RGBc(250, 250, 250);
-         FONT_COLOR_NORMAL = COLOR_BLACK;
-         FONT_COLOR_SEL    = COLOR_WHITE;
+         BKG_COLOR_NORMAL  = (pix_bytes == 4) ? COLOR_200_32 : COLOR_200_16;
+         BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_160_32 : COLOR_160_16;
+         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_132_32 : COLOR_132_16;
+         BKG_COLOR_TAPE    = (pix_bytes == 4) ? COLOR_180_32 : COLOR_180_16;
+         BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_40_32 : COLOR_40_16;
+         BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_250_32 : COLOR_250_16;
+         FONT_COLOR_NORMAL = (pix_bytes == 4) ? COLOR_BLACK_32 : COLOR_BLACK_16;
+         FONT_COLOR_SEL    = (pix_bytes == 4) ? COLOR_WHITE_32 : COLOR_WHITE_16;
          break;
    }
-
-   int BKG_PADDING_X_DEFAULT = -3;
-   int BKG_PADDING_Y_DEFAULT = -3;
 
 #if defined(__XVIC__)
    XOFFSET  = 4;
@@ -398,9 +396,3 @@ void print_vkbd(void)
 #endif
 }
 
-int check_vkey(int x, int y)
-{
-   /* Check which key is pressed */
-   int page = 0;
-   return vkeys[(y * VKBDX) + x + page].value;
-}

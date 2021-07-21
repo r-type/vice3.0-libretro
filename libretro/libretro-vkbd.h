@@ -2,7 +2,6 @@
 #define LIBRETRO_VKBD_H
 
 extern void print_vkbd(void);
-extern int check_vkey(int x, int y);
 
 typedef struct
 {

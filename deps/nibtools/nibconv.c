@@ -43,15 +43,18 @@ int capacity_margin;
 int align_delay;
 int increase_sync = 0;
 int presync = 0;
-BYTE fillbyte = 0x55;
+BYTE fillbyte = 0xfe;
 BYTE drive = 8;
 char * cbm_adapter = "";
 int use_floppycode_srq = 0;
+int override_srq = 0;
 int extra_capacity_margin=5;
 int sync_align_buffer=0;
 int fattrack=0;
 int track_match=0;
 int old_g64=0;
+int read_killer=1;
+int backwards=0;
 
 int ARCH_MAINDECL
 main(int argc, char **argv)
@@ -71,18 +74,18 @@ main(int argc, char **argv)
 	force_align = ALIGN_NONE;
 	gap_match_length = 7;
 	cap_min_ignore = 0;
-	verbose = 1;
-	rpm_real = 296;
+	verbose = 0;
+	rpm_real = 295;
 
 	/* default is to reduce sync */
-	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541 + 2);
-	//memset(track_length, 0, MAX_TRACKS_1541 + 2);
-	for(t=0; t<MAX_TRACKS_1541 + 2; t++)
+	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541+1);
+	//memset(track_length, 0, MAX_TRACKS_1541+1);
+	for(t=0; t<MAX_TRACKS_1541+1; t++)
 		track_length[t] = NIB_TRACK_LENGTH; // I do not recall why this was done, but left at MAX
 
 	fprintf(stdout,
 		"\nnibconv - converts a CBM disk image from one format to another.\n"
-		AUTHOR "Revision %d - " VERSION "\n\n", SVN);
+		AUTHOR VERSION "\n\n");
 
 	/* clear heap buffers */
 	memset(compressed_buffer, 0x00, sizeof(compressed_buffer));
@@ -123,7 +126,7 @@ main(int argc, char **argv)
 	if (compare_extension(inname, "D64"))
 	{
 		if(!(read_d64(inname, track_buffer, track_density, track_length))) exit(0);
-		skip_halftracks=1;
+		//skip_halftracks=1;
 	}
 	else if (compare_extension(inname, "G64"))
 	{
@@ -181,35 +184,29 @@ main(int argc, char **argv)
 			printf("trying to use needs this information (such as for protection),\nit may still fail.\n");
 		}
 	}
-	else if (compare_extension(outname, "NBZ"))
+	else if ((compare_extension(outname, "NBZ"))||(compare_extension(outname, "NIB")))
 	{
-		/*
-		if( (compare_extension(inname, "D64")) ||
-			(compare_extension(inname, "G64")) ||
-			(compare_extension(inname, "NBZ")))
-		{
-			printf("Output format makes no sense from this input file.\n");
-			exit(0);
-		}
-		*/
-		if(skip_halftracks) track_inc = 2;
-		if(!(file_buffer_size = write_nib(file_buffer, track_buffer, track_density, track_length))) exit(0);
-		if(!(file_buffer_size = LZ_CompressFast(file_buffer, compressed_buffer, file_buffer_size))) exit(0);
-		if(!(save_file(outname, compressed_buffer, file_buffer_size))) exit(0);
-	}
-	else if (compare_extension(outname, "NIB"))
-	{
-		/*
+		if(skip_halftracks) track_inc = 1;
+		else track_inc = 2; /* yes, I know it's reversed */
+
+		/* handle cases of making NIB from other formats for testing */
 		if( (compare_extension(inname, "D64")) ||
 			(compare_extension(inname, "G64")))
 		{
-			printf("Output format makes no sense from this input file.\n");
-			exit(0);
+			rig_tracks(track_buffer, track_density, track_length, track_alignment);
 		}
-		*/
-		if(skip_halftracks) track_inc = 2;
+
 		if(!(file_buffer_size = write_nib(file_buffer, track_buffer, track_density, track_length))) exit(0);
-		if(!(save_file(outname, file_buffer, file_buffer_size))) exit(0);
+
+		if (compare_extension(outname, "NBZ"))
+		{
+			if(!(file_buffer_size = LZ_CompressFast(file_buffer, compressed_buffer, file_buffer_size))) exit(0);
+			if(!(save_file(outname, compressed_buffer, file_buffer_size))) exit(0);
+		}
+		else
+		{
+			if(!(save_file(outname, file_buffer, file_buffer_size))) exit(0);
+		}
 	}
 	else if (compare_extension(outname, "NB2"))
 	{
@@ -228,7 +225,7 @@ main(int argc, char **argv)
 void
 usage(void)
 {
-	fprintf(stderr,
+	printf(
 	"usage: nibconv [options] <infile>.ext1 <outfile>.ext2\n"
 	"\nsupported file extensions for ext1:\n"
 	"NIB, NB2, D64, G64\n"

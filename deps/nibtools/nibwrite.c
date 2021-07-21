@@ -14,6 +14,7 @@
 #include "mnibarch.h"
 #include "gcr.h"
 #include "nibtools.h"
+#include "prot.h"
 #include "lz.h"
 
 int _dowildcard = 1;
@@ -34,10 +35,10 @@ int start_track, end_track, track_inc;
 int reduce_sync;
 int fix_gcr, aggressive_gcr;
 int align;
-unsigned int lpt[4];
-int lpt_num;
+extern unsigned int lpt[4];
+extern int lpt_num;
+extern unsigned int floppybytes;
 int drivetype;
-unsigned int floppybytes;
 int imagetype;
 int mode;
 int verify;
@@ -54,7 +55,7 @@ int unformat_passes;
 int align_delay;
 int increase_sync = 0;
 int presync = 0;
-BYTE fillbyte = 0x55;
+BYTE fillbyte = 0xfe;
 BYTE drive = 8;
 char * cbm_adapter = "";
 int use_floppycode_srq = 0;
@@ -64,6 +65,9 @@ int sync_align_buffer=0;
 int fattrack=0;
 int track_match=0;
 int old_g64=0;
+int read_killer=1;
+int extended_parallel_test=0;
+int backwards=0;
 
 CBM_FILE fd;
 FILE *fplog;
@@ -77,7 +81,7 @@ main(int argc, char *argv[])
 
 	fprintf(stdout,
 		"\nnibwrite - Commodore 1541/1571 disk image 'remastering' tool\n"
-		AUTHOR "Revision %d - " VERSION "\n\n", SVN);
+		AUTHOR VERSION "\n\n");
 
 	/* we can do nothing with no switches */
 	if (argc < 2)
@@ -102,7 +106,6 @@ main(int argc, char *argv[])
 	gap_match_length = 7;
 	cap_min_ignore = 0;
 	motor_speed = 300;
-	rpm_real = 296;
 	unformat_passes = 1;
 
 	mode = MODE_WRITE_DISK;
@@ -114,7 +117,7 @@ main(int argc, char *argv[])
 	memset(track_buffer, 0x00, sizeof(track_buffer));
 
 	/* default is to reduce sync */
-	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541+2);
+	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541+1);
 
 	/* cache our arguments for logfile generation */
 	strcpy(argcache, "");
@@ -211,6 +214,7 @@ int loadimage(char *filename)
 	{
 		if(!(read_g64(filename, track_buffer, track_density, track_length))) return 0;
 		if(sync_align_buffer)	sync_tracks(track_buffer, track_density, track_length, track_alignment);
+		search_fat_tracks(track_buffer, track_density, track_length);
 	}
 	else if (compare_extension(filename, "NBZ"))
 	{
@@ -219,17 +223,20 @@ int loadimage(char *filename)
 		if(!(file_buffer_size = LZ_Uncompress(compressed_buffer, file_buffer, file_buffer_size))) return 0;
 		if(!(read_nib(file_buffer, file_buffer_size, track_buffer, track_density, track_length))) return 0;
 		align_tracks(track_buffer, track_density, track_length, track_alignment);
+		search_fat_tracks(track_buffer, track_density, track_length);
 	}
 	else if (compare_extension(filename, "NIB"))
 	{
 		if(!(file_buffer_size = load_file(filename, file_buffer))) return 0;
 		if(!(read_nib(file_buffer, file_buffer_size, track_buffer, track_density, track_length))) return 0;
 		align_tracks(track_buffer, track_density, track_length, track_alignment);
+		search_fat_tracks(track_buffer, track_density, track_length);
 	}
 	else if (compare_extension(filename, "NB2"))
 	{
 		if(!(read_nb2(filename, track_buffer, track_density, track_length))) return 0;
 		align_tracks(track_buffer, track_density, track_length, track_alignment);
+		search_fat_tracks(track_buffer, track_density, track_length);
 	}
 	else
 	{
@@ -248,8 +255,11 @@ int writeimage(CBM_FILE fd)
 	if(auto_capacity_adjust)
 		adjust_target(fd);
 
-	if(align_disk)
-		init_aligned_disk(fd);
+	if((fattrack)&&(fattrack!=99))
+		unformat_disk(fd);
+
+	//if(align_disk)
+	//	init_aligned_disk(fd);
 
 	if(mode == MODE_WRITE_RAW)
 		master_disk_raw(fd, track_buffer, track_density, track_length);
@@ -265,14 +275,13 @@ int writeimage(CBM_FILE fd)
 void
 usage(void)
 {
-	fprintf(stderr, "usage: nibwrite [options] <filename>\n\n"
+	printf("usage: nibwrite [options] <filename>\n\n"
 		 " -@x: Use OpenCBM device 'x' (xa1541, xum1541:0, xum1541:1, etc.)\n"
 	     " -D[n]: Use drive #[n]\n"
 	     " -S[n]: Override starting track\n"
 	     " -E[n]: Override ending track\n"
-//	     " -s[n]: Manual track skew (in ms)\n"
 		 " -m[n]: Change extra capacity margin to [n] (default: 0)\n"
-		 " -s: Use SRQ transfer code instead of parallel (1571 only)\n"
+		 " -P: Use parallel instead of SRQ on 1571\n"
 	     " -t: Enable timer-based track alignment\n"
 	     " -c: Disable automatic capacity adjustment\n"
 	     " -u: Unformat disk. (writes all 0 bits to surface)\n"

@@ -59,7 +59,7 @@ int align_delay;
 int align_report;
 int increase_sync = 0;
 int presync = 0;
-BYTE fillbyte = 0x55;
+BYTE fillbyte = 0xfe;
 BYTE drive = 8;
 char * cbm_adapter = "";
 int use_floppycode_srq = 0;
@@ -68,6 +68,7 @@ int extra_capacity_margin=5;
 int sync_align_buffer=0;
 int fattrack=0;
 int old_g64=0;
+int backwards=0;
 
 BYTE density_map;
 float motor_speed;
@@ -79,13 +80,14 @@ int ARCH_MAINDECL
 main(int argc, char *argv[])
 {
 	int bump, reset, i;
+	double st, et;
 	char filename[256], logfilename[256], *dotpos;
 	char argcache[256];
 	FILE *fp;
 
-	fprintf(stdout,
+	printf(
 		"\nnibread - Commodore 1541/1571 disk image nibbler\n"
-		AUTHOR "Revision %d - " VERSION "\n\n", SVN);
+		AUTHOR VERSION "\n\n");
 
 	/* we can do nothing with no switches */
 	if (argc < 2)
@@ -124,7 +126,6 @@ main(int argc, char *argv[])
 	cap_min_ignore = 0;
 	ihs = 0;
 	mode = MODE_READ_DISK;
-	rpm_real = 296;
 	align_report = 0;
 
 	// cache our arguments for logfile generation
@@ -189,7 +190,7 @@ main(int argc, char *argv[])
 			printf("* Using halftracks\n");
 			break;
 
-		case 'i':
+		case 'i':  // this is not implemented in SRQ mode //
 			printf("* 1571 or SuperCard-compatible index hole sensor (use only for side 1)\n");
 			ihs = 1;
 			break;
@@ -208,7 +209,7 @@ main(int argc, char *argv[])
 			extended_parallel_test = atoi(&(*argv)[2]);
 			if(!extended_parallel_test)
 				extended_parallel_test = 100;
-			printf("* Extended parallel port test loops = %d\n", extended_parallel_test);
+			printf("* Extended port test loops = %d\n", extended_parallel_test);
 			break;
 
 		case 'I':
@@ -228,14 +229,16 @@ main(int argc, char *argv[])
 
 		case 'S':
 			if (!(*argv)[2]) usage();
-			start_track = (BYTE) (2*(atoi(&(*argv)[2])));
-			printf("* Start track set to %d\n", start_track/2);
+			st = atof(&(*argv)[2])*2;
+			start_track = (int)st;
+			printf("* Start track set to %.1f (%d)\n", st/2, start_track);
 			break;
 
 		case 'E':
 			if (!(*argv)[2]) usage();
-			end_track =  (BYTE) (2*(atoi(&(*argv)[2])));
-			printf("* End track set to %d\n", end_track/2);
+			et = atof(&(*argv)[2])*2;
+			end_track = (int)et;
+			printf("* End track set to %.1f (%d)\n", et/2, end_track);
 			break;
 
 		case 'D':
@@ -334,7 +337,7 @@ main(int argc, char *argv[])
 
 	if ((fplog = fopen(logfilename, "wb")) == NULL)
 	{
-		fprintf(stderr, "Couldn't create log file %s!\n", logfilename);
+		printf("Couldn't create log file %s!\n", logfilename);
 		exit(2);
 	}
 
@@ -499,14 +502,14 @@ int disk2file(CBM_FILE fd, char *filename)
 void
 usage(void)
 {
-	fprintf(stderr, "usage: nibread [options] <filename>\n\n"
+	printf("usage: nibread [options] <filename>\n\n"
 		 " -@x: Use OpenCBM device 'x' (xa1541, xum1541:0, xum1541:1, etc.)\n"
 	     " -D[n]: Use drive #[n]\n"
 	     " -e[n]: Retry reading tracks with errors [n] times\n"
 	     " -S[n]: Override starting track\n"
 	     " -E[n]: Override ending track\n"
 	     " -G[n]: Match track gap by [n] number of bytes (advanced users only)\n"
-	     " -s: Use SRQ transfer code instead of parallel (1571 only)\n"
+	     " -P: Use parallel transfer instead of SRQ (1571 only)\n"
 	     " -k: Disable reading of 'killer' tracks\n"
 	     " -d: Force default densities\n"
 	     " -v: Enable track matching (crude read verify)\n"

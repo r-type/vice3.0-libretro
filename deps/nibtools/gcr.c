@@ -34,13 +34,24 @@ BYTE sector_map[MAX_TRACKS_1541 + 1] = {
 	17, 17, 17, 17, 17, 17, 17				/* 36 - 42 (non-standard) */
 };
 
+// 7, 17, 12, 8
+BYTE sector_gap_length[MAX_TRACKS_1541 + 1] = {
+	0,
+	10, 10, 10, 10, 10, 10, 10, 10, 10, 10,	/*  1 - 10 */
+	10, 10, 10, 10, 10, 10, 10, 17, 17, 17,	/* 11 - 20 */
+	17, 17, 17, 17, 11, 11, 11, 11, 11, 11,	/* 21 - 30 */
+	8, 8, 8, 8, 8,						/* 31 - 35 */
+	8, 8, 8, 8, 8, 8, 8				/* 36 - 42 (non-standard) */
+};
+
+
 BYTE speed_map[MAX_TRACKS_1541 + 1] = {
 	0,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,	/*  1 - 10 */
 	3, 3, 3, 3, 3, 3, 3, 2, 2, 2,	/* 11 - 20 */
 	2, 2, 2, 2, 1, 1, 1, 1, 1, 1,	/* 21 - 30 */
 	0, 0, 0, 0, 0,					/* 31 - 35 */
-	2, 2, 2, 2, 2, 2, 2				/* 36 - 42 (non-standard) */
+	0, 0, 0, 0, 0, 0, 0				/* 36 - 42 (non-standard) */
 };
 
 BYTE align_map[MAX_TRACKS_1541 + 1] = {
@@ -238,6 +249,9 @@ extract_id(BYTE * gcr_track, BYTE * id)
 		convert_4bytes_from_GCR(gcr_ptr, header);
 		convert_4bytes_from_GCR(gcr_ptr + 5, header + 4);
 
+		if (header[0] == 0x08 && header[2] == 0)
+		   id[0] = header[3];
+
 	} while (header[0] != 0x08 || header[2] != sector || header[3] != track);
 
 	id[0] = header[5];
@@ -273,6 +287,7 @@ convert_GCR_sector(BYTE *gcr_start, BYTE *gcr_cycle, BYTE *d64_sector, int track
  	// we should later try to repair some common GCR errors
  	//	1) tri-bit error, in which 01110 is misinterpreted as 01000
 	// 2) low frequency error, in which 10010 is misinterpreted as 11000
+
 	BYTE header[10];        /* block header */
 	BYTE hdr_chksum;        /* header checksum */
 	BYTE blk_chksum;        /* block  checksum */
@@ -378,7 +393,10 @@ convert_GCR_sector(BYTE *gcr_start, BYTE *gcr_cycle, BYTE *d64_sector, int track
 
 	/* check for Block header mark */
 	if (d64_sector[0] != 0x07)
+	{
 		error_code = (error_code == SECTOR_OK) ? DATA_NOT_FOUND : error_code;
+		if(verbose>3) printf("\nIncorrect Block Header: 0x%.2x != 0x07\n", d64_sector[0]);
+	}
 
 	/* Block checksum calc */
 	for (i = 1, blk_chksum = 0; i <= 256; i++)
@@ -404,7 +422,7 @@ convert_sector_to_GCR(BYTE * buffer, BYTE * ptr, int track, int sector, BYTE * d
 	BYTE tempID[3];
 
 	memcpy(tempID, diskID, 3);
-	memset(ptr, 0x55, SECTOR_SIZE);	/* 'unformat' GCR sector */
+	memset(ptr, 0x55, SECTOR_SIZE + sector_gap_length[track]);	/* 'unformat' GCR sector */
 
 	if (error == SYNC_NOT_FOUND)
 		return;
@@ -470,8 +488,10 @@ convert_sector_to_GCR(BYTE * buffer, BYTE * ptr, int track, int sector, BYTE * d
 		ptr += 5;
 	}
 
-	memset(ptr, 0x55, SECTOR_GAP_LENGTH);	 /* tail gap*/
-	ptr += SECTOR_GAP_LENGTH;
+	memset(ptr, 0x55, sector_gap_length[track]);	 /* tail gap*/
+	ptr += sector_gap_length[track];
+	//memset(ptr, 0x55, SECTOR_GAP_LENGTH);	 /* tail gap*/
+	//ptr += SECTOR_GAP_LENGTH;
 }
 
 size_t
@@ -698,8 +718,10 @@ find_sector0(BYTE * work_buffer, size_t tracklen, size_t * p_sectorlen)
 	while (pos >= work_buffer + tracklen)
 		pos -= tracklen;
 
-	/*return pos - 1;  // go to  last byte that contains first few bits of sync */
-	return pos; // go to first full byte of sync
+	if(*(pos-1)&1)
+		return pos - 1;  // go to  last byte that contains first few bits of sync
+	else
+		return pos; // return at first full byte of sync
 }
 
 BYTE *
@@ -756,8 +778,10 @@ find_sector_gap(BYTE * work_buffer, size_t tracklen, size_t * p_sectorlen)
 	while (pos >= work_buffer + tracklen)
 		pos -= tracklen;
 
-	/*return pos - 1;  // go to  last byte that contains first few bits of sync*/
-	return pos; // return at first full byte of sync
+	if(*(pos-1)&1)
+		return pos - 1;  // go to  last byte that contains first few bits of sync
+	else
+		return pos; // return at first full byte of sync
 }
 
 /* checks if there is any reasonable section of formatted (GCR) data */
@@ -1058,41 +1082,92 @@ aligned:
 }
 
 size_t
-lengthen_sync(BYTE * buffer, size_t length, size_t length_max)
+lengthen_sync(BYTE *buffer, size_t length, size_t length_max)
 {
-	size_t added;
-	BYTE *source, *newp, *end;
-	BYTE newbuf[NIB_TRACK_LENGTH];
+        size_t added;
+        BYTE *source, *newp, *end;
+        BYTE newbuf[NIB_TRACK_LENGTH];
 
-	added = 0;
-	end = buffer + length;
-	source = buffer;
-	newp = newbuf;
+        added = 0;
+        end = buffer + length - 1;
+        source = buffer;
+        newp = newbuf;
 
-	if (length >= length_max)
-		return 0;
+        if (length >= length_max)
+                return 0;
 
-	/* wrap alignment */
-	if( ((*(end-1) & 0x01) == 0x01) && (*source == 0xff) && (*(source+1) != 0xff) )
+        /* wrap alignment */
+        //if( ((*(end-1) & 0x01) == 0x01) && (*source == 0xff) && (*(source+1) != 0xff) )
+        //{
+        //        *(newp++) = 0xff;
+        //        added++;
+        //}
+        //*(newp++) = *(source++);
+
+        do
+        {
+				//if(((*(source-1)&0x01)==0x01)&&(*source==0xff)&&(*(source+1)!= 0xff)&&(length+added<=length_max))
+                if((*source==0xff)&&(*(source+1)!= 0xff))
+                {
+                        *(newp++) = 0xff;
+                        added++;
+                }
+                *(newp++) = *(source++);
+
+        } while (source <= end);
+
+        memcpy(buffer, newbuf, length+added);
+        return added;
+}
+
+
+size_t
+kill_partial_sync(BYTE * gcrdata, size_t length, size_t length_max)
+{
+	size_t sync_cnt = 0;
+	size_t sync_len[1000];
+	size_t sync_pos[1000];
+	BYTE sync_pre[1000];
+	BYTE sync_pre2[1000];
+	size_t i, locked, total=0;
+
+	memset(sync_len, 0, sizeof(sync_len));
+	memset(sync_pos, 0, sizeof(sync_pos));
+	memset(sync_pre, 0, sizeof(sync_pre));
+	memset(sync_pre2, 0, sizeof(sync_pre2));
+
+	// count syncs/lengths
+	for (locked=0, i=0; i<length-1; i++)
 	{
-		*(newp++) = 0xff;
-		added++;
-	}
-	*(newp++) = *(source++);
-
-	do
-	{
-		if ( ((*(source-1) & 0x01) == 0x01) && (*source == 0xff) && (*(source+1) != 0xff) /*&& (length+added <= length_max)*/ )
+		if (locked)
 		{
-			*(newp++) = 0xff;
-			added++;
+			if (gcrdata[i] == 0xff)
+				sync_len[sync_cnt]++;
+			else
+				locked = 0; // end of sync
 		}
-		*(newp++) = *(source++);
+		//else if (gcrdata[i] == 0xff) // not full sync, only last 8 bits
+		else if(((gcrdata[i] & 0x01) == 0x01) && (gcrdata[i+1] == 0xff)) // 10 bits
+		{
+			locked = 1;
+			sync_cnt++;
+			sync_len[sync_cnt] = 1;
+			sync_pos[sync_cnt] = i;
+			sync_pre[sync_cnt] = gcrdata[i];
+			sync_pre2[sync_cnt] = gcrdata[i-1];
+		}
 
-	} while (source <= (end-1));
+	}
 
-	memcpy(buffer, newbuf, length+added);
-	return added;
+	if(verbose>1) printf("\nSYNCS:%d\n", sync_cnt);
+	for (i=1; i<=sync_cnt; i++)
+	{
+		if(verbose>1) printf("(%d,%d,%x%x)\n", sync_pos[i], sync_len[i], sync_pre2[i], sync_pre[i]);
+
+		gcrdata[sync_pos[i]] = sync_pre2[i];
+	}
+
+	return 0;
 }
 
 /*
@@ -1495,7 +1570,7 @@ compare_sectors(BYTE * track1, BYTE * track2, size_t length1, size_t length2, BY
 					}
 				}
 
-				getchar();
+				//getchar();
 			}
 		}
 		strcat(outputstring, tmpstr);

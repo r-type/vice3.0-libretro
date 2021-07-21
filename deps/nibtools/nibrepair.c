@@ -51,7 +51,7 @@ int capacity_margin;
 int align_delay;
 int increase_sync = 0;
 int presync = 0;
-BYTE fillbyte = 0x55;
+BYTE fillbyte = 0xfe;
 BYTE drive = 8;
 char * cbm_adapter = "";
 int use_floppycode_srq = 0;
@@ -61,6 +61,8 @@ int sync_align_buffer=0;
 int fattrack=0;
 int track_match=0;
 int old_g64=0;
+int read_killer=1;
+int backwards=0;
 
 /* local prototypes */
 int repair(void);
@@ -84,11 +86,10 @@ main(int argc, char **argv)
 	force_align = ALIGN_NONE;
 	gap_match_length = 7;
 	cap_min_ignore = 0;
-	rpm_real = 296;
 
 	fprintf(stdout,
 		"\nnibrepair - converts a damaged NIB/NB2/G64 to a new 'repaired' G64 file.\n"
-		AUTHOR "Revision %d - " VERSION "\n\n", SVN);
+		AUTHOR VERSION "\n\n");
 
 	/* clear heap buffers */
 	memset(compressed_buffer, 0x00, sizeof(compressed_buffer));
@@ -96,7 +97,7 @@ main(int argc, char **argv)
 	memset(track_buffer, 0x00, sizeof(track_buffer));
 
 	/* default is to reduce sync */
-	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541+2);
+	memset(reduce_map, REDUCE_SYNC, MAX_TRACKS_1541+1);
 
 	while (--argc && (*(++argv)[0] == '-'))
 		parseargs(argv);
@@ -166,7 +167,7 @@ int repair(void)
 	/* get disk id */
 	if (!extract_id(track_buffer + (18 * 2 * NIB_TRACK_LENGTH), id))
 	{
-		fprintf(stderr, "Cannot find directory sector.\n");
+		printf("Cannot find directory sector.\n");
 		return 0;
 	}
 
@@ -408,7 +409,7 @@ BYTE repair_GCR_sector(BYTE *gcr_start, BYTE *gcr_cycle, int track, int sector, 
 void
 usage(void)
 {
-	fprintf(stderr, "usage: nibrepair [options] <filename>\n\n");
+	printf("usage: nibrepair [options] <filename>\n\n");
 	switchusage();
 	exit(1);
 }

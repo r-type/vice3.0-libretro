@@ -14,12 +14,8 @@
 
 */
 
-#if !defined(BYTE)
 #define BYTE unsigned char
-#endif
-#if !defined(DWORD)
 #define DWORD unsigned int
-#endif
 #define TRUE 1
 #define FALSE 0
 #define MAX_TRACKS_1541 42 /* tracks are referenced 1-42 instead of 0-41 */
@@ -37,10 +33,9 @@
 #define HEADER_LENGTH 	10
 #define HEADER_GAP_LENGTH 	9  // this must be 9 or 1541 will corrupt the sector if written
 #define DATA_LENGTH 	325 			// 65 * 5
-#define SECTOR_GAP_LENGTH 		8  // this varies by drive motor speed and sector from 4-19
+//#define SECTOR_GAP_LENGTH 		  // this varies by drive motor speed and sector from 4-19
 
-#define SECTOR_SIZE ((SYNC_LENGTH) + (HEADER_LENGTH) + (HEADER_GAP_LENGTH) + \
-											(SYNC_LENGTH) + (DATA_LENGTH) + (SECTOR_GAP_LENGTH))
+#define SECTOR_SIZE ((SYNC_LENGTH) + (HEADER_LENGTH) + (HEADER_GAP_LENGTH) + (SYNC_LENGTH) + (DATA_LENGTH))
 
 /* NIB format constants */
 #define NIB_TRACK_LENGTH 0x2000
@@ -77,10 +72,10 @@ get our numbers.
 speed zone divisors are 13, 14, 15, 16 for densities 3, 2, 1, 0 respectively
 */
 
-#define DENSITY3 2307692.308 // bytes per minute
-#define DENSITY2 2142857.143
-#define DENSITY1 2000000.000
-#define DENSITY0 1875000.000
+#define DENSITY3 2307692 // bytes per minute
+#define DENSITY2 2142857
+#define DENSITY1 2000000
+#define DENSITY0 1875000
 
 /* Some disks have much less data than we normally expect to be able to write at a given density.
 	It's like short tracks, but it's a mastering issue not a protection.
@@ -126,6 +121,7 @@ speed zone divisors are 13, 14, 15, 16 for densities 3, 2, 1, 0 respectively
 
 /* global variables */
 extern BYTE sector_map[];
+extern BYTE sector_gap_length[];
 extern BYTE speed_map[];
 extern BYTE align_map[];
 extern BYTE reduce_map[];
@@ -164,7 +160,8 @@ size_t compare_tracks(BYTE * track1, BYTE * track2, size_t length1, size_t  leng
 size_t compare_sectors(BYTE * track1, BYTE * track2, size_t length1, size_t length2, BYTE * id1, BYTE * id2, int track, char * outputstring);
 size_t strip_runs(BYTE * buffer, size_t length, size_t length_max, size_t minrun, BYTE target);
 size_t reduce_runs(BYTE * buffer, size_t length, size_t length_max, size_t minrun, BYTE target);
-size_t lengthen_sync(BYTE * buffer, size_t length, size_t length_max);
+size_t lengthen_sync(BYTE * buffer, size_t length, size_t length_max);\
+size_t kill_partial_sync(BYTE * gcrdata, size_t length, size_t length_max);
 size_t strip_gaps(BYTE * buffer, size_t length);
 size_t reduce_gaps(BYTE * buffer, size_t length, size_t length_max);
 size_t is_bad_gcr(BYTE * gcrdata, size_t length, size_t pos);

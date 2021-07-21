@@ -5,11 +5,7 @@
  */
 
 #define VERSION "Built "__DATE__" "__TIME__
-#define AUTHOR "(C) Peter Rittwage and the rest of the C64 Preservation Project team\nhttp://c64preservation.com\n"
-
-#ifndef SVN
-#define SVN 2014
-#endif
+#define AUTHOR "(C) Peter Rittwage\nhttp://c64preservation.com\n"
 
 #define FL_STEPTO      			0x00
 #define FL_MOTOR       		0x01
@@ -109,6 +105,7 @@ extern int extra_capacity_margin;
 extern int sync_align_buffer;
 extern int fattrack;
 extern int old_g64;
+extern int backwards;
 
 #include "ihs.h"
 
@@ -137,6 +134,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 int write_d64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *track_length);
 size_t compress_halftrack(int halftrack, BYTE *track_buffer, BYTE track_density, size_t track_length);
 int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, BYTE *track_alignment);
+int rig_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, BYTE *track_alignment);
 int sync_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, BYTE *track_alignment);
 #ifdef __LIBRETRO__
 int write_dword(FILE * fd, unsigned int * buf, int num);
@@ -163,12 +161,11 @@ void master_disk_raw(CBM_FILE fd, BYTE *track_buffer, BYTE *track_density, size_
 void prep_track(CBM_FILE fd, BYTE *track_buffer, BYTE *track_density, int track, size_t tracklen);
 void write_raw(CBM_FILE fd, BYTE *track_buffer, BYTE *track_density, size_t *track_length);
 void unformat_disk(CBM_FILE fd);
-void zero_track(CBM_FILE fd, int track);
+void fill_track(CBM_FILE fd, int track, BYTE fill);
 unsigned int track_capacity(CBM_FILE fd);
 void init_aligned_disk(CBM_FILE fd);
 void adjust_target(CBM_FILE fd);
 void speed_adjust(CBM_FILE fd);
-void kill_track(CBM_FILE fd, int track);
 
 /* drive.c  */
 int compare_extension(unsigned char * filename, unsigned char * extension);

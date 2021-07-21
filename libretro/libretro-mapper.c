@@ -129,14 +129,14 @@ int retro_ui_get_pointer_state(int *px, int *py, unsigned int *pbuttons)
       unsigned pointer_color = 0;
       switch (opt_joyport_pointer_color)
       {
-         case 0: pointer_color = RGB(  0,   0,   0); break; /* Black */
-         case 1: pointer_color = RGB(255, 255, 255); break; /* White */
-         case 2: pointer_color = RGB(255,   0,   0); break; /* Red */
-         case 3: pointer_color = RGB(  0, 255,   0); break; /* Green */
-         case 4: pointer_color = RGB(  0,   0, 255); break; /* Blue */
-         case 5: pointer_color = RGB(255, 255,   0); break; /* Yellow */
-         case 6: pointer_color = RGB(  0, 255, 255); break; /* Cyan */
-         case 7: pointer_color = RGB(255,   0, 255); break; /* Purple */
+         case 0: pointer_color = RGBc(  0,   0,   0); break; /* Black */
+         case 1: pointer_color = RGBc(255, 255, 255); break; /* White */
+         case 2: pointer_color = RGBc(255,   0,   0); break; /* Red */
+         case 3: pointer_color = RGBc(  0, 255,   0); break; /* Green */
+         case 4: pointer_color = RGBc(  0,   0, 255); break; /* Blue */
+         case 5: pointer_color = RGBc(255, 255,   0); break; /* Yellow */
+         case 6: pointer_color = RGBc(  0, 255, 255); break; /* Cyan */
+         case 7: pointer_color = RGBc(255,   0, 255); break; /* Purple */
       }
 
       draw_hline(*px - 2, *py, 2, 1, pointer_color);

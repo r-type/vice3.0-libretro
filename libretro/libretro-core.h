@@ -158,30 +158,6 @@ extern unsigned short int pix_bytes;
    }
 
 
-/* VKBD */
-#define VKBDX 11
-#define VKBDY 7
-
-#if 0
-#define POINTER_DEBUG
-#endif
-#ifdef POINTER_DEBUG
-extern int pointer_x;
-extern int pointer_y;
-#endif
-
-extern int vkey_pos_x;
-extern int vkey_pos_y;
-extern int vkey_pressed;
-extern int vkey_sticky;
-extern int vkey_sticky1;
-extern int vkey_sticky2;
-
-extern int vkbd_x_min;
-extern int vkbd_x_max;
-extern int vkbd_y_min;
-extern int vkbd_y_max;
-
 /* Statusbar */
 #define STATUSBAR_BOTTOM  0x01
 #define STATUSBAR_TOP     0x02
@@ -225,6 +201,27 @@ extern long retro_ticks(void);
 extern void reload_restart(void);
 extern void emu_reset(int type);
 extern int RGBc(int r, int g, int b);
+
+extern void emu_function(int function);
+enum EMU_FUNCTIONS
+{
+   EMU_VKBD = 0,
+   EMU_STATUSBAR,
+   EMU_JOYPORT,
+   EMU_RESET,
+   EMU_SAVE_DISK,
+   EMU_ASPECT_RATIO,
+   EMU_ZOOM_MODE,
+   EMU_TURBO_FIRE,
+   EMU_WARP_MODE,
+   EMU_DATASETTE_HOTKEYS,
+   EMU_DATASETTE_STOP,
+   EMU_DATASETTE_START,
+   EMU_DATASETTE_FORWARD,
+   EMU_DATASETTE_REWIND,
+   EMU_DATASETTE_RESET,
+   EMU_FUNCTION_COUNT
+};
 
 /* VICE options */
 struct vice_core_options

@@ -185,8 +185,6 @@ const char *cartridge_get_file_name(int type) { return NULL; }
 extern int cart_getid_slotmain(void);
 #endif
 
-retro_input_state_t input_state_cb = NULL;
-retro_input_poll_t input_poll_cb = NULL;
 retro_log_printf_t log_cb = NULL;
 static retro_set_led_state_t led_state_cb = NULL;
 static retro_video_refresh_t video_cb = NULL;

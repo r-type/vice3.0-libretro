@@ -1177,7 +1177,7 @@ void retro_poll_event()
    /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
    /* keyup allowing most likely not needed on actual keyboard presses even though they get stuck also */
    int retro_port;
-   for (retro_port = 0; retro_port <= 4; retro_port++)
+   for (retro_port = 0; retro_port <= 3; retro_port++)
    {
       if (retro_devices[retro_port] == RETRO_DEVICE_VICE_JOYSTICK || retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
       {
@@ -1190,8 +1190,6 @@ void retro_poll_event()
             vice_port = 3;
          else if (retro_port == 3)
             vice_port = 4;
-         else if (retro_port == 4)
-            vice_port = 5;
 
          /* No same port joystick movements with non-joysticks */
          if (opt_joyport_type > 1 && vice_port == cur_port)

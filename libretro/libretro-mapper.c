@@ -49,7 +49,7 @@ static void retro_mouse_move(int x, int y)
 /* Core flags */
 int mapper_keys[RETRO_MAPPER_LAST] = {0};
 int retro_capslock = false;
-static int mapper_flag[3][128] = {0};
+static int mapper_flag[RETRO_DEVICES][128] = {0};
 extern int vkflag[10];
 
 unsigned int cur_port = 2;

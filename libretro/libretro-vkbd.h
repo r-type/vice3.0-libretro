@@ -1,8 +1,16 @@
 #ifndef LIBRETRO_VKBD_H
 #define LIBRETRO_VKBD_H
 
-extern void print_vkbd(void);
-extern int check_vkey(int x, int y);
+#define VKBDX 11
+#define VKBDY 7
+
+#if 0
+#define POINTER_DEBUG
+#endif
+#ifdef POINTER_DEBUG
+extern int pointer_x;
+extern int pointer_y;
+#endif
 
 typedef struct
 {

@@ -56,9 +56,14 @@
 #define JOYPAD_FIRE2                    0x20
 #define JOYPAD_FIRE3                    0x40
 
+extern int16_t joypad_bits[RETRO_DEVICES];
 extern int mapper_keys[RETRO_MAPPER_LAST];
 extern void retro_poll_event();
 extern void retro_keyboard_event(bool, unsigned, uint32_t, uint16_t);
+
+extern void retro_key_up(int);
+extern void retro_key_down(int);
+extern unsigned int retro_devices[RETRO_DEVICES];
 
 typedef struct
 {

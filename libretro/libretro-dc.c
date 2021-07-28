@@ -111,6 +111,7 @@ static char* get_label(const char* filename)
    int i;
 
    label[0] = '\0';
+
    /* Disk image which we can read name from */
    if (strendswith(filename, "d64") || strendswith(filename, "d71"))
    {
@@ -240,29 +241,6 @@ static char* get_label(const char* filename)
    return strdup((char*)label);
 }
 
-/* Search for image file relative to M3U
- * Allocates returned string */
-static char* m3u_search_file(const char* basedir, const char* filename)
-{
-   /* Verify if this item is an absolute pathname (or the file is in working dir) */
-   if (path_is_valid(filename))
-      return strdup(filename);
-
-   /* If basedir was provided and path is relative, search relative to M3U file location */
-   else if (basedir != NULL && !path_is_absolute(filename))
-   {
-      char filepath[RETRO_PATH_MAX] = {0};
-      path_join(filepath, basedir, filename);
-
-      /* Verify if this item is a relative filename */
-      if (path_is_valid(filepath))
-         return strdup(filepath);
-   }
-
-   /* File not found */
-   return NULL;
-}
-
 void dc_reset(dc_storage* dc)
 {
    /* Verify */
@@ -320,7 +298,7 @@ dc_storage* dc_create(void)
    return dc;
 }
 
-bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* disk_label, char* program)
+bool dc_add_file_int(dc_storage* dc, const char* filename, const char* label, const char* disk_label, const char* program)
 {
    /* Verify */
    if (dc == NULL)
@@ -334,25 +312,12 @@ bool dc_add_file_int(dc_storage* dc, char* filename, char* label, char* disk_lab
    {
       /* Add the file */
       dc->count++;
-      dc->files[dc->count-1]       = filename;
-      dc->labels[dc->count-1]      = label;
-      dc->disk_labels[dc->count-1] = disk_label;
-      dc->load[dc->count-1]        = (!string_is_empty(program)) ? program : NULL;
+      dc->files[dc->count-1]       = strdup(filename);
+      dc->labels[dc->count-1]      = !string_is_empty(label) ? strdup(label) : NULL;
+      dc->disk_labels[dc->count-1] = !string_is_empty(disk_label) ? strdup(disk_label) : NULL;
+      dc->load[dc->count-1]        = !string_is_empty(program) ? strdup(program) : NULL;
       dc->types[dc->count-1]       = dc_get_image_type(filename);
       return true;
-   }
-
-   /* Determine if tape or disk fliplist from first entry */
-   if (dc->unit != -1 && !string_is_empty(dc->files[0]))
-   {
-      if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_TAPE)
-         dc->unit = 1;
-      else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_FLOPPY)
-         dc->unit = 8;
-      else if (dc_get_image_type(dc->files[0]) == DC_IMAGE_TYPE_MEM)
-         dc->unit = 0;
-      else
-         dc->unit = 8;
    }
 
    return false;
@@ -386,10 +351,7 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
       fill_short_pathname_representation(file_label, filename, sizeof(file_label));
 
    /* Copy and return */
-   return dc_add_file_int(dc, strdup(filename),
-      string_is_empty(file_label) ? NULL : strdup(file_label),
-      string_is_empty(disk_label) ? NULL : strdup(disk_label),
-      string_is_empty(program)    ? NULL : strdup(program));
+   return dc_add_file_int(dc, filename, file_label, disk_label, program);
 }
 
 bool dc_remove_file(dc_storage* dc, int index)
@@ -457,7 +419,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
       dc->replace = false;
 
       char full_path_replace[RETRO_PATH_MAX] = {0};
-      strcpy(full_path_replace, (char*)filename);
+      strlcpy(full_path_replace, (char*)filename, sizeof(full_path_replace));
 
       /* ZIP + NIB vars, use the same temp directory for single NIBs */
       char zip_basename[RETRO_PATH_MAX] = {0};
@@ -794,9 +756,6 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
       /* Disk control interface 'name' for the following file */
       char* image_name = NULL;
 
-      /* M3U path for the following file */
-      char* filename = NULL;
-
       char* string = trimwhitespace(buffer);
       if (string[0] == '\0')
          continue;
@@ -886,6 +845,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
          /* Path format:
           *   FILE_NAME|FILE_LABEL
           * Delimiter + FILE_LABEL is optional */
+         char file_path[RETRO_PATH_MAX]  = {0};
          char file_name[RETRO_PATH_MAX]  = {0};
          char file_label[RETRO_PATH_MAX] = {0};
          char* delim_ptr                 = strchr(string, M3U_PATH_DELIM);
@@ -900,22 +860,20 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             /* Get FILE_NAME segment */
             size_t len = (size_t)(1 + delim_ptr - string);
             if (len > 0)
-               strncpy(
-                     file_name, string,
+               strncpy(file_name, string,
                      ((len < RETRO_PATH_MAX ? len : RETRO_PATH_MAX) * sizeof(char)) - 1);
 
             /* Get FILE_LABEL segment */
             delim_ptr++;
             if (*delim_ptr != '\0')
-               strncpy(
-                     file_label, delim_ptr, sizeof(file_label) - 1);
+               strncpy(file_label, delim_ptr, sizeof(file_label) - 1);
 
             /* Note: If delimiter is present but FILE_LABEL
              * is omitted, label is intentionally left blank */
             label_set = true;
          }
          else
-            strncpy(file_name, string, sizeof(file_name) - 1);
+            snprintf(file_name, sizeof(file_name), "%s", string);
 
          /* Parse direct PRG load */
          char image_prg[D64_NAME_LEN] = {0};
@@ -941,107 +899,100 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             }
          }
 
-         /* Search the file (absolute, relative to m3u) */
-         if ((filename = m3u_search_file(basedir, file_name)) != NULL)
+         /* Absolute or relative */
+         if (path_is_valid(file_name))
+            snprintf(file_path, sizeof(file_path), "%s", file_name);
+         else if (!string_is_empty(basedir) && !path_is_absolute(file_name))
+            path_join(file_path, basedir, file_name);
+
+         /* If image name is missing, use filename without extension */
+         if (!image_name)
          {
-            /* If image name is missing, use filename without extension */
-            if (!image_name)
-            {
-               char tmp[512];
-               tmp[0] = '\0';
+            char tmp[512];
+            tmp[0] = '\0';
 
-               if (!string_is_empty(browsed_file))
-                  fill_short_pathname_representation(tmp, browsed_file, sizeof(tmp));
-               else
-                  fill_short_pathname_representation(tmp, filename, sizeof(tmp));
+            if (!string_is_empty(browsed_file))
+               fill_short_pathname_representation(tmp, browsed_file, sizeof(tmp));
+            else
+               fill_short_pathname_representation(tmp, file_path, sizeof(tmp));
 
-               image_name = strdup(tmp);
-            }
-
-            if (!label)
-               label = get_label(filename);
-
-            if (!file_label[0] && !label_set)
-               snprintf(file_label, sizeof(file_label), "%s", image_name);
-
-            char full_path[RETRO_PATH_MAX] = {0};
-            snprintf(full_path, sizeof(full_path), "%s", filename);
-
-            /* ZIP + NIB vars, use the same temp directory for single NIBs */
-            char zip_basename[RETRO_PATH_MAX] = {0};
-            snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(full_path));
-            path_remove_extension(zip_basename);
-
-            char nib_input[RETRO_PATH_MAX] = {0};
-            char nib_output[RETRO_PATH_MAX] = {0};
-
-            /* NIB convert to G64 */
-            if (dc_get_image_type(filename) == DC_IMAGE_TYPE_NIBBLER)
-            {
-               snprintf(nib_input, sizeof(nib_input), "%s", filename);
-               snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
-               path_mkdir(retro_temp_directory);
-               nib_convert(nib_input, nib_output);
-               snprintf(full_path, sizeof(full_path), "%s", nib_output);
-            }
-
-            /* ZIP */
-            if (strendswith(filename, "zip") || strendswith(filename, "7z"))
-            {
-               char lastfile[RETRO_PATH_MAX] = {0};
-
-               path_mkdir(retro_temp_directory);
-               if (strendswith(filename, "zip"))
-                  zip_uncompress(full_path, retro_temp_directory, lastfile);
-               else if (strendswith(filename, "7z"))
-                  sevenzip_uncompress(full_path, retro_temp_directory, lastfile);
-
-               /* Convert all NIBs to G64 */
-               if (!string_is_empty(browsed_file))
-               {
-                  snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, browsed_file);
-                  if (dc_get_image_type(nib_input) == DC_IMAGE_TYPE_NIBBLER && path_is_valid(nib_input))
-                  {
-                     /* Reuse lastfile */
-                     snprintf(lastfile, sizeof(lastfile), "%s", browsed_file);
-                     snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(lastfile));
-                     nib_convert(nib_input, nib_output);
-                     snprintf(browsed_file, sizeof(browsed_file), "%s", path_basename(nib_output));
-                  }
-                  snprintf(lastfile, sizeof(lastfile), "%s", browsed_file);
-               }
-               else
-               {
-                  DIR *zip_dir = NULL;
-                  struct dirent *zip_dirp;
-
-                  zip_dir = opendir(retro_temp_directory);
-                  while ((zip_dirp = readdir(zip_dir)) != NULL)
-                  {
-                     if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
-                     {
-                        snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
-                        snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
-                        nib_convert(nib_input, nib_output);
-                        snprintf(lastfile, sizeof(lastfile), "%s", path_basename(nib_output));
-                     }
-                  }
-                  closedir(zip_dir);
-               }
-
-               snprintf(full_path, RETRO_PATH_MAX, "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, lastfile);
-            }
-
-            /* Add the file to the struct */
-            if (path_is_valid(full_path))
-               dc_add_file(dc, full_path,
-                     file_label,
-                     label,
-                     image_prg);
-
-            free(filename);
-            filename = NULL;
+            image_name = strdup(tmp);
          }
+
+         if (!label)
+            label = get_label(file_path);
+
+         if (!file_label[0] && !label_set)
+            snprintf(file_label, sizeof(file_label), "%s", image_name);
+
+         /* ZIP + NIB vars, use the same temp directory for single NIBs */
+         char zip_basename[RETRO_PATH_MAX] = {0};
+         snprintf(zip_basename, sizeof(zip_basename), "%s", path_basename(file_path));
+         path_remove_extension(zip_basename);
+
+         char nib_input[RETRO_PATH_MAX] = {0};
+         char nib_output[RETRO_PATH_MAX] = {0};
+
+         /* NIB convert to G64 */
+         if (dc_get_image_type(file_path) == DC_IMAGE_TYPE_NIBBLER)
+         {
+            snprintf(nib_input, sizeof(nib_input), "%s", file_path);
+            snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+            path_mkdir(retro_temp_directory);
+            nib_convert(nib_input, nib_output);
+            snprintf(file_path, sizeof(file_path), "%s", nib_output);
+         }
+
+         /* ZIP */
+         if (strendswith(file_path, "zip") || strendswith(file_path, "7z"))
+         {
+            char lastfile[RETRO_PATH_MAX] = {0};
+
+            path_mkdir(retro_temp_directory);
+            if (strendswith(file_path, "zip"))
+               zip_uncompress(file_path, retro_temp_directory, lastfile);
+            else if (strendswith(file_path, "7z"))
+               sevenzip_uncompress(file_path, retro_temp_directory, lastfile);
+
+            /* Convert all NIBs to G64 */
+            if (!string_is_empty(browsed_file))
+            {
+               snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, browsed_file);
+               if (dc_get_image_type(nib_input) == DC_IMAGE_TYPE_NIBBLER && path_is_valid(nib_input))
+               {
+                  /* Reuse lastfile */
+                  snprintf(lastfile, sizeof(lastfile), "%s", browsed_file);
+                  snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(lastfile));
+                  nib_convert(nib_input, nib_output);
+                  snprintf(browsed_file, sizeof(browsed_file), "%s", path_basename(nib_output));
+               }
+               snprintf(lastfile, sizeof(lastfile), "%s", browsed_file);
+            }
+            else
+            {
+               DIR *zip_dir = NULL;
+               struct dirent *zip_dirp;
+
+               zip_dir = opendir(retro_temp_directory);
+               while ((zip_dirp = readdir(zip_dir)) != NULL)
+               {
+                  if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_NIBBLER)
+                  {
+                     snprintf(nib_input, sizeof(nib_input), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_dirp->d_name);
+                     snprintf(nib_output, sizeof(nib_output), "%s%s%s.g64", retro_temp_directory, FSDEV_DIR_SEP_STR, path_remove_extension(zip_dirp->d_name));
+                     nib_convert(nib_input, nib_output);
+                     snprintf(lastfile, sizeof(lastfile), "%s", path_basename(nib_output));
+                  }
+               }
+               closedir(zip_dir);
+            }
+
+            snprintf(file_path, RETRO_PATH_MAX, "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, lastfile);
+         }
+
+         /* Add the file to the struct */
+         if (path_is_valid(file_path))
+            dc_add_file(dc, file_path, file_label, label, image_prg);
          else
             log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found in dir '%s'\n", file_name, list_file, basedir);
       }

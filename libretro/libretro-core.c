@@ -1107,9 +1107,9 @@ static int process_cmdline(const char* argv)
             {
                char arg_path[RETRO_PATH_MAX] = {0};
                char arg_full[RETRO_PATH_MAX] = {0};
-               strcpy(arg_path, argv);
+               strlcpy(arg_path, argv, sizeof(arg_path));
                path_basedir(arg_path);
-               strcpy(arg_full, arg_path);
+               strlcpy(arg_full, arg_path, sizeof(arg_full));
                strcat(arg_full, arg);
                Add_Option(arg_full);
             }

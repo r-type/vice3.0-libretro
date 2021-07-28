@@ -6045,14 +6045,14 @@ void update_geometry(int mode)
          retroYS_offset     = 0;
          retro_bmp_offset   = 0;
 
-         system_av_info.geometry.base_width   = retrow;
-         system_av_info.geometry.base_height  = retroh;
          system_av_info.geometry.max_width    = defaultw;
          system_av_info.geometry.max_height   = defaulth;
+         system_av_info.geometry.base_width   = retrow;
+         system_av_info.geometry.base_height  = retroh;
          system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
 
-         /* Update av_info only when PAL/NTSC change occurs */
-         if (retro_region != retro_get_region())
+         /* Update av_info only when PAL/NTSC change occurs and at first start */
+         if (retro_region != retro_get_region() || runstate == RUNSTATE_FIRST_START)
          {
             retro_get_system_av_info(&system_av_info);
             environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
@@ -6397,10 +6397,11 @@ void retro_run(void)
 
    if (runstate == RUNSTATE_FIRST_START)
    {
-      /* This is only done once after loading the core from scratch and starting it */
-      runstate = RUNSTATE_RUNNING;
       /* Geometry has to get updated here in retro_run after retro_load_game */
       update_geometry(0);
+
+      /* This is only done once after loading the core from scratch and starting it */
+      runstate = RUNSTATE_RUNNING;
    } 
    else if (runstate == RUNSTATE_LOADED_CONTENT)
    {

@@ -6491,7 +6491,10 @@ bool retro_load_game(const struct retro_game_info *info)
       local_path = utf8_to_local_string_alloc(info->path);
       if (local_path)
       {
-         process_cmdline(local_path);
+         if (path_is_valid(local_path) && !path_is_directory(local_path))
+            process_cmdline(local_path);
+         else
+            process_cmdline("");
          free(local_path);
          local_path = NULL;
       }

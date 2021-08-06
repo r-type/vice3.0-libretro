@@ -165,6 +165,7 @@ static void display_joyport(void)
        snprintf(tmpstr, sizeof(tmpstr), "J%s%3s ", joy1, joystick_value_human(joystick_value[1], 0));
 #endif
 
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
     if (vice_opt.UserportJoyType != -1)
     {
         snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3], 0));
@@ -175,6 +176,29 @@ static void display_joyport(void)
         snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%5s", "");
         snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%5s", "");
     }
+#elif defined(__XVIC__)
+    if (vice_opt.UserportJoyType != -1)
+    {
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "J%d%3s ", 2, joystick_value_human(joystick_value[2], 0));
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "J%d%3s ", 3, joystick_value_human(joystick_value[3], 0));
+    }
+    else
+    {
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%5s", "");
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%5s", "");
+    }
+#elif defined(__XPET__) || defined(__XCBM2__)
+    if (vice_opt.UserportJoyType != -1)
+    {
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "J%d%3s ", 1, joystick_value_human(joystick_value[1], 0));
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "J%d%3s ", 2, joystick_value_human(joystick_value[2], 0));
+    }
+    else
+    {
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%5s", "");
+        snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "%5s", "");
+    }
+#endif
 
     if (opt_statusbar & STATUSBAR_BASIC)
         snprintf(tmpstr, sizeof(tmpstr), "%24s", "");

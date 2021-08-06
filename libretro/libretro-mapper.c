@@ -796,7 +796,8 @@ void retro_poll_event()
    int retro_port;
    for (retro_port = 0; retro_port <= 3; retro_port++)
    {
-      if (retro_devices[retro_port] == RETRO_DEVICE_VICE_JOYSTICK || retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
+      if (retro_devices[retro_port] == RETRO_DEVICE_VICE_JOYSTICK ||
+          retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
       {
          int vice_port = cur_port;
          uint8_t joy_value = 0;
@@ -833,11 +834,11 @@ void retro_poll_event()
                   )
                )
             )
-         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_N])
+         || (mapper_flag[vice_port][JOYPAD_N])
          )
             joy_value |= (!retro_vkbd) ? JOYPAD_N : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP))
-              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_N]))
+              && (!mapper_flag[vice_port][JOYPAD_N]))
             joy_value &= ~JOYPAD_N;
 
          /* Down */
@@ -856,11 +857,11 @@ void retro_poll_event()
                   )
                )
             )
-         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_S])
+         || (mapper_flag[vice_port][JOYPAD_S])
          )
             joy_value |= (!retro_vkbd) ? JOYPAD_S : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN))
-              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_S]))
+              && (!mapper_flag[vice_port][JOYPAD_S]))
             joy_value &= ~JOYPAD_S;
 
          /* Left */
@@ -879,11 +880,11 @@ void retro_poll_event()
                   )
                )
             )
-         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_W])
+         || (mapper_flag[vice_port][JOYPAD_W])
          )
             joy_value |= (!retro_vkbd) ? JOYPAD_W : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))
-              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_W]))
+              && (!mapper_flag[vice_port][JOYPAD_W]))
             joy_value &= ~JOYPAD_W;
 
          /* Right */
@@ -902,11 +903,11 @@ void retro_poll_event()
                   )
                )
             )
-         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_E])
+         || (mapper_flag[vice_port][JOYPAD_E])
          )
             joy_value |= (!retro_vkbd) ? JOYPAD_E : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))
-              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_E]))
+              && (!mapper_flag[vice_port][JOYPAD_E]))
             joy_value &= ~JOYPAD_E;
 
          /* Fire button */
@@ -933,11 +934,11 @@ void retro_poll_event()
                   (vice_port == cur_port && input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_KP5))
                )
             )
-         || (vice_port < 3 && mapper_flag[vice_port][JOYPAD_FIRE])
+         || (mapper_flag[vice_port][JOYPAD_FIRE])
          )
             joy_value |= (!retro_vkbd) ? JOYPAD_FIRE : joy_value;
          else if (!(joypad_bits[retro_port] & (1 << fire_button))
-              && (vice_port < 3 && !mapper_flag[vice_port][JOYPAD_FIRE]))
+              && (!mapper_flag[vice_port][JOYPAD_FIRE]))
             joy_value &= ~JOYPAD_FIRE;
 
          /* Jump button */
@@ -1045,7 +1046,9 @@ void retro_poll_event()
       {
          opt_joyport_type_prev = opt_joyport_type;
          resources_set_int("JoyPort1Device", opt_joyport_type);
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
          resources_set_int("JoyPort2Device", opt_joyport_type);
+#endif
       }
    }
    /* Other than a joystick, set only cur_port */
@@ -1056,6 +1059,7 @@ void retro_poll_event()
          opt_joyport_type_prev = opt_joyport_type;
          cur_port_prev = cur_port;
 
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
          if (cur_port == 2)
          {
             resources_set_int("JoyPort1Device", 1);
@@ -1066,6 +1070,9 @@ void retro_poll_event()
             resources_set_int("JoyPort2Device", 1);
             resources_set_int("JoyPort1Device", opt_joyport_type);
          }
+#else
+         resources_set_int("JoyPort1Device", opt_joyport_type);
+#endif
       }
 
       int j = cur_port - 1;

@@ -48,7 +48,6 @@ static bool noautostart = false;
 static char* autostartString = NULL;
 static char* autostartProgram = NULL;
 char full_path[RETRO_PATH_MAX] = {0};
-static char* core_options_legacy_strings = NULL;
 static struct vice_cart_info vice_carts[RETRO_NUM_CORE_OPTION_VALUES_MAX] = {0};
 
 static snapshot_stream_t* snapshot_stream = NULL;
@@ -194,6 +193,9 @@ static retro_environment_t environ_cb = NULL;
 static struct retro_perf_callback perf_cb;
 
 bool libretro_supports_bitmasks = false;
+static bool libretro_supports_option_categories = false;
+#define HAVE_NO_LANGEXTRA
+
 static unsigned int retro_led_state[3] = {0};
 unsigned int vice_led_state[3] = {0};
 
@@ -1676,7 +1678,7 @@ static void retro_led_interface(void)
    }
 }
 
-void retro_set_paths(void)
+static void retro_set_paths(void)
 {
    const char *system_dir = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir) && system_dir)
@@ -1758,11 +1760,2397 @@ static void free_vice_carts(void)
    }
 }
 
+static void retro_set_core_options()
+{
+   /* Core categories */
+   static struct retro_core_option_v2_category option_cats_us[] =
+   {
+      {
+         "audio",
+         "Audio Options",
+         "Configure audio options."
+      },
+      {
+         "video",
+         "Video Options",
+         "Configure video options."
+      },
+      {
+         "media",
+         "Media Options",
+         "Configure media options."
+      },
+      {
+         "input",
+         "Input Options",
+         "Configure input options."
+      },
+      {
+         "hotkey",
+         "Hotkey Mapping Options",
+         "Configure keyboard hotkey mapping options."
+      },
+      {
+         "retropad",
+         "RetroPad Mapping Options",
+         "Configure RetroPad mapping options."
+      },
+      { NULL, NULL, NULL },
+   };
+
+   /* Core options */
+   static struct retro_core_option_v2_definition option_defs_us[] =
+   {
+#if defined(__XVIC__)
+      {
+         "vice_vic20_model",
+         "Model",
+         NULL,
+         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "VIC20 PAL auto", "VIC-20 PAL Automatic" },
+            { "VIC20 NTSC auto", "VIC-20 NTSC Automatic" },
+            { "VIC20 PAL", "VIC-20 PAL" },
+            { "VIC20 NTSC", "VIC-20 NTSC" },
+            { "VIC21", "Super VIC (+16K) NTSC" },
+            { NULL, NULL },
+         },
+         "VIC20 PAL auto"
+      },
+      {
+         "vice_vic20_memory_expansions",
+         "Memory Expansion",
+         NULL,
+         "Can be forced with filename tags '(8k)' & '(8kb)' or directory tags '8k' & '8kb'.\nChanging while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "none", "disabled" },
+            { "3kB", "3kB" },
+            { "8kB", "8kB" },
+            { "16kB", "16kB" },
+            { "24kB", "24kB" },
+            { "35kB", "35kB" },
+            { NULL, NULL },
+         },
+         "none"
+      },
+#elif defined(__XPLUS4__)
+      {
+         "vice_plus4_model",
+         "Model",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "C16 PAL", "C16 PAL" },
+            { "C16 NTSC", "C16 NTSC" },
+            { "PLUS4 PAL", "Plus/4 PAL" },
+            { "PLUS4 NTSC", "Plus/4 NTSC" },
+            { "V364 NTSC", "V364 NTSC" },
+            { "232 NTSC", "C232 NTSC" },
+            { NULL, NULL }
+         },
+         "PLUS4 PAL"
+      },
+#elif defined(__X128__)
+      {
+         "vice_c128_model",
+         "Model",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "C128 PAL", "C128 PAL" },
+            { "C128 NTSC", "C128 NTSC" },
+            { "C128 D PAL", "C128 D PAL" },
+            { "C128 D NTSC", "C128 D NTSC" },
+            { "C128 DCR PAL", "C128 DCR PAL" },
+            { "C128 DCR NTSC", "C128 DCR NTSC" },
+            { NULL, NULL },
+         },
+         "C128 PAL"
+      },
+      {
+         "vice_c128_video_output",
+         "Video Output",
+         NULL,
+         "",
+         NULL,
+         NULL,
+         {
+            { "VICII", "VIC-II (40 cols)" },
+            { "VDC", "VDC (80 cols)" },
+            { NULL, NULL },
+         },
+         "VICII"
+      },
+      {
+         "vice_c128_go64",
+         "GO64",
+         NULL,
+         "Start in C64 compatibility mode.\nChanging while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#elif defined(__XPET__)
+      {
+         "vice_pet_model",
+         "Model",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "2001", "PET 2001" },
+            { "3008", "PET 3008" },
+            { "3016", "PET 3016" },
+            { "3032", "PET 3032" },
+            { "3032B", "PET 3032B" },
+            { "4016", "PET 4016" },
+            { "4032", "PET 4032" },
+            { "4032B", "PET 4032B" },
+            { "8032", "PET 8032" },
+            { "8096", "PET 8096" },
+            { "8296", "PET 8296" },
+            { "SUPERPET", "Super PET" },
+            { NULL, NULL },
+         },
+         "8032"
+      },
+#elif defined(__XCBM2__)
+      {
+         "vice_cbm2_model",
+         "Model",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "610 PAL", "CBM 610 PAL" },
+            { "610 NTSC", "CBM 610 NTSC" },
+            { "620 PAL", "CBM 620 PAL" },
+            { "620 NTSC", "CBM 620 NTSC" },
+            { "620PLUS PAL", "CBM 620+ PAL" },
+            { "620PLUS NTSC", "CBM 620+ NTSC" },
+            { "710 NTSC", "CBM 710 NTSC" },
+            { "720 NTSC", "CBM 720 NTSC" },
+            { "720PLUS NTSC", "CBM 720+ NTSC" },
+            { NULL, NULL },
+         },
+         "610 PAL"
+      },
+#elif defined(__XCBM5x0__)
+      {
+         "vice_cbm5x0_model",
+         "Model",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "510 PAL", "CBM 510 PAL" },
+            { "510 NTSC", "CBM 510 NTSC" },
+            { NULL, NULL },
+         },
+         "510 PAL"
+      },
+#elif defined(__X64DTV__)
+      {
+         "vice_c64dtv_model",
+         "Model",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "DTV2 PAL", "DTV v2 PAL" },
+            { "DTV2 NTSC", "DTV v2 NTSC" },
+            { "DTV3 PAL", "DTV v3 PAL" },
+            { "DTV3 NTSC", "DTV v3 NTSC" },
+            { "HUMMER NTSC", "Hummer NTSC" },
+            { NULL, NULL },
+         },
+         "DTV3 PAL"
+      },
+#else
+      {
+         "vice_c64_model",
+         "Model",
+         NULL,
+         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "C64 PAL auto", "C64 PAL Automatic" },
+            { "C64 NTSC auto", "C64 NTSC Automatic" },
+            { "C64C PAL auto", "C64C PAL Automatic" },
+            { "C64C NTSC auto", "C64C NTSC Automatic" },
+            { "C64 PAL", "C64 PAL" },
+            { "C64 NTSC", "C64 NTSC" },
+            { "C64C PAL", "C64C PAL" },
+            { "C64C NTSC", "C64C NTSC" },
+            { "C64SX PAL", "SX-64 PAL" },
+            { "C64SX NTSC", "SX-64 NTSC" },
+            { "PET64 PAL", "Educator 64 (PET 64) PAL" },
+            { "PET64 NTSC", "Educator 64 (PET 64) NTSC" },
+            { "C64 GS PAL", "C64 Games System PAL" },
+            { "C64 JAP NTSC", "C64 Japanese NTSC" },
+#if 0
+            { "C64 OLD PAL", NULL },
+            { "C64 PAL N", NULL },
+            { "C64 OLD NTSC", NULL },
+#endif
+            { NULL, NULL },
+         },
+         "C64 PAL auto"
+      },
+#if defined(__XSCPU64__)
+      {
+         "vice_supercpu_simm_size",
+         "SuperCPU SIMM Size",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "0", "disabled" },
+            { "1", "1024kB" },
+            { "2", "2048kB" },
+            { "4", "4096kB" },
+            { "8", "8192kB" },
+            { "16", "16384kB" },
+            { NULL, NULL },
+         },
+         "16"
+      },
+#else
+      {
+         "vice_ram_expansion_unit",
+         "RAM Expansion Unit",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "none", "disabled" },
+            { "128kB", "128kB (1700)" },
+            { "256kB", "256kB (1764)" },
+            { "512kB", "512kB (1750)" },
+            { "1024kB", "1024kB" },
+            { "2048kB", "2048kB" },
+            { "4096kB", "4096kB" },
+            { "8192kB", "8192kB" },
+            { "16384kB", "16384kB" },
+            { NULL, NULL },
+         },
+         "none"
+      },
+#endif /* __XSCPU64__ */
+#endif
+#if defined(__XSCPU64__)
+      {
+         "vice_supercpu_speed_switch",
+         "SuperCPU Speed Switch",
+         NULL,
+         "",
+         NULL,
+         NULL,
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
+      {
+         "vice_supercpu_kernal",
+         "SuperCPU Kernal",
+         NULL,
+         "JiffyDOS does not work with the internal kernal! ROMs required in 'system/vice/SCPU64':\n- 'scpu-dos-1.4.bin'\n- 'scpu-dos-2.04.bin'",
+         NULL,
+         NULL,
+         {
+            { "0", "Internal" },
+            { "1", "1.40" },
+            { "2", "2.04" },
+            { NULL, NULL },
+         },
+         "0"
+      },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
+      {
+         "vice_jiffydos",
+         "JiffyDOS",
+         NULL,
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+         "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+#elif defined(__X128__)
+         "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
+#endif
+         NULL,
+         NULL,
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+      {
+         "vice_read_vicerc",
+         "Read 'vicerc'",
+         NULL,
+         "Process first found 'vicerc' in this order:\n1. 'saves/[content].vicerc'\n2. 'saves/vicerc'\n3. 'system/vice/vicerc'",
+         NULL,
+         NULL,
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
+#if !defined(__X64DTV__)
+      {
+         "vice_reset",
+         "Reset Type",
+         NULL,
+         "- 'Autostart' hard resets and reruns content.\n- 'Soft' keeps some code in memory.\n- 'Hard' erases all memory.\n- 'Freeze' is for cartridges.",
+         NULL,
+         NULL,
+         {
+            { "autostart", "Autostart" },
+            { "soft", "Soft" },
+            { "hard", "Hard" },
+            { "freeze", "Freeze" },
+            { NULL, NULL },
+         },
+         "autostart"
+      },
+#endif
+#if !defined(__XPET__) && !defined(__X64DTV__)
+      /* Sublabel and options filled dynamically in retro_set_environment() */
+      {
+         "vice_cartridge",
+         "Media > Cartridge",
+         "Cartridge",
+         "",
+         NULL,
+         "media",
+         {
+            { NULL, NULL },
+         },
+         NULL
+      },
+#endif
+#if !defined(__X64DTV__)
+      {
+         "vice_autostart",
+         "Media > Autostart",
+         "Autostart",
+         "'ON' always runs content, 'OFF' runs only PRG/CRT, 'Warp' turns warp mode on during autostart loading.",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { "warp", "Warp" },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
+      {
+         "vice_autoloadwarp",
+         "Media > Automatic Load Warp",
+         "Automatic Load Warp",
+         "Toggle warp mode during disk and/or tape access. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { "disk", "Disk only" },
+            { "tape", "Tape only" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_drive_true_emulation",
+         "Media > True Drive Emulation",
+         "True Drive Emulation",
+         "Loads much slower, but some games need it.\nRequired for 'JiffyDOS', 'Automatic Load Warp' and LED driver interface!",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
+      {
+         "vice_virtual_device_traps",
+         "Media > Virtual Device Traps",
+         "Virtual Device Traps",
+         "Required for printer device, but causes loading issues on rare cases. Enabled forcefully by disabling 'True Drive Emulation'.",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_floppy_write_protection",
+         "Media > Floppy Write Protection",
+         "Floppy Write Protection",
+         "Set device 8 read only.",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+      {
+         "vice_easyflash_write_protection",
+         "Media > EasyFlash Write Protection",
+         "EasyFlash Write Protection",
+         "Set EasyFlash cartridges read only.",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+      {
+         "vice_work_disk",
+         "Media > Global Work Disk",
+         "Global Work Disk",
+         "Global disk in device 8 is only inserted when core is started without content.",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "8_d64", "D64 - 664 blocks, 170kB - Device 8" },
+            { "9_d64", "D64 - 664 blocks, 170kB - Device 9" },
+            { "8_d71", "D71 - 1328 blocks, 340kB - Device 8" },
+            { "9_d71", "D71 - 1328 blocks, 340kB - Device 9" },
+            { "8_d81", "D81 - 3160 blocks, 800kB - Device 8" },
+            { "9_d81", "D81 - 3160 blocks, 800kB - Device 9" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif /* !defined(__X64DTV__) */
+      {
+         "vice_video_options_display",
+         "Show Video Options",
+         NULL,
+         "Page refresh by menu toggle required!",
+         NULL,
+         NULL,
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+      {
+         "vice_aspect_ratio",
+         "Video > Pixel Aspect Ratio",
+         "Pixel Aspect Ratio",
+         "Hotkey toggling disables this option until core restart.",
+         NULL,
+         "video",
+         {
+            { "auto", "Automatic" },
+            { "pal", "PAL" },
+            { "ntsc", "NTSC" },
+            { "raw", "1:1" },
+            { NULL, NULL },
+         },
+         "auto"
+      },
+      {
+         "vice_zoom_mode",
+         "Video > Zoom Mode",
+         "Zoom Mode",
+         "Crop borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
+         NULL,
+         "video",
+         {
+            { "disabled", NULL },
+            { "small", "Small" },
+            { "medium", "Medium" },
+            { "maximum", "Maximum" },
+            { "manual", "Manual" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_zoom_mode_crop",
+         "Video > Zoom Mode Crop",
+         "Zoom Mode Crop",
+         "'Horizontal + Vertical' & 'Maximum' removes borders completely. Ignored with 'Manual' zoom.",
+         NULL,
+         "video",
+         {
+            { "both", "Horizontal + Vertical" },
+            { "horizontal", "Horizontal" },
+            { "vertical", "Vertical" },
+            { "16:9", "16:9" },
+            { "16:10", "16:10" },
+            { "4:3", "4:3" },
+            { "5:4", "5:4" },
+            { NULL, NULL },
+         },
+         "both"
+      },
+      {
+         "vice_manual_crop_top",
+         "Video > Manual Crop Top",
+         "Manual Crop Top",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "VIC-II top border height:\n- 35px PAL\n- 23px NTSC",
+#elif defined(__XVIC__)
+         "VIC top border height:\n- 48px PAL\n- 22px NTSC",
+#elif defined(__XPLUS4__)
+         "TED top border height:\n- 40px PAL\n- 18px NTSC",
+#endif
+         NULL,
+         "video",
+         MANUAL_CROP_OPTIONS,
+         "0",
+      },
+      {
+         "vice_manual_crop_bottom",
+         "Video > Manual Crop Bottom",
+         "Manual Crop Bottom",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "VIC-II bottom border height:\n- 37px PAL\n- 24px NTSC",
+#elif defined(__XVIC__)
+         "VIC bottom border height:\n- 52px PAL\n- 28px NTSC",
+#elif defined(__XPLUS4__)
+         "TED bottom border height:\n- 48px PAL\n- 24px NTSC",
+#endif
+         NULL,
+         "video",
+         MANUAL_CROP_OPTIONS,
+         "0",
+      },
+      {
+         "vice_manual_crop_left",
+         "Video > Manual Crop Left",
+         "Manual Crop Left",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "VIC-II left border width:\n- 32px",
+#elif defined(__XVIC__)
+         "VIC left border width:\n- 48px PAL\n- 32px NTSC",
+#elif defined(__XPLUS4__)
+         "TED left border width:\n- 32px",
+#endif
+         NULL,
+         "video",
+         MANUAL_CROP_OPTIONS,
+         "0",
+      },
+      {
+         "vice_manual_crop_right",
+         "Video > Manual Crop Right",
+         "Manual Crop Right",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "VIC-II right border width:\n- 32px",
+#elif defined(__XVIC__)
+         "VIC right border width:\n- 48px PAL\n- 16px NTSC",
+#elif defined(__XPLUS4__)
+         "TED right border width:\n- 32px",
+#endif
+         NULL,
+         "video",
+         MANUAL_CROP_OPTIONS,
+         "0",
+      },
+#endif
+      {
+         "vice_statusbar",
+         "Video > Statusbar Mode",
+         "Statusbar Mode",
+         "- 'Full': Joyports + Current image + LEDs\n- 'Basic': Current image + LEDs\n- 'Minimal': Track number + FPS hidden",
+         NULL,
+         "video",
+         {
+            { "bottom", "Bottom Full" },
+            { "bottom_minimal", "Bottom Full Minimal" },
+            { "bottom_basic", "Bottom Basic" },
+            { "bottom_basic_minimal", "Bottom Basic Minimal" },
+            { "top", "Top Full" },
+            { "top_minimal", "Top Full Minimal" },
+            { "top_basic", "Top Basic" },
+            { "top_basic_minimal", "Top Basic Minimal" },
+            { NULL, NULL },
+         },
+         "bottom"
+      },
+      {
+         "vice_vkbd_theme",
+         "Video > Virtual KBD Theme",
+         "Virtual KBD Theme",
+         "By default, the keyboard comes up with RetroPad Select.",
+         NULL,
+         "video",
+         {
+            { "auto", "Automatic (shadow)" },
+            { "auto_outline", "Automatic (outline)" },
+            { "brown", "Brown (shadow)" },
+            { "brown_outline", "Brown (outline)" },
+            { "beige", "Beige (shadow)" },
+            { "beige_outline", "Beige (outline)" },
+            { "dark", "Dark (shadow)" },
+            { "dark_outline", "Dark (outline)" },
+            { "light", "Light (shadow)" },
+            { "light_outline", "Light (outline)" },
+            { NULL, NULL },
+         },
+         "auto"
+      },
+      {
+         "vice_vkbd_transparency",
+         "Video > Virtual KBD Transparency",
+         "Virtual KBD Transparency",
+         "Keyboard transparency can be toggled with RetroPad A.",
+         NULL,
+         "video",
+         {
+            { "0%",   NULL },
+            { "25%",  NULL },
+            { "50%",  NULL },
+            { "75%",  NULL },
+            { "100%", NULL },
+            { NULL, NULL },
+         },
+         "25%"
+      },
+      {
+         "vice_gfx_colors",
+         "Video > Color Depth",
+         "Color Depth",
+         "24-bit is slower and not available on all platforms. Full restart required.",
+         NULL,
+         "video",
+         {
+            { "16bit", "Thousands (16-bit)" },
+            { "24bit", "Millions (24-bit)" },
+            { NULL, NULL },
+         },
+         "16bit"
+      },
+      {
+         "vice_joyport_pointer_color",
+         "Video > Light Pen/Gun Pointer Color",
+         "Light Pen/Gun Pointer Color",
+         "Crosshair color for light pens and guns.",
+         NULL,
+         "video",
+         {
+            { "disabled", NULL },
+            { "black", "Black" },
+            { "white", "White" },
+            { "red", "Red" },
+            { "green", "Green" },
+            { "blue", "Blue" },
+            { "yellow", "Yellow" },
+            { "purple", "Purple" },
+            { NULL, NULL },
+         },
+         "blue"
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_filter",
+         "Video > VIC-II Filter",
+         "VIC-II Filter",
+#elif defined(__XVIC__)
+         "vice_vic_filter",
+         "Video > VIC Filter",
+         "VIC Filter",
+#elif defined(__XPLUS4__)
+         "vice_ted_filter",
+         "Video > TED Filter",
+         "TED Filter",
+#elif defined(__XPET__) || defined(__XCBM2__)
+         "vice_crtc_filter",
+         "Video > CRTC Filter",
+         "CRTC Filter",
+#endif
+         "CRT emulation filter with custom horizontal blur.",
+         NULL,
+         "video",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { "enabled_medblur", "50% blur" },
+            { "enabled_lowblur", "10% blur" },
+         },
+         "disabled"
+      },
+#if defined(__XVIC__)
+      {
+         "vice_vic20_external_palette",
+         "Video > VIC Color Palette",
+         "VIC Color Palette",
+         "'Colodore' is recommended for the most accurate colors.",
+         NULL,
+         "video",
+         {
+            { "default", "Internal" },
+            { "colodore_vic", "Colodore" },
+            { "mike-pal", "Mike (PAL)" },
+            { "mike-ntsc", "Mike (NTSC)" },
+            { "vice", "VICE" },
+            { NULL, NULL },
+         },
+         "colodore_vic"
+      },
+#elif defined(__XPLUS4__)
+      {
+         "vice_plus4_external_palette",
+         "Video > TED Color Palette",
+         "TED Color Palette",
+         "'Colodore' is recommended for the most accurate colors.",
+         NULL,
+         "video",
+         {
+            { "default", "Internal" },
+            { "colodore_ted", "Colodore" },
+            { "yape-pal", "Yape (PAL)" },
+            { "yape-ntsc", "Yape (NTSC)" },
+            { NULL, NULL },
+         },
+         "colodore_ted"
+      },
+#elif defined(__XPET__)
+      {
+         "vice_pet_external_palette",
+         "Video > CRTC Color Palette",
+         "CRTC Color Palette",
+         "",
+         NULL,
+         "video",
+         {
+            { "default", "Internal" },
+            { "green", "Green" },
+            { "amber", "Amber" },
+            { "white", "White" },
+            { NULL, NULL },
+         },
+         "default"
+      },
+#elif defined(__XCBM2__)
+      {
+         "vice_cbm2_external_palette",
+         "Video > CRTC Color Palette",
+         "CRTC Color Palette",
+         "",
+         NULL,
+         "video",
+         {
+            { "default", "Internal" },
+            { "green", "Green" },
+            { "amber", "Amber" },
+            { "white", "White" },
+            { NULL, NULL },
+         },
+         "default"
+      },
+#elif !defined(__X64DTV__)
+      {
+         "vice_external_palette",
+         "Video > VIC-II Color Palette",
+         "VIC-II Color Palette",
+         "'Colodore' is recommended for most accurate colors.",
+         NULL,
+         "video",
+         {
+            { "default", "Internal" },
+            { "colodore", "Colodore" },
+            { "pepto-pal", "Pepto (PAL)" },
+#if 0
+            { "pepto-palold", "Pepto (old PAL)" },
+#endif
+            { "pepto-ntsc", "Pepto (NTSC)" },
+            { "pepto-ntsc-sony", "Pepto (NTSC, Sony)" },
+            { "cjam", "ChristopherJam" },
+            { "c64hq", "C64HQ" },
+            { "c64s", "C64S" },
+            { "ccs64", "CCS64" },
+            { "community-colors", "Community Colors" },
+            { "deekay", "Deekay" },
+            { "frodo", "Frodo" },
+            { "godot", "Godot" },
+            { "pc64", "PC64" },
+            { "ptoing", "Ptoing" },
+            { "rgb", "RGB" },
+            { "vice", "VICE" },
+            { NULL, NULL },
+         },
+         "colodore"
+      },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_color_gamma",
+         "Video > VIC-II Color Gamma",
+         "VIC-II Color Gamma",
+#elif defined(__XVIC__)
+         "vice_vic_color_gamma",
+         "Video > VIC Color Gamma",
+         "VIC Color Gamma",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_gamma",
+         "Video > TED Color Gamma",
+         "TED Color Gamma",
+#endif
+         "Gamma for the internal palette.",
+         NULL,
+         "video",
+         PALETTE_GAMMA_OPTIONS,
+         "2800"
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_color_brightness",
+         "Video > VIC-II Color Brightness",
+         "VIC-II Color Brightness",
+#elif defined(__XVIC__)
+         "vice_vic_color_brightness",
+         "Video > VIC Color Brightness",
+         "VIC Color Brightness",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_brightness",
+         "Video > TED Color Brightness",
+         "TED Color Brightness",
+#endif
+         "Brightness for the internal palette.",
+         NULL,
+         "video",
+         PALETTE_COLOR_OPTIONS,
+         "1000"
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_color_contrast",
+         "Video > VIC-II Color Contrast",
+         "VIC-II Color Contrast",
+#elif defined(__XVIC__)
+         "vice_vic_color_contrast",
+         "Video > VIC Color Contrast",
+         "VIC Color Contrast",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_contrast",
+         "Video > TED Color Contrast",
+         "TED Color Contrast",
+#endif
+         "Contrast for the internal palette.",
+         NULL,
+         "video",
+         PALETTE_COLOR_OPTIONS,
+         "1000"
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_color_saturation",
+         "Video > VIC-II Color Saturation",
+         "VIC-II Color Saturation",
+#elif defined(__XVIC__)
+         "vice_vic_color_saturation",
+         "Video > VIC Color Saturation",
+         "VIC Color Saturation",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_saturation",
+         "Video > TED Color Saturation",
+         "TED Color Saturation",
+#endif
+         "Saturation for the internal palette.",
+         NULL,
+         "video",
+         PALETTE_COLOR_OPTIONS,
+         "1000"
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_color_tint",
+         "Video > VIC-II Color Tint",
+         "VIC-II Color Tint",
+#elif defined(__XVIC__)
+         "vice_vic_color_tint",
+         "Video > VIC Color Tint",
+         "VIC Color Tint",
+#elif defined(__XPLUS4__)
+         "vice_ted_color_tint",
+         "Video > TED Color Tint",
+         "TED Color Tint",
+#endif
+         "Tint for the internal palette.",
+         NULL,
+         "video",
+         PALETTE_COLOR_OPTIONS,
+         "1000"
+      },
+#endif
+      {
+         "vice_audio_options_display",
+         "Show Audio Options",
+         NULL,
+         "Page refresh by menu toggle required!",
+         NULL,
+         NULL,
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_drive_sound_emulation",
+         "Audio > Drive Sound Emulation",
+         "Drive Sound Emulation",
+         "'True Drive Emulation' & D64/D71 disk image required.",
+         NULL,
+         "audio",
+         {
+            { "disabled", NULL },
+            { "5%", NULL },
+            { "10%", NULL },
+            { "15%", NULL },
+            { "20%", NULL },
+            { "25%", NULL },
+            { "30%", NULL },
+            { "35%", NULL },
+            { "40%", NULL },
+            { "45%", NULL },
+            { "50%", NULL },
+            { "55%", NULL },
+            { "60%", NULL },
+            { "65%", NULL },
+            { "70%", NULL },
+            { "75%", NULL },
+            { "80%", NULL },
+            { "85%", NULL },
+            { "90%", NULL },
+            { "95%", NULL },
+            { "100%", NULL },
+            { NULL, NULL },
+         },
+         "20%"
+      },
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
+      {
+         "vice_datasette_sound",
+         "Audio > Datasette Sound",
+         "Datasette Sound",
+         "TAP tape image required.",
+         NULL,
+         "audio",
+         {
+            { "disabled", NULL },
+            { "5%", NULL },
+            { "10%", NULL },
+            { "15%", NULL },
+            { "20%", NULL },
+            { "25%", NULL },
+            { "30%", NULL },
+            { "35%", NULL },
+            { "40%", NULL },
+            { "45%", NULL },
+            { "50%", NULL },
+            { "55%", NULL },
+            { "60%", NULL },
+            { "65%", NULL },
+            { "70%", NULL },
+            { "75%", NULL },
+            { "80%", NULL },
+            { "85%", NULL },
+            { "90%", NULL },
+            { "95%", NULL },
+            { "100%", NULL },
+            { "-1", "100% + Mute" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+      {
+         "vice_audio_leak_emulation",
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "Audio > VIC-II Audio Leak Emulation",
+         "VIC-II Audio Leak Emulation",
+#elif defined(__XVIC__)
+         "Audio > VIC Audio Leak Emulation",
+         "VIC Audio Leak Emulation",
+#elif defined(__XPLUS4__)
+         "Audio > TED Audio Leak Emulation",
+         "TED Audio Leak Emulation",
+#endif
+         "",
+         NULL,
+         "audio",
+         {
+            { "disabled", NULL },
+            { "1", "100%" },
+            { "2", "200%" },
+            { "3", "300%" },
+            { "4", "400%" },
+            { "5", "500%" },
+            { "6", "600%" },
+            { "7", "700%" },
+            { "8", "800%" },
+            { "9", "900%" },
+            { "10", "1000%" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+#if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
+      {
+         "vice_sid_engine",
+         "Audio > SID Engine",
+         "SID Engine",
+#if defined(__X64DTV__)
+         "'ReSID-DTV' is accurate, 'FastSID' is the last resort.",
+#else
+         "'ReSID' is accurate, 'ReSID-FP' is more accurate, 'FastSID' is the last resort.",
+#endif
+         NULL,
+         "audio",
+         {
+            { "FastSID", NULL },
+#if defined(__X64DTV__)
+            { "ReSID", "ReSID-DTV" },
+#else
+            { "ReSID", NULL },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
+#ifdef HAVE_RESID33
+            { "ReSID-3.3", NULL },
+#endif
+            { "ReSID-FP", NULL },
+#endif
+            { NULL, NULL },
+         },
+         "ReSID"
+      },
+#if !defined(__X64DTV__)
+      {
+         "vice_sid_model",
+         "Audio > SID Model",
+         "SID Model",
+         "C64 has '6581', C64C has '8580'.",
+         NULL,
+         "audio",
+         {
+            { "default", "Default" },
+            { "6581", NULL },
+            { "8580", NULL },
+            { "8580RD", "8580 ReSID + digi boost" },
+            { NULL, NULL },
+         },
+         "default"
+      },
+      {
+         "vice_sid_extra",
+         "Audio > SID Extra",
+         "SID Extra",
+         "Second SID base address.",
+         NULL,
+         "audio",
+         {
+            { "disabled", NULL },
+            { "0xd420", "$D420" },
+            { "0xd500", "$D500" },
+            { "0xde00", "$DE00" },
+            { "0xdf00", "$DF00" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+      {
+         "vice_resid_sampling",
+         "Audio > ReSID Sampling",
+         "ReSID Sampling",
+         "'Resampling' provides best quality. 'Fast' improves performance dramatically on PS Vita.",
+         NULL,
+         "audio",
+         {
+            { "fast", "Fast" },
+            { "interpolation", "Interpolation" },
+            { "fast resampling", "Fast Resampling" },
+            { "resampling", "Resampling" },
+            { NULL, NULL },
+         },
+#if defined(__X64__) || defined(__XCBM5x0__) || defined(__XCBM2__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
+         "fast"
+#else
+         "resampling"
+#endif
+      },
+      {
+         "vice_resid_passband",
+         "Audio > ReSID Filter Passband",
+         "ReSID Filter Passband",
+         "",
+         NULL,
+         "audio",
+         {
+            { "0", NULL },
+            { "10", NULL },
+            { "20", NULL },
+            { "30", NULL },
+            { "40", NULL },
+            { "50", NULL },
+            { "60", NULL },
+            { "70", NULL },
+            { "80", NULL },
+            { "90", NULL },
+            { NULL, NULL },
+         },
+         "90"
+      },
+      {
+         "vice_resid_gain",
+         "Audio > ReSID Filter Gain",
+         "ReSID Filter Gain",
+         "",
+         NULL,
+         "audio",
+         {
+            { "90", NULL },
+            { "91", NULL },
+            { "92", NULL },
+            { "93", NULL },
+            { "94", NULL },
+            { "95", NULL },
+            { "96", NULL },
+            { "97", NULL },
+            { "98", NULL },
+            { "99", NULL },
+            { "100", NULL },
+            { NULL, NULL },
+         },
+         "97"
+      },
+      {
+         "vice_resid_filterbias",
+         "Audio > ReSID Filter 6581 Bias",
+         "ReSID Filter 6581 Bias",
+         "",
+         NULL,
+         "audio",
+         {
+            { "-5000", NULL },
+            { "-4500", NULL },
+            { "-4000", NULL },
+            { "-3500", NULL },
+            { "-3000", NULL },
+            { "-2500", NULL },
+            { "-2000", NULL },
+            { "-1500", NULL },
+            { "-1000", NULL },
+            { "-500", NULL },
+            { "0", NULL },
+            { "500", NULL },
+            { "1000", NULL },
+            { "1500", NULL },
+            { "2000", NULL },
+            { "2500", NULL },
+            { "3000", NULL },
+            { "3500", NULL },
+            { "4000", NULL },
+            { "4500", NULL },
+            { "5000", NULL },
+            { NULL, NULL },
+         },
+         "500"
+      },
+      {
+         "vice_resid_8580filterbias",
+         "Audio > ReSID Filter 8580 Bias",
+         "ReSID Filter 8580 Bias",
+         "",
+         NULL,
+         "audio",
+         {
+            { "-5000", NULL },
+            { "-4500", NULL },
+            { "-4000", NULL },
+            { "-3500", NULL },
+            { "-3000", NULL },
+            { "-2500", NULL },
+            { "-2000", NULL },
+            { "-1500", NULL },
+            { "-1000", NULL },
+            { "-500", NULL },
+            { "0", NULL },
+            { "500", NULL },
+            { "1000", NULL },
+            { "1500", NULL },
+            { "2000", NULL },
+            { "2500", NULL },
+            { "3000", NULL },
+            { "3500", NULL },
+            { "4000", NULL },
+            { "4500", NULL },
+            { "5000", NULL },
+            { NULL, NULL },
+         },
+         "1500"
+      },
+#endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+      {
+         "vice_sfx_sound_expander",
+         "Audio > SFX Sound Expander",
+         "SFX Sound Expander",
+         "",
+         NULL,
+         "audio",
+         {
+            { "disabled", NULL },
+            { "3526", "YM3526" },
+            { "3812", "YM3812" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+      {
+         "vice_sound_sample_rate",
+         "Audio > Sample Rate",
+         "Sample Rate",
+         "Slightly higher quality or higher performance.",
+         NULL,
+         "audio",
+         {
+            { "22050", NULL },
+            { "44100", NULL },
+            { "48000", NULL },
+            { "96000", NULL },
+            { NULL, NULL },
+         },
+         "48000"
+      },
+#if !defined(__XPET__) && !defined(__XCBM2__)
+      {
+         "vice_analogmouse",
+         "Input > Analog Stick Mouse",
+         "Analog Stick Mouse",
+         "Override analog stick remappings when non-joysticks are used. 'OFF' controls mouse/paddles with both analogs when remappings are empty.",
+         NULL,
+         "input",
+         {
+            { "disabled", NULL },
+            { "left", "Left Analog" },
+            { "right", "Right Analog" },
+            { "both", "Both Analogs" },
+            { NULL, NULL },
+         },
+         "left"
+      },
+      {
+         "vice_analogmouse_deadzone",
+         "Input > Analog Stick Mouse Deadzone",
+         "Analog Stick Mouse Deadzone",
+         "",
+         NULL,
+         "input",
+         {
+            { "0", "0%" },
+            { "5", "5%" },
+            { "10", "10%" },
+            { "15", "15%" },
+            { "20", "20%" },
+            { "25", "25%" },
+            { "30", "30%" },
+            { "35", "35%" },
+            { "40", "40%" },
+            { "45", "45%" },
+            { "50", "50%" },
+            { NULL, NULL },
+         },
+         "20"
+      },
+      {
+         "vice_analogmouse_speed",
+         "Input > Analog Stick Mouse Speed",
+         "Analog Stick Mouse Speed",
+         "",
+         NULL,
+         "input",
+         {
+            { "0.5", "50%" },
+            { "0.6", "60%" },
+            { "0.7", "70%" },
+            { "0.8", "80%" },
+            { "0.9", "90%" },
+            { "1.0", "100%" },
+            { "1.1", "110%" },
+            { "1.2", "120%" },
+            { "1.3", "130%" },
+            { "1.4", "140%" },
+            { "1.5", "150%" },
+            { "1.6", "160%" },
+            { "1.7", "170%" },
+            { "1.8", "180%" },
+            { "1.9", "190%" },
+            { "2.0", "200%" },
+            { NULL, NULL },
+         },
+         "1.0"
+      },
+      {
+         "vice_dpadmouse_speed",
+         "Input > D-Pad Mouse Speed",
+         "D-Pad Mouse Speed",
+         "",
+         NULL,
+         "input",
+         {
+            { "3", "50%" },
+            { "4", "66%" },
+            { "5", "83%" },
+            { "6", "100%" },
+            { "7", "116%" },
+            { "8", "133%" },
+            { "9", "150%" },
+            { "10", "166%" },
+            { "11", "183%" },
+            { "12", "200%" },
+            { NULL, NULL },
+         },
+         "6"
+      },
+      {
+         "vice_mouse_speed",
+         "Input > Mouse Speed",
+         "Mouse Speed",
+         "Affects mouse speed globally.",
+         NULL,
+         "input",
+         {
+            { "10", "10%" },
+            { "20", "20%" },
+            { "30", "30%" },
+            { "40", "40%" },
+            { "50", "50%" },
+            { "60", "60%" },
+            { "70", "70%" },
+            { "80", "80%" },
+            { "90", "90%" },
+            { "100", "100%" },
+            { "110", "110%" },
+            { "120", "120%" },
+            { "130", "130%" },
+            { "140", "140%" },
+            { "150", "150%" },
+            { "160", "160%" },
+            { "170", "170%" },
+            { "180", "180%" },
+            { "190", "190%" },
+            { "200", "200%" },
+            { NULL, NULL },
+         },
+         "100"
+      },
+#endif
+      {
+         "vice_physical_keyboard_pass_through",
+         "Input > Keyboard Pass-through",
+         "Keyboard Pass-through",
+         "'ON' passes all physical keyboard events to the core. 'OFF' prevents RetroPad keys from generating keyboard events.",
+         NULL,
+         "input",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
+      {
+         "vice_datasette_hotkeys",
+         "Input > Datasette Hotkeys",
+         "Datasette Hotkeys",
+         "Toggle all Datasette hotkeys.",
+         NULL,
+         "input",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+#if !defined(__XPET__) && !defined(__XCBM2__)
+      {
+         "vice_keyrah_keypad_mappings",
+         "Input > Keyrah Keypad Mappings",
+         "Keyrah Keypad Mappings",
+         "Hardcoded keypad to joyport mappings for Keyrah hardware.",
+         NULL,
+         "input",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__)
+      {
+         "vice_keyboard_keymap",
+         "Input > Keyboard Keymap",
+         "Keyboard Keymap",
+#if defined(__XPLUS4__)
+         "User-defined keymaps go in 'system/vice/PLUS4'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#elif defined(__XVIC__)
+         "User-defined keymaps go in 'system/vice/VIC20'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#elif defined(__X128__)
+         "User-defined keymaps go in 'system/vice/C128'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#elif defined(__XSCPU64__)
+         "User-defined keymaps go in 'system/vice/SCPU64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#else
+         "User-defined keymaps go in 'system/vice/C64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
+#endif
+         NULL,
+         "input",
+         {
+            { "positional", "Positional" },
+            { "symbolic", "Symbolic" },
+            { "positional-user", "Positional (User-defined)" },
+            { "symbolic-user", "Symbolic (User-defined)" },
+            { NULL, NULL },
+         },
+         "positional"
+      },
+#endif
+      {
+         "vice_mapping_options_display",
+         "Show Mapping Options",
+         NULL,
+         "Page refresh by menu toggle required!",
+         NULL,
+         NULL,
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
+      /* Hotkeys */
+      {
+         "vice_mapper_vkbd",
+         "Hotkey > Toggle Virtual Keyboard",
+         "Toggle Virtual Keyboard",
+         "Press the mapped key to toggle the virtual keyboard.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_statusbar",
+         "Hotkey > Toggle Statusbar",
+         "Toggle Statusbar",
+         "Press the mapped key to toggle the statusbar.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "RETROK_F12"
+      },
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
+      {
+         "vice_mapper_joyport_switch",
+         "Hotkey > Switch Joyport",
+         "Switch Joyport",
+         "Press the mapped key to switch joyports 1 & 2.\nSwitching disables 'RetroPad Port' option until core restart.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "RETROK_RCTRL"
+      },
+#endif
+      {
+         "vice_mapper_reset",
+         "Hotkey > Reset",
+         "Reset",
+         "Press the mapped key to trigger the selected 'Reset Type'.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "RETROK_END"
+      },
+      {
+         "vice_mapper_warp_mode",
+         "Hotkey > Hold Warp Mode",
+         "Hold Warp Mode",
+         "Hold the mapped key for warp mode.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         ""
+      },
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
+      {
+         "vice_mapper_aspect_ratio_toggle",
+         "Hotkey > Toggle Aspect Ratio",
+         "Toggle Aspect Ratio",
+         "Press the mapped key to toggle aspect ratio.\nToggling disables 'Pixel Aspect Ratio' option until core restart.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_zoom_mode_toggle",
+         "Hotkey > Toggle Zoom Mode",
+         "Toggle Zoom Mode",
+         "Press the mapped key to toggle zoom mode.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "---"
+      },
+#endif
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
+      /* Datasette controls */
+      {
+         "vice_mapper_datasette_toggle_hotkeys",
+         "Hotkey > Toggle Datasette Hotkeys",
+         "Toggle Datasette Hotkeys",
+         "Press the mapped key to toggle Datasette hotkeys.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_datasette_start",
+         "Hotkey > Datasette Start",
+         "Datasette Start",
+         "Press start on tape.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "RETROK_UP"
+      },
+      {
+         "vice_mapper_datasette_stop",
+         "Hotkey > Datasette Stop",
+         "Datasette Stop",
+         "Press stop on tape.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "RETROK_DOWN"
+      },
+      {
+         "vice_mapper_datasette_rewind",
+         "Hotkey > Datasette Rewind",
+         "Datasette Rewind",
+         "Press rewind on tape.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "RETROK_LEFT"
+      },
+      {
+         "vice_mapper_datasette_forward",
+         "Hotkey > Datasette Fast Forward",
+         "Datasette Fast Forward",
+         "Press fast forward on tape.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "RETROK_RIGHT"
+      },
+      {
+         "vice_mapper_datasette_reset",
+         "Hotkey > Datasette Reset",
+         "Datasette Reset",
+         "Press reset on tape.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "---"
+      },
+#endif
+      /* Button mappings */
+      {
+         "vice_mapper_select",
+         "RetroPad > Select",
+         "Select",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "TOGGLE_VKBD"
+      },
+      {
+         "vice_mapper_start",
+         "RetroPad > Start",
+         "Start",
+         "VKBD: Press 'Return'. Remapping to non-keyboard keys overrides VKBD function!",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_b",
+         "RetroPad > B",
+         "B",
+         "Unmapped defaults to fire button.\nVKBD: Press selected key.",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_a",
+         "RetroPad > A",
+         "A",
+         "VKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_y",
+         "RetroPad > Y",
+         "Y",
+         "VKBD: Toggle 'ShiftLock'. Remapping to non-keyboard keys overrides VKBD function!",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_x",
+         "RetroPad > X",
+         "X",
+         "VKBD: Press 'Space'. Remapping to non-keyboard keys overrides VKBD function!",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "RETROK_SPACE"
+      },
+      {
+         "vice_mapper_l",
+         "RetroPad > L",
+         "L",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_r",
+         "RetroPad > R",
+         "R",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_l2",
+         "RetroPad > L2",
+         "L2",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "RETROK_ESCAPE"
+      },
+      {
+         "vice_mapper_r2",
+         "RetroPad > R2",
+         "R2",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "RETROK_RETURN"
+      },
+      {
+         "vice_mapper_l3",
+         "RetroPad > L3",
+         "L3",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_r3",
+         "RetroPad > R3",
+         "R3",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      /* Left Stick */
+      {
+         "vice_mapper_lu",
+         "RetroPad > Left Analog > Up",
+         "Left Analog > Up",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_ld",
+         "RetroPad > Left Analog > Down",
+         "Left Analog > Down",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_ll",
+         "RetroPad > Left Analog > Left",
+         "Left Analog > Left",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_lr",
+         "RetroPad > Left Analog > Right",
+         "Left Analog > Right",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      /* Right Stick */
+      {
+         "vice_mapper_ru",
+         "RetroPad > Right Analog > Up",
+         "Right Analog > Up",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_rd",
+         "RetroPad > Right Analog > Down",
+         "Right Analog > Down",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_rl",
+         "RetroPad > Right Analog > Left",
+         "Right Analog > Left",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_rr",
+         "RetroPad > Right Analog > Right",
+         "Right Analog > Right",
+         "",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+#if !defined(__XPET__) && !defined(__XCBM2__)
+      /* Turbo Fire */
+      {
+         "vice_turbo_fire",
+         "RetroPad > Turbo Fire",
+         "Turbo Fire",
+         "Hotkey toggling disables this option until core restart.",
+         NULL,
+         "input",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
+         "vice_turbo_fire_button",
+         "RetroPad > Turbo Button",
+         "Turbo Button",
+         "Replace the mapped button with turbo fire button.",
+         NULL,
+         "input",
+         {
+            { "B", "RetroPad B" },
+            { "A", "RetroPad A" },
+            { "Y", "RetroPad Y" },
+            { "X", "RetroPad X" },
+            { "L", "RetroPad L" },
+            { "R", "RetroPad R" },
+            { "L2", "RetroPad L2" },
+            { "R2", "RetroPad R2" },
+            { NULL, NULL },
+         },
+         "B"
+      },
+      {
+         "vice_turbo_pulse",
+         "RetroPad > Turbo Pulse",
+         "Turbo Pulse",
+         "Frames in a button cycle.\n- '2' = 1 frame down, 1 frame up\n- '4' = 2 frames down, 2 frames up\n- '6' = 3 frames down, 3 frames up\netc.",
+         NULL,
+         "input",
+         {
+            { "2", "2 frames" },
+            { "4", "4 frames" },
+            { "6", "6 frames" },
+            { "8", "8 frames" },
+            { "10", "10 frames" },
+            { "12", "12 frames" },
+            { NULL, NULL },
+         },
+         "6"
+      },
+#endif
+#if !defined(__XCBM5x0__)
+      {
+         "vice_userport_joytype",
+         "Input > Userport Joystick Adapter",
+         "Userport Joystick Adapter",
+         "Required for more than 2 joysticks, for example IK+ Gold with 3 players.",
+         NULL,
+         "input",
+         {
+            { "disabled", NULL },
+            { "CGA", "Protovision / Classical Games" },
+            { "HIT", "Digital Excess & Hitmen" },
+            { "Kingsoft", "Kingsoft" },
+            { "Starbyte", "Starbyte" },
+            { "Hummer", "C64DTV Hummer" },
+            { "OEM", "VIC-20 OEM" },
+            { "PET", "PET" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
+      {
+         "vice_joyport",
+         "RetroPad > Joystick Port",
+         "Joystick Port",
+         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling disables this option until core restart.",
+         NULL,
+         "input",
+         {
+            { "1", "Port 1" },
+            { "2", "Port 2" },
+            { NULL, NULL },
+         },
+         "2"
+      },
+#endif
+#if !defined(__XPET__) && !defined(__XCBM2__)
+      {
+         "vice_joyport_type",
+         "RetroPad > Joystick Port Type",
+         "Joystick Port Type",
+         "Non-joysticks are plugged in current port only and are controlled with left analog stick or mouse. Paddles are split to 1st and 2nd RetroPort.",
+         NULL,
+         "input",
+         {
+            { "1", "Joystick" },
+            { "2", "Paddles" },
+            { "3", "Mouse (1351)" },
+            { "4", "Mouse (NEOS)" },
+            { "5", "Mouse (Amiga)" },
+            { "6", "Trackball (Atari CX-22)" },
+            { "7", "Mouse (Atari ST)" },
+            { "8", "Mouse (SmartMouse)" },
+            { "9", "Mouse (Micromys)" },
+            { "10", "Koalapad" },
+            { "11", "Light Pen (Up trigger)" },
+            { "12", "Light Pen (Left trigger)" },
+            { "13", "Light Pen (Datel)" },
+            { "16", "Light Pen (Inkwell)" },
+            { "14", "Light Gun (Magnum Light Phaser)" },
+            { "15", "Light Gun (Stack Light Rifle)" },
+            { NULL, NULL },
+         },
+         "1"
+      },
+      {
+         "vice_retropad_options",
+         "RetroPad > Face Button Options",
+         "RetroPad Face Button Options",
+         "Rotate face buttons clockwise and/or make 2nd fire press up.",
+         NULL,
+         "input",
+         {
+            { "disabled", "B = Fire" },
+            { "jump", "B = Fire, A = Up" },
+            { "rotate", "Y = Fire" },
+            { "rotate_jump", "Y = Fire, B = Up" },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+#endif
+      { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },
+   };
+
+   /* Fill in the values for all the mappers */
+   int i = 0;
+   int j = 0;
+   int hotkey = 0;
+   int hotkeys_skipped = 0;
+   /* Count special hotkeys */
+   while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+   {
+      if (retro_keys[j].id < 0)
+         hotkeys_skipped++;
+      ++j;
+   }
+   while (option_defs_us[i].key)
+   {
+      if (strstr(option_defs_us[i].key, "vice_mapper_"))
+      {
+         /* Show different key list for hotkeys (special negatives removed) */
+         if (  strstr(option_defs_us[i].key, "vice_mapper_vkbd")
+            || strstr(option_defs_us[i].key, "vice_mapper_statusbar")
+            || strstr(option_defs_us[i].key, "vice_mapper_joyport_switch")
+            || strstr(option_defs_us[i].key, "vice_mapper_reset")
+            || strstr(option_defs_us[i].key, "vice_mapper_aspect_ratio_toggle")
+            || strstr(option_defs_us[i].key, "vice_mapper_zoom_mode_toggle")
+            || strstr(option_defs_us[i].key, "vice_mapper_warp_mode")
+            || strstr(option_defs_us[i].key, "vice_mapper_datasette_toggle_hotkeys")
+            || strstr(option_defs_us[i].key, "vice_mapper_datasette_start")
+            || strstr(option_defs_us[i].key, "vice_mapper_datasette_stop")
+            || strstr(option_defs_us[i].key, "vice_mapper_datasette_rewind")
+            || strstr(option_defs_us[i].key, "vice_mapper_datasette_forward")
+            || strstr(option_defs_us[i].key, "vice_mapper_datasette_reset"))
+            hotkey = 1;
+         else
+            hotkey = 0;
+
+         j = 0;
+         if (hotkey)
+         {
+            while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+            {
+               if (j == 0) /* "---" unmapped */
+               {
+                  option_defs_us[i].values[j].value = retro_keys[j].value;
+                  option_defs_us[i].values[j].label = retro_keys[j].label;
+               }
+               else
+               {
+                  option_defs_us[i].values[j].value = retro_keys[j + hotkeys_skipped + 1].value;
+                  option_defs_us[i].values[j].label = retro_keys[j + hotkeys_skipped + 1].label;
+               }
+               ++j;
+            }
+         }
+         else
+         {
+            while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+            {
+               option_defs_us[i].values[j].value = retro_keys[j].value;
+               option_defs_us[i].values[j].label = retro_keys[j].label;
+               ++j;
+            }
+         }
+         option_defs_us[i].values[j].value = NULL;
+         option_defs_us[i].values[j].label = NULL;
+      }
+      else if (!strcmp(option_defs_us[i].key, "vice_cartridge"))
+      {
+         j = 0;
+         option_defs_us[i].values[0].value = "none";
+         option_defs_us[i].values[0].label = "disabled";
+         ++j;
+
+         DIR *cart_dir;
+         struct dirent *cart_dirp;
+
+         char machine_directory[RETRO_PATH_MAX] = {0};
+         snprintf(machine_directory, sizeof(machine_directory), "%s%s%s",
+               retro_system_data_directory, FSDEV_DIR_SEP_STR, machine_name);
+
+         /* Scan system/vice/machine directory for cartridges */
+         if (path_is_directory(machine_directory))
+         {
+            cart_dir = opendir(machine_directory);
+            while ((cart_dirp = readdir(cart_dir)) != NULL && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
+            {
+               /* Blacklisted */
+               if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
+                   !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
+                  continue;
+
+               if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
+               {
+                  char cart_value[RETRO_PATH_MAX] = {0};
+                  char cart_label[50] = {0};
+                  snprintf(cart_value, sizeof(cart_value), "%s", cart_dirp->d_name);
+                  snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
+
+                  vice_carts[j].value = strdup(cart_value);
+                  vice_carts[j].label = strdup(cart_label);
+
+                  option_defs_us[i].values[j].value = vice_carts[j].value;
+                  option_defs_us[i].values[j].label = vice_carts[j].label;
+                  ++j;
+               }
+
+               vice_carts[j].value = NULL;
+               vice_carts[j].label = NULL;
+            }
+            closedir(cart_dir);
+         }
+
+         option_defs_us[i].values[j].value = NULL;
+         option_defs_us[i].values[j].label = NULL;
+
+         /* Info sublabel */
+         char info[100] = {0};
+         snprintf(info, sizeof(info), "Cartridge images go in 'system/vice/%s'.\nChanging while running resets the system!", machine_name);
+         option_defs_us[i].info = strdup(info);
+      }
+      ++i;
+   }
+
+   struct retro_core_options_v2 options_us = {
+      option_cats_us,
+      option_defs_us
+   };
+
+   unsigned version = 0;
+   if (!environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version))
+      version = 0;
+
+   if (version >= 2)
+   {
+#ifndef HAVE_NO_LANGEXTRA
+      struct retro_core_options_v2_intl core_options_intl;
+
+      core_options_intl.us    = &options_us;
+      core_options_intl.local = NULL;
+
+      if (environ_cb(RETRO_ENVIRONMENT_GET_LANGUAGE, &language) &&
+          (language < RETRO_LANGUAGE_LAST) && (language != RETRO_LANGUAGE_ENGLISH))
+         core_options_intl.local = options_intl[language];
+
+      libretro_supports_option_categories = environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2_INTL,
+            &core_options_intl);
+#else
+      libretro_supports_option_categories = environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2,
+            &options_us);
+#endif
+   }
+   else
+   {
+      size_t i, j;
+      size_t option_index              = 0;
+      size_t num_options               = 0;
+      struct retro_core_option_definition
+            *option_v1_defs_us         = NULL;
+#ifndef HAVE_NO_LANGEXTRA
+      size_t num_options_intl          = 0;
+      struct retro_core_option_v2_definition
+            *option_defs_intl          = NULL;
+      struct retro_core_option_definition
+            *option_v1_defs_intl       = NULL;
+      struct retro_core_options_intl
+            core_options_v1_intl;
+#endif
+      struct retro_variable *variables = NULL;
+      char **values_buf                = NULL;
+
+      /* Determine total number of options */
+      while (true)
+      {
+         if (option_defs_us[num_options].key)
+            num_options++;
+         else
+            break;
+      }
+
+      if (version >= 1)
+      {
+         /* Allocate US array */
+         option_v1_defs_us = (struct retro_core_option_definition *)
+               calloc(num_options + 1, sizeof(struct retro_core_option_definition));
+
+         /* Copy parameters from option_defs_us array */
+         for (i = 0; i < num_options; i++)
+         {
+            struct retro_core_option_v2_definition *option_def_us = &option_defs_us[i];
+            struct retro_core_option_value *option_values         = option_def_us->values;
+            struct retro_core_option_definition *option_v1_def_us = &option_v1_defs_us[i];
+            struct retro_core_option_value *option_v1_values      = option_v1_def_us->values;
+
+            option_v1_def_us->key           = option_def_us->key;
+            option_v1_def_us->desc          = option_def_us->desc;
+            option_v1_def_us->info          = option_def_us->info;
+            option_v1_def_us->default_value = option_def_us->default_value;
+
+            /* Values must be copied individually... */
+            while (option_values->value)
+            {
+               option_v1_values->value = option_values->value;
+               option_v1_values->label = option_values->label;
+
+               option_values++;
+               option_v1_values++;
+            }
+         }
+
+#ifndef HAVE_NO_LANGEXTRA
+         if (environ_cb(RETRO_ENVIRONMENT_GET_LANGUAGE, &language) &&
+             (language < RETRO_LANGUAGE_LAST) && (language != RETRO_LANGUAGE_ENGLISH) &&
+             options_intl[language])
+            option_defs_intl = options_intl[language]->definitions;
+
+         if (option_defs_intl)
+         {
+            /* Determine number of intl options */
+            while (true)
+            {
+               if (option_defs_intl[num_options_intl].key)
+                  num_options_intl++;
+               else
+                  break;
+            }
+
+            /* Allocate intl array */
+            option_v1_defs_intl = (struct retro_core_option_definition *)
+                  calloc(num_options_intl + 1, sizeof(struct retro_core_option_definition));
+
+            /* Copy parameters from option_defs_intl array */
+            for (i = 0; i < num_options_intl; i++)
+            {
+               struct retro_core_option_v2_definition *option_def_intl = &option_defs_intl[i];
+               struct retro_core_option_value *option_values           = option_def_intl->values;
+               struct retro_core_option_definition *option_v1_def_intl = &option_v1_defs_intl[i];
+               struct retro_core_option_value *option_v1_values        = option_v1_def_intl->values;
+
+               option_v1_def_intl->key           = option_def_intl->key;
+               option_v1_def_intl->desc          = option_def_intl->desc;
+               option_v1_def_intl->info          = option_def_intl->info;
+               option_v1_def_intl->default_value = option_def_intl->default_value;
+
+               /* Values must be copied individually... */
+               while (option_values->value)
+               {
+                  option_v1_values->value = option_values->value;
+                  option_v1_values->label = option_values->label;
+
+                  option_values++;
+                  option_v1_values++;
+               }
+            }
+         }
+
+         core_options_v1_intl.us    = option_v1_defs_us;
+         core_options_v1_intl.local = option_v1_defs_intl;
+
+         environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_INTL, &core_options_v1_intl);
+#else
+         environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, option_v1_defs_us);
+#endif
+      }
+      else
+      {
+         /* Allocate arrays */
+         variables  = (struct retro_variable *)calloc(num_options + 1,
+               sizeof(struct retro_variable));
+         values_buf = (char **)calloc(num_options, sizeof(char *));
+
+         if (!variables || !values_buf)
+            goto error;
+
+         /* Copy parameters from option_defs_us array */
+         for (i = 0; i < num_options; i++)
+         {
+            const char *key                        = option_defs_us[i].key;
+            const char *desc                       = option_defs_us[i].desc;
+            const char *default_value              = option_defs_us[i].default_value;
+            struct retro_core_option_value *values = option_defs_us[i].values;
+            size_t buf_len                         = 3;
+            size_t default_index                   = 0;
+
+            values_buf[i] = NULL;
+
+            if (desc)
+            {
+               size_t num_values = 0;
+
+               /* Determine number of values */
+               while (true)
+               {
+                  if (values[num_values].value)
+                  {
+                     /* Check if this is the default value */
+                     if (default_value)
+                        if (strcmp(values[num_values].value, default_value) == 0)
+                           default_index = num_values;
+
+                     buf_len += strlen(values[num_values].value);
+                     num_values++;
+                  }
+                  else
+                     break;
+               }
+
+               /* Build values string */
+               if (num_values > 0)
+               {
+                  buf_len += num_values - 1;
+                  buf_len += strlen(desc);
+
+                  values_buf[i] = (char *)calloc(buf_len, sizeof(char));
+                  if (!values_buf[i])
+                     goto error;
+
+                  strcpy(values_buf[i], desc);
+                  strcat(values_buf[i], "; ");
+
+                  /* Default value goes first */
+                  strcat(values_buf[i], values[default_index].value);
+
+                  /* Add remaining values */
+                  for (j = 0; j < num_values; j++)
+                  {
+                     if (j != default_index)
+                     {
+                        strcat(values_buf[i], "|");
+                        strcat(values_buf[i], values[j].value);
+                     }
+                  }
+               }
+            }
+
+            variables[option_index].key   = key;
+            variables[option_index].value = values_buf[i];
+            option_index++;
+         }
+
+         /* Set variables */
+         environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+      }
+
+error:
+      /* Clean up */
+
+      if (option_v1_defs_us)
+      {
+         free(option_v1_defs_us);
+         option_v1_defs_us = NULL;
+      }
+
+#ifndef HAVE_NO_LANGEXTRA
+      if (option_v1_defs_intl)
+      {
+         free(option_v1_defs_intl);
+         option_v1_defs_intl = NULL;
+      }
+#endif
+
+      if (values_buf)
+      {
+         for (i = 0; i < num_options; i++)
+         {
+            if (values_buf[i])
+            {
+               free(values_buf[i]);
+               values_buf[i] = NULL;
+            }
+         }
+
+         free(values_buf);
+         values_buf = NULL;
+      }
+
+      if (variables)
+      {
+         free(variables);
+         variables = NULL;
+      }
+   }
+}
+
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
    retro_set_paths();
    free_vice_carts();
+   retro_set_core_options();
 
    /* Controller ports */
    static const struct retro_controller_description p1_controllers[] = {
@@ -1801,1793 +4189,8 @@ void retro_set_environment(retro_environment_t cb)
 
    cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 
-   /* Core options */
-   static struct retro_core_option_definition core_options[] =
-   {
-#if defined(__XVIC__)
-      {
-         "vice_vic20_model",
-         "Model",
-         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
-         {
-            { "VIC20 PAL auto", "VIC-20 PAL Automatic" },
-            { "VIC20 NTSC auto", "VIC-20 NTSC Automatic" },
-            { "VIC20 PAL", "VIC-20 PAL" },
-            { "VIC20 NTSC", "VIC-20 NTSC" },
-            { "VIC21", "Super VIC (+16K) NTSC" },
-            { NULL, NULL },
-         },
-         "VIC20 PAL auto"
-      },
-      {
-         "vice_vic20_memory_expansions",
-         "System > Memory Expansion",
-         "Can be forced with filename tags '(8k)' & '(8kb)' or directory tags '8k' & '8kb'.\nChanging while running resets the system!",
-         {
-            { "none", "disabled" },
-            { "3kB", "3kB" },
-            { "8kB", "8kB" },
-            { "16kB", "16kB" },
-            { "24kB", "24kB" },
-            { "35kB", "35kB" },
-            { NULL, NULL },
-         },
-         "none"
-      },
-#elif defined(__XPLUS4__)
-      {
-         "vice_plus4_model",
-         "Model",
-         "Changing while running resets the system!",
-         {
-            { "C16 PAL", "C16 PAL" },
-            { "C16 NTSC", "C16 NTSC" },
-            { "PLUS4 PAL", "Plus/4 PAL" },
-            { "PLUS4 NTSC", "Plus/4 NTSC" },
-            { "V364 NTSC", "V364 NTSC" },
-            { "232 NTSC", "C232 NTSC" },
-            { NULL, NULL }
-         },
-         "PLUS4 PAL"
-      },
-#elif defined(__X128__)
-      {
-         "vice_c128_model",
-         "Model",
-         "Changing while running resets the system!",
-         {
-            { "C128 PAL", "C128 PAL" },
-            { "C128 NTSC", "C128 NTSC" },
-            { "C128 D PAL", "C128 D PAL" },
-            { "C128 D NTSC", "C128 D NTSC" },
-            { "C128 DCR PAL", "C128 DCR PAL" },
-            { "C128 DCR NTSC", "C128 DCR NTSC" },
-            { NULL, NULL },
-         },
-         "C128 PAL"
-      },
-      {
-         "vice_c128_video_output",
-         "System > Video Output",
-         "",
-         {
-            { "VICII", "VIC-II (40 cols)" },
-            { "VDC", "VDC (80 cols)" },
-            { NULL, NULL },
-         },
-         "VICII"
-      },
-      {
-         "vice_c128_go64",
-         "System > GO64",
-         "Start in C64 compatibility mode.\nChanging while running resets the system!",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#elif defined(__XPET__)
-      {
-         "vice_pet_model",
-         "Model",
-         "Changing while running resets the system!",
-         {
-            { "2001", "PET 2001" },
-            { "3008", "PET 3008" },
-            { "3016", "PET 3016" },
-            { "3032", "PET 3032" },
-            { "3032B", "PET 3032B" },
-            { "4016", "PET 4016" },
-            { "4032", "PET 4032" },
-            { "4032B", "PET 4032B" },
-            { "8032", "PET 8032" },
-            { "8096", "PET 8096" },
-            { "8296", "PET 8296" },
-            { "SUPERPET", "Super PET" },
-            { NULL, NULL },
-         },
-         "8032"
-      },
-#elif defined(__XCBM2__)
-      {
-         "vice_cbm2_model",
-         "Model",
-         "Changing while running resets the system!",
-         {
-            { "610 PAL", "CBM 610 PAL" },
-            { "610 NTSC", "CBM 610 NTSC" },
-            { "620 PAL", "CBM 620 PAL" },
-            { "620 NTSC", "CBM 620 NTSC" },
-            { "620PLUS PAL", "CBM 620+ PAL" },
-            { "620PLUS NTSC", "CBM 620+ NTSC" },
-            { "710 NTSC", "CBM 710 NTSC" },
-            { "720 NTSC", "CBM 720 NTSC" },
-            { "720PLUS NTSC", "CBM 720+ NTSC" },
-            { NULL, NULL },
-         },
-         "610 PAL"
-      },
-#elif defined(__XCBM5x0__)
-      {
-         "vice_cbm5x0_model",
-         "Model",
-         "Changing while running resets the system!",
-         {
-            { "510 PAL", "CBM 510 PAL" },
-            { "510 NTSC", "CBM 510 NTSC" },
-            { NULL, NULL },
-         },
-         "510 PAL"
-      },
-#elif defined(__X64DTV__)
-      {
-         "vice_c64dtv_model",
-         "Model",
-         "Changing while running resets the system!",
-         {
-            { "DTV2 PAL", "DTV v2 PAL" },
-            { "DTV2 NTSC", "DTV v2 NTSC" },
-            { "DTV3 PAL", "DTV v3 PAL" },
-            { "DTV3 NTSC", "DTV v3 NTSC" },
-            { "HUMMER NTSC", "Hummer NTSC" },
-            { NULL, NULL },
-         },
-         "DTV3 PAL"
-      },
-#else
-      {
-         "vice_c64_model",
-         "Model",
-         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
-         {
-            { "C64 PAL auto", "C64 PAL Automatic" },
-            { "C64 NTSC auto", "C64 NTSC Automatic" },
-            { "C64C PAL auto", "C64C PAL Automatic" },
-            { "C64C NTSC auto", "C64C NTSC Automatic" },
-            { "C64 PAL", "C64 PAL" },
-            { "C64 NTSC", "C64 NTSC" },
-            { "C64C PAL", "C64C PAL" },
-            { "C64C NTSC", "C64C NTSC" },
-            { "C64SX PAL", "SX-64 PAL" },
-            { "C64SX NTSC", "SX-64 NTSC" },
-            { "PET64 PAL", "Educator 64 (PET 64) PAL" },
-            { "PET64 NTSC", "Educator 64 (PET 64) NTSC" },
-            { "C64 GS PAL", "C64 Games System PAL" },
-            { "C64 JAP NTSC", "C64 Japanese NTSC" },
-#if 0
-            { "C64 OLD PAL", NULL },
-            { "C64 PAL N", NULL },
-            { "C64 OLD NTSC", NULL },
-#endif
-            { NULL, NULL },
-         },
-         "C64 PAL auto"
-      },
-#if defined(__XSCPU64__)
-      {
-         "vice_supercpu_simm_size",
-         "System > SuperCPU SIMM Size",
-         "Changing while running resets the system!",
-         {
-            { "0", "disabled" },
-            { "1", "1024kB" },
-            { "2", "2048kB" },
-            { "4", "4096kB" },
-            { "8", "8192kB" },
-            { "16", "16384kB" },
-            { NULL, NULL },
-         },
-         "16"
-      },
-#else
-      {
-         "vice_ram_expansion_unit",
-         "System > RAM Expansion Unit",
-         "Changing while running resets the system!",
-         {
-            { "none", "disabled" },
-            { "128kB", "128kB (1700)" },
-            { "256kB", "256kB (1764)" },
-            { "512kB", "512kB (1750)" },
-            { "1024kB", "1024kB" },
-            { "2048kB", "2048kB" },
-            { "4096kB", "4096kB" },
-            { "8192kB", "8192kB" },
-            { "16384kB", "16384kB" },
-            { NULL, NULL },
-         },
-         "none"
-      },
-#endif /* __XSCPU64__ */
-#endif
-#if defined(__XSCPU64__)
-      {
-         "vice_supercpu_speed_switch",
-         "System > SuperCPU Speed Switch",
-         "",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "enabled"
-      },
-      {
-         "vice_supercpu_kernal",
-         "System > SuperCPU Kernal",
-         "JiffyDOS does not work with the internal kernal! ROMs required in 'system/vice/SCPU64':\n- 'scpu-dos-1.4.bin'\n- 'scpu-dos-2.04.bin'",
-         {
-            { "0", "Internal" },
-            { "1", "1.40" },
-            { "2", "2.04" },
-            { NULL, NULL },
-         },
-         "0"
-      },
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
-      {
-         "vice_jiffydos",
-         "System > JiffyDOS",
-#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
-#elif defined(__X128__)
-         "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
-#endif
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-      {
-         "vice_read_vicerc",
-         "System > Read 'vicerc'",
-         "Process first found 'vicerc' in this order:\n1. 'saves/[content].vicerc'\n2. 'saves/vicerc'\n3. 'system/vice/vicerc'",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "enabled"
-      },
-#if !defined(__X64DTV__)
-      {
-         "vice_reset",
-         "System > Reset Type",
-         "- 'Autostart' hard resets and reruns content.\n- 'Soft' keeps some code in memory.\n- 'Hard' erases all memory.\n- 'Freeze' is for cartridges.",
-         {
-            { "autostart", "Autostart" },
-            { "soft", "Soft" },
-            { "hard", "Hard" },
-            { "freeze", "Freeze" },
-            { NULL, NULL },
-         },
-         "autostart"
-      },
-#endif
-#if !defined(__XPET__) && !defined(__X64DTV__)
-      /* Sublabel and options filled dynamically in retro_set_environment() */
-      {
-         "vice_cartridge",
-         "Media > Cartridge",
-         "",
-         {
-            { NULL, NULL },
-         },
-         NULL
-      },
-#endif
-#if !defined(__X64DTV__)
-      {
-         "vice_autostart",
-         "Media > Autostart",
-         "'ON' always runs content, 'OFF' runs only PRG/CRT, 'Warp' turns warp mode on during autostart loading.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { "warp", "Warp" },
-            { NULL, NULL },
-         },
-         "enabled"
-      },
-      {
-         "vice_autoloadwarp",
-         "Media > Automatic Load Warp",
-         "Toggle warp mode during disk and/or tape access. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { "disk", "Disk only" },
-            { "tape", "Tape only" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_drive_true_emulation",
-         "Media > True Drive Emulation",
-         "Loads much slower, but some games need it.\nRequired for 'JiffyDOS', 'Automatic Load Warp' and LED driver interface!",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "enabled"
-      },
-      {
-         "vice_virtual_device_traps",
-         "Media > Virtual Device Traps",
-         "Required for printer device, but causes loading issues on rare cases. Enabled forcefully by disabling 'True Drive Emulation'.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_floppy_write_protection",
-         "Media > Floppy Write Protection",
-         "Set device 8 read only.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-      {
-         "vice_easyflash_write_protection",
-         "Media > EasyFlash Write Protection",
-         "Set EasyFlash cartridges read only.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-      {
-         "vice_work_disk",
-         "Media > Global Work Disk",
-         "Global disk in device 8 is only inserted when core is started without content.",
-         {
-            { "disabled", NULL },
-            { "8_d64", "D64 - 664 blocks, 170kB - Device 8" },
-            { "9_d64", "D64 - 664 blocks, 170kB - Device 9" },
-            { "8_d71", "D71 - 1328 blocks, 340kB - Device 8" },
-            { "9_d71", "D71 - 1328 blocks, 340kB - Device 9" },
-            { "8_d81", "D81 - 3160 blocks, 800kB - Device 8" },
-            { "9_d81", "D81 - 3160 blocks, 800kB - Device 9" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif /* !defined(__X64DTV__) */
-      {
-         "vice_video_options_display",
-         "Show Video Options",
-         "Page refresh by menu toggle required!",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
-      {
-         "vice_aspect_ratio",
-         "Video > Pixel Aspect Ratio",
-         "Hotkey toggling disables this option until core restart.",
-         {
-            { "auto", "Automatic" },
-            { "pal", "PAL" },
-            { "ntsc", "NTSC" },
-            { "raw", "1:1" },
-            { NULL, NULL },
-         },
-         "auto"
-      },
-      {
-         "vice_zoom_mode",
-         "Video > Zoom Mode",
-         "Crop borders to fit various host screens. Requirements in RetroArch settings:\n- Aspect Ratio: Core provided,\n- Integer Scale: Off.",
-         {
-            { "disabled", NULL },
-            { "small", "Small" },
-            { "medium", "Medium" },
-            { "maximum", "Maximum" },
-            { "manual", "Manual" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_zoom_mode_crop",
-         "Video > Zoom Mode Crop",
-         "'Horizontal + Vertical' & 'Maximum' removes borders completely. Ignored with 'Manual' zoom.",
-         {
-            { "both", "Horizontal + Vertical" },
-            { "horizontal", "Horizontal" },
-            { "vertical", "Vertical" },
-            { "16:9", "16:9" },
-            { "16:10", "16:10" },
-            { "4:3", "4:3" },
-            { "5:4", "5:4" },
-            { NULL, NULL },
-         },
-         "both"
-      },
-      {
-         "vice_manual_crop_top",
-         "Video > Manual Crop Top",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "VIC-II top border height:\n- 35px PAL\n- 23px NTSC",
-#elif defined(__XVIC__)
-         "VIC top border height:\n- 48px PAL\n- 22px NTSC",
-#elif defined(__XPLUS4__)
-         "TED top border height:\n- 40px PAL\n- 18px NTSC",
-#endif
-         MANUAL_CROP_OPTIONS,
-         "0",
-      },
-      {
-         "vice_manual_crop_bottom",
-         "Video > Manual Crop Bottom",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "VIC-II bottom border height:\n- 37px PAL\n- 24px NTSC",
-#elif defined(__XVIC__)
-         "VIC bottom border height:\n- 52px PAL\n- 28px NTSC",
-#elif defined(__XPLUS4__)
-         "TED bottom border height:\n- 48px PAL\n- 24px NTSC",
-#endif
-         MANUAL_CROP_OPTIONS,
-         "0",
-      },
-      {
-         "vice_manual_crop_left",
-         "Video > Manual Crop Left",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "VIC-II left border width:\n- 32px",
-#elif defined(__XVIC__)
-         "VIC left border width:\n- 48px PAL\n- 32px NTSC",
-#elif defined(__XPLUS4__)
-         "TED left border width:\n- 32px",
-#endif
-         MANUAL_CROP_OPTIONS,
-         "0",
-      },
-      {
-         "vice_manual_crop_right",
-         "Video > Manual Crop Right",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "VIC-II right border width:\n- 32px",
-#elif defined(__XVIC__)
-         "VIC right border width:\n- 48px PAL\n- 16px NTSC",
-#elif defined(__XPLUS4__)
-         "TED right border width:\n- 32px",
-#endif
-         MANUAL_CROP_OPTIONS,
-         "0",
-      },
-#endif
-      {
-         "vice_statusbar",
-         "Video > Statusbar Mode",
-         "- 'Full': Joyports + Current image + LEDs\n- 'Basic': Current image + LEDs\n- 'Minimal': Track number + FPS hidden",
-         {
-            { "bottom", "Bottom Full" },
-            { "bottom_minimal", "Bottom Full Minimal" },
-            { "bottom_basic", "Bottom Basic" },
-            { "bottom_basic_minimal", "Bottom Basic Minimal" },
-            { "top", "Top Full" },
-            { "top_minimal", "Top Full Minimal" },
-            { "top_basic", "Top Basic" },
-            { "top_basic_minimal", "Top Basic Minimal" },
-            { NULL, NULL },
-         },
-         "bottom"
-      },
-      {
-         "vice_vkbd_theme",
-         "Video > Virtual KBD Theme",
-         "By default, the keyboard comes up with RetroPad Select.",
-         {
-            { "auto", "Automatic (shadow)" },
-            { "auto_outline", "Automatic (outline)" },
-            { "brown", "Brown (shadow)" },
-            { "brown_outline", "Brown (outline)" },
-            { "beige", "Beige (shadow)" },
-            { "beige_outline", "Beige (outline)" },
-            { "dark", "Dark (shadow)" },
-            { "dark_outline", "Dark (outline)" },
-            { "light", "Light (shadow)" },
-            { "light_outline", "Light (outline)" },
-            { NULL, NULL },
-         },
-         "auto"
-      },
-      {
-         "vice_vkbd_transparency",
-         "Video > Virtual KBD Transparency",
-         "Keyboard transparency can be toggled with RetroPad A.",
-         {
-            { "0%",   NULL },
-            { "25%",  NULL },
-            { "50%",  NULL },
-            { "75%",  NULL },
-            { "100%", NULL },
-            { NULL, NULL },
-         },
-         "25%"
-      },
-      {
-         "vice_gfx_colors",
-         "Video > Color Depth",
-         "24-bit is slower and not available on all platforms. Full restart required.",
-         {
-            { "16bit", "Thousands (16-bit)" },
-            { "24bit", "Millions (24-bit)" },
-            { NULL, NULL },
-         },
-         "16bit"
-      },
-      {
-         "vice_joyport_pointer_color",
-         "Video > Light Pen/Gun Pointer Color",
-         "Crosshair color for light pens and guns.",
-         {
-            { "disabled", NULL },
-            { "black", "Black" },
-            { "white", "White" },
-            { "red", "Red" },
-            { "green", "Green" },
-            { "blue", "Blue" },
-            { "yellow", "Yellow" },
-            { "purple", "Purple" },
-            { NULL, NULL },
-         },
-         "blue"
-      },
-      {
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "vice_vicii_filter",
-         "Video > VIC-II Filter",
-#elif defined(__XVIC__)
-         "vice_vic_filter",
-         "Video > VIC Filter",
-#elif defined(__XPLUS4__)
-         "vice_ted_filter",
-         "Video > TED Filter",
-#elif defined(__XPET__) || defined(__XCBM2__)
-         "vice_crtc_filter",
-         "Video > CRTC Filter",
-#endif
-         "CRT emulation filter with custom horizontal blur.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { "enabled_medblur", "50% blur" },
-            { "enabled_lowblur", "10% blur" },
-         },
-         "disabled"
-      },
-#if defined(__XVIC__)
-      {
-         "vice_vic20_external_palette",
-         "Video > VIC Color Palette",
-         "'Colodore' is recommended for the most accurate colors.",
-         {
-            { "default", "Internal" },
-            { "colodore_vic", "Colodore" },
-            { "mike-pal", "Mike (PAL)" },
-            { "mike-ntsc", "Mike (NTSC)" },
-            { "vice", "VICE" },
-            { NULL, NULL },
-         },
-         "colodore_vic"
-      },
-#elif defined(__XPLUS4__)
-      {
-         "vice_plus4_external_palette",
-         "Video > TED Color Palette",
-         "'Colodore' is recommended for the most accurate colors.",
-         {
-            { "default", "Internal" },
-            { "colodore_ted", "Colodore" },
-            { "yape-pal", "Yape (PAL)" },
-            { "yape-ntsc", "Yape (NTSC)" },
-            { NULL, NULL },
-         },
-         "colodore_ted"
-      },
-#elif defined(__XPET__)
-      {
-         "vice_pet_external_palette",
-         "Video > CRTC Color Palette",
-         "",
-         {
-            { "default", "Internal" },
-            { "green", "Green" },
-            { "amber", "Amber" },
-            { "white", "White" },
-            { NULL, NULL },
-         },
-         "default"
-      },
-#elif defined(__XCBM2__)
-      {
-         "vice_cbm2_external_palette",
-         "Video > CRTC Color Palette",
-         "",
-         {
-            { "default", "Internal" },
-            { "green", "Green" },
-            { "amber", "Amber" },
-            { "white", "White" },
-            { NULL, NULL },
-         },
-         "default"
-      },
-#elif !defined(__X64DTV__)
-      {
-         "vice_external_palette",
-         "Video > VIC-II Color Palette",
-         "'Colodore' is recommended for most accurate colors.",
-         {
-            { "default", "Internal" },
-            { "colodore", "Colodore" },
-            { "pepto-pal", "Pepto (PAL)" },
-#if 0
-            { "pepto-palold", "Pepto (old PAL)" },
-#endif
-            { "pepto-ntsc", "Pepto (NTSC)" },
-            { "pepto-ntsc-sony", "Pepto (NTSC, Sony)" },
-            { "cjam", "ChristopherJam" },
-            { "c64hq", "C64HQ" },
-            { "c64s", "C64S" },
-            { "ccs64", "CCS64" },
-            { "community-colors", "Community Colors" },
-            { "deekay", "Deekay" },
-            { "frodo", "Frodo" },
-            { "godot", "Godot" },
-            { "pc64", "PC64" },
-            { "ptoing", "Ptoing" },
-            { "rgb", "RGB" },
-            { "vice", "VICE" },
-            { NULL, NULL },
-         },
-         "colodore"
-      },
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
-      {
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "vice_vicii_color_gamma",
-         "Video > VIC-II Color Gamma",
-#elif defined(__XVIC__)
-         "vice_vic_color_gamma",
-         "Video > VIC Color Gamma",
-#elif defined(__XPLUS4__)
-         "vice_ted_color_gamma",
-         "Video > TED Color Gamma",
-#endif
-         "Gamma for the internal palette.",
-         PALETTE_GAMMA_OPTIONS,
-         "2800"
-      },
-      {
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "vice_vicii_color_brightness",
-         "Video > VIC-II Color Brightness",
-#elif defined(__XVIC__)
-         "vice_vic_color_brightness",
-         "Video > VIC Color Brightness",
-#elif defined(__XPLUS4__)
-         "vice_ted_color_brightness",
-         "Video > TED Color Brightness",
-#endif
-         "Brightness for the internal palette.",
-         PALETTE_COLOR_OPTIONS,
-         "1000"
-      },
-      {
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "vice_vicii_color_contrast",
-         "Video > VIC-II Color Contrast",
-#elif defined(__XVIC__)
-         "vice_vic_color_contrast",
-         "Video > VIC Color Contrast",
-#elif defined(__XPLUS4__)
-         "vice_ted_color_contrast",
-         "Video > TED Color Contrast",
-#endif
-         "Contrast for the internal palette.",
-         PALETTE_COLOR_OPTIONS,
-         "1000"
-      },
-      {
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "vice_vicii_color_saturation",
-         "Video > VIC-II Color Saturation",
-#elif defined(__XVIC__)
-         "vice_vic_color_saturation",
-         "Video > VIC Color Saturation",
-#elif defined(__XPLUS4__)
-         "vice_ted_color_saturation",
-         "Video > TED Color Saturation",
-#endif
-         "Saturation for the internal palette.",
-         PALETTE_COLOR_OPTIONS,
-         "1000"
-      },
-      {
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "vice_vicii_color_tint",
-         "Video > VIC-II Color Tint",
-#elif defined(__XVIC__)
-         "vice_vic_color_tint",
-         "Video > VIC Color Tint",
-#elif defined(__XPLUS4__)
-         "vice_ted_color_tint",
-         "Video > TED Color Tint",
-#endif
-         "Tint for the internal palette.",
-         PALETTE_COLOR_OPTIONS,
-         "1000"
-      },
-#endif
-      {
-         "vice_audio_options_display",
-         "Show Audio Options",
-         "Page refresh by menu toggle required!",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_drive_sound_emulation",
-         "Audio > Drive Sound Emulation",
-         "'True Drive Emulation' & D64/D71 disk image required.",
-         {
-            { "disabled", NULL },
-            { "5%", NULL },
-            { "10%", NULL },
-            { "15%", NULL },
-            { "20%", NULL },
-            { "25%", NULL },
-            { "30%", NULL },
-            { "35%", NULL },
-            { "40%", NULL },
-            { "45%", NULL },
-            { "50%", NULL },
-            { "55%", NULL },
-            { "60%", NULL },
-            { "65%", NULL },
-            { "70%", NULL },
-            { "75%", NULL },
-            { "80%", NULL },
-            { "85%", NULL },
-            { "90%", NULL },
-            { "95%", NULL },
-            { "100%", NULL },
-            { NULL, NULL },
-         },
-         "20%"
-      },
-#if !defined(__XSCPU64__) && !defined(__X64DTV__)
-      {
-         "vice_datasette_sound",
-         "Audio > Datasette Sound",
-         "TAP tape image required.",
-         {
-            { "disabled", NULL },
-            { "5%", NULL },
-            { "10%", NULL },
-            { "15%", NULL },
-            { "20%", NULL },
-            { "25%", NULL },
-            { "30%", NULL },
-            { "35%", NULL },
-            { "40%", NULL },
-            { "45%", NULL },
-            { "50%", NULL },
-            { "55%", NULL },
-            { "60%", NULL },
-            { "65%", NULL },
-            { "70%", NULL },
-            { "75%", NULL },
-            { "80%", NULL },
-            { "85%", NULL },
-            { "90%", NULL },
-            { "95%", NULL },
-            { "100%", NULL },
-            { "-1", "100% + Mute" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
-      {
-         "vice_audio_leak_emulation",
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         "Audio > VIC-II Audio Leak Emulation",
-#elif defined(__XVIC__)
-         "Audio > VIC Audio Leak Emulation",
-#elif defined(__XPLUS4__)
-         "Audio > TED Audio Leak Emulation",
-#endif
-         "",
-         {
-            { "disabled", NULL },
-            { "1", "100%" },
-            { "2", "200%" },
-            { "3", "300%" },
-            { "4", "400%" },
-            { "5", "500%" },
-            { "6", "600%" },
-            { "7", "700%" },
-            { "8", "800%" },
-            { "9", "900%" },
-            { "10", "1000%" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-#if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
-      {
-         "vice_sid_engine",
-         "Audio > SID Engine",
-#if defined(__X64DTV__)
-         "'ReSID-DTV' is accurate, 'FastSID' is the last resort.",
-#else
-         "'ReSID' is accurate, 'ReSID-FP' is more accurate, 'FastSID' is the last resort.",
-#endif
-         {
-            { "FastSID", NULL },
-#if defined(__X64DTV__)
-            { "ReSID", "ReSID-DTV" },
-#else
-            { "ReSID", NULL },
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
-#ifdef HAVE_RESID33
-            { "ReSID-3.3", NULL },
-#endif
-            { "ReSID-FP", NULL },
-#endif
-            { NULL, NULL },
-         },
-         "ReSID"
-      },
-#if !defined(__X64DTV__)
-      {
-         "vice_sid_model",
-         "Audio > SID Model",
-         "C64 has '6581', C64C has '8580'.",
-         {
-            { "default", "Default" },
-            { "6581", NULL },
-            { "8580", NULL },
-            { "8580RD", "8580 ReSID + digi boost" },
-            { NULL, NULL },
-         },
-         "default"
-      },
-      {
-         "vice_sid_extra",
-         "Audio > SID Extra",
-         "Second SID base address.",
-         {
-            { "disabled", NULL },
-            { "0xd420", "$D420" },
-            { "0xd500", "$D500" },
-            { "0xde00", "$DE00" },
-            { "0xdf00", "$DF00" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-      {
-         "vice_resid_sampling",
-         "Audio > ReSID Sampling",
-         "'Resampling' provides best quality. 'Fast' improves performance dramatically on PS Vita.",
-         {
-            { "fast", "Fast" },
-            { "interpolation", "Interpolation" },
-            { "fast resampling", "Fast Resampling" },
-            { "resampling", "Resampling" },
-            { NULL, NULL },
-         },
-#if defined(__X64__) || defined(__XCBM5x0__) || defined(__XCBM2__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
-         "fast"
-#else
-         "resampling"
-#endif
-      },
-      {
-         "vice_resid_passband",
-         "Audio > ReSID Filter Passband",
-         "",
-         {
-            { "0", NULL },
-            { "10", NULL },
-            { "20", NULL },
-            { "30", NULL },
-            { "40", NULL },
-            { "50", NULL },
-            { "60", NULL },
-            { "70", NULL },
-            { "80", NULL },
-            { "90", NULL },
-            { NULL, NULL },
-         },
-         "90"
-      },
-      {
-         "vice_resid_gain",
-         "Audio > ReSID Filter Gain",
-         "",
-         {
-            { "90", NULL },
-            { "91", NULL },
-            { "92", NULL },
-            { "93", NULL },
-            { "94", NULL },
-            { "95", NULL },
-            { "96", NULL },
-            { "97", NULL },
-            { "98", NULL },
-            { "99", NULL },
-            { "100", NULL },
-            { NULL, NULL },
-         },
-         "97"
-      },
-      {
-         "vice_resid_filterbias",
-         "Audio > ReSID Filter 6581 Bias",
-         "",
-         {
-            { "-5000", NULL },
-            { "-4500", NULL },
-            { "-4000", NULL },
-            { "-3500", NULL },
-            { "-3000", NULL },
-            { "-2500", NULL },
-            { "-2000", NULL },
-            { "-1500", NULL },
-            { "-1000", NULL },
-            { "-500", NULL },
-            { "0", NULL },
-            { "500", NULL },
-            { "1000", NULL },
-            { "1500", NULL },
-            { "2000", NULL },
-            { "2500", NULL },
-            { "3000", NULL },
-            { "3500", NULL },
-            { "4000", NULL },
-            { "4500", NULL },
-            { "5000", NULL },
-            { NULL, NULL },
-         },
-         "500"
-      },
-      {
-         "vice_resid_8580filterbias",
-         "Audio > ReSID Filter 8580 Bias",
-         "",
-         {
-            { "-5000", NULL },
-            { "-4500", NULL },
-            { "-4000", NULL },
-            { "-3500", NULL },
-            { "-3000", NULL },
-            { "-2500", NULL },
-            { "-2000", NULL },
-            { "-1500", NULL },
-            { "-1000", NULL },
-            { "-500", NULL },
-            { "0", NULL },
-            { "500", NULL },
-            { "1000", NULL },
-            { "1500", NULL },
-            { "2000", NULL },
-            { "2500", NULL },
-            { "3000", NULL },
-            { "3500", NULL },
-            { "4000", NULL },
-            { "4500", NULL },
-            { "5000", NULL },
-            { NULL, NULL },
-         },
-         "1500"
-      },
-#endif
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
-      {
-         "vice_sfx_sound_expander",
-         "Audio > SFX Sound Expander",
-         "",
-         {
-            { "disabled", NULL },
-            { "3526", "YM3526" },
-            { "3812", "YM3812" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-      {
-         "vice_sound_sample_rate",
-         "Audio > Output Sample Rate",
-         "Slightly higher quality or higher performance.",
-         {
-            { "22050", NULL },
-            { "44100", NULL },
-            { "48000", NULL },
-            { "96000", NULL },
-            { NULL, NULL },
-         },
-         "48000"
-      },
-#if !defined(__XPET__) && !defined(__XCBM2__)
-      {
-         "vice_analogmouse",
-         "Input > Analog Stick Mouse",
-         "Override analog stick remappings when non-joysticks are used. 'OFF' controls mouse/paddles with both analogs when remappings are empty.",
-         {
-            { "disabled", NULL },
-            { "left", "Left Analog" },
-            { "right", "Right Analog" },
-            { "both", "Both Analogs" },
-            { NULL, NULL },
-         },
-         "left"
-      },
-      {
-         "vice_analogmouse_deadzone",
-         "Input > Analog Stick Mouse Deadzone",
-         "",
-         {
-            { "0", "0%" },
-            { "5", "5%" },
-            { "10", "10%" },
-            { "15", "15%" },
-            { "20", "20%" },
-            { "25", "25%" },
-            { "30", "30%" },
-            { "35", "35%" },
-            { "40", "40%" },
-            { "45", "45%" },
-            { "50", "50%" },
-            { NULL, NULL },
-         },
-         "20"
-      },
-      {
-         "vice_analogmouse_speed",
-         "Input > Analog Stick Mouse Speed",
-         "",
-         {
-            { "0.5", "50%" },
-            { "0.6", "60%" },
-            { "0.7", "70%" },
-            { "0.8", "80%" },
-            { "0.9", "90%" },
-            { "1.0", "100%" },
-            { "1.1", "110%" },
-            { "1.2", "120%" },
-            { "1.3", "130%" },
-            { "1.4", "140%" },
-            { "1.5", "150%" },
-            { "1.6", "160%" },
-            { "1.7", "170%" },
-            { "1.8", "180%" },
-            { "1.9", "190%" },
-            { "2.0", "200%" },
-            { NULL, NULL },
-         },
-         "1.0"
-      },
-      {
-         "vice_dpadmouse_speed",
-         "Input > D-Pad Mouse Speed",
-         "",
-         {
-            { "3", "50%" },
-            { "4", "66%" },
-            { "5", "83%" },
-            { "6", "100%" },
-            { "7", "116%" },
-            { "8", "133%" },
-            { "9", "150%" },
-            { "10", "166%" },
-            { "11", "183%" },
-            { "12", "200%" },
-            { NULL, NULL },
-         },
-         "6"
-      },
-      {
-         "vice_mouse_speed",
-         "Input > Mouse Speed",
-         "Affects mouse speed globally.",
-         {
-            { "10", "10%" },
-            { "20", "20%" },
-            { "30", "30%" },
-            { "40", "40%" },
-            { "50", "50%" },
-            { "60", "60%" },
-            { "70", "70%" },
-            { "80", "80%" },
-            { "90", "90%" },
-            { "100", "100%" },
-            { "110", "110%" },
-            { "120", "120%" },
-            { "130", "130%" },
-            { "140", "140%" },
-            { "150", "150%" },
-            { "160", "160%" },
-            { "170", "170%" },
-            { "180", "180%" },
-            { "190", "190%" },
-            { "200", "200%" },
-            { NULL, NULL },
-         },
-         "100"
-      },
-#endif
-#if !defined(__XCBM5x0__)
-      {
-         "vice_userport_joytype",
-         "Input > Userport Joystick Adapter",
-         "Required for more than 2 joysticks, for example IK+ Gold with 3 players.",
-         {
-            { "disabled", NULL },
-            { "CGA", "Protovision / Classical Games" },
-            { "HIT", "Digital Excess & Hitmen" },
-            { "Kingsoft", "Kingsoft" },
-            { "Starbyte", "Starbyte" },
-            { "Hummer", "C64DTV Hummer" },
-            { "OEM", "VIC-20 OEM" },
-            { "PET", "PET" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-#if !defined(__XPET__) && !defined(__XCBM2__)
-      {
-         "vice_keyrah_keypad_mappings",
-         "Input > Keyrah Keypad Mappings",
-         "Hardcoded keypad to joyport mappings for Keyrah hardware.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__)
-      {
-         "vice_keyboard_keymap",
-         "Input > Keyboard Keymap",
-#if defined(__XPLUS4__)
-         "User-defined keymaps go in 'system/vice/PLUS4'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
-#elif defined(__XVIC__)
-         "User-defined keymaps go in 'system/vice/VIC20'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
-#elif defined(__X128__)
-         "User-defined keymaps go in 'system/vice/C128'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
-#elif defined(__XSCPU64__)
-         "User-defined keymaps go in 'system/vice/SCPU64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
-#else
-         "User-defined keymaps go in 'system/vice/C64'.\n- Positional: 'sdl_pos.vkm'\n- Symbolic: 'sdl_sym.vkm'",
-#endif
-         {
-            { "positional", "Positional" },
-            { "symbolic", "Symbolic" },
-            { "positional-user", "Positional (User-defined)" },
-            { "symbolic-user", "Symbolic (User-defined)" },
-            { NULL, NULL },
-         },
-         "positional"
-      },
-#endif
-      {
-         "vice_physical_keyboard_pass_through",
-         "Input > Keyboard Pass-through",
-         "'ON' passes all physical keyboard events to the core. 'OFF' prevents RetroPad keys from generating keyboard events.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#if !defined(__XSCPU64__) && !defined(__X64DTV__)
-      {
-         "vice_datasette_hotkeys",
-         "Input > Datasette Hotkeys",
-         "Toggle all Datasette hotkeys.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-      {
-         "vice_mapping_options_display",
-         "Show Mapping Options",
-         "Page refresh by menu toggle required!",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "enabled"
-      },
-      /* Hotkeys */
-      {
-         "vice_mapper_vkbd",
-         "Hotkey > Toggle Virtual Keyboard",
-         "Press the mapped key to toggle the virtual keyboard.",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_statusbar",
-         "Hotkey > Toggle Statusbar",
-         "Press the mapped key to toggle the statusbar.",
-         {{ NULL, NULL }},
-         "RETROK_F12"
-      },
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
-      {
-         "vice_mapper_joyport_switch",
-         "Hotkey > Switch Joyport",
-         "Press the mapped key to switch joyports 1 & 2.\nSwitching disables 'RetroPad Port' option until core restart.",
-         {{ NULL, NULL }},
-         "RETROK_RCTRL"
-      },
-#endif
-      {
-         "vice_mapper_reset",
-         "Hotkey > Reset",
-         "Press the mapped key to trigger the selected 'Reset Type'.",
-         {{ NULL, NULL }},
-         "RETROK_END"
-      },
-      {
-         "vice_mapper_warp_mode",
-         "Hotkey > Hold Warp Mode",
-         "Hold the mapped key for warp mode.",
-         {{ NULL, NULL }},
-         ""
-      },
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
-      {
-         "vice_mapper_aspect_ratio_toggle",
-         "Hotkey > Toggle Aspect Ratio",
-         "Press the mapped key to toggle aspect ratio.\nToggling disables 'Pixel Aspect Ratio' option until core restart.",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_zoom_mode_toggle",
-         "Hotkey > Toggle Zoom Mode",
-         "Press the mapped key to toggle zoom mode.",
-         {{ NULL, NULL }},
-         "---"
-      },
-#endif
-#if !defined(__XSCPU64__) && !defined(__X64DTV__)
-      /* Datasette controls */
-      {
-         "vice_mapper_datasette_toggle_hotkeys",
-         "Hotkey > Toggle Datasette Hotkeys",
-         "Press the mapped key to toggle Datasette hotkeys.",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_datasette_start",
-         "Hotkey > Datasette Start",
-         "Press start on tape.",
-         {{ NULL, NULL }},
-         "RETROK_UP"
-      },
-      {
-         "vice_mapper_datasette_stop",
-         "Hotkey > Datasette Stop",
-         "Press stop on tape.",
-         {{ NULL, NULL }},
-         "RETROK_DOWN"
-      },
-      {
-         "vice_mapper_datasette_rewind",
-         "Hotkey > Datasette Rewind",
-         "Press rewind on tape.",
-         {{ NULL, NULL }},
-         "RETROK_LEFT"
-      },
-      {
-         "vice_mapper_datasette_forward",
-         "Hotkey > Datasette Fast Forward",
-         "Press fast forward on tape.",
-         {{ NULL, NULL }},
-         "RETROK_RIGHT"
-      },
-      {
-         "vice_mapper_datasette_reset",
-         "Hotkey > Datasette Reset",
-         "Press reset on tape.",
-         {{ NULL, NULL }},
-         "---"
-      },
-#endif
-      /* Button mappings */
-      {
-         "vice_mapper_select",
-         "RetroPad > Select",
-         "",
-         {{ NULL, NULL }},
-         "TOGGLE_VKBD"
-      },
-      {
-         "vice_mapper_start",
-         "RetroPad > Start",
-         "VKBD: Press 'Return'. Remapping to non-keyboard keys overrides VKBD function!",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_b",
-         "RetroPad > B",
-         "Unmapped defaults to fire button.\nVKBD: Press selected key.",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_a",
-         "RetroPad > A",
-         "VKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_y",
-         "RetroPad > Y",
-         "VKBD: Toggle 'ShiftLock'. Remapping to non-keyboard keys overrides VKBD function!",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_x",
-         "RetroPad > X",
-         "VKBD: Press 'Space'. Remapping to non-keyboard keys overrides VKBD function!",
-         {{ NULL, NULL }},
-         "RETROK_SPACE"
-      },
-      {
-         "vice_mapper_l",
-         "RetroPad > L",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_r",
-         "RetroPad > R",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_l2",
-         "RetroPad > L2",
-         "",
-         {{ NULL, NULL }},
-         "RETROK_ESCAPE"
-      },
-      {
-         "vice_mapper_r2",
-         "RetroPad > R2",
-         "",
-         {{ NULL, NULL }},
-         "RETROK_RETURN"
-      },
-      {
-         "vice_mapper_l3",
-         "RetroPad > L3",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_r3",
-         "RetroPad > R3",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      /* Left Stick */
-      {
-         "vice_mapper_lu",
-         "RetroPad > Left Analog > Up",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_ld",
-         "RetroPad > Left Analog > Down",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_ll",
-         "RetroPad > Left Analog > Left",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_lr",
-         "RetroPad > Left Analog > Right",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      /* Right Stick */
-      {
-         "vice_mapper_ru",
-         "RetroPad > Right Analog > Up",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_rd",
-         "RetroPad > Right Analog > Down",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_rl",
-         "RetroPad > Right Analog > Left",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_rr",
-         "RetroPad > Right Analog > Right",
-         "",
-         {{ NULL, NULL }},
-         "---"
-      },
-#if !defined(__XPET__) && !defined(__XCBM2__)
-      /* Turbo Fire */
-      {
-         "vice_turbo_fire",
-         "RetroPad > Turbo Fire",
-         "Hotkey toggling disables this option until core restart.",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-      {
-         "vice_turbo_fire_button",
-         "RetroPad > Turbo Button",
-         "Replace the mapped button with turbo fire button.",
-         {
-            { "B", "RetroPad B" },
-            { "A", "RetroPad A" },
-            { "Y", "RetroPad Y" },
-            { "X", "RetroPad X" },
-            { "L", "RetroPad L" },
-            { "R", "RetroPad R" },
-            { "L2", "RetroPad L2" },
-            { "R2", "RetroPad R2" },
-            { NULL, NULL },
-         },
-         "B"
-      },
-      {
-         "vice_turbo_pulse",
-         "RetroPad > Turbo Pulse",
-         "Frames in a button cycle.\n- '2' = 1 frame down, 1 frame up\n- '4' = 2 frames down, 2 frames up\n- '6' = 3 frames down, 3 frames up\netc.",
-         {
-            { "2", "2 frames" },
-            { "4", "4 frames" },
-            { "6", "6 frames" },
-            { "8", "8 frames" },
-            { "10", "10 frames" },
-            { "12", "12 frames" },
-            { NULL, NULL },
-         },
-         "6"
-      },
-#endif
-#if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
-      {
-         "vice_joyport",
-         "RetroPad > Port",
-         "Most games use port 2, some use port 1.\nFilename forcing or hotkey toggling disables this option until core restart.",
-         {
-            { "1", "Port 1" },
-            { "2", "Port 2" },
-            { NULL, NULL },
-         },
-         "2"
-      },
-#endif
-#if !defined(__XPET__) && !defined(__XCBM2__)
-      {
-         "vice_joyport_type",
-         "RetroPad > Port Type",
-         "Non-joysticks are plugged in current port only and are controlled with left analog stick or mouse. Paddles are split to 1st and 2nd RetroPort.",
-         {
-            { "1", "Joystick" },
-            { "2", "Paddles" },
-            { "3", "Mouse (1351)" },
-            { "4", "Mouse (NEOS)" },
-            { "5", "Mouse (Amiga)" },
-            { "6", "Trackball (Atari CX-22)" },
-            { "7", "Mouse (Atari ST)" },
-            { "8", "Mouse (SmartMouse)" },
-            { "9", "Mouse (Micromys)" },
-            { "10", "Koalapad" },
-            { "11", "Light Pen (Up trigger)" },
-            { "12", "Light Pen (Left trigger)" },
-            { "13", "Light Pen (Datel)" },
-            { "16", "Light Pen (Inkwell)" },
-            { "14", "Light Gun (Magnum Light Phaser)" },
-            { "15", "Light Gun (Stack Light Rifle)" },
-            { NULL, NULL },
-         },
-         "1"
-      },
-      {
-         "vice_retropad_options",
-         "RetroPad > Face Button Options",
-         "Rotate face buttons clockwise and/or make 2nd fire press up.",
-         {
-            { "disabled", "B = Fire" },
-            { "jump", "B = Fire, A = Up" },
-            { "rotate", "Y = Fire" },
-            { "rotate_jump", "Y = Fire, B = Up" },
-            { NULL, NULL },
-         },
-         "disabled"
-      },
-#endif
-      { NULL, NULL, NULL, {{0}}, NULL },
-   };
-
-   /* Fill in the values for all the mappers */
-   int i = 0;
-   int j = 0;
-   int hotkey = 0;
-   int hotkeys_skipped = 0;
-   /* Count special hotkeys */
-   while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
-   {
-      if (retro_keys[j].id < 0)
-         hotkeys_skipped++;
-      ++j;
-   }
-   while (core_options[i].key) 
-   {
-      if (strstr(core_options[i].key, "vice_mapper_"))
-      {
-         /* Show different key list for hotkeys (special negatives removed) */
-         if (  strstr(core_options[i].key, "vice_mapper_vkbd")
-            || strstr(core_options[i].key, "vice_mapper_statusbar")
-            || strstr(core_options[i].key, "vice_mapper_joyport_switch")
-            || strstr(core_options[i].key, "vice_mapper_reset")
-            || strstr(core_options[i].key, "vice_mapper_aspect_ratio_toggle")
-            || strstr(core_options[i].key, "vice_mapper_zoom_mode_toggle")
-            || strstr(core_options[i].key, "vice_mapper_warp_mode")
-            || strstr(core_options[i].key, "vice_mapper_datasette_toggle_hotkeys")
-            || strstr(core_options[i].key, "vice_mapper_datasette_start")
-            || strstr(core_options[i].key, "vice_mapper_datasette_stop")
-            || strstr(core_options[i].key, "vice_mapper_datasette_rewind")
-            || strstr(core_options[i].key, "vice_mapper_datasette_forward")
-            || strstr(core_options[i].key, "vice_mapper_datasette_reset"))
-            hotkey = 1;
-         else
-            hotkey = 0;
-
-         j = 0;
-         if (hotkey)
-         {
-            while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
-            {
-               if (j == 0) /* "---" unmapped */
-               {
-                  core_options[i].values[j].value = retro_keys[j].value;
-                  core_options[i].values[j].label = retro_keys[j].label;
-               }
-               else
-               {
-                  core_options[i].values[j].value = retro_keys[j + hotkeys_skipped + 1].value;
-                  core_options[i].values[j].label = retro_keys[j + hotkeys_skipped + 1].label;
-               }
-               ++j;
-            }
-         }
-         else
-         {
-            while (retro_keys[j].value[0] && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
-            {
-               core_options[i].values[j].value = retro_keys[j].value;
-               core_options[i].values[j].label = retro_keys[j].label;
-               ++j;
-            }
-         }
-         core_options[i].values[j].value = NULL;
-         core_options[i].values[j].label = NULL;
-      }
-      else if (!strcmp(core_options[i].key, "vice_cartridge"))
-      {
-         j = 0;
-         core_options[i].values[0].value = "none";
-         core_options[i].values[0].label = "disabled";
-         ++j;
-
-         DIR *cart_dir;
-         struct dirent *cart_dirp;
-
-         char machine_directory[RETRO_PATH_MAX] = {0};
-         snprintf(machine_directory, sizeof(machine_directory), "%s%s%s",
-               retro_system_data_directory, FSDEV_DIR_SEP_STR, machine_name);
-
-         /* Scan system/vice/machine directory for cartridges */
-         if (path_is_directory(machine_directory))
-         {
-            cart_dir = opendir(machine_directory);
-            while ((cart_dirp = readdir(cart_dir)) != NULL && j < RETRO_NUM_CORE_OPTION_VALUES_MAX - 1)
-            {
-               /* Blacklisted */
-               if (!strcmp(cart_dirp->d_name, "scpu-dos-1.4.bin") ||
-                   !strcmp(cart_dirp->d_name, "scpu-dos-2.04.bin"))
-                  continue;
-
-               if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
-               {
-                  char cart_value[RETRO_PATH_MAX] = {0};
-                  char cart_label[50] = {0};
-                  snprintf(cart_value, sizeof(cart_value), "%s", cart_dirp->d_name);
-                  snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
-
-                  vice_carts[j].value = strdup(cart_value);
-                  vice_carts[j].label = strdup(cart_label);
-
-                  core_options[i].values[j].value = vice_carts[j].value;
-                  core_options[i].values[j].label = vice_carts[j].label;
-                  ++j;
-               }
-
-               vice_carts[j].value = NULL;
-               vice_carts[j].label = NULL;
-            }
-            closedir(cart_dir);
-         }
-
-         core_options[i].values[j].value = NULL;
-         core_options[i].values[j].label = NULL;
-
-         /* Info sublabel */
-         char info[100] = {0};
-         snprintf(info, sizeof(info), "Cartridge images go in 'system/vice/%s'.\nChanging while running resets the system!", machine_name);
-         core_options[i].info = strdup(info);
-      }
-      ++i;
-   }
-
-   unsigned version = 0;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &version) && (version >= 1))
-   {
-      cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS, core_options);
-   }
-   else
-   {
-      /* Fallback for older API */
-      /* Use define because C doesn't care about const. */
-#define NUM_CORE_OPTIONS ( sizeof(core_options)/sizeof(core_options[0])-1 )
-      static struct retro_variable variables[NUM_CORE_OPTIONS+1];
-
-      /* Only generate variables once, it's as static as core_options */
-      if (!core_options_legacy_strings)
-      {
-         /* First pass: Calculate size of string-buffer required */
-         unsigned buf_len;
-         char *buf;
-         {
-            unsigned alloc_len = 0;
-            struct retro_core_option_definition *o = core_options + NUM_CORE_OPTIONS - 1;
-            struct retro_variable *rv = variables + NUM_CORE_OPTIONS - 1;
-            for (; o >= core_options; --o, --rv)
-            {
-               int l = snprintf(0, 0, "%s; %s", o->desc, o->default_value);
-               for (struct retro_core_option_value *v = o->values; v->value; ++v)
-                  l += snprintf(0, 0, "|%s", v->value);
-               alloc_len += l + 1;
-            }
-            buf = core_options_legacy_strings = (char *)malloc(alloc_len);
-            buf_len = alloc_len;
-         }
-         /* Second pass: Fill string-buffer */
-         struct retro_core_option_definition *o = core_options + NUM_CORE_OPTIONS - 1;
-         struct retro_variable *rv = variables + NUM_CORE_OPTIONS;
-         rv->key = rv->value = 0;
-         --rv;
-         for (; o >= core_options; --o, --rv)
-         {
-            int l = snprintf(buf, buf_len, "%s; %s", o->desc, o->default_value);
-            for (struct retro_core_option_value *v = o->values; v->value; ++v)
-               if (v->value != o->default_value)
-                  l += snprintf(buf+l, buf_len, "|%s", v->value);
-            rv->key = o->key;
-            rv->value = buf;
-            ++l;
-            buf += l;
-            buf_len -= l;
-         }
-      }
-      cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
-#undef NUM_CORE_OPTIONS
-   }
-
-   static bool allowNoGameMode;
-   allowNoGameMode = true;
-   cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allowNoGameMode);
+   bool support_no_game = true;
+   cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &support_no_game);
 
    static struct retro_led_interface led_interface;
    cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_interface);
@@ -5295,7 +5898,22 @@ static void update_variables(void)
 #endif
 
 
+
    /*** Options display ***/
+   if (libretro_supports_option_categories)
+   {
+      option_display.visible = false;
+
+      option_display.key = "vice_mapping_options_display";
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+
+      option_display.key = "vice_video_options_display";
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+
+      option_display.key = "vice_audio_options_display";
+      environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+      return;
+   }
 
    /* Mapping options */
    option_display.visible = opt_mapping_options_display;
@@ -5894,13 +6512,6 @@ void retro_deinit(void)
    if (dc)
       dc_free(dc);
 
-   /* Clean legacy strings */
-   if (core_options_legacy_strings)
-   {
-      free(core_options_legacy_strings);
-      core_options_legacy_strings = NULL;
-   }
-
    /* Clean dynamic cartridge info */
    free_vice_carts();
 
@@ -5913,6 +6524,7 @@ void retro_deinit(void)
 
    /* 'Reset' troublesome static variables */
    libretro_supports_bitmasks = false;
+   libretro_supports_option_categories = false;
    pix_bytes_initialized = false;
    cur_port_locked = false;
    opt_aspect_ratio_locked = false;

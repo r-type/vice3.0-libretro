@@ -48,9 +48,8 @@ static void retro_mouse_move(int x, int y)
 
 /* Core flags */
 int mapper_keys[RETRO_MAPPER_LAST] = {0};
-int retro_capslock = false;
+bool retro_capslock = false;
 static int mapper_flag[RETRO_DEVICES][128] = {0};
-extern int vkflag[10];
 
 unsigned int cur_port = 2;
 static int cur_port_prev = -1;
@@ -61,10 +60,6 @@ unsigned int mouse_speed[2] = {0};
 unsigned int retro_statusbar = 0;
 extern unsigned char statusbar_text[RETRO_PATH_MAX];
 unsigned int retro_warpmode = 0;
-extern bool retro_vkbd;
-extern bool retro_vkbd_transparent;
-extern short int retro_vkbd_ready;
-extern void input_vkbd(void);
 
 static unsigned retro_key_state[RETROK_LAST] = {0};
 unsigned retro_key_event_state[RETROK_LAST] = {0};
@@ -139,6 +134,9 @@ void emu_function(int function)
    switch (function)
    {
       case EMU_VKBD:
+         /* No toggling while key is pressed */
+         if (vkflag[RETRO_DEVICE_ID_JOYPAD_B])
+            return;
          retro_vkbd = !retro_vkbd;
          /* Reset VKBD input readiness */
          retro_vkbd_ready = -2;
@@ -422,7 +420,8 @@ void update_input(unsigned disable_keys)
             int just_released = 0;
             if ((i < 4 || i > 7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad */
             {
-               /* Skip the VKBD buttons if VKBD is visible and buttons are mapped to keyboard keys */
+               /* Skip VKBD buttons if VKBD is visible and buttons
+                * are mapped to keyboard keys, but allow release */
                if (retro_vkbd)
                {
                   switch (i)
@@ -432,7 +431,7 @@ void update_input(unsigned disable_keys)
                      case RETRO_DEVICE_ID_JOYPAD_A:
                      case RETRO_DEVICE_ID_JOYPAD_X:
                      case RETRO_DEVICE_ID_JOYPAD_START:
-                        if (mapper_keys[i] >= 0)
+                        if (mapper_keys[i] >= 0 && !jbt[j][i])
                            continue;
                         break;
                   }

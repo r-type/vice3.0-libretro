@@ -5,22 +5,10 @@
 
 #include "kbd.h"
 
-extern retro_input_state_t input_state_cb;
-
-extern bool retro_capslock;
-extern unsigned int opt_vkbd_theme;
-extern libretro_graph_alpha_t opt_vkbd_alpha;
-extern unsigned int zoom_mode_id;
-
-extern int tape_enabled;
-extern int tape_counter;
-extern int tape_control;
-
-int vkflag[10] = {0};
-
 bool retro_vkbd = false;
-bool retro_vkbd_transparent = true;
+static bool retro_vkbd_transparent = true;
 short int retro_vkbd_ready = 0;
+int vkflag[10] = {0};
 
 #ifdef POINTER_DEBUG
 int pointer_x = 0;
@@ -60,14 +48,6 @@ int vkey_sticky1_release = 0;
 int vkey_sticky2_release = 0;
 
 
-
-int RGBc(int r, int g, int b)
-{
-   if (pix_bytes == 4) 
-      return ARGB888(255, r, g, b);
-   else
-      return RGB565(r, g, b);
-}
 
 static int BKG_PADDING(const char* str)
 {
@@ -500,95 +480,6 @@ void input_vkbd(void)
 
    now = retro_ticks() / 1000;
 
-   if (!vkflag[RETRO_DEVICE_ID_JOYPAD_B]) /* Allow directions when key is not pressed */
-   {
-      if (!vkflag[RETRO_DEVICE_ID_JOYPAD_UP] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) ||
-                                                 (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) ||
-                                                 input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_UP)))
-         vkflag[RETRO_DEVICE_ID_JOYPAD_UP] = 1;
-      else
-      if (vkflag[RETRO_DEVICE_ID_JOYPAD_UP] && (!(joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) &&
-                                                !(joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) &&
-                                                !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_UP)))
-         vkflag[RETRO_DEVICE_ID_JOYPAD_UP] = 0;
-
-      if (!vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) ||
-                                                   (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) ||
-                                                   input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_DOWN)))
-         vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] = 1;
-      else
-      if (vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] && (!(joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) &&
-                                                  !(joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) &&
-                                                  !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_DOWN)))
-         vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] = 0;
-
-      if (!vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) ||
-                                                   (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) ||
-                                                   input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_LEFT)))
-         vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] = 1;
-      else
-      if (vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] && (!(joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) &&
-                                                  !(joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) &&
-                                                  !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_LEFT)))
-         vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] = 0;
-
-      if (!vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) ||
-                                                    (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) ||
-                                                    input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RIGHT)))
-         vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] = 1;
-      else
-      if (vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] && (!(joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) &&
-                                                   !(joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) &&
-                                                   !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RIGHT)))
-         vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] = 0;
-   }
-   else /* Release all directions when key is pressed */
-   {
-      vkflag[RETRO_DEVICE_ID_JOYPAD_UP]    = 0;
-      vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN]  = 0;
-      vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT]  = 0;
-      vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] = 0;
-   }
-
-   if (vkflag[RETRO_DEVICE_ID_JOYPAD_UP] ||
-       vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] ||
-       vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] ||
-       vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT])
-   {
-      if (let_go_of_direction)
-         /* just pressing down */
-         last_press_time = now;
-
-      if ((now - last_press_time > VKBD_MIN_HOLDING_TIME
-        && now - last_move_time > VKBD_MOVE_DELAY)
-        || let_go_of_direction)
-      {
-         last_move_time = now;
-
-         if (vkflag[RETRO_DEVICE_ID_JOYPAD_UP])
-            vkey_pos_y -= 1;
-         else if (vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN])
-            vkey_pos_y += 1;
-
-         if (vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT])
-            vkey_pos_x -= 1;
-         else if (vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT])
-            vkey_pos_x += 1;
-      }
-      let_go_of_direction = false;
-   }
-   else
-      let_go_of_direction = true;
-
-   if (vkey_pos_x < 0)
-      vkey_pos_x = VKBDX - 1;
-   else if (vkey_pos_x > VKBDX - 1)
-      vkey_pos_x = 0;
-   if (vkey_pos_y < 0)
-      vkey_pos_y = VKBDY - 1;
-   else if (vkey_pos_y > VKBDY - 1)
-      vkey_pos_y = 0;
-
    /* Absolute pointer */
    int p_x = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
    int p_y = input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_Y);
@@ -693,9 +584,8 @@ void input_vkbd(void)
                       input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN) ||
                       input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_PRESSED)))
    {
-      vkey_pressed = vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + ((0) ? VKBDX * VKBDY : 0)].value;
-
       vkflag[i] = 1;
+      vkey_pressed = vkeys[(vkey_pos_y * VKBDX) + vkey_pos_x + ((0) ? VKBDX * VKBDY : 0)].value;
 
       if (vkey_pressed != -1 && last_vkey_pressed == -1)
       {
@@ -777,6 +667,96 @@ void input_vkbd(void)
       let_go_of_button = 1;
       vkey_sticky = 0;
    }
+
+   /* Allow directions when key is not pressed */
+   if (!vkflag[RETRO_DEVICE_ID_JOYPAD_B])
+   {
+      if (!vkflag[RETRO_DEVICE_ID_JOYPAD_UP] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) ||
+                                                 (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) ||
+                                                 input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_UP)))
+         vkflag[RETRO_DEVICE_ID_JOYPAD_UP] = 1;
+      else
+      if (vkflag[RETRO_DEVICE_ID_JOYPAD_UP] && (!(joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) &&
+                                                !(joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) &&
+                                                !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_UP)))
+         vkflag[RETRO_DEVICE_ID_JOYPAD_UP] = 0;
+
+      if (!vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) ||
+                                                   (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) ||
+                                                   input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_DOWN)))
+         vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] = 1;
+      else
+      if (vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] && (!(joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) &&
+                                                  !(joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) &&
+                                                  !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_DOWN)))
+         vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] = 0;
+
+      if (!vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) ||
+                                                   (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) ||
+                                                   input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_LEFT)))
+         vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] = 1;
+      else
+      if (vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] && (!(joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) &&
+                                                  !(joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) &&
+                                                  !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_LEFT)))
+         vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] = 0;
+
+      if (!vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] && ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) ||
+                                                    (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) ||
+                                                    input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RIGHT)))
+         vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] = 1;
+      else
+      if (vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] && (!(joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) &&
+                                                   !(joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) &&
+                                                   !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RIGHT)))
+         vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] = 0;
+   }
+   else /* Release all directions when key is pressed */
+   {
+      vkflag[RETRO_DEVICE_ID_JOYPAD_UP]    = 0;
+      vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN]  = 0;
+      vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT]  = 0;
+      vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT] = 0;
+   }
+
+   if (vkflag[RETRO_DEVICE_ID_JOYPAD_UP] ||
+       vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN] ||
+       vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT] ||
+       vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT])
+   {
+      if (let_go_of_direction)
+         /* just pressing down */
+         last_press_time = now;
+
+      if ((now - last_press_time > VKBD_MIN_HOLDING_TIME
+        && now - last_move_time > VKBD_MOVE_DELAY)
+        || let_go_of_direction)
+      {
+         last_move_time = now;
+
+         if (vkflag[RETRO_DEVICE_ID_JOYPAD_UP])
+            vkey_pos_y -= 1;
+         else if (vkflag[RETRO_DEVICE_ID_JOYPAD_DOWN])
+            vkey_pos_y += 1;
+
+         if (vkflag[RETRO_DEVICE_ID_JOYPAD_LEFT])
+            vkey_pos_x -= 1;
+         else if (vkflag[RETRO_DEVICE_ID_JOYPAD_RIGHT])
+            vkey_pos_x += 1;
+      }
+      let_go_of_direction = false;
+   }
+   else
+      let_go_of_direction = true;
+
+   if (vkey_pos_x < 0)
+      vkey_pos_x = VKBDX - 1;
+   else if (vkey_pos_x > VKBDX - 1)
+      vkey_pos_x = 0;
+   if (vkey_pos_y < 0)
+      vkey_pos_y = VKBDY - 1;
+   else if (vkey_pos_y > VKBDY - 1)
+      vkey_pos_y = 0;
 
 #if 0
    printf("vkey:%d sticky:%d sticky1:%d sticky2:%d, now:%d last:%d\n", vkey_pressed, vkey_sticky, vkey_sticky1, vkey_sticky2, now, last_press_time_button);

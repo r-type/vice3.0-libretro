@@ -152,7 +152,9 @@ void emu_function(int function)
          break;
 #endif
          cur_port++;
-         if (cur_port > 2) cur_port = 1;
+         unsigned max_port = (vice_opt.UserportJoyType != -1) ? 4 : 2;
+         if (cur_port > max_port) cur_port = 1;
+
          /* Lock current port */
          cur_port_locked = true;
          /* Statusbar notification */
@@ -789,11 +791,10 @@ void retro_poll_event()
       disable_keys = process_keyboard_pass_through();
    update_input(disable_keys);
 
-   /* retro joypad take control over keyboard joy */
-   /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
-   /* keyup allowing most likely not needed on actual keyboard presses even though they get stuck also */
-   int retro_port;
-   for (retro_port = 0; retro_port <= 3; retro_port++)
+   /* Joystick port iteration */
+   unsigned retro_port;
+   unsigned max_port = (vice_opt.UserportJoyType != -1) ? 4 : 2;
+   for (retro_port = 0; retro_port < max_port; retro_port++)
    {
       if (retro_devices[retro_port] == RETRO_DEVICE_VICE_JOYSTICK ||
           retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
@@ -801,12 +802,18 @@ void retro_poll_event()
          int vice_port = cur_port;
          uint8_t joy_value = 0;
 
-         if (retro_port == 1) /* Second joypad controls other player */
-            vice_port = (cur_port == 2) ? 1 : 2;
-         else if (retro_port == 2)
-            vice_port = 3;
-         else if (retro_port == 3)
-            vice_port = 4;
+         if (vice_opt.UserportJoyType != -1)
+         {
+            /* With userport adapter: Next retro port controls next joyport */
+            vice_port = cur_port + retro_port;
+            vice_port = (vice_port > max_port) ? (vice_port - max_port) : vice_port;
+         }
+         else
+         {
+            /* Without userport adapter: Second port controls opposite joyport */
+            if (retro_port == 1)
+               vice_port = (cur_port == 2) ? 1 : 2;
+         }
 
          /* No same port joystick movements with non-joysticks */
          if (opt_joyport_type > 1 && vice_port == cur_port)
@@ -1051,7 +1058,7 @@ void retro_poll_event()
       }
    }
    /* Other than a joystick, set only cur_port */
-   else if (opt_joyport_type > 1)
+   else if (opt_joyport_type > 1 && cur_port < 3)
    {
       if (opt_joyport_type_prev != opt_joyport_type || cur_port_prev != cur_port)
       {

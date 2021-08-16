@@ -354,7 +354,7 @@ else ifneq (,$(findstring armv,$(platform)))
    else ifneq (,$(findstring hardfloat,$(platform)))
       CFLAGS += -mfloat-abi=hard
    endif
-   CFLAGS += -DARM -marm -DALIGN_DWORD -mstructure-size-boundary=32 -mthumb-interwork -falign-functions=16 -pipe -fstack-protector
+   CFLAGS += -DARM -marm -DALIGN_DWORD -mthumb-interwork -falign-functions=16 -pipe -fstack-protector
 
 # Wincross64
 else ifeq ($(platform), wincross64)
@@ -431,6 +431,12 @@ endif
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)
+
+objectclean:
+	rm -f $(OBJECTS)
+
+targetclean:
+	rm -f $(TARGET)
 
 .PHONY: clean
 endif

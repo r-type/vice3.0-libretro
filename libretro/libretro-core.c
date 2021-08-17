@@ -1817,8 +1817,7 @@ static void retro_set_core_options()
             { "VIC21", "Super VIC (+16K) NTSC" },
             { NULL, NULL },
          },
-         "VIC20 PAL auto",
-         NULL
+         "VIC20 PAL auto"
       },
       {
          "vice_vic20_memory_expansions",
@@ -1836,8 +1835,7 @@ static void retro_set_core_options()
             { "35kB", "35kB" },
             { NULL, NULL },
          },
-         "none",
-         NULL
+         "none"
       },
 #elif defined(__XPLUS4__)
       {
@@ -1856,8 +1854,7 @@ static void retro_set_core_options()
             { "232 NTSC", "C232 NTSC" },
             { NULL, NULL }
          },
-         "PLUS4 PAL",
-         NULL
+         "PLUS4 PAL"
       },
 #elif defined(__X128__)
       {
@@ -1876,8 +1873,7 @@ static void retro_set_core_options()
             { "C128 DCR NTSC", "C128 DCR NTSC" },
             { NULL, NULL },
          },
-         "C128 PAL",
-         NULL
+         "C128 PAL"
       },
       {
          "vice_c128_video_output",
@@ -1891,8 +1887,7 @@ static void retro_set_core_options()
             { "VDC", "VDC (80 cols)" },
             { NULL, NULL },
          },
-         "VICII",
-         NULL
+         "VICII"
       },
       {
          "vice_c128_go64",
@@ -1906,8 +1901,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
 #elif defined(__XPET__)
       {
@@ -1932,8 +1926,7 @@ static void retro_set_core_options()
             { "SUPERPET", "Super PET" },
             { NULL, NULL },
          },
-         "8032",
-         NULL
+         "8032"
       },
 #elif defined(__XCBM2__)
       {
@@ -1955,8 +1948,7 @@ static void retro_set_core_options()
             { "720PLUS NTSC", "CBM 720+ NTSC" },
             { NULL, NULL },
          },
-         "610 PAL",
-         NULL
+         "610 PAL"
       },
 #elif defined(__XCBM5x0__)
       {
@@ -1971,8 +1963,7 @@ static void retro_set_core_options()
             { "510 NTSC", "CBM 510 NTSC" },
             { NULL, NULL },
          },
-         "510 PAL",
-         NULL
+         "510 PAL"
       },
 #elif defined(__X64DTV__)
       {
@@ -1990,8 +1981,7 @@ static void retro_set_core_options()
             { "HUMMER NTSC", "Hummer NTSC" },
             { NULL, NULL },
          },
-         "DTV3 PAL",
-         NULL
+         "DTV3 PAL"
       },
 #else
       {
@@ -2023,8 +2013,7 @@ static void retro_set_core_options()
 #endif
             { NULL, NULL },
          },
-         "C64 PAL auto",
-         NULL
+         "C64 PAL auto"
       },
 #if defined(__XSCPU64__)
       {
@@ -2043,8 +2032,7 @@ static void retro_set_core_options()
             { "16", "16384kB" },
             { NULL, NULL },
          },
-         "16",
-         "int"
+         "16"
       },
 #else
       {
@@ -2066,8 +2054,7 @@ static void retro_set_core_options()
             { "16384kB", "16384kB" },
             { NULL, NULL },
          },
-         "none",
-         NULL
+         "none"
       },
 #endif /* __XSCPU64__ */
 #endif
@@ -2084,8 +2071,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "enabled",
-         "bool"
+         "enabled"
       },
       {
          "vice_supercpu_kernal",
@@ -2100,8 +2086,7 @@ static void retro_set_core_options()
             { "2", "2.04" },
             { NULL, NULL },
          },
-         "0",
-         "int"
+         "0"
       },
 #endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
@@ -2121,8 +2106,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
 #endif
       {
@@ -2137,8 +2121,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "enabled",
-         "bool"
+         "enabled"
       },
 #if !defined(__X64DTV__)
       {
@@ -2155,8 +2138,7 @@ static void retro_set_core_options()
             { "freeze", "Freeze" },
             { NULL, NULL },
          },
-         "autostart",
-         NULL
+         "autostart"
       },
 #endif
 #if !defined(__XPET__) && !defined(__X64DTV__)
@@ -2171,7 +2153,6 @@ static void retro_set_core_options()
          {
             { NULL, NULL },
          },
-         NULL,
          NULL
       },
 #endif
@@ -2189,8 +2170,7 @@ static void retro_set_core_options()
             { "warp", "Warp" },
             { NULL, NULL },
          },
-         "enabled",
-         NULL
+         "enabled"
       },
       {
          "vice_autoloadwarp",
@@ -2206,8 +2186,7 @@ static void retro_set_core_options()
             { "tape", "Tape only" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
       {
          "vice_drive_true_emulation",
@@ -2221,8 +2200,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "enabled",
-         "bool"
+         "enabled"
       },
       {
          "vice_virtual_device_traps",
@@ -2236,8 +2214,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
       {
          "vice_floppy_write_protection",
@@ -2251,8 +2228,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
       {
@@ -2267,8 +2243,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
 #endif
       {
@@ -2288,8 +2263,7 @@ static void retro_set_core_options()
             { "9_d81", "D81 - 3160 blocks, 800kB - Device 9" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
 #endif /* !defined(__X64DTV__) */
       {
@@ -2304,8 +2278,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
@@ -2322,8 +2295,7 @@ static void retro_set_core_options()
             { "raw", "1:1" },
             { NULL, NULL },
          },
-         "auto",
-         NULL
+         "auto"
       },
       {
          "vice_zoom_mode",
@@ -2340,8 +2312,7 @@ static void retro_set_core_options()
             { "manual", "Manual" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
       {
          "vice_zoom_mode_crop",
@@ -2360,8 +2331,7 @@ static void retro_set_core_options()
             { "5:4", "5:4" },
             { NULL, NULL },
          },
-         "both",
-         NULL
+         "both"
       },
       {
          "vice_manual_crop_top",
@@ -2378,7 +2348,6 @@ static void retro_set_core_options()
          "video",
          MANUAL_CROP_OPTIONS,
          "0",
-         NULL
       },
       {
          "vice_manual_crop_bottom",
@@ -2395,7 +2364,6 @@ static void retro_set_core_options()
          "video",
          MANUAL_CROP_OPTIONS,
          "0",
-         NULL
       },
       {
          "vice_manual_crop_left",
@@ -2412,7 +2380,6 @@ static void retro_set_core_options()
          "video",
          MANUAL_CROP_OPTIONS,
          "0",
-         NULL
       },
       {
          "vice_manual_crop_right",
@@ -2429,7 +2396,6 @@ static void retro_set_core_options()
          "video",
          MANUAL_CROP_OPTIONS,
          "0",
-         NULL
       },
 #endif
       {
@@ -2450,8 +2416,7 @@ static void retro_set_core_options()
             { "top_basic_minimal", "Top Basic Minimal" },
             { NULL, NULL },
          },
-         "bottom",
-         NULL
+         "bottom"
       },
       {
          "vice_vkbd_theme",
@@ -2473,8 +2438,7 @@ static void retro_set_core_options()
             { "light_outline", "Light (outline)" },
             { NULL, NULL },
          },
-         "auto",
-         NULL
+         "auto"
       },
       {
          "vice_vkbd_transparency",
@@ -2491,8 +2455,7 @@ static void retro_set_core_options()
             { "100%", NULL },
             { NULL, NULL },
          },
-         "25%",
-         NULL
+         "25%"
       },
       {
          "vice_gfx_colors",
@@ -2506,8 +2469,7 @@ static void retro_set_core_options()
             { "24bit", "Millions (24-bit)" },
             { NULL, NULL },
          },
-         "16bit",
-         NULL
+         "16bit"
       },
       {
          "vice_joyport_pointer_color",
@@ -2527,8 +2489,7 @@ static void retro_set_core_options()
             { "purple", "Purple" },
             { NULL, NULL },
          },
-         "blue",
-         NULL
+         "blue"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2557,8 +2518,7 @@ static void retro_set_core_options()
             { "enabled_medblur", "50% blur" },
             { "enabled_lowblur", "10% blur" },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
 #if defined(__XVIC__)
       {
@@ -2576,8 +2536,7 @@ static void retro_set_core_options()
             { "vice", "VICE" },
             { NULL, NULL },
          },
-         "colodore_vic",
-         NULL
+         "colodore_vic"
       },
 #elif defined(__XPLUS4__)
       {
@@ -2594,8 +2553,7 @@ static void retro_set_core_options()
             { "yape-ntsc", "Yape (NTSC)" },
             { NULL, NULL },
          },
-         "colodore_ted",
-         NULL
+         "colodore_ted"
       },
 #elif defined(__XPET__)
       {
@@ -2612,8 +2570,7 @@ static void retro_set_core_options()
             { "white", "White" },
             { NULL, NULL },
          },
-         "default",
-         NULL
+         "default"
       },
 #elif defined(__XCBM2__)
       {
@@ -2630,8 +2587,7 @@ static void retro_set_core_options()
             { "white", "White" },
             { NULL, NULL },
          },
-         "default",
-         NULL
+         "default"
       },
 #elif !defined(__X64DTV__)
       {
@@ -2664,8 +2620,7 @@ static void retro_set_core_options()
             { "vice", "VICE" },
             { NULL, NULL },
          },
-         "colodore",
-         NULL
+         "colodore"
       },
 #endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
@@ -2687,8 +2642,7 @@ static void retro_set_core_options()
          NULL,
          "video",
          PALETTE_GAMMA_OPTIONS,
-         "2800",
-         NULL
+         "2800"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2708,8 +2662,7 @@ static void retro_set_core_options()
          NULL,
          "video",
          PALETTE_COLOR_OPTIONS,
-         "1000",
-         NULL
+         "1000"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2729,8 +2682,7 @@ static void retro_set_core_options()
          NULL,
          "video",
          PALETTE_COLOR_OPTIONS,
-         "1000",
-         NULL
+         "1000"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2750,8 +2702,7 @@ static void retro_set_core_options()
          NULL,
          "video",
          PALETTE_COLOR_OPTIONS,
-         "1000",
-         NULL
+         "1000"
       },
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
@@ -2771,8 +2722,7 @@ static void retro_set_core_options()
          NULL,
          "video",
          PALETTE_COLOR_OPTIONS,
-         "1000",
-         NULL
+         "1000"
       },
 #endif
       {
@@ -2787,8 +2737,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
       {
          "vice_drive_sound_emulation",
@@ -2821,8 +2770,7 @@ static void retro_set_core_options()
             { "100%", NULL },
             { NULL, NULL },
          },
-         "20%",
-         NULL
+         "20%"
       },
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
       {
@@ -2857,8 +2805,7 @@ static void retro_set_core_options()
             { "-1", "100% + Mute" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
 #endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
@@ -2891,8 +2838,7 @@ static void retro_set_core_options()
             { "10", "1000%" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
 #endif
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
@@ -2922,8 +2868,7 @@ static void retro_set_core_options()
 #endif
             { NULL, NULL },
          },
-         "ReSID",
-         NULL
+         "ReSID"
       },
 #if !defined(__X64DTV__)
       {
@@ -2940,8 +2885,7 @@ static void retro_set_core_options()
             { "8580RD", "8580 ReSID + digi boost" },
             { NULL, NULL },
          },
-         "default",
-         NULL
+         "default"
       },
       {
          "vice_sid_extra",
@@ -2958,8 +2902,7 @@ static void retro_set_core_options()
             { "0xdf00", "$DF00" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
 #endif
       {
@@ -2977,11 +2920,10 @@ static void retro_set_core_options()
             { NULL, NULL },
          },
 #if defined(__X64__) || defined(__XCBM5x0__) || defined(__XCBM2__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
-         "fast",
+         "fast"
 #else
-         "resampling",
+         "resampling"
 #endif
-         NULL
       },
       {
          "vice_resid_passband",
@@ -3003,8 +2945,7 @@ static void retro_set_core_options()
             { "90", NULL },
             { NULL, NULL },
          },
-         "90",
-         NULL
+         "90"
       },
       {
          "vice_resid_gain",
@@ -3027,8 +2968,7 @@ static void retro_set_core_options()
             { "100", NULL },
             { NULL, NULL },
          },
-         "97",
-         "int"
+         "97"
       },
       {
          "vice_resid_filterbias",
@@ -3061,8 +3001,7 @@ static void retro_set_core_options()
             { "5000", NULL },
             { NULL, NULL },
          },
-         "500",
-         "int"
+         "500"
       },
       {
          "vice_resid_8580filterbias",
@@ -3095,8 +3034,7 @@ static void retro_set_core_options()
             { "5000", NULL },
             { NULL, NULL },
          },
-         "1500",
-         "int"
+         "1500"
       },
 #endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
@@ -3113,8 +3051,7 @@ static void retro_set_core_options()
             { "3812", "YM3812" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
 #endif
       {
@@ -3131,8 +3068,7 @@ static void retro_set_core_options()
             { "96000", NULL },
             { NULL, NULL },
          },
-         "48000",
-         NULL
+         "48000"
       },
 #if !defined(__XPET__) && !defined(__XCBM2__)
       {
@@ -3149,8 +3085,7 @@ static void retro_set_core_options()
             { "both", "Both Analogs" },
             { NULL, NULL },
          },
-         "left",
-         NULL
+         "left"
       },
       {
          "vice_analogmouse_deadzone",
@@ -3173,8 +3108,7 @@ static void retro_set_core_options()
             { "50", "50%" },
             { NULL, NULL },
          },
-         "20",
-         NULL
+         "20"
       },
       {
          "vice_analogmouse_speed",
@@ -3202,8 +3136,7 @@ static void retro_set_core_options()
             { "2.0", "200%" },
             { NULL, NULL },
          },
-         "1.0",
-         "float"
+         "1.0"
       },
       {
          "vice_dpadmouse_speed",
@@ -3225,8 +3158,7 @@ static void retro_set_core_options()
             { "12", "200%" },
             { NULL, NULL },
          },
-         "6",
-         "int"
+         "6"
       },
       {
          "vice_mouse_speed",
@@ -3258,8 +3190,7 @@ static void retro_set_core_options()
             { "200", "200%" },
             { NULL, NULL },
          },
-         "100",
-         "int"
+         "100"
       },
 #endif
       {
@@ -3274,8 +3205,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
       {
@@ -3290,8 +3220,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
 #endif
 #if !defined(__XPET__) && !defined(__XCBM2__)
@@ -3307,8 +3236,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
 #endif
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XCBM5x0__)
@@ -3336,8 +3264,7 @@ static void retro_set_core_options()
             { "symbolic-user", "Symbolic (User-defined)" },
             { NULL, NULL },
          },
-         "positional",
-         NULL
+         "positional"
       },
 #endif
       {
@@ -3352,8 +3279,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "enabled",
-         "bool"
+         "enabled"
       },
       /* Hotkeys */
       {
@@ -3364,8 +3290,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_statusbar",
@@ -3375,8 +3300,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "RETROK_F12",
-         NULL
+         "RETROK_F12"
       },
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
       {
@@ -3387,8 +3311,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "RETROK_RCTRL",
-         NULL
+         "RETROK_RCTRL"
       },
 #endif
       {
@@ -3399,8 +3322,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "RETROK_END",
-         NULL
+         "RETROK_END"
       },
       {
          "vice_mapper_warp_mode",
@@ -3410,8 +3332,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "",
-         NULL
+         ""
       },
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
       {
@@ -3422,8 +3343,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_zoom_mode_toggle",
@@ -3433,8 +3353,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
 #endif
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
@@ -3447,8 +3366,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_datasette_start",
@@ -3458,8 +3376,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "RETROK_UP",
-         NULL
+         "RETROK_UP"
       },
       {
          "vice_mapper_datasette_stop",
@@ -3469,8 +3386,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "RETROK_DOWN",
-         NULL
+         "RETROK_DOWN"
       },
       {
          "vice_mapper_datasette_rewind",
@@ -3480,8 +3396,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "RETROK_LEFT",
-         NULL
+         "RETROK_LEFT"
       },
       {
          "vice_mapper_datasette_forward",
@@ -3491,8 +3406,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "RETROK_RIGHT",
-         NULL
+         "RETROK_RIGHT"
       },
       {
          "vice_mapper_datasette_reset",
@@ -3502,8 +3416,7 @@ static void retro_set_core_options()
          NULL,
          "hotkey",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
 #endif
       /* Button mappings */
@@ -3515,8 +3428,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "TOGGLE_VKBD",
-         NULL
+         "TOGGLE_VKBD"
       },
       {
          "vice_mapper_start",
@@ -3526,8 +3438,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_b",
@@ -3537,8 +3448,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_a",
@@ -3548,8 +3458,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_y",
@@ -3559,8 +3468,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_x",
@@ -3570,8 +3478,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "RETROK_SPACE",
-         NULL
+         "RETROK_SPACE"
       },
       {
          "vice_mapper_l",
@@ -3581,8 +3488,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_r",
@@ -3592,8 +3498,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_l2",
@@ -3603,8 +3508,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "RETROK_ESCAPE",
-         NULL
+         "RETROK_ESCAPE"
       },
       {
          "vice_mapper_r2",
@@ -3614,8 +3518,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "RETROK_RETURN",
-         NULL
+         "RETROK_RETURN"
       },
       {
          "vice_mapper_l3",
@@ -3625,8 +3528,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_r3",
@@ -3636,8 +3538,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       /* Left Stick */
       {
@@ -3648,8 +3549,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_ld",
@@ -3659,8 +3559,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_ll",
@@ -3670,8 +3569,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_lr",
@@ -3681,8 +3579,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       /* Right Stick */
       {
@@ -3693,8 +3590,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_rd",
@@ -3704,8 +3600,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_rl",
@@ -3715,8 +3610,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
       {
          "vice_mapper_rr",
@@ -3726,8 +3620,7 @@ static void retro_set_core_options()
          NULL,
          "retropad",
          {{ NULL, NULL }},
-         "---",
-         NULL
+         "---"
       },
 #if !defined(__XPET__) && !defined(__XCBM2__)
       /* Turbo Fire */
@@ -3743,8 +3636,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "disabled",
-         "bool"
+         "disabled"
       },
       {
          "vice_turbo_fire_button",
@@ -3764,8 +3656,7 @@ static void retro_set_core_options()
             { "R2", "RetroPad R2" },
             { NULL, NULL },
          },
-         "B",
-         NULL
+         "B"
       },
       {
          "vice_turbo_pulse",
@@ -3783,8 +3674,7 @@ static void retro_set_core_options()
             { "12", "12 frames" },
             { NULL, NULL },
          },
-         "6",
-         "int"
+         "6"
       },
 #endif
 #if !defined(__XCBM5x0__)
@@ -3806,8 +3696,7 @@ static void retro_set_core_options()
             { "PET", "PET" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
 #endif
 #if !defined(__XPET__) && !defined(__XCBM2__) && !defined(__XVIC__)
@@ -3823,8 +3712,7 @@ static void retro_set_core_options()
             { "2", "Port 2" },
             { NULL, NULL },
          },
-         "2",
-         "int"
+         "2"
       },
 #endif
 #if !defined(__XPET__) && !defined(__XCBM2__)
@@ -3854,8 +3742,7 @@ static void retro_set_core_options()
             { "15", "Light Gun (Stack Light Rifle)" },
             { NULL, NULL },
          },
-         "1",
-         "int"
+         "1"
       },
       {
          "vice_retropad_options",
@@ -3871,11 +3758,10 @@ static void retro_set_core_options()
             { "rotate_jump", "Y = Fire, B = Up" },
             { NULL, NULL },
          },
-         "disabled",
-         NULL
+         "disabled"
       },
 #endif
-      { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL, NULL },
+      { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },
    };
 
    /* Fill in the values for all the mappers */

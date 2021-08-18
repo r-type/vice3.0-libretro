@@ -591,8 +591,7 @@ void input_vkbd(void)
       {
          switch (vkey_pressed)
          {
-            case -2:
-               emu_function(EMU_RESET);
+            case -2: /* Reset on release */
                break;
             case -3:
                if (retro_capslock)
@@ -643,6 +642,7 @@ void input_vkbd(void)
          }
       }
       last_vkey_pressed = vkey_pressed;
+      last_vkey_pressed_time = now;
    }
    else
    if (vkflag[i] && (!(joypad_bits[0] & (1 << i)) &&
@@ -652,19 +652,29 @@ void input_vkbd(void)
    {
       vkey_pressed = -1;
       vkflag[i] = 0;
+
+      if (last_vkey_pressed == -2)
+      {
+         /* Reset on long press */
+         if (now - last_vkey_pressed_time > 500)
+            emu_function(EMU_RESET);
+         /* Freeze on short press */
+         else
+            emu_reset(3);
+      }
    }
 
-   if (vkflag[RETRO_DEVICE_ID_JOYPAD_B] && vkey_pressed > 0)
+   if (vkflag[i] && vkey_pressed > 0)
    {
       if (let_go_of_button)
          last_press_time_button = now;
       if (now - last_press_time_button > VKBD_STICKY_HOLDING_TIME)
          vkey_sticky = 1;
-      let_go_of_button = 0;
+      let_go_of_button = false;
    }
    else
    {
-      let_go_of_button = 1;
+      let_go_of_button = true;
       vkey_sticky = 0;
    }
 

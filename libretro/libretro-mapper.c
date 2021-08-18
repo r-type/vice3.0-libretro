@@ -78,6 +78,7 @@ extern unsigned int opt_analogmouse_deadzone;
 extern float opt_analogmouse_speed;
 bool datasette_hotkeys = false;
 
+extern unsigned int opt_reset_type;
 extern unsigned int zoom_mode_id;
 extern int zoom_mode_id_prev;
 extern unsigned int opt_zoom_mode_id;
@@ -131,6 +132,8 @@ int retro_ui_get_pointer_state(int *px, int *py, unsigned int *pbuttons)
 
 void emu_function(int function)
 {
+   char tmp_str[20] = {0};
+
    switch (function)
    {
       case EMU_VKBD:
@@ -157,6 +160,26 @@ void emu_function(int function)
          break;
       case EMU_RESET:
          emu_reset(-1);
+         /* Statusbar notification */
+         switch (opt_reset_type)
+         {
+            default:
+            case 0: snprintf(tmp_str, sizeof(tmp_str), "Autostart"); break;
+            case 1: snprintf(tmp_str, sizeof(tmp_str), "Soft reset"); break;
+            case 2: snprintf(tmp_str, sizeof(tmp_str), "Hard reset"); break;
+            case 3: snprintf(tmp_str, sizeof(tmp_str), "Freeze"); break;
+         }
+         snprintf(statusbar_text, sizeof(statusbar_text), "%c %-98s",
+               (' ' | 0x80), tmp_str);
+         imagename_timer = 50;
+         break;
+      case EMU_FREEZE:
+         emu_reset(3);
+         /* Statusbar notification */
+         snprintf(tmp_str, sizeof(tmp_str), "Freeze");
+         snprintf(statusbar_text, sizeof(statusbar_text), "%c %-98s",
+               (' ' | 0x80), tmp_str);
+         imagename_timer = 50;
          break;
       case EMU_ASPECT_RATIO:
          if (opt_aspect_ratio == 0)

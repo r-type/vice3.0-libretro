@@ -1087,7 +1087,7 @@ void retro_poll_event()
       static int dpadmouse_speed[2] = {0};
       static int dpadmouse_pressed[2] = {0};
 #ifdef MOUSE_DPAD_ACCEL
-      static long now = 0;
+      long now = 0;
       now = retro_ticks() / 1000;
 #endif
 
@@ -1142,7 +1142,7 @@ void retro_poll_event()
             /* Digital mouse speed modifiers */
             if (!dpadmouse_pressed[retro_j])
 #ifdef MOUSE_DPAD_ACCEL
-               dpadmouse_speed[retro_j] = opt_dpadmouse_speed - 2;
+               dpadmouse_speed[retro_j] = opt_dpadmouse_speed - 3;
 #else
                dpadmouse_speed[retro_j] = opt_dpadmouse_speed;
 #endif
@@ -1154,7 +1154,7 @@ void retro_poll_event()
 
 #ifdef MOUSE_DPAD_ACCEL
             /* Digital mouse acceleration */
-            if (dpadmouse_pressed[retro_j] && (now - dpadmouse_pressed[retro_j] > 300))
+            if (dpadmouse_pressed[retro_j] && (now - dpadmouse_pressed[retro_j] > 400))
             {
                dpadmouse_speed[retro_j]++;
                dpadmouse_pressed[retro_j] = now;
@@ -1163,7 +1163,7 @@ void retro_poll_event()
 
             /* Digital mouse speed limits */
             if (dpadmouse_speed[retro_j] < 2) dpadmouse_speed[retro_j] = 2;
-            if (dpadmouse_speed[retro_j] > 14) dpadmouse_speed[retro_j] = 14;
+            if (dpadmouse_speed[retro_j] > 20) dpadmouse_speed[retro_j] = 20;
          }
 
          if (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))

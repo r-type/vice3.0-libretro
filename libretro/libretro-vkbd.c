@@ -7,47 +7,170 @@
 
 bool retro_vkbd = false;
 static bool retro_vkbd_transparent = true;
-short int retro_vkbd_ready = 0;
-int vkflag[10] = {0};
+signed char retro_vkbd_ready = 0;
+static int vkflag[10] = {0};
 
 #ifdef POINTER_DEBUG
-int pointer_x = 0;
-int pointer_y = 0;
+static int pointer_x = 0;
+static int pointer_y = 0;
 #endif
-int last_pointer_x = 0;
-int last_pointer_y = 0;
+static int last_pointer_x = 0;
+static int last_pointer_y = 0;
 
 /* VKBD starting point: 10x3 == f7 */
-int vkey_pos_x = 10;
-int vkey_pos_y = 3;
-int vkbd_x_min = 0;
-int vkbd_x_max = 0;
-int vkbd_y_min = 0;
-int vkbd_y_max = 0;
+static int vkey_pos_x = 10;
+static int vkey_pos_y = 3;
+static int vkbd_x_min = 0;
+static int vkbd_x_max = 0;
+static int vkbd_y_min = 0;
+static int vkbd_y_max = 0;
 
 /* VKBD_MIN_HOLDING_TIME: Hold a direction longer than this and automatic movement sets in */
 /* VKBD_MOVE_DELAY: Delay between automatic movement from button to button */
 #define VKBD_MIN_HOLDING_TIME 200
 #define VKBD_MOVE_DELAY 50
-bool let_go_of_direction = true;
-long last_move_time = 0;
-long last_press_time = 0;
+static bool let_go_of_direction = true;
+static long last_move_time = 0;
+static long last_press_time = 0;
 
 /* VKBD_STICKY_HOLDING_TIME: Button press longer than this triggers sticky key */
 #define VKBD_STICKY_HOLDING_TIME 1000
-bool let_go_of_button = true;
-long last_press_time_button = 0;
-int vkey_pressed = -1;
-int vkey_sticky = -1;
-int vkey_sticky1 = -1;
-int vkey_sticky2 = -1;
+static bool let_go_of_button = true;
+static long last_press_time_button = 0;
+static int vkey_pressed = -1;
+static int vkey_sticky = -1;
+static int vkey_sticky1 = -1;
+static int vkey_sticky2 = -1;
 
-long last_vkey_pressed_time = 0;
-int last_vkey_pressed = -1;
-int vkey_sticky1_release = 0;
-int vkey_sticky2_release = 0;
+static long last_vkey_pressed_time = 0;
+static int last_vkey_pressed = -1;
+static int vkey_sticky1_release = 0;
+static int vkey_sticky2_release = 0;
 
+typedef struct
+{
+   char normal[5];
+   char shift[5];
+   int value;
+} retro_vkeys;
 
+static const retro_vkeys vkeys[VKBDX * VKBDY] =
+{
+   /* 0 */
+   { "1"  ,"!"   ,RETROK_1},
+   { "2"  ,"\""  ,RETROK_2},
+   { "3"  ,"#"   ,RETROK_3},
+   { "4"  ,"$"   ,RETROK_4},
+   { "5"  ,"%"   ,RETROK_5},
+   { "6"  ,"&"   ,RETROK_6},
+   { "7"  ,"'"   ,RETROK_7},
+   { "8"  ,"("   ,RETROK_8},
+   { "9"  ,")"   ,RETROK_9},
+#ifdef __XPLUS4__
+   { "0"  ,{26}  ,RETROK_0},
+#else
+   { "0"  ,"0"   ,RETROK_0},
+#endif
+#ifdef __XPLUS4__
+   { "F1" ,"F4"  ,RETROK_F1},
+#else
+   { "f1" ,"f2"  ,RETROK_F1},
+#endif
+
+   /* 11 */
+   { "Q"  ,"Q"   ,RETROK_q},
+   { "W"  ,"W"   ,RETROK_w},
+   { "E"  ,"E"   ,RETROK_e},
+   { "R"  ,"R"   ,RETROK_r},
+   { "T"  ,"T"   ,RETROK_t},
+   { "Y"  ,"Y"   ,RETROK_y},
+   { "U"  ,"U"   ,RETROK_u},
+   { "I"  ,"I"   ,RETROK_i},
+   { "O"  ,"O"   ,RETROK_o},
+   { "P"  ,"P"   ,RETROK_p},
+#ifdef __XPLUS4__
+   { "F2" ,"F5"  ,RETROK_F2},
+#else
+   { "f3" ,"f4"  ,RETROK_F3},
+#endif
+
+   /* 22 */
+   { "A"  ,"A"   ,RETROK_a},
+   { "S"  ,"S"   ,RETROK_s},
+   { "D"  ,"D"   ,RETROK_d},
+   { "F"  ,"F"   ,RETROK_f},
+   { "G"  ,"G"   ,RETROK_g},
+   { "H"  ,"H"   ,RETROK_h},
+   { "J"  ,"J"   ,RETROK_j},
+   { "K"  ,"K"   ,RETROK_k},
+   { "L"  ,"L"   ,RETROK_l},
+   { {31} ,{31}  ,RETROK_INSERT}, /* £ */
+#ifdef __XPLUS4__
+   { "F3" ,"F6"  ,RETROK_F3},
+#else
+   { "f5" ,"f6"  ,RETROK_F5},
+#endif
+
+   /* 33 */
+   { "Z"  ,"Z"   ,RETROK_z},
+   { "X"  ,"X"   ,RETROK_x},
+   { "C"  ,"C"   ,RETROK_c},
+   { "V"  ,"V"   ,RETROK_v},
+   { "B"  ,"B"   ,RETROK_b},
+   { "N"  ,"N"   ,RETROK_n},
+   { "M"  ,"M"   ,RETROK_m},
+   { ","  ,"<"   ,RETROK_COMMA},
+   { "."  ,">"   ,RETROK_PERIOD},
+   { "/"  ,"?"   ,RETROK_SLASH},
+#ifdef __XPLUS4__
+   { "HLP" ,"F7" ,RETROK_F8},
+#else
+   { "f7" ,"f8"  ,RETROK_F7},
+#endif
+
+   /* 44 */
+#ifdef __XPLUS4__
+   { "ESC","ESC" ,RETROK_BACKQUOTE},
+#else
+   { {25} ,{25}  ,RETROK_BACKQUOTE}, /* Left arrow */
+#endif
+   { "CTR","CTR" ,RETROK_TAB},
+   { "+"  ,"+"   ,RETROK_MINUS},
+   { "-"  ,"-"   ,RETROK_EQUALS},
+   { "@"  ,"@"   ,RETROK_LEFTBRACKET},
+   { "*"  ,"*"   ,RETROK_RIGHTBRACKET},
+   { {26} ,{7}   ,RETROK_DELETE}, /* Up arrow / Pi */
+   { ":"  ,"["   ,RETROK_SEMICOLON},
+   { ";"  ,"]"   ,RETROK_QUOTE},
+   { "="  ,"="   ,RETROK_BACKSLASH},
+   { "STB","SVD" ,-3}, /* Statusbar / Save disk */
+
+   /* 55 */
+   { {24} ,{24}  ,RETROK_LCTRL},
+   { "R/S","R/S" ,RETROK_ESCAPE},
+   { "S/L","S/L" ,-10}, /* ShiftLock */
+   { "LSH","LSH" ,RETROK_LSHIFT},
+   { "RSH","RSH" ,RETROK_RSHIFT},
+   { "RST","RST" ,RETROK_PAGEUP},
+   { "CLR","CLR" ,RETROK_HOME},
+   { "DEL","DEL" ,RETROK_BACKSPACE},
+   { {30} ,{30}  ,RETROK_UP},
+   { "RET","RET" ,RETROK_RETURN},
+   { "JOY","ASR" ,-4}, /* Switch joyport / Toggle aspect ratio */
+
+   /* 66 */
+   { {17} ,{17}  ,-2},  /* Reset */
+   { {19} ,{19}  ,-15}, /* Datasette RESET */
+   { {20} ,{20}  ,-12}, /* Datasette PLAY */
+   { {21} ,{21}  ,-14}, /* Datasette RWD */
+   { {22} ,{22}  ,-13}, /* Datasette FWD */
+   { {23} ,{23}  ,-11}, /* Datasette STOP */
+   { {18} ,{18}  ,RETROK_SPACE},
+   { {27} ,{27}  ,RETROK_LEFT},
+   { {28} ,{28}  ,RETROK_DOWN},
+   { {29} ,{29}  ,RETROK_RIGHT},
+   { "TRF","ZOM" ,-5}, /* Toggle turbo fire / Toggle zoom mode */
+};
 
 static int BKG_PADDING(const char* str)
 {
@@ -457,6 +580,18 @@ static void input_vkbd_sticky(void)
       vkey_sticky2 = -1;
       kbd_handle_keyup(vkey_sticky2);
    }
+}
+
+void toggle_vkbd(void)
+{
+   /* No toggling while key is pressed */
+   if (vkflag[RETRO_DEVICE_ID_JOYPAD_B])
+      return;
+   retro_vkbd = !retro_vkbd;
+   /* Reset VKBD input readiness */
+   retro_vkbd_ready = -2;
+   /* Release VKBD controllable joypads */
+   memset(joypad_bits, 0, 2*sizeof(joypad_bits[0]));
 }
 
 void input_vkbd(void)

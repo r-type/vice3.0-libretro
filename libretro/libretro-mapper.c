@@ -48,9 +48,8 @@ static void retro_mouse_move(int x, int y)
 
 /* Core flags */
 int mapper_keys[RETRO_MAPPER_LAST] = {0};
-int retro_capslock = false;
+bool retro_capslock = false;
 static int mapper_flag[RETRO_DEVICES][128] = {0};
-extern int vkflag[10];
 
 unsigned int cur_port = 2;
 static int cur_port_prev = -1;
@@ -61,10 +60,6 @@ unsigned int mouse_speed[2] = {0};
 unsigned int retro_statusbar = 0;
 extern unsigned char statusbar_text[RETRO_PATH_MAX];
 unsigned int retro_warpmode = 0;
-extern bool retro_vkbd;
-extern bool retro_vkbd_transparent;
-extern short int retro_vkbd_ready;
-extern void input_vkbd(void);
 
 static unsigned retro_key_state[RETROK_LAST] = {0};
 unsigned retro_key_event_state[RETROK_LAST] = {0};
@@ -83,6 +78,7 @@ extern unsigned int opt_analogmouse_deadzone;
 extern float opt_analogmouse_speed;
 bool datasette_hotkeys = false;
 
+extern unsigned int opt_reset_type;
 extern unsigned int zoom_mode_id;
 extern int zoom_mode_id_prev;
 extern unsigned int opt_zoom_mode_id;
@@ -136,15 +132,13 @@ int retro_ui_get_pointer_state(int *px, int *py, unsigned int *pbuttons)
 
 void emu_function(int function)
 {
+   char tmp_str[20] = {0};
+
    switch (function)
    {
       case EMU_VKBD:
-         retro_vkbd = !retro_vkbd;
-         /* Reset VKBD input readiness */
-         retro_vkbd_ready = -2;
-         /* Release VKBD controllable joypads */
-         memset(joypad_bits, 0, 2*sizeof(joypad_bits[0]));
-         break;
+         toggle_vkbd();
+         return;
       case EMU_STATUSBAR:
          retro_statusbar = (retro_statusbar) ? 0 : 1;
          resources_set_int("SDLStatusbar", retro_statusbar);
@@ -154,7 +148,9 @@ void emu_function(int function)
          break;
 #endif
          cur_port++;
-         if (cur_port > 2) cur_port = 1;
+         unsigned max_port = (vice_opt.UserportJoyType != -1) ? 4 : 2;
+         if (cur_port > max_port) cur_port = 1;
+
          /* Lock current port */
          cur_port_locked = true;
          /* Statusbar notification */
@@ -164,6 +160,26 @@ void emu_function(int function)
          break;
       case EMU_RESET:
          emu_reset(-1);
+         /* Statusbar notification */
+         switch (opt_reset_type)
+         {
+            default:
+            case 0: snprintf(tmp_str, sizeof(tmp_str), "Autostart"); break;
+            case 1: snprintf(tmp_str, sizeof(tmp_str), "Soft reset"); break;
+            case 2: snprintf(tmp_str, sizeof(tmp_str), "Hard reset"); break;
+            case 3: snprintf(tmp_str, sizeof(tmp_str), "Freeze"); break;
+         }
+         snprintf(statusbar_text, sizeof(statusbar_text), "%c %-98s",
+               (' ' | 0x80), tmp_str);
+         imagename_timer = 50;
+         break;
+      case EMU_FREEZE:
+         emu_reset(3);
+         /* Statusbar notification */
+         snprintf(tmp_str, sizeof(tmp_str), "Freeze");
+         snprintf(statusbar_text, sizeof(statusbar_text), "%c %-98s",
+               (' ' | 0x80), tmp_str);
+         imagename_timer = 50;
          break;
       case EMU_ASPECT_RATIO:
          if (opt_aspect_ratio == 0)
@@ -422,7 +438,8 @@ void update_input(unsigned disable_keys)
             int just_released = 0;
             if ((i < 4 || i > 7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad */
             {
-               /* Skip the VKBD buttons if VKBD is visible and buttons are mapped to keyboard keys */
+               /* Skip VKBD buttons if VKBD is visible and buttons
+                * are mapped to keyboard keys, but allow release */
                if (retro_vkbd)
                {
                   switch (i)
@@ -432,7 +449,7 @@ void update_input(unsigned disable_keys)
                      case RETRO_DEVICE_ID_JOYPAD_A:
                      case RETRO_DEVICE_ID_JOYPAD_X:
                      case RETRO_DEVICE_ID_JOYPAD_START:
-                        if (mapper_keys[i] >= 0)
+                        if (mapper_keys[i] >= 0 && !jbt[j][i])
                            continue;
                         break;
                   }
@@ -790,11 +807,10 @@ void retro_poll_event()
       disable_keys = process_keyboard_pass_through();
    update_input(disable_keys);
 
-   /* retro joypad take control over keyboard joy */
-   /* override keydown, but allow keyup, to prevent key sticking during keyboard use, if held down on opening keyboard */
-   /* keyup allowing most likely not needed on actual keyboard presses even though they get stuck also */
-   int retro_port;
-   for (retro_port = 0; retro_port <= 3; retro_port++)
+   /* Joystick port iteration */
+   unsigned retro_port;
+   unsigned max_port = (vice_opt.UserportJoyType != -1) ? 4 : 2;
+   for (retro_port = 0; retro_port < max_port; retro_port++)
    {
       if (retro_devices[retro_port] == RETRO_DEVICE_VICE_JOYSTICK ||
           retro_devices[retro_port] == RETRO_DEVICE_JOYPAD)
@@ -802,12 +818,18 @@ void retro_poll_event()
          int vice_port = cur_port;
          uint8_t joy_value = 0;
 
-         if (retro_port == 1) /* Second joypad controls other player */
-            vice_port = (cur_port == 2) ? 1 : 2;
-         else if (retro_port == 2)
-            vice_port = 3;
-         else if (retro_port == 3)
-            vice_port = 4;
+         if (vice_opt.UserportJoyType != -1)
+         {
+            /* With userport adapter: Next retro port controls next joyport */
+            vice_port = cur_port + retro_port;
+            vice_port = (vice_port > max_port) ? (vice_port - max_port) : vice_port;
+         }
+         else
+         {
+            /* Without userport adapter: Second port controls opposite joyport */
+            if (retro_port == 1)
+               vice_port = (cur_port == 2) ? 1 : 2;
+         }
 
          /* No same port joystick movements with non-joysticks */
          if (opt_joyport_type > 1 && vice_port == cur_port)
@@ -1052,7 +1074,7 @@ void retro_poll_event()
       }
    }
    /* Other than a joystick, set only cur_port */
-   else if (opt_joyport_type > 1)
+   else if (opt_joyport_type > 1 && cur_port < 3)
    {
       if (opt_joyport_type_prev != opt_joyport_type || cur_port_prev != cur_port)
       {
@@ -1081,7 +1103,7 @@ void retro_poll_event()
       static int dpadmouse_speed[2] = {0};
       static int dpadmouse_pressed[2] = {0};
 #ifdef MOUSE_DPAD_ACCEL
-      static long now = 0;
+      long now = 0;
       now = retro_ticks() / 1000;
 #endif
 
@@ -1136,7 +1158,7 @@ void retro_poll_event()
             /* Digital mouse speed modifiers */
             if (!dpadmouse_pressed[retro_j])
 #ifdef MOUSE_DPAD_ACCEL
-               dpadmouse_speed[retro_j] = opt_dpadmouse_speed - 2;
+               dpadmouse_speed[retro_j] = opt_dpadmouse_speed - 3;
 #else
                dpadmouse_speed[retro_j] = opt_dpadmouse_speed;
 #endif
@@ -1148,7 +1170,7 @@ void retro_poll_event()
 
 #ifdef MOUSE_DPAD_ACCEL
             /* Digital mouse acceleration */
-            if (dpadmouse_pressed[retro_j] && (now - dpadmouse_pressed[retro_j] > 300))
+            if (dpadmouse_pressed[retro_j] && (now - dpadmouse_pressed[retro_j] > 400))
             {
                dpadmouse_speed[retro_j]++;
                dpadmouse_pressed[retro_j] = now;
@@ -1157,7 +1179,7 @@ void retro_poll_event()
 
             /* Digital mouse speed limits */
             if (dpadmouse_speed[retro_j] < 2) dpadmouse_speed[retro_j] = 2;
-            if (dpadmouse_speed[retro_j] > 14) dpadmouse_speed[retro_j] = 14;
+            if (dpadmouse_speed[retro_j] > 20) dpadmouse_speed[retro_j] = 20;
          }
 
          if (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))

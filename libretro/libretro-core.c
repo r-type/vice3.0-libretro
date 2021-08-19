@@ -3134,6 +3134,11 @@ static void retro_set_core_options()
             { "1.8", "180%" },
             { "1.9", "190%" },
             { "2.0", "200%" },
+            { "2.1", "210%" },
+            { "2.2", "220%" },
+            { "2.3", "230%" },
+            { "2.4", "240%" },
+            { "2.5", "250%" },
             { NULL, NULL },
          },
          "1.0"
@@ -3156,6 +3161,9 @@ static void retro_set_core_options()
             { "10", "166%" },
             { "11", "183%" },
             { "12", "200%" },
+            { "13", "216%" },
+            { "14", "233%" },
+            { "15", "250%" },
             { NULL, NULL },
          },
          "6"
@@ -7099,7 +7107,7 @@ bool retro_load_game(const struct retro_game_info *info)
       local_path = utf8_to_local_string_alloc(info->path);
       if (local_path)
       {
-         if (path_is_valid(local_path) && !path_is_directory(local_path))
+         if (path_is_valid(info->path) && !path_is_directory(info->path))
             process_cmdline(local_path);
          else
             process_cmdline("");

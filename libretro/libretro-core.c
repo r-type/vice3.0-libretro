@@ -193,6 +193,8 @@ static retro_environment_t environ_cb = NULL;
 static struct retro_perf_callback perf_cb;
 
 bool libretro_supports_bitmasks = false;
+static bool libretro_supports_ff_override = false;
+bool libretro_ff_enabled = false;
 static bool libretro_supports_option_categories = false;
 #define HAVE_NO_LANGEXTRA
 
@@ -1676,6 +1678,20 @@ static void retro_led_interface(void)
          led_state_cb(l, led_state[l]);
       }
    }
+}
+
+void retro_fastforwarding(bool enabled)
+{
+   struct retro_fastforwarding_override ff_override;
+
+   if (!libretro_supports_ff_override)
+      return;
+
+   ff_override.ratio       = 10.0f;
+   ff_override.fastforward = enabled;
+   libretro_ff_enabled     = enabled;
+
+   environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, &ff_override);
 }
 
 static void retro_set_paths(void)
@@ -6488,6 +6504,9 @@ void retro_init(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
       libretro_supports_bitmasks = true;
 
+   if (environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, NULL))
+      libretro_supports_ff_override = true;
+
    static struct retro_keyboard_callback keyboard_callback = {retro_keyboard_event};
    environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard_callback);
 
@@ -6532,6 +6551,7 @@ void retro_deinit(void)
 
    /* 'Reset' troublesome static variables */
    libretro_supports_bitmasks = false;
+   libretro_supports_ff_override = false;
    libretro_supports_option_categories = false;
    pix_bytes_initialized = false;
    cur_port_locked = false;

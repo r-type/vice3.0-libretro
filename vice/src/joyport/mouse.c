@@ -64,6 +64,14 @@
 #include "clkguard.h"
 #include "ds1202_1302.h"
 
+#ifdef __LIBRETRO__
+extern unsigned int cur_port;
+static float mouse_move_x2 = 0.0f;
+static float mouse_move_y2 = 0.0f;
+static int16_t mouse_x2 = 0;
+static int16_t mouse_y2 = 0;
+#endif
+
 /* Control port <--> mouse/paddles/pad connections:
 
    cport | 1351         | I/O
@@ -380,6 +388,16 @@ void mouse_move(float dx, float dy)
     mouse_timestamp = tick_now();
 }
 
+#ifdef __LIBRETRO__
+void mouse_move2(float dx, float dy)
+{
+    /* Capture the relative mouse movement to be processed later in mouse_poll() */
+    mouse_move_x2 += dx;
+    mouse_move_y2 -= dy;
+    mouse_timestamp = tick_now();
+}
+#endif
+
 void mouse_get_int16(int16_t *x, int16_t *y)
 {    
     *x = (int16_t)mouse_x;
@@ -422,6 +440,11 @@ uint8_t mouse_poll(void)
     CLOCK emu_now, emu_iv, emu_iv2;
     int diff_x, diff_y;
 
+#ifdef __LIBRETRO__
+    int16_t delta_x2, delta_y2;
+    int16_t new_x2, new_y2;
+#endif
+
     /* Ensure the mouse hasn't moved too far since the last poll */
     mouse_move_apply_limit();
 
@@ -440,6 +463,17 @@ uint8_t mouse_poll(void)
     /* OK - on with the show, get new mouse values */
     new_x = (int16_t)mouse_x;
     new_y = (int16_t)mouse_y;
+
+#ifdef __LIBRETRO__
+    delta_x2 = (int16_t)mouse_move_x2;
+    delta_y2 = (int16_t)mouse_move_y2;
+    mouse_x2 += delta_x2;
+    mouse_y2 += delta_y2;
+    mouse_move_x2 -= delta_x2;
+    mouse_move_y2 -= delta_y2;
+    new_x2 = (int16_t)mouse_x2;
+    new_y2 = (int16_t)mouse_y2;
+#endif
 
     /* range of new_x and new_y are [0,63] */
     /* fetch now for both emu and os */
@@ -646,8 +680,21 @@ static inline uint8_t mouse_paddle_update(uint8_t paddle_v, int16_t *old_v, int1
 static uint8_t mouse_get_paddle_x(int port)
 {
     if (_mouse_enabled) {
+#ifdef __LIBRETRO__
+        if (port + 1 == cur_port)
+        {
+            paddle_val[2] = mouse_paddle_update(paddle_val[2], &(paddle_old[2]), (int16_t)mouse_x / PADDLE_DIV);
+            return (uint8_t)(0xff - paddle_val[2]);
+        }
+        else
+        {
+            paddle_val[4] = mouse_paddle_update(paddle_val[4], &(paddle_old[4]), (int16_t)mouse_x2 / PADDLE_DIV);
+            return (uint8_t)(0xff - paddle_val[4]);
+        }
+#else
         paddle_val[2] = mouse_paddle_update(paddle_val[2], &(paddle_old[2]), (int16_t)mouse_x / PADDLE_DIV);
         return (uint8_t)(0xff - paddle_val[2]);
+#endif
     }
     return 0xff;
 }
@@ -655,8 +702,21 @@ static uint8_t mouse_get_paddle_x(int port)
 static uint8_t mouse_get_paddle_y(int port)
 {
     if (_mouse_enabled) {
+#ifdef __LIBRETRO__
+        if (port + 1 == cur_port)
+        {
+            paddle_val[3] = mouse_paddle_update(paddle_val[3], &(paddle_old[3]), (int16_t)mouse_y / PADDLE_DIV);
+            return (uint8_t)(0xff - paddle_val[3]);
+        }
+        else
+        {
+            paddle_val[5] = mouse_paddle_update(paddle_val[5], &(paddle_old[5]), (int16_t)mouse_y2 / PADDLE_DIV);
+            return (uint8_t)(0xff - paddle_val[5]);
+        }
+#else
         paddle_val[3] = mouse_paddle_update(paddle_val[3], &(paddle_old[3]), (int16_t)mouse_y / PADDLE_DIV);
         return (uint8_t)(0xff - paddle_val[3]);
+#endif
     }
     return 0xff;
 }

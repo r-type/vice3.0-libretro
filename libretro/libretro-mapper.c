@@ -15,19 +15,6 @@
 #include "kbd.h"
 #include "mousedrv.h"
 
-retro_input_state_t input_state_cb;
-static retro_input_poll_t input_poll_cb;
-
-void retro_set_input_state(retro_input_state_t cb)
-{
-   input_state_cb = cb;
-}
-
-void retro_set_input_poll(retro_input_poll_t cb)
-{
-   input_poll_cb = cb;
-}
-
 /* Mouse speed flags */
 #define MOUSE_SPEED_SLOWER 1
 #define MOUSE_SPEED_FASTER 2
@@ -849,9 +836,6 @@ int process_keyboard_pass_through()
 void retro_poll_event()
 {
    unsigned i, j;
-
-   input_poll_cb();
-
    for (j = 0; j < RETRO_DEVICES; j++)
    {
       if (libretro_supports_bitmasks)

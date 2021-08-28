@@ -190,6 +190,12 @@ static retro_audio_sample_t audio_cb = NULL;
 static retro_audio_sample_batch_t audio_batch_cb = NULL;
 static retro_environment_t environ_cb = NULL;
 
+retro_input_state_t input_state_cb = NULL;
+void retro_set_input_state(retro_input_state_t cb) { input_state_cb = cb; }
+
+static retro_input_poll_t input_poll_cb = NULL;
+void retro_set_input_poll(retro_input_poll_t cb) { input_poll_cb = cb; }
+
 static struct retro_perf_callback perf_cb;
 
 bool libretro_supports_bitmasks = false;
@@ -7063,6 +7069,7 @@ void retro_run(void)
    }
 
    /* Input poll */
+   input_poll_cb();
    retro_poll_event();
 
    /* Main loop with Warp Mode maximizing without too much input lag */

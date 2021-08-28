@@ -16,7 +16,9 @@ Supported platforms: Linux, Windows, Apple, Android, emscripten, Switch, Vita
 | X               | Space                   |
 | L2              | Escape (RUN/STOP)       |
 | R2              | Enter (RETURN)          |
-| Select          | Toggle virtual keyboard |
+| Select (Short)  | Toggle virtual keyboard |
+| Select (Long)   | Toggle statusbar        |
+| Select (Hold)   | Fast-Forward            |
 
 | Keyboard key    | Action                  |
 |-----------------|-------------------------|

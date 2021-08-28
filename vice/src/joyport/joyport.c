@@ -35,6 +35,10 @@
 #include "uiapi.h"
 #include "util.h"
 
+#ifdef __LIBRETRO__
+extern unsigned int opt_joyport_type;
+#endif
+
 static joyport_t joyport_device[JOYPORT_MAX_DEVICES];
 static uint8_t joyport_display[6] = { 0, 0, 0, 0, 0, 0};
 
@@ -241,6 +245,14 @@ uint8_t read_joyport_potx(void)
         }
     }
 
+#ifdef __LIBRETRO__
+    if (opt_joyport_type == 2)
+    {
+       id1 = JOYPORT_ID_PADDLES;
+       id2 = JOYPORT_ID_PADDLES;
+    }
+#endif
+
     if (id1 != JOYPORT_ID_NONE) {
         if (joyport_device[id1].read_potx) {
             ret1 = joyport_device[id1].read_potx(pot_port1);
@@ -289,6 +301,14 @@ uint8_t read_joyport_poty(void)
             id2 = joy_port[pot_port2];
         }
     }
+
+#ifdef __LIBRETRO__
+    if (opt_joyport_type == 2)
+    {
+       id1 = JOYPORT_ID_PADDLES;
+       id2 = JOYPORT_ID_PADDLES;
+    }
+#endif
 
     if (id1 != JOYPORT_ID_NONE) {
         if (joyport_device[id1].read_poty) {

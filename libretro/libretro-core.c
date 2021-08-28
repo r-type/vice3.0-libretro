@@ -190,9 +190,17 @@ static retro_audio_sample_t audio_cb = NULL;
 static retro_audio_sample_batch_t audio_batch_cb = NULL;
 static retro_environment_t environ_cb = NULL;
 
+retro_input_state_t input_state_cb = NULL;
+void retro_set_input_state(retro_input_state_t cb) { input_state_cb = cb; }
+
+static retro_input_poll_t input_poll_cb = NULL;
+void retro_set_input_poll(retro_input_poll_t cb) { input_poll_cb = cb; }
+
 static struct retro_perf_callback perf_cb;
 
 bool libretro_supports_bitmasks = false;
+static bool libretro_supports_ff_override = false;
+bool libretro_ff_enabled = false;
 static bool libretro_supports_option_categories = false;
 #define HAVE_NO_LANGEXTRA
 
@@ -1676,6 +1684,20 @@ static void retro_led_interface(void)
          led_state_cb(l, led_state[l]);
       }
    }
+}
+
+void retro_fastforwarding(bool enabled)
+{
+   struct retro_fastforwarding_override ff_override;
+
+   if (!libretro_supports_ff_override)
+      return;
+
+   ff_override.ratio       = 10.0f;
+   ff_override.fastforward = enabled;
+   libretro_ff_enabled     = enabled;
+
+   environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, &ff_override);
 }
 
 static void retro_set_paths(void)
@@ -6488,6 +6510,9 @@ void retro_init(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
       libretro_supports_bitmasks = true;
 
+   if (environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, NULL))
+      libretro_supports_ff_override = true;
+
    static struct retro_keyboard_callback keyboard_callback = {retro_keyboard_event};
    environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &keyboard_callback);
 
@@ -6532,6 +6557,7 @@ void retro_deinit(void)
 
    /* 'Reset' troublesome static variables */
    libretro_supports_bitmasks = false;
+   libretro_supports_ff_override = false;
    libretro_supports_option_categories = false;
    pix_bytes_initialized = false;
    cur_port_locked = false;
@@ -7043,6 +7069,7 @@ void retro_run(void)
    }
 
    /* Input poll */
+   input_poll_cb();
    retro_poll_event();
 
    /* Main loop with Warp Mode maximizing without too much input lag */

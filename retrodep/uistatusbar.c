@@ -129,7 +129,7 @@ static void display_joyport(void)
     else if (opt_joyport_type > 2 && cur_port == 1)
         snprintf(tmpstr, sizeof(tmpstr), "M%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Paddles */
-    else if (opt_joyport_type == 2 && cur_port == 1)
+    else if (opt_joyport_type == 2)
         snprintf(tmpstr, sizeof(tmpstr), "P%s%3s ", joy1, joystick_value_human(mouse_value[1], 1));
     /* Joystick */
     else
@@ -142,7 +142,7 @@ static void display_joyport(void)
     else if (opt_joyport_type > 2 && cur_port == 2)
         snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "M%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
     /* Paddles */
-    else if (opt_joyport_type == 2 && cur_port == 2)
+    else if (opt_joyport_type == 2)
         snprintf(tmpstr + strlen(tmpstr), sizeof(tmpstr), "P%s%3s ", joy2, joystick_value_human(mouse_value[2], 1));
     /* Joystick */
     else

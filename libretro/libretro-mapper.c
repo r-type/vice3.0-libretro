@@ -64,7 +64,8 @@ unsigned int retro_statusbar = 0;
 extern unsigned char statusbar_text[RETRO_PATH_MAX];
 unsigned int retro_warpmode = 0;
 
-static unsigned retro_key_state[RETROK_LAST] = {0};
+unsigned retro_key_state[RETROK_LAST] = {0};
+unsigned retro_key_state_internal[RETROK_LAST] = {0};
 unsigned retro_key_event_state[RETROK_LAST] = {0};
 int16_t joypad_bits[RETRO_DEVICES];
 extern bool libretro_supports_bitmasks;
@@ -254,22 +255,26 @@ void emu_function(int function)
    } 
 }
 
-void retro_key_up(int symkey)
+void retro_key_up(int key)
 {
+   retro_key_state_internal[key] = 0;
+
    /* Prevent LShift keyup if ShiftLock is on */
-   if (symkey == RETROK_LSHIFT)
+   if (key == RETROK_LSHIFT)
    {
       if (!retro_capslock)
-         kbd_handle_keyup(symkey);
+         kbd_handle_keyup(key);
    }
    else 
-      kbd_handle_keyup(symkey);
+      kbd_handle_keyup(key);
 }
 
-void retro_key_down(int symkey)
+void retro_key_down(int key)
 {
+   retro_key_state_internal[key] = 1;
+
    /* CapsLock / ShiftLock */
-   if (symkey == RETROK_CAPSLOCK)
+   if (key == RETROK_CAPSLOCK)
    {
       if (retro_capslock)
          kbd_handle_keyup(RETROK_LSHIFT);
@@ -278,7 +283,7 @@ void retro_key_down(int symkey)
       retro_capslock = !retro_capslock;
    }
    else
-      kbd_handle_keydown(symkey);
+      kbd_handle_keydown(key);
 }
 
 void process_key(unsigned disable_keys)

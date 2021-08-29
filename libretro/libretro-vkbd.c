@@ -278,7 +278,7 @@ void print_vkbd(void)
          BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_BROWNGRAY_32 : COLOR_BROWNGRAY_16;
          BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_BROWNLITE_32 : COLOR_BROWNLITE_16;
          BKG_COLOR_TAPE    = (pix_bytes == 4) ? COLOR_TAPE_32 : COLOR_TAPE_16;
-         BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_160_32 : COLOR_160_16;
+         BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_150_32 : COLOR_150_16;
          BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_BROWNDARK_32 : COLOR_BROWNDARK_16;
          FONT_COLOR_NORMAL = (pix_bytes == 4) ? COLOR_WHITE_32 : COLOR_WHITE_16;
          FONT_COLOR_SEL    = (pix_bytes == 4) ? COLOR_BLACK_32 : COLOR_BLACK_16;
@@ -287,7 +287,7 @@ void print_vkbd(void)
       case 2: /* C64C beige */
          BKG_COLOR_NORMAL  = (pix_bytes == 4) ? COLOR_BEIGE_32 : COLOR_BEIGE_16;
          BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_BEIGEDARK_32 : COLOR_BEIGEDARK_16;
-         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_132_32 : COLOR_132_16;
+         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_110_32 : COLOR_110_16;
          BKG_COLOR_TAPE    = (pix_bytes == 4) ? COLOR_TAPE_32 : COLOR_TAPE_16;
          BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_40_32 : COLOR_40_16;
          BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_250_32 : COLOR_250_16;
@@ -298,18 +298,18 @@ void print_vkbd(void)
       case 3: /* Dark */
          BKG_COLOR_NORMAL  = (pix_bytes == 4) ? COLOR_32_32 : COLOR_32_16;
          BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_64_32 : COLOR_64_16;
-         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_10_32 : COLOR_10_16;
+         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_16_32 : COLOR_16_16;
          BKG_COLOR_TAPE    = (pix_bytes == 4) ? COLOR_40_32 : COLOR_40_16;
-         BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_140_32 : COLOR_140_16;
-         BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_16_32 : COLOR_16_16;
+         BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_150_32 : COLOR_150_16;
+         BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_10_32 : COLOR_10_16;
          FONT_COLOR_NORMAL = (pix_bytes == 4) ? COLOR_WHITE_32 : COLOR_WHITE_16;
          FONT_COLOR_SEL    = (pix_bytes == 4) ? COLOR_BLACK_32 : COLOR_BLACK_16;
          break;
       
       case 4: /* Light */
          BKG_COLOR_NORMAL  = (pix_bytes == 4) ? COLOR_200_32 : COLOR_200_16;
-         BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_160_32 : COLOR_160_16;
-         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_132_32 : COLOR_132_16;
+         BKG_COLOR_ALT     = (pix_bytes == 4) ? COLOR_150_32 : COLOR_150_16;
+         BKG_COLOR_EXTRA   = (pix_bytes == 4) ? COLOR_110_32 : COLOR_110_16;
          BKG_COLOR_TAPE    = (pix_bytes == 4) ? COLOR_180_32 : COLOR_180_16;
          BKG_COLOR_SEL     = (pix_bytes == 4) ? COLOR_40_32 : COLOR_40_16;
          BKG_COLOR_ACTIVE  = (pix_bytes == 4) ? COLOR_250_32 : COLOR_250_16;
@@ -457,10 +457,15 @@ void print_vkbd(void)
          /* Default font color */
          FONT_COLOR = FONT_COLOR_NORMAL;
 
+         /* Pressed keys via mapper */
+         int current_key = vkeys[(y * VKBDX) + x + page].value;
+         current_key = (current_key > 0) ? current_key : 0;
+
          /* Sticky + CapsLock + pressed colors */
          if ( (vkey_sticky1 == vkeys[(y * VKBDX) + x + page].value
           ||   vkey_sticky2 == vkeys[(y * VKBDX) + x + page].value
           ||(retro_capslock && vkeys[(y * VKBDX) + x + page].value == -10)
+          ||(retro_key_state_internal[current_key])
           ||(vkflag[RETRO_DEVICE_ID_JOYPAD_START] && vkeys[(y * VKBDX) + x + page].value == RETROK_RETURN)
           ||(vkflag[RETRO_DEVICE_ID_JOYPAD_X]     && vkeys[(y * VKBDX) + x + page].value == RETROK_SPACE)
           ||(tape_enabled && tape_control == 1 && vkeys[(y * VKBDX) + x + page].value == -12)  /* Datasette Play */

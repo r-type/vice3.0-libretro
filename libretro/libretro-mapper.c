@@ -376,6 +376,12 @@ void update_input(unsigned disable_keys)
             case RETRO_MAPPER_WARP_MODE:
                emu_function(EMU_WARP_MODE);
                break;
+            case RETRO_MAPPER_TURBO_FIRE:
+               emu_function(EMU_TURBO_FIRE);
+               break;
+            case RETRO_MAPPER_SAVE_DISK:
+               emu_function(EMU_SAVE_DISK);
+               break;
             case RETRO_MAPPER_DATASETTE_HOTKEYS:
                emu_function(EMU_DATASETTE_HOTKEYS);
                break;
@@ -470,7 +476,7 @@ void update_input(unsigned disable_keys)
          {
             int just_pressed  = 0;
             int just_released = 0;
-            if ((i < 4 || i > 7) && i < 16) /* Remappable RetroPad buttons excluding D-Pad */
+            if (i < 16) /* Remappable RetroPad buttons and directions */
             {
                /* Skip VKBD buttons if VKBD is visible and buttons
                 * are mapped to keyboard keys, but allow release */
@@ -478,6 +484,10 @@ void update_input(unsigned disable_keys)
                {
                   switch (i)
                   {
+                     case RETRO_DEVICE_ID_JOYPAD_UP:
+                     case RETRO_DEVICE_ID_JOYPAD_DOWN:
+                     case RETRO_DEVICE_ID_JOYPAD_LEFT:
+                     case RETRO_DEVICE_ID_JOYPAD_RIGHT:
                      case RETRO_DEVICE_ID_JOYPAD_B:
                      case RETRO_DEVICE_ID_JOYPAD_Y:
                      case RETRO_DEVICE_ID_JOYPAD_A:
@@ -559,6 +569,10 @@ void update_input(unsigned disable_keys)
                   emu_function(EMU_ZOOM_MODE);
                else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_WARP_MODE])
                   emu_function(EMU_WARP_MODE);
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_TURBO_FIRE])
+                  emu_function(EMU_TURBO_FIRE);
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_SAVE_DISK])
+                  emu_function(EMU_SAVE_DISK);
                else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_HOTKEYS])
                   emu_function(EMU_DATASETTE_HOTKEYS);
                else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_STOP])
@@ -620,6 +634,10 @@ void update_input(unsigned disable_keys)
                   ; /* nop */
                else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_WARP_MODE])
                   emu_function(EMU_WARP_MODE);
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_TURBO_FIRE])
+                  ; /* nop */
+               else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_SAVE_DISK])
+                  ; /* nop */
                else if (mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_HOTKEYS])
                   ; /* nop */
                else if (datasette_hotkeys && mapper_keys[i] == mapper_keys[RETRO_MAPPER_DATASETTE_STOP])
@@ -893,7 +911,7 @@ void retro_poll_event()
          joy_value = get_joystick_value(vice_port);
 
          /* Up */
-         if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP))
+         if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP) && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_UP])
          &&  !(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)))
          || (opt_keyrah_keypad && vice_port < 3
             && (
@@ -916,7 +934,7 @@ void retro_poll_event()
             joy_value &= ~JOYPAD_N;
 
          /* Down */
-         if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN))
+         if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN) && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_DOWN])
          &&  !(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)))
          || (opt_keyrah_keypad && vice_port < 3
             && (
@@ -939,7 +957,7 @@ void retro_poll_event()
             joy_value &= ~JOYPAD_S;
 
          /* Left */
-         if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT))
+         if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT) && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_LEFT])
          &&  !(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)))
          || (opt_keyrah_keypad && vice_port < 3
             && (
@@ -962,7 +980,7 @@ void retro_poll_event()
             joy_value &= ~JOYPAD_W;
 
          /* Right */
-         if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT))
+         if (((joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT) && !mapper_keys[RETRO_DEVICE_ID_JOYPAD_RIGHT])
          &&  !(joypad_bits[retro_port] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)))
          || (opt_keyrah_keypad && vice_port < 3
             && (

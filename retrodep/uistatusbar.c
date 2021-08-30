@@ -784,8 +784,13 @@ void uistatusbar_draw(void)
 
         /* Right alignment for tape/drive/power */
         int x_align = retroXS_offset;
+#ifdef __XVIC__
+        /* VIC-20 zoom horizontal centering shenanigans */
+        if (i >= STATUSBAR_TAPE_POS && retroXS_offset && retro_region != RETRO_REGION_PAL)
+            x_align -= 8;
+#endif
         if (i >= STATUSBAR_TAPE_POS)
-            x_align = retroXS_offset + x_align_offset + zoomed_width - (MAX_STATUSBAR_LEN * char_width);
+            x_align += x_align_offset + zoomed_width - (MAX_STATUSBAR_LEN * char_width);
 
         if (drive_enabled)
         {

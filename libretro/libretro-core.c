@@ -128,8 +128,10 @@ static bool request_reload_restart = false;
 static bool request_restart = false;
 static bool request_update_work_disk = false;
 int request_model_set = -1;
+int request_model_auto_set = -1;
 static int request_model_prev = -1;
-static unsigned int opt_model_auto = 1;
+static bool opt_model_auto = true;
+static bool opt_model_auto_locked = false;
 unsigned int opt_autostart = 1;
 unsigned int opt_autoloadwarp = 0;
 unsigned int opt_read_vicerc = 0;
@@ -1346,9 +1348,9 @@ void update_from_vice()
           strstr(full_path, "(Japan, USA)"))
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         request_model_set = C64MODEL_C64_NTSC;
+         request_model_auto_set = C64MODEL_C64_NTSC;
 #elif defined(__XVIC__)
-         request_model_set = VIC20MODEL_VIC20_NTSC;
+         request_model_auto_set = VIC20MODEL_VIC20_NTSC;
 #endif
       }
 
@@ -1361,21 +1363,21 @@ void update_from_vice()
           strstr(full_path, "(Sweden)"))
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-         request_model_set = C64MODEL_C64_PAL;
+         request_model_auto_set = C64MODEL_C64_PAL;
 #elif defined(__XVIC__)
-         request_model_set = VIC20MODEL_VIC20_PAL;
+         request_model_auto_set = VIC20MODEL_VIC20_PAL;
 #endif
       }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
       if (strstr(full_path, "(GS)"))
-         request_model_set = C64MODEL_C64_GS;
+         request_model_auto_set = C64MODEL_C64_GS;
       else if (strstr(full_path, "(MAX)"))
-         request_model_set = C64MODEL_ULTIMAX;
+         request_model_auto_set = C64MODEL_ULTIMAX;
 #endif
    }
    else
-      request_model_set = -1;
+      request_model_auto_set = -1;
 #endif
 
    /* If flip list is empty, get current tape or floppy image name and add to the list */
@@ -3345,6 +3347,26 @@ static void retro_set_core_options()
       },
 #endif
       {
+         "vice_mapper_turbo_fire_toggle",
+         "Hotkey > Toggle Turbo Fire",
+         "Toggle Turbo Fire",
+         "Press the mapped key to toggle turbo fire.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_save_disk_toggle",
+         "Hotkey > Toggle Save Disk",
+         "Toggle Save Disk",
+         "Press the mapped key to create/insert/eject a save disk.",
+         NULL,
+         "hotkey",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
          "vice_mapper_reset",
          "Hotkey > Reset",
          "Reset",
@@ -3451,6 +3473,86 @@ static void retro_set_core_options()
 #endif
       /* Button mappings */
       {
+         "vice_mapper_up",
+         "RetroPad > Up",
+         "Up",
+         "Unmapped defaults to joystick up.",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_down",
+         "RetroPad > Down",
+         "Down",
+         "Unmapped defaults to joystick down.",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_left",
+         "RetroPad > Left",
+         "Left",
+         "Unmapped defaults to joystick left.",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_right",
+         "RetroPad > Right",
+         "Right",
+         "Unmapped defaults to joystick right.",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_a",
+         "RetroPad > A",
+         "A",
+         "VKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_b",
+         "RetroPad > B",
+         "B",
+         "Unmapped defaults to fire button.\nVKBD: Press selected key.",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
+         "vice_mapper_x",
+         "RetroPad > X",
+         "X",
+         "VKBD: Press 'Space'. Remapping to non-keyboard keys overrides VKBD function!",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "RETROK_SPACE"
+      },
+      {
+         "vice_mapper_y",
+         "RetroPad > Y",
+         "Y",
+         "VKBD: Toggle 'ShiftLock'. Remapping to non-keyboard keys overrides VKBD function!",
+         NULL,
+         "retropad",
+         {{ NULL, NULL }},
+         "---"
+      },
+      {
          "vice_mapper_select",
          "RetroPad > Select",
          "Select",
@@ -3469,46 +3571,6 @@ static void retro_set_core_options()
          "retropad",
          {{ NULL, NULL }},
          "---"
-      },
-      {
-         "vice_mapper_b",
-         "RetroPad > B",
-         "B",
-         "Unmapped defaults to fire button.\nVKBD: Press selected key.",
-         NULL,
-         "retropad",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_a",
-         "RetroPad > A",
-         "A",
-         "VKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
-         NULL,
-         "retropad",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_y",
-         "RetroPad > Y",
-         "Y",
-         "VKBD: Toggle 'ShiftLock'. Remapping to non-keyboard keys overrides VKBD function!",
-         NULL,
-         "retropad",
-         {{ NULL, NULL }},
-         "---"
-      },
-      {
-         "vice_mapper_x",
-         "RetroPad > X",
-         "X",
-         "VKBD: Press 'Space'. Remapping to non-keyboard keys overrides VKBD function!",
-         NULL,
-         "retropad",
-         {{ NULL, NULL }},
-         "RETROK_SPACE"
       },
       {
          "vice_mapper_l",
@@ -3818,6 +3880,8 @@ static void retro_set_core_options()
             || strstr(option_defs_us[i].key, "vice_mapper_aspect_ratio_toggle")
             || strstr(option_defs_us[i].key, "vice_mapper_zoom_mode_toggle")
             || strstr(option_defs_us[i].key, "vice_mapper_warp_mode")
+            || strstr(option_defs_us[i].key, "vice_mapper_turbo_fire_toggle")
+            || strstr(option_defs_us[i].key, "vice_mapper_save_disk_toggle")
             || strstr(option_defs_us[i].key, "vice_mapper_datasette_toggle_hotkeys")
             || strstr(option_defs_us[i].key, "vice_mapper_datasette_start")
             || strstr(option_defs_us[i].key, "vice_mapper_datasette_stop")
@@ -4505,8 +4569,8 @@ static void update_variables(void)
    {
       int model = 0;
 
-      if (strstr(var.value, "auto")) opt_model_auto = 1;
-      else                           opt_model_auto = 0;
+      if (strstr(var.value, "auto")) opt_model_auto = true;
+      else                           opt_model_auto = false;
 
       if      (!strcmp(var.value, "VIC20 PAL auto"))  model = VIC20MODEL_VIC20_PAL;
       else if (!strcmp(var.value, "VIC20 NTSC auto")) model = VIC20MODEL_VIC20_NTSC;
@@ -4516,9 +4580,8 @@ static void update_variables(void)
 
       if (retro_ui_finalized && vice_opt.Model != model)
       {
-         vic20model_set(model);
+         request_model_set = model;
          request_restart = true;
-         request_model_prev = -1;
          /* Memory expansion needs to be reseted to get updated */
          vice_opt.VIC20Memory = 0xff;
       }
@@ -4598,7 +4661,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && vice_opt.Model != model)
       {
-         plus4model_set(model);
+         request_model_set = model;
          request_restart = true;
       }
 
@@ -4620,7 +4683,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && vice_opt.Model != model)
       {
-         c128model_set(model);
+         request_model_set = model;
          request_restart = true;
       }
 
@@ -4688,7 +4751,7 @@ static void update_variables(void)
       
       if (retro_ui_finalized && vice_opt.Model != model)
       {
-         petmodel_set(model);
+         request_model_set = model;
          request_restart = true;
          /* Keyboard layout refresh required. All models below 8032 except B models use graphics layout, others use business. */
          keyboard_init();
@@ -4714,7 +4777,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && vice_opt.Model != model)
       {
-         cbm2model_set(model);
+         request_model_set = model;
          request_restart = true;
       }
 
@@ -4732,7 +4795,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && vice_opt.Model != model)
       {
-         cbm2model_set(model);
+         request_model_set = model;
          request_restart = true;
       }
 
@@ -4753,7 +4816,7 @@ static void update_variables(void)
 
       if (retro_ui_finalized && vice_opt.Model != model)
       {
-         dtvmodel_set(model);
+         request_model_set = model;
          request_restart = true;
       }
 
@@ -4766,8 +4829,8 @@ static void update_variables(void)
    {
       int model = 0;
 
-      if (strstr(var.value, "auto")) opt_model_auto = 1;
-      else                           opt_model_auto = 0;
+      if (strstr(var.value, "auto")) opt_model_auto = true;
+      else                           opt_model_auto = false;
 
       if      (!strcmp(var.value, "C64 PAL auto"))   model = C64MODEL_C64_PAL;
       else if (!strcmp(var.value, "C64 NTSC auto"))  model = C64MODEL_C64_NTSC;
@@ -4789,9 +4852,8 @@ static void update_variables(void)
 
       if (retro_ui_finalized && vice_opt.Model != model)
       {
-         c64model_set(model);
+         request_model_set = model;
          request_restart = true;
-         request_model_prev = -1;
       }
 
       vice_opt.Model = model;
@@ -5685,6 +5747,34 @@ static void update_variables(void)
 
    /* Mapper */
    /* RetroPad */
+   var.key = "vice_mapper_up";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_UP] = retro_keymap_id(var.value);
+   }
+
+   var.key = "vice_mapper_down";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_DOWN] = retro_keymap_id(var.value);
+   }
+
+   var.key = "vice_mapper_left";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_LEFT] = retro_keymap_id(var.value);
+   }
+
+   var.key = "vice_mapper_right";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_DEVICE_ID_JOYPAD_RIGHT] = retro_keymap_id(var.value);
+   }
+
    var.key = "vice_mapper_select";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -5875,6 +5965,20 @@ static void update_variables(void)
       mapper_keys[RETRO_MAPPER_WARP_MODE] = retro_keymap_id(var.value);
    }
 
+   var.key = "vice_mapper_turbo_fire_toggle";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_MAPPER_TURBO_FIRE] = retro_keymap_id(var.value);
+   }
+
+   var.key = "vice_mapper_save_disk_toggle";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      mapper_keys[RETRO_MAPPER_SAVE_DISK] = retro_keymap_id(var.value);
+   }
+
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
    var.key = "vice_datasette_hotkeys";
    var.value = NULL;
@@ -5948,6 +6052,14 @@ static void update_variables(void)
    /* Mapping options */
    option_display.visible = opt_mapping_options_display;
 
+   option_display.key = "vice_mapper_up";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_down";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_left";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_right";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_select";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_start";
@@ -6005,6 +6117,10 @@ static void update_variables(void)
    option_display.key = "vice_mapper_reset";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_mapper_warp_mode";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_turbo_fire_toggle";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_mapper_save_disk_toggle";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
    option_display.key = "vice_mapper_datasette_toggle_hotkeys";
@@ -6563,8 +6679,9 @@ void retro_deinit(void)
    cur_port_locked = false;
    opt_aspect_ratio_locked = false;
    request_model_set = -1;
+   request_model_auto_set = -1;
    request_model_prev = -1;
-   opt_model_auto = 1;
+   opt_model_auto = true;
 }
 
 unsigned retro_api_version(void)
@@ -6945,7 +7062,41 @@ void retro_audio_render(const int16_t *data, size_t frames)
 #endif
 }
 
+void emu_model_set(int model)
+{
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
+   if (opt_model_auto && opt_model_auto_locked)
+      model = request_model_auto_set;
+#endif
 
+   if (model == request_model_prev)
+      return;
+
+   /* Suspend and mute sound while model is changing to avoid problems */
+   sound_suspend();
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
+   c64model_set(model);
+#elif defined(__X64DTV__)
+   dtvmodel_set(model);
+#elif defined(__X128__)
+   c128model_set(model);
+#elif defined(__XPLUS4__)
+   plus4model_set(model);
+#elif defined(__XVIC__)
+   vic20model_set(model);
+#elif defined(__XCBM5x0__)
+   cbm2model_set(model);
+#elif defined(__XCBM2__)
+   cbm2model_set(model);
+#elif defined(__XPET__)
+   petmodel_set(model);
+#endif
+
+   sound_resume();
+   sound_volume_counter_reset();
+   request_model_prev = model;
+}
 
 void retro_run(void)
 {
@@ -6957,58 +7108,58 @@ void retro_run(void)
    if (retro_ui_finalized)
    {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
-      /* Set model when requested */
-      if (opt_model_auto == 1 && request_model_set > -1)
+      /* Set automatic model when requested */
+      if (opt_model_auto && !opt_model_auto_locked && request_model_auto_set > -1)
       {
-         if (request_model_prev != request_model_set)
+         if (request_model_prev != request_model_auto_set)
          {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
-            switch (request_model_set)
+            switch (request_model_auto_set)
             {
                case C64MODEL_C64_PAL:
                case C64MODEL_C64C_PAL:
                   if (vice_opt.Model == C64MODEL_C64_NTSC || vice_opt.Model == C64MODEL_C64_PAL)
-                     request_model_set = C64MODEL_C64_PAL;
+                     request_model_auto_set = C64MODEL_C64_PAL;
                   else if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
-                     request_model_set = C64MODEL_C64C_PAL;
+                     request_model_auto_set = C64MODEL_C64C_PAL;
                   break;
                case C64MODEL_C64_NTSC:
                case C64MODEL_C64C_NTSC:
                   if (vice_opt.Model == C64MODEL_C64_NTSC || vice_opt.Model == C64MODEL_C64_PAL)
-                     request_model_set = C64MODEL_C64_NTSC;
+                     request_model_auto_set = C64MODEL_C64_NTSC;
                   else if (vice_opt.Model == C64MODEL_C64C_NTSC || vice_opt.Model == C64MODEL_C64C_PAL)
-                     request_model_set = C64MODEL_C64C_NTSC;
+                     request_model_auto_set = C64MODEL_C64C_NTSC;
                   break;
             }
 
-            if (request_model_set == C64MODEL_C64_NTSC)
+            if (request_model_auto_set == C64MODEL_C64_NTSC)
                log_cb(RETRO_LOG_INFO, "Forcing C64 NTSC mode\n");
-            else if (request_model_set == C64MODEL_C64C_NTSC)
+            else if (request_model_auto_set == C64MODEL_C64C_NTSC)
                log_cb(RETRO_LOG_INFO, "Forcing C64C NTSC mode\n");
-            else if (request_model_set == C64MODEL_C64_PAL)
+            else if (request_model_auto_set == C64MODEL_C64_PAL)
                log_cb(RETRO_LOG_INFO, "Forcing C64 PAL mode\n");
-            else if (request_model_set == C64MODEL_C64C_PAL)
+            else if (request_model_auto_set == C64MODEL_C64C_PAL)
                log_cb(RETRO_LOG_INFO, "Forcing C64C PAL mode\n");
-            else if (request_model_set == C64MODEL_C64_GS)
+            else if (request_model_auto_set == C64MODEL_C64_GS)
                log_cb(RETRO_LOG_INFO, "Forcing C64GS mode\n");
-            else if (request_model_set == C64MODEL_ULTIMAX)
+            else if (request_model_auto_set == C64MODEL_ULTIMAX)
                log_cb(RETRO_LOG_INFO, "Forcing ULTIMAX mode\n");
-
-            c64model_set(request_model_set);
 #elif defined(__XVIC__)
-            if (request_model_set == VIC20MODEL_VIC20_NTSC)
+            if (request_model_auto_set == VIC20MODEL_VIC20_NTSC)
                log_cb(RETRO_LOG_INFO, "Forcing NTSC mode\n");
-            else if (request_model_set == VIC20MODEL_VIC20_PAL)
+            else if (request_model_auto_set == VIC20MODEL_VIC20_PAL)
                log_cb(RETRO_LOG_INFO, "Forcing PAL mode\n");
-
-            vic20model_set(request_model_set);
 #endif
-            request_model_prev = request_model_set;
+            request_model_set  = request_model_auto_set;
          }
 
-         opt_model_auto = 2;
+         opt_model_auto_locked = true;
       }
 #endif
+
+      /* Set model */
+      if (request_model_set > -1)
+         emu_model_set(request_model_set);
 
       /* Update samplerate if changed by core option */
       if (prev_sound_sample_rate != vice_opt.SoundSampleRate)

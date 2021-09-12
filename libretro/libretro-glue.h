@@ -27,9 +27,8 @@ char* strleft(const char* str, int len);
 char* strright(const char* str, int len);
 bool strstartswith(const char* str, const char* start);
 bool strendswith(const char* str, const char* end);
-char *path_remove_program(char *path);
 void path_join(char* out, const char* basedir, const char* filename);
-char* path_join_dup(const char* basedir, const char* filename);
+char *path_remove_program(char *path);
 
 /* VICE helpers */
 extern int log_resources_set_int(const char *name, int value);

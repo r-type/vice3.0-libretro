@@ -4263,55 +4263,57 @@ error:
    }
 }
 
+static const struct retro_controller_description joyport_controllers[] =
+{
+   { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
+   { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+   { "None", RETRO_DEVICE_NONE },
+   { NULL, 0 }
+};
+
+static const struct retro_controller_description nonport_controllers[] =
+{
+   { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
+   { "None", RETRO_DEVICE_NONE },
+   { NULL, 0 }
+};
+
+static void retro_set_inputs(void)
+{
+   unsigned i;
+
+   const struct retro_controller_info ports[] =
+   {
+      { joyport_controllers, 4 },
+      { joyport_controllers, 4 },
+      { joyport_controllers, 4 },
+      { joyport_controllers, 4 },
+      { nonport_controllers, 3 },
+      { nonport_controllers, 3 },
+      { NULL, 0 }
+   };
+
+   environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+
+   /* Reset analog device types to RetroPad */
+   for (i = 0; i < RETRO_DEVICES; i++)
+      if (retro_devices[i] == RETRO_DEVICE_ANALOG)
+         retro_devices[i] = RETRO_DEVICE_JOYPAD;
+}
+
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
    retro_set_paths();
    free_vice_carts();
    retro_set_core_options();
-
-   /* Controller ports */
-   static const struct retro_controller_description p1_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "None", RETRO_DEVICE_NONE },
-   };
-   static const struct retro_controller_description p2_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "None", RETRO_DEVICE_NONE },
-   };
-   static const struct retro_controller_description p3_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "None", RETRO_DEVICE_NONE },
-   };
-   static const struct retro_controller_description p4_controllers[] = {
-      { "Joystick", RETRO_DEVICE_VICE_JOYSTICK },
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "None", RETRO_DEVICE_NONE },
-   };
-   static const struct retro_controller_description p5_controllers[] = {
-      { "Keyboard", RETRO_DEVICE_VICE_KEYBOARD },
-      { "None", RETRO_DEVICE_NONE },
-   };
-
-   static const struct retro_controller_info ports[] = {
-      { p1_controllers, 3 }, /* port 1 */
-      { p2_controllers, 3 }, /* port 2 */
-      { p3_controllers, 3 }, /* port 3 */
-      { p4_controllers, 3 }, /* port 4 */
-      { p5_controllers, 2 }, /* port 5 */
-      { NULL, 0 }
-   };
-
-   cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+   retro_set_inputs();
 
    bool support_no_game = true;
-   cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &support_no_game);
+   environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &support_no_game);
 
    static struct retro_led_interface led_interface;
-   cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_interface);
+   environ_cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_interface);
    if (led_interface.set_led_state)
       led_state_cb = led_interface.set_led_state;
 }

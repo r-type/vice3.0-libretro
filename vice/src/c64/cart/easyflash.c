@@ -722,19 +722,42 @@ int easyflash_snapshot_read_module(snapshot_t *s)
         goto fail;
     }
 
+#ifdef __LIBRETRO__
+    /* Normal libretro saves without cart data */
+    if (easyflash_filename)
+    {
+        if (0
+            || (SMR_B_INT(m, &easyflash_jumper) < 0)
+            || (SMR_B(m, &easyflash_register_00) < 0)
+            || (SMR_B(m, &easyflash_register_02) < 0)
+            || (SMR_BA(m, easyflash_ram, 256) < 0)) {
+            goto fail;
+        }
+    }
+    /* Normal VICE saves with cart data (VSFs) */
+    else
+    {
+        if (0
+            || (SMR_B_INT(m, &easyflash_jumper) < 0)
+            || (SMR_B(m, &easyflash_register_00) < 0)
+            || (SMR_B(m, &easyflash_register_02) < 0)
+            || (SMR_BA(m, easyflash_ram, 256) < 0)
+            || (SMR_BA(m, roml_banks, 0x80000) < 0)
+            || (SMR_BA(m, romh_banks, 0x80000) < 0)) {
+            goto fail;
+        }
+    }
+#else
     if (0
         || (SMR_B_INT(m, &easyflash_jumper) < 0)
         || (SMR_B(m, &easyflash_register_00) < 0)
         || (SMR_B(m, &easyflash_register_02) < 0)
         || (SMR_BA(m, easyflash_ram, 256) < 0)
-#ifdef __LIBRETRO__
-        ) {
-#else
         || (SMR_BA(m, roml_banks, 0x80000) < 0)
         || (SMR_BA(m, romh_banks, 0x80000) < 0)) {
-#endif
         goto fail;
     }
+#endif
 
     snapshot_module_close(m);
 
@@ -755,7 +778,10 @@ int easyflash_snapshot_read_module(snapshot_t *s)
     }
 
 #ifdef __LIBRETRO__
-    easyflash_common_attach(easyflash_filename);
+    if (easyflash_filename)
+        easyflash_common_attach(easyflash_filename);
+    else
+        easyflash_common_attach("dummy");
 #else
     easyflash_common_attach("dummy");
 

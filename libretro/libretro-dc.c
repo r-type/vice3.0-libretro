@@ -876,7 +876,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             snprintf(file_name, sizeof(file_name), "%s", string);
 
          /* Parse direct PRG load */
-         char image_prg[D64_NAME_LEN] = {0};
+         char image_prg[D64_NAME_LEN + 1] = {0};
          if (strstr(file_name, ":"))
          {
             char *token = strtok((char*)file_name, ":");

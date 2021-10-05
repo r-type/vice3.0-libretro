@@ -1154,9 +1154,58 @@ static int drive_snapshot_read_gcrimage_module(snapshot_t *s, unsigned int dnr)
 
         filename[i-3] = c;
     }
+
     if (filename[0] != '\0')
         snprintf(dc_savestate_filename, sizeof(dc_savestate_filename), "%s", filename);
+    else
+    {
+        snapshot_module_close(m);
+        m = snapshot_module_open(s, snap_module_name,
+                             &major_version, &minor_version);
 
+        if (0
+            || SMR_DW(m, &num_half_tracks) < 0
+            || num_half_tracks > MAX_GCR_TRACKS) {
+            snapshot_module_close(m);
+            return -1;
+        }
+
+        for (i = 0; i < num_half_tracks; i++) {
+            if (SMR_DW(m, &track_size) < 0
+                || track_size > NUM_MAX_MEM_BYTES_TRACK) {
+                snapshot_module_close(m);
+                return -1;
+            }
+
+            if (track_size) {
+                if (drive->gcr->tracks[i].data == NULL) {
+                    drive->gcr->tracks[i].data = lib_calloc(1, track_size);
+                } else if (drive->gcr->tracks[i].size != (int)track_size) {
+                    drive->gcr->tracks[i].data = lib_realloc(drive->gcr->tracks[i].data, track_size);
+                }
+                memset(drive->gcr->tracks[i].data, 0, track_size);
+            } else {
+                if (drive->gcr->tracks[i].data) {
+                    lib_free(drive->gcr->tracks[i].data);
+                    drive->gcr->tracks[i].data = NULL;
+                }
+            }
+            data = drive->gcr->tracks[i].data;
+            drive->gcr->tracks[i].size = track_size;
+
+            if (track_size && SMR_BA(m, data, track_size) < 0) {
+                snapshot_module_close(m);
+                return -1;
+            }
+        }
+        for (; i < MAX_GCR_TRACKS; i++) {
+            if (drive->gcr->tracks[i].data) {
+                lib_free(drive->gcr->tracks[i].data);
+                drive->gcr->tracks[i].data = NULL;
+                drive->gcr->tracks[i].size = 0;
+            }
+        }
+    }
     snapshot_module_close(m);
 
     drive->GCR_image_loaded = 1;

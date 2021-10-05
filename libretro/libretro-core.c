@@ -1533,6 +1533,13 @@ void update_from_vice()
       dc->eject_state = false;
       display_current_image(dc->labels[dc->index], true);
    }
+   else if (autostartString && strendswith(autostartString, "vsf"))
+   {
+      char vsf_label[RETRO_PATH_MAX];
+      fill_short_pathname_representation(vsf_label, autostartString, sizeof(vsf_label));
+      dc->eject_state = false;
+      display_current_image(vsf_label, true);
+   }
    else
    {
       dc->eject_state = true;

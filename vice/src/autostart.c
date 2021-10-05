@@ -84,6 +84,7 @@
 #ifdef __LIBRETRO__
 #include "keyboard.h"
 #include "libretro.h"
+#include "libretro-glue.h"
 extern unsigned int opt_autostart;
 #endif
 
@@ -1564,7 +1565,7 @@ int autostart_disk(int unit, int drive, const char *file_name, const char *progr
             return 0;
         }
 #ifdef __LIBRETRO__
-        else
+        else if (!strendswith(file_name, "vsf"))
             resources_set_int("Drive8Type", 0);
 #endif
     }

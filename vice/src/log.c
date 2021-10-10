@@ -498,7 +498,7 @@ int log_debug(const char *format, ...)
 
     va_start(ap, format);
 #if 1
-    printf(format, ap);
+    vprintf(format, ap);
     printf("\n");
 #else
     rc = log_helper(RETRO_LOG_DEBUG, 0, format, ap);

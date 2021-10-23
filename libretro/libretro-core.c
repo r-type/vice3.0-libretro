@@ -7086,7 +7086,7 @@ void retro_audio_render(const int16_t *data, size_t frames)
       return;
 #if ARCHDEP_SOUND_OUTPUT_MODE == SOUND_OUTPUT_STEREO
 #ifdef RETRO_AUDIO_BATCH
-   audio_batch_cb(data, frames/2);
+   audio_batch_cb(data, frames >> 1);
 #else
    for (int x = 0; x < frames; x += 2) audio_cb(data[x], data[x+1]);
 #endif

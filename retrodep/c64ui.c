@@ -51,11 +51,11 @@ ui_jam_action_t ui_jam_dialog(const char *format, ...)
    char message[512];
 
    va_list ap;
-   va_start (ap, format);
-   vsnprintf(message, sizeof(message) - 1, format, ap);
-   va_end (ap);
+   va_start(ap, format);
+   vsnprintf(message, sizeof(message), format, ap);
+   va_end(ap);
 
-   log_cb(RETRO_LOG_ERROR, "%s", message);
+   log_cb(RETRO_LOG_ERROR, "%s\n", message);
    machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 
    return UI_JAM_NONE;

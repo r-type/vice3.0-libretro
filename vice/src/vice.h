@@ -31,6 +31,10 @@
 #ifndef VICE_VICE_H
 #define VICE_VICE_H
 
+#ifdef __LIBRETRO__
+#include "sysconfig.h"
+#endif
+
 #ifdef ANDROID_COMPILE
 #  include "config.android.h"
 #else

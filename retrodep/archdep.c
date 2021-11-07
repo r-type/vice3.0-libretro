@@ -37,6 +37,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <stddef.h>
+#include <time.h>
 
 #ifdef HAVE_VFORK_H
 #include <vfork.h>
@@ -77,47 +79,26 @@ extern char full_path[RETRO_PATH_MAX];
 static char *argv0 = NULL;
 static char *boot_path = NULL;
 
-#include <stddef.h>
-
 #if defined(VITA) || defined(__SWITCH__)
 char* getcwd( char* buf, size_t size )
 {
-  if (size > strlen(retro_system_data_directory) && buf)
-  {
-    strcpy(buf, retro_system_data_directory);
-    return buf;
-  }
+    if (size > strlen(retro_system_data_directory) && buf)
+    {
+        strcpy(buf, retro_system_data_directory);
+        return buf;
+    }
 
-  return NULL;
+    return NULL;
 }
 
 int chdir( const char* path)
 {
-  return 0;
+    return 0;
 }
 #endif
 
-int joystick_arch_cmdline_options_init(void)
-{
-        return 1;
-}
-/* returns host keyboard mapping. used to initialize the keyboard map when
-   starting with a black (default) config, so an educated guess works good
-   enough most of the time :)
-
-   FIXME: add more languages/actual detection
-*/
-
-int kbd_arch_get_host_mapping(void)
-{
-    return KBD_MAPPING_US;
-}
-
-#include <time.h>
-
 #ifdef __PS3__
 #include <pthread_types.h>
-
 #ifndef __PSL1GHT__
 #define sysGetCurrentTime sys_time_get_current_time
 int gettimeofday(struct timeval* x, int unused)
@@ -132,8 +113,17 @@ int gettimeofday(struct timeval* x, int unused)
     return ret;
 }
 #endif
-
 #endif
+
+int joystick_arch_cmdline_options_init(void)
+{
+    return 1;
+}
+
+int kbd_arch_get_host_mapping(void)
+{
+    return KBD_MAPPING_US;
+}
 
 int archdep_rtc_get_centisecond(void)
 {
@@ -700,10 +690,9 @@ void archdep_sound_enable_default_device_tracking(void)
 
 bool archdep_is_exiting(void)
 {
-   return false;
+    return false;
 }
 
 void archdep_vice_exit(int excode)
 {
 }
-

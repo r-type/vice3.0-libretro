@@ -145,7 +145,13 @@ char *path_remove_program(char *path)
 void zip_uncompress(char *in, char *out, char *lastfile)
 {
     unzFile uf = NULL;
-    uf = unzOpen(in);
+    char *in_local = NULL;
+    in_local = utf8_to_local_string_alloc(in);
+
+    uf = unzOpen(in_local);
+
+    free(in_local);
+    in_local = NULL;
 
     uLong i;
     unz_global_info gi;
@@ -199,7 +205,8 @@ void zip_uncompress(char *in, char *out, char *lastfile)
             int skip = 0;
             unsigned x = 0;
 
-            write_filename = strdup(filename_withpath);
+            write_filename = local_to_utf8_string_alloc(filename_withpath);
+
             /* Replace non-ascii chars with underscore */
             for (x = 128; x < 256; x++)
                string_replace_all_chars(write_filename, x, '_');
@@ -340,7 +347,7 @@ void sevenzip_uncompress(char *in, char *out, char *lastfile)
    if (!lookStream.buf)
       lookStream.bufSize = 0;
 
-#if 0 && defined(_WIN32) && defined(USE_WINDOWS_FILE) && !defined(LEGACY_WIN32)
+#if defined(_WIN32) && defined(USE_WINDOWS_FILE) && !defined(LEGACY_WIN32)
    if (!string_is_empty(in))
    {
       wchar_t *pathW = utf8_to_utf16_string_alloc(in);
@@ -434,9 +441,11 @@ void sevenzip_uncompress(char *in, char *out, char *lastfile)
          if (dc_get_image_type(output_path) == DC_IMAGE_TYPE_FLOPPY && lastfile != NULL)
             snprintf(lastfile, RETRO_PATH_MAX, "%s", path_basename(output_path));
 
+#if 0
          /* Replace non-ascii chars with underscore */
          for (x = 128; x < 256; x++)
             string_replace_all_chars(output_path, x, '_');
+#endif
 
          for (j = 0; output_path[j] != 0; j++)
          {
@@ -953,8 +962,8 @@ int nib_convert(char *in, char *out)
 	memset(file_buffer, 0x00, sizeof(file_buffer));
 	memset(track_buffer, 0x00, sizeof(track_buffer));
 
-	snprintf(inname, sizeof(inname), "%s", in);
-	snprintf(outname, sizeof(outname), "%s", out);
+	snprintf(inname, sizeof(inname), "%s", local_to_utf8_string_alloc(in));
+	snprintf(outname, sizeof(outname), "%s", local_to_utf8_string_alloc(out));
 
 	/* convert */
 	if (compare_extension((unsigned char *)inname, (unsigned char *)"NIB"))

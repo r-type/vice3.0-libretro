@@ -502,6 +502,9 @@ typedef unsigned char __u_char;
 #include "deps/nibtools/bitshifter.c"
 #include "deps/nibtools/lz.c"
 
+#undef printf
+#define printf(format, string) log_cb(RETRO_LOG_INFO, format, string)
+
 int write_dword(FILE * fd, unsigned int * buf, int num)
 {
 	int i;
@@ -549,11 +552,11 @@ int load_file(char *filename, BYTE *file_buffer)
 	int size;
 	FILE *fpin;
 
-	if(verbose) printf("Loading \"%s\"...\n",filename);
+	if(verbose) printf("Loading \"%s\"...\n", filename);
 
 	if ((fpin = fopen(filename, "rb")) == NULL)
 	{
-		fprintf(stderr, "Couldn't open input file %s!\n", filename);
+		printf("Couldn't open input file %s!\n", filename);
 		return 0;
 	}
 
@@ -562,7 +565,7 @@ int load_file(char *filename, BYTE *file_buffer)
 	rewind(fpin);
 
 	if (fread(file_buffer, size, 1, fpin) != 1) {
-			printf("unable to read file\n");
+			printf("%s", "unable to read file\n");
 			return 0;
 	}
 
@@ -575,12 +578,12 @@ int read_nib(BYTE *file_buffer, int file_buffer_size, BYTE *track_buffer, BYTE *
 {
 	int track, t_index=0, h_index=0;
 
-	if(verbose) printf("\nParsing NIB data...\n");
+	if(verbose) printf("%s", "Parsing NIB data...\n");
 
 	if (memcmp(file_buffer, "MNIB-1541-RAW", 13) != 0)
 	{
-		printf("Not valid NIB data!\n");
-		return 0;
+		printf("%s", "Not valid NIB data!\n");
+		return 1;
 	}
 	else if(verbose)
 		printf("NIB file version %d\n", file_buffer[13]);
@@ -608,7 +611,7 @@ int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, 
 	BYTE nibdata[NIB_TRACK_LENGTH];
 
 	memset(nibdata, 0, sizeof(nibdata));
-	if(verbose) printf("Aligning tracks...\n");
+	if(verbose) printf("%s", "Aligning tracks...\n");
 
 	for (track = 1; track <= 84; track ++)
 	{
@@ -629,8 +632,8 @@ int align_tracks(BYTE *track_buffer, BYTE *track_density, size_t *track_length, 
 		if((verbose)&&(track_length[track]>0))
 		{
 			printf("%4.1f: ",(float) track/2);
-			if(track_density[track] & BM_NO_SYNC) printf("NOSYNC:");
-			if(track_density[track] & BM_FF_TRACK) printf("KILLER:");
+			if(track_density[track] & BM_NO_SYNC) printf("%s", "NOSYNC:");
+			if(track_density[track] & BM_FF_TRACK) printf("%s", "KILLER:");
 			printf("(%d:", track_density[track]&3);
 			printf("%d) ", track_length[track]);
 			printf("[align=%s]\n",alignments[track_alignment[track]]);
@@ -664,7 +667,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 	/*char errorstring[0x1000]; */
 
 #if 0
-	printf("Writing G64 file...\n");
+	printf("%s", "Writing G64 file...\n");
 #else
 	log_cb(RETRO_LOG_INFO, "->G64: %s\n", filename);
 #endif
@@ -696,7 +699,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 
 	if (fwrite(header, sizeof(header), 1, fpout) != 1)
 	{
-		printf("Cannot write G64 header.\n");
+		printf("%s", "Cannot write G64 header.\n");
 		return 0;
 	}
 
@@ -713,13 +716,13 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 	/* write headers */
 	if (write_dword(fpout, gcr_track_p, sizeof(gcr_track_p)) < 0)
 	{
-		printf("Cannot write track header.\n");
+		printf("%s", "Cannot write track header.\n");
 		return 0;
 	}
 
 	if (write_dword(fpout, gcr_speed_p, sizeof(gcr_speed_p)) < 0)
 	{
-		printf("Cannot write speed header.\n");
+		printf("%s", "Cannot write speed header.\n");
 		return 0;
 	}
 
@@ -741,10 +744,10 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 		{
 			printf("\n%4.1f: (", (float)track/2);
 			printf("%d", track_density[track]&3);
-			if ( (track_density[track]&3) != speed_map[track/2]) printf("!");
+			if ( (track_density[track]&3) != speed_map[track/2]) printf("%s", "!");
 			printf(":%d) ", track_length[track]);
-			if (track_density[track] & BM_NO_SYNC) printf("NOSYNC ");
-			if (track_density[track] & BM_FF_TRACK) printf("KILLER ");
+			if (track_density[track] & BM_NO_SYNC) printf("%s", "NOSYNC ");
+			if (track_density[track] & BM_FF_TRACK) printf("%s", "KILLER ");
 		}
 
 		/* process/compress GCR data */
@@ -759,7 +762,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 		}
 
 		badgcr = check_bad_gcr(buffer, track_len);
-		if(verbose>1) printf("(weak:%d)",badgcr);
+		if(verbose>1) printf("(weak:%d)", badgcr);
 
 		if(rpm_real)
 		{
@@ -792,7 +795,7 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 			capacity[speed_map[track/2]] = G64_TRACK_MAXLEN;
 			track_len = compress_halftrack(track, buffer, track_density[track], track_len);
 		}
-		if(verbose>1) printf("(fill:$%.2x)",fillbyte);
+		if(verbose>1) printf("(fill:$%.2x)", fillbyte);
 
 		gcr_track[0] = (BYTE) (track_len % 256);
 		gcr_track[1] = (BYTE) (track_len / 256);
@@ -813,12 +816,12 @@ int write_g64(char *filename, BYTE *track_buffer, BYTE *track_density, size_t *t
 
 		if (fwrite(gcr_track, (G64_TRACK_MAXLEN + 2), 1, fpout) != 1)
 		{
-			printf("Cannot write track data.\n");
+			printf("%s", "Cannot write G64 track data.\n");
 			return 0;
 		}
 	}
 	fclose(fpout);
-	if(verbose) printf("\nSuccessfully saved G64 file\n");
+	if(verbose) printf("%s", "Successfully saved G64 file\n");
 	return 1;
 }
 
@@ -964,9 +967,9 @@ int nib_convert(char *in, char *out)
 	}
 	else if (compare_extension((unsigned char *)inname, (unsigned char *)"NBZ"))
 	{
-		if(!(file_buffer_size = load_file(inname, compressed_buffer))) exit(0);
-		if(!(file_buffer_size = LZ_Uncompress(compressed_buffer, file_buffer, file_buffer_size))) exit(0);
-		if(!(read_nib(file_buffer, file_buffer_size, track_buffer, track_density, track_length))) exit(0);
+		if(!(file_buffer_size = load_file(inname, compressed_buffer))) return 0;
+		if(!(file_buffer_size = LZ_Uncompress(compressed_buffer, file_buffer, file_buffer_size))) return 0;
+		if(!(read_nib(file_buffer, file_buffer_size, track_buffer, track_density, track_length))) return 0;
 		if( (compare_extension((unsigned char *)outname, (unsigned char *)"G64")) || (compare_extension((unsigned char *)outname, (unsigned char *)"D64")) )
 			align_tracks(track_buffer, track_density, track_length, track_alignment);
 		search_fat_tracks(track_buffer, track_density, track_length);

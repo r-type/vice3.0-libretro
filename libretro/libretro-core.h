@@ -18,6 +18,7 @@
 #include "libretro-dc.h"
 #include "string/stdstring.h"
 #include "file/file_path.h"
+#include "encodings/utf.h"
 #include "compat/strcasestr.h"
 
 #define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))

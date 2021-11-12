@@ -32,6 +32,11 @@
 #include "userport_joystick.h"
 #endif
 
+#ifdef USE_LIBRETRO_VFS
+#undef utf8_to_local_string_alloc
+#define utf8_to_local_string_alloc strdup
+#endif
+
 /* Main CPU loop */
 long retro_now = 0;
 unsigned retro_renderloop = 1;
@@ -659,7 +664,8 @@ static int process_cmdline(const char* argv)
          FILE *zip_m3u;
          char zip_m3u_list[DC_MAX_SIZE][RETRO_PATH_MAX] = {0};
          char zip_m3u_path[RETRO_PATH_MAX] = {0};
-         snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
+         snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u",
+               retro_temp_directory, FSDEV_DIR_SEP_STR, utf8_to_local_string_alloc(zip_basename));
          int zip_m3u_num = 0;
 
          DIR *zip_dir;
@@ -679,10 +685,13 @@ static int process_cmdline(const char* argv)
          closedir(zip_dir);
 
          zip_dir = opendir(retro_temp_directory);
+         char *zip_lastfile = {0};
          while ((zip_dirp = readdir(zip_dir)) != NULL)
          {
             if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1 || browsed_file[0] != '\0')
                continue;
+
+            zip_lastfile = local_to_utf8_string_alloc(zip_dirp->d_name);
 
             /* Multi file mode, generate playlist */
             if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
@@ -692,7 +701,7 @@ static int process_cmdline(const char* argv)
             {
                zip_mode = 1;
                zip_m3u_num++;
-               snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_dirp->d_name);
+               snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_lastfile);
             }
          }
          closedir(zip_dir);
@@ -720,6 +729,10 @@ static int process_cmdline(const char* argv)
          }
 
          argv = full_path;
+
+         if (zip_lastfile)
+            free(zip_lastfile);
+         zip_lastfile = NULL;
       }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
@@ -4323,6 +4336,14 @@ void retro_set_environment(retro_environment_t cb)
    environ_cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_interface);
    if (led_interface.set_led_state)
       led_state_cb = led_interface.set_led_state;
+
+#ifdef USE_LIBRETRO_VFS
+   struct retro_vfs_interface_info vfs_iface_info;
+   vfs_iface_info.required_interface_version = 1;
+   vfs_iface_info.iface                      = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VFS_INTERFACE, &vfs_iface_info))
+      filestream_vfs_init(&vfs_iface_info);
+#endif
 }
 
 int log_resources_set_int(const char *name, int value)
@@ -7086,7 +7107,7 @@ void retro_audio_render(const int16_t *data, size_t frames)
       return;
 #if ARCHDEP_SOUND_OUTPUT_MODE == SOUND_OUTPUT_STEREO
 #ifdef RETRO_AUDIO_BATCH
-   audio_batch_cb(data, frames/2);
+   audio_batch_cb(data, frames >> 1);
 #else
    for (int x = 0; x < frames; x += 2) audio_cb(data[x], data[x+1]);
 #endif

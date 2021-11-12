@@ -1,3 +1,6 @@
+#ifndef _CONFIG_H
+#define _CONFIG_H
+
 #include <retro_endianness.h>
 
 #define USE_EMBEDDED 1
@@ -73,9 +76,7 @@
 #define HAVE_MEMMOVE 1
 
 /* Define to 1 if you have the `mkstemp' function. */
-#ifndef __PS3__
-#define HAVE_MKSTEMP 1
-#endif
+/*#define HAVE_MKSTEMP 1*/
 
 /* Enable mouse support */
 #define HAVE_MOUSE 1
@@ -159,3 +160,4 @@
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a `char[]'. */
 #define YYTEXT_POINTER 1
 
+#endif /* _CONFIG_H */

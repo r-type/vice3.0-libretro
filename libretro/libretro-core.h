@@ -124,6 +124,7 @@ extern unsigned short int pix_bytes;
 /* Autoloadwarp */
 #define AUTOLOADWARP_DISK 0x01
 #define AUTOLOADWARP_TAPE 0x02
+#define AUTOLOADWARP_MUTE 0x04
 
 /* Variables */
 extern unsigned int retro_renderloop;

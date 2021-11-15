@@ -51,6 +51,7 @@ extern unsigned int opt_autoloadwarp;
 extern unsigned int retro_warpmode;
 extern int retro_warp_mode_enabled();
 extern int RGBc(int r, int g, int b);
+extern bool audio_playing(void);
 
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
@@ -506,14 +507,16 @@ static void display_tape(void)
 
     if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || retro_warp_mode_enabled()) && !retro_warpmode)
     {
-        if (tape_control == 1 && tape_motor && !retro_warp_mode_enabled())
+        bool audio = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) && opt_autoloadwarp & AUTOLOADWARP_TAPE ? audio_playing() : false;
+
+        if (tape_control == 1 && tape_motor && !audio && !retro_warp_mode_enabled())
         {
             resources_set_int("WarpMode", 1);
 #if 0
             printf("Tape Warp ON\n");
 #endif
         }
-        else if ((tape_control != 1 || !tape_motor) && retro_warp_mode_enabled() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
+        else if ((tape_control != 1 || !tape_motor || audio) && retro_warp_mode_enabled() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
         {
             resources_set_int("WarpMode", 0);
 #if 0

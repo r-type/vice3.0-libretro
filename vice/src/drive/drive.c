@@ -78,12 +78,13 @@
 #include "libretro-core.h"
 extern unsigned int opt_autoloadwarp;
 extern unsigned int retro_warpmode;
-extern int retro_warp_mode_enabled();
-extern bool retro_disk_get_eject_state();
+extern int retro_warp_mode_enabled(void);
+extern bool retro_disk_get_eject_state(void);
 extern unsigned int vice_led_state[3];
 static int warpmode_counter_ledon = 0;
 static int warpmode_counter_ledoff = 0;
 static int drive_half_track_prev = 0;
+extern bool audio_playing(void);
 #endif
 
 static int drive_init_was_called = 0;
@@ -857,14 +858,15 @@ void drive_update_ui_status(void)
                 int warp = -1;
                 int drive_half_track = drive0->current_half_track;
                 int drive_led_status = vice_led_state[1];
+                bool audio           = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) ? audio_playing() : false;
 
-                if ((drive_half_track != drive_half_track_prev) && !retro_warp_mode_enabled())
+                if ((drive_half_track != drive_half_track_prev) && !retro_warp_mode_enabled() && !audio)
                 {
                     warpmode_counter_ledon = 0;
                     warpmode_counter_ledoff = 0;
                     warp = 1;
                 }
-                else if ((drive_half_track == drive_half_track_prev && drive_led_status) && retro_warp_mode_enabled())
+                else if ((drive_half_track == drive_half_track_prev && drive_led_status) && retro_warp_mode_enabled() && !audio)
                 {
                     warpmode_counter_ledon++;
                     warpmode_counter_ledoff = 0;
@@ -877,6 +879,12 @@ void drive_update_ui_status(void)
                     warpmode_counter_ledoff++;
                     if (warpmode_counter_ledoff > 23)
                         warp = 0;
+                }
+                else if (retro_warp_mode_enabled() && audio)
+                {
+                    warpmode_counter_ledon = 0;
+                    warpmode_counter_ledoff = 0;
+                    warp = 0;
                 }
                 else
                 {

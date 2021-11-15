@@ -107,6 +107,9 @@ static bool pix_bytes_initialized = false;
 unsigned short int retro_bmp[RETRO_BMP_SIZE] = {0};
 unsigned int retro_bmp_offset = 0;
 
+/* Audio buffer copy for auto warp detection */
+int16_t *audio_buffer;
+
 /* Core options */
 struct vice_core_options vice_opt;
 
@@ -1722,6 +1725,20 @@ void retro_fastforwarding(bool enabled)
    environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, &ff_override);
 }
 
+bool audio_playing()
+{
+   if (audio_buffer && audio_buffer[0])
+   {
+      for (unsigned i = 2; i < 20; i++)
+      {
+         int target = (i % 2 == 0) ? 0 : 1;
+         if (audio_buffer[i] != audio_buffer[target])
+            return true;
+      }
+   }
+   return false;
+}
+
 static void retro_set_paths(void)
 {
    const char *system_dir = NULL;
@@ -2220,14 +2237,17 @@ static void retro_set_core_options()
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
          "Automatic Load Warp",
-         "Toggle warp mode during disk and/or tape access. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
+         "Toggle warp mode during disk and/or tape access if there is no audio output. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
          NULL,
          "media",
          {
             { "disabled", NULL },
             { "enabled", NULL },
+            { "mute", "Ignore audio" },
             { "disk", "Disk only" },
+            { "disk_mute", "Disk only (Ignore audio)" },
             { "tape", "Tape only" },
+            { "tape_mute", "Tape only (Ignore audio)" },
             { NULL, NULL },
          },
          "disabled"
@@ -4426,10 +4446,14 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if      (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
-      else if (!strcmp(var.value, "disk"))     opt_autoloadwarp = AUTOLOADWARP_DISK;
-      else if (!strcmp(var.value, "tape"))     opt_autoloadwarp = AUTOLOADWARP_TAPE;
+      opt_autoloadwarp = 0;
+
+      if      (strstr(var.value, "disk"))      opt_autoloadwarp |= AUTOLOADWARP_DISK;
+      else if (strstr(var.value, "tape"))      opt_autoloadwarp |= AUTOLOADWARP_TAPE;
       else                                     opt_autoloadwarp = AUTOLOADWARP_DISK | AUTOLOADWARP_TAPE;
+
+      if      (strstr(var.value, "mute"))      opt_autoloadwarp |= AUTOLOADWARP_MUTE;
+      else if (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
 
       /* Silently restore sounds when autoloadwarp is disabled and DSE is enabled */
       if (retro_ui_finalized && vice_opt.DriveSoundEmulation && vice_opt.DriveTrueEmulation &&

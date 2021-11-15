@@ -2466,7 +2466,7 @@ static void retro_set_core_options()
          "vice_vkbd_theme",
          "Video > Virtual KBD Theme",
          "Virtual KBD Theme",
-         "By default, the keyboard comes up with RetroPad Select.",
+         "The keyboard comes up with RetroPad Select by default.",
          NULL,
          "video",
          {
@@ -2865,7 +2865,7 @@ static void retro_set_core_options()
          "Audio > TED Audio Leak Emulation",
          "TED Audio Leak Emulation",
 #endif
-         "",
+         "Graphic chip to audio leak emulation.",
          NULL,
          "audio",
          {
@@ -2973,7 +2973,7 @@ static void retro_set_core_options()
          "vice_resid_passband",
          "Audio > ReSID Filter Passband",
          "ReSID Filter Passband",
-         "",
+         "Resampling filter passband in percentage of the total bandwidth.",
          NULL,
          "audio",
          {
@@ -2995,7 +2995,7 @@ static void retro_set_core_options()
          "vice_resid_gain",
          "Audio > ReSID Filter Gain",
          "ReSID Filter Gain",
-         "",
+         "Gain in percent.",
          NULL,
          "audio",
          {
@@ -3018,7 +3018,7 @@ static void retro_set_core_options()
          "vice_resid_filterbias",
          "Audio > ReSID Filter 6581 Bias",
          "ReSID Filter 6581 Bias",
-         "",
+         "Filter bias for 6581, which can be used to adjust DAC bias in millivolts.",
          NULL,
          "audio",
          {
@@ -3051,7 +3051,7 @@ static void retro_set_core_options()
          "vice_resid_8580filterbias",
          "Audio > ReSID Filter 8580 Bias",
          "ReSID Filter 8580 Bias",
-         "",
+         "Filter bias for 8580, which can be used to adjust DAC bias in millivolts.",
          NULL,
          "audio",
          {
@@ -3086,13 +3086,13 @@ static void retro_set_core_options()
          "vice_sfx_sound_expander",
          "Audio > SFX Sound Expander",
          "SFX Sound Expander",
-         "",
+         "Sound synthesizer cartridge with 9 voices.",
          NULL,
          "audio",
          {
             { "disabled", NULL },
-            { "3526", "YM3526" },
-            { "3812", "YM3812" },
+            { "3526", "Yamaha YM3526" },
+            { "3812", "Yamaha YM3812" },
             { NULL, NULL },
          },
          "disabled"
@@ -3102,7 +3102,7 @@ static void retro_set_core_options()
          "vice_sound_sample_rate",
          "Audio > Sample Rate",
          "Sample Rate",
-         "Slightly higher quality or higher performance.",
+         "Sound sample rate in Hz.",
          NULL,
          "audio",
          {
@@ -3135,7 +3135,7 @@ static void retro_set_core_options()
          "vice_analogmouse_deadzone",
          "Input > Analog Stick Mouse Deadzone",
          "Analog Stick Mouse Deadzone",
-         "",
+         "Required distance from stick center to register input.",
          NULL,
          "input",
          {
@@ -3158,7 +3158,7 @@ static void retro_set_core_options()
          "vice_analogmouse_speed",
          "Input > Analog Stick Mouse Speed",
          "Analog Stick Mouse Speed",
-         "",
+         "Mouse movement speed multiplier for analog stick.",
          NULL,
          "input",
          {
@@ -3200,7 +3200,7 @@ static void retro_set_core_options()
          "vice_dpadmouse_speed",
          "Input > D-Pad Mouse Speed",
          "D-Pad Mouse Speed",
-         "",
+         "Mouse movement speed multiplier for directional pad.",
          NULL,
          "input",
          {
@@ -3230,7 +3230,7 @@ static void retro_set_core_options()
          "vice_mouse_speed",
          "Input > Mouse Speed",
          "Mouse Speed",
-         "Affects mouse speed globally.",
+         "Global mouse speed.",
          NULL,
          "input",
          {
@@ -3600,7 +3600,7 @@ static void retro_set_core_options()
          "vice_mapper_select",
          "RetroPad > Select",
          "Select",
-         "",
+         "VKBD comes up with RetroPad Select by default.",
          NULL,
          "retropad",
          {{ NULL, NULL }},

@@ -509,7 +509,7 @@ static void display_tape(void)
     {
         bool audio = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) && opt_autoloadwarp & AUTOLOADWARP_TAPE ? audio_playing() : false;
 
-        if (tape_control == 1 && tape_motor && !audio && !retro_warp_mode_enabled())
+        if (tape_control == 1 && tape_motor == 2 && !audio && !retro_warp_mode_enabled())
         {
             resources_set_int("WarpMode", 1);
 #if 0
@@ -560,6 +560,9 @@ void ui_display_tape_counter(int counter)
 {
     if (tape_counter != counter) {
         display_tape();
+
+        if (tape_motor)
+           tape_motor = 2;
     }
 
     tape_counter = counter;

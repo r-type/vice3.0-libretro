@@ -6469,6 +6469,7 @@ bool retro_disk_set_eject_state(bool ejected)
                break;
             case 1:
                tape_image_attach(unit, dc->files[dc->index]);
+               datasette_control(DATASETTE_CONTROL_START);
                break;
             default:
                file_system_attach_disk(unit, 0, dc->files[dc->index]);

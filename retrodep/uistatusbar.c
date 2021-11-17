@@ -48,10 +48,7 @@ extern unsigned int mouse_value[2 + 1];
 extern unsigned int vice_led_state[3];
 extern unsigned int opt_joyport_type;
 extern unsigned int opt_autoloadwarp;
-extern unsigned int retro_warpmode;
-extern int retro_warp_mode_enabled();
 extern int RGBc(int r, int g, int b);
-extern bool audio_playing(void);
 
 /* ----------------------------------------------------------------- */
 /* static functions/variables */

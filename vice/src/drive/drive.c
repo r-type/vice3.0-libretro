@@ -77,14 +77,11 @@
 #include <stdbool.h>
 #include "libretro-core.h"
 extern unsigned int opt_autoloadwarp;
-extern unsigned int retro_warpmode;
-extern int retro_warp_mode_enabled(void);
-extern bool retro_disk_get_eject_state(void);
 extern unsigned int vice_led_state[3];
+extern bool retro_disk_get_eject_state(void);
 static int warpmode_counter_ledon = 0;
 static int warpmode_counter_ledoff = 0;
 static int drive_half_track_prev = 0;
-extern bool audio_playing(void);
 #endif
 
 static int drive_init_was_called = 0;

@@ -109,6 +109,7 @@ unsigned int retro_bmp_offset = 0;
 
 /* Audio buffer copy for auto warp detection */
 int16_t *audio_buffer;
+static bool audio_is_playing = false;
 
 /* Core options */
 struct vice_core_options vice_opt;
@@ -1725,18 +1726,29 @@ void retro_fastforwarding(bool enabled)
    environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, &ff_override);
 }
 
-bool audio_playing()
+bool audio_playing(void)
 {
    if (audio_buffer && audio_buffer[0])
    {
       for (unsigned i = 2; i < 20; i++)
       {
          int target = (i % 2 == 0) ? 0 : 1;
-         if (audio_buffer[i] != audio_buffer[target])
+         if (audio_buffer[i] != audio_buffer[target] &&
+             audio_buffer[i] != 0 &&
+             audio_buffer[target] != 0)
+         {
+            audio_is_playing = true;
             return true;
+         }
       }
    }
+   audio_is_playing = false;
    return false;
+}
+
+bool is_audio_playing_while_autoloadwarping(void)
+{
+   return (audio_is_playing && !retro_warpmode && !(opt_autoloadwarp & AUTOLOADWARP_MUTE));
 }
 
 static void retro_set_paths(void)
@@ -7315,6 +7327,9 @@ void retro_run(void)
 
       if (perf_cb.get_time_usec && frame_max > 1)
          frame_max = 1000000 / (retro_refresh / 5) / (retro_ticks() - frame_time);
+
+      if (frame_count > 0 && (!retro_warp_mode_enabled() || is_audio_playing_while_autoloadwarping()))
+         frame_max = 1;
    }
 
    /* LED interface */

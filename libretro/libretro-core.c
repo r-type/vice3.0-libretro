@@ -107,6 +107,10 @@ static bool pix_bytes_initialized = false;
 unsigned short int retro_bmp[RETRO_BMP_SIZE] = {0};
 unsigned int retro_bmp_offset = 0;
 
+/* Audio buffer copy for auto warp detection */
+int16_t *audio_buffer;
+static bool audio_is_playing = false;
+
 /* Core options */
 struct vice_core_options vice_opt;
 
@@ -1722,6 +1726,31 @@ void retro_fastforwarding(bool enabled)
    environ_cb(RETRO_ENVIRONMENT_SET_FASTFORWARDING_OVERRIDE, &ff_override);
 }
 
+bool audio_playing(void)
+{
+   if (audio_buffer && audio_buffer[0])
+   {
+      for (unsigned i = 2; i < 20; i++)
+      {
+         int target = (i % 2 == 0) ? 0 : 1;
+         if (audio_buffer[i] != audio_buffer[target] &&
+             audio_buffer[i] != 0 &&
+             audio_buffer[target] != 0)
+         {
+            audio_is_playing = true;
+            return true;
+         }
+      }
+   }
+   audio_is_playing = false;
+   return false;
+}
+
+bool is_audio_playing_while_autoloadwarping(void)
+{
+   return (audio_is_playing && !retro_warpmode && !(opt_autoloadwarp & AUTOLOADWARP_MUTE));
+}
+
 static void retro_set_paths(void)
 {
    const char *system_dir = NULL;
@@ -2220,14 +2249,17 @@ static void retro_set_core_options()
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
          "Automatic Load Warp",
-         "Toggle warp mode during disk and/or tape access. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
+         "Toggle warp mode during disk and/or tape access if there is no audio output. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
          NULL,
          "media",
          {
             { "disabled", NULL },
             { "enabled", NULL },
+            { "mute", "Ignore audio" },
             { "disk", "Disk only" },
+            { "disk_mute", "Disk only (Ignore audio)" },
             { "tape", "Tape only" },
+            { "tape_mute", "Tape only (Ignore audio)" },
             { NULL, NULL },
          },
          "disabled"
@@ -2466,7 +2498,7 @@ static void retro_set_core_options()
          "vice_vkbd_theme",
          "Video > Virtual KBD Theme",
          "Virtual KBD Theme",
-         "By default, the keyboard comes up with RetroPad Select.",
+         "The keyboard comes up with RetroPad Select by default.",
          NULL,
          "video",
          {
@@ -2865,7 +2897,7 @@ static void retro_set_core_options()
          "Audio > TED Audio Leak Emulation",
          "TED Audio Leak Emulation",
 #endif
-         "",
+         "Graphic chip to audio leak emulation.",
          NULL,
          "audio",
          {
@@ -2973,7 +3005,7 @@ static void retro_set_core_options()
          "vice_resid_passband",
          "Audio > ReSID Filter Passband",
          "ReSID Filter Passband",
-         "",
+         "Resampling filter passband in percentage of the total bandwidth.",
          NULL,
          "audio",
          {
@@ -2995,7 +3027,7 @@ static void retro_set_core_options()
          "vice_resid_gain",
          "Audio > ReSID Filter Gain",
          "ReSID Filter Gain",
-         "",
+         "Gain in percent.",
          NULL,
          "audio",
          {
@@ -3018,7 +3050,7 @@ static void retro_set_core_options()
          "vice_resid_filterbias",
          "Audio > ReSID Filter 6581 Bias",
          "ReSID Filter 6581 Bias",
-         "",
+         "Filter bias for 6581, which can be used to adjust DAC bias in millivolts.",
          NULL,
          "audio",
          {
@@ -3051,7 +3083,7 @@ static void retro_set_core_options()
          "vice_resid_8580filterbias",
          "Audio > ReSID Filter 8580 Bias",
          "ReSID Filter 8580 Bias",
-         "",
+         "Filter bias for 8580, which can be used to adjust DAC bias in millivolts.",
          NULL,
          "audio",
          {
@@ -3086,13 +3118,13 @@ static void retro_set_core_options()
          "vice_sfx_sound_expander",
          "Audio > SFX Sound Expander",
          "SFX Sound Expander",
-         "",
+         "Sound synthesizer cartridge with 9 voices.",
          NULL,
          "audio",
          {
             { "disabled", NULL },
-            { "3526", "YM3526" },
-            { "3812", "YM3812" },
+            { "3526", "Yamaha YM3526" },
+            { "3812", "Yamaha YM3812" },
             { NULL, NULL },
          },
          "disabled"
@@ -3102,7 +3134,7 @@ static void retro_set_core_options()
          "vice_sound_sample_rate",
          "Audio > Sample Rate",
          "Sample Rate",
-         "Slightly higher quality or higher performance.",
+         "Sound sample rate in Hz.",
          NULL,
          "audio",
          {
@@ -3135,7 +3167,7 @@ static void retro_set_core_options()
          "vice_analogmouse_deadzone",
          "Input > Analog Stick Mouse Deadzone",
          "Analog Stick Mouse Deadzone",
-         "",
+         "Required distance from stick center to register input.",
          NULL,
          "input",
          {
@@ -3158,7 +3190,7 @@ static void retro_set_core_options()
          "vice_analogmouse_speed",
          "Input > Analog Stick Mouse Speed",
          "Analog Stick Mouse Speed",
-         "",
+         "Mouse movement speed multiplier for analog stick.",
          NULL,
          "input",
          {
@@ -3200,7 +3232,7 @@ static void retro_set_core_options()
          "vice_dpadmouse_speed",
          "Input > D-Pad Mouse Speed",
          "D-Pad Mouse Speed",
-         "",
+         "Mouse movement speed multiplier for directional pad.",
          NULL,
          "input",
          {
@@ -3230,7 +3262,7 @@ static void retro_set_core_options()
          "vice_mouse_speed",
          "Input > Mouse Speed",
          "Mouse Speed",
-         "Affects mouse speed globally.",
+         "Global mouse speed.",
          NULL,
          "input",
          {
@@ -3600,7 +3632,7 @@ static void retro_set_core_options()
          "vice_mapper_select",
          "RetroPad > Select",
          "Select",
-         "",
+         "VKBD comes up with RetroPad Select by default.",
          NULL,
          "retropad",
          {{ NULL, NULL }},
@@ -4426,10 +4458,14 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if      (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
-      else if (!strcmp(var.value, "disk"))     opt_autoloadwarp = AUTOLOADWARP_DISK;
-      else if (!strcmp(var.value, "tape"))     opt_autoloadwarp = AUTOLOADWARP_TAPE;
+      opt_autoloadwarp = 0;
+
+      if      (strstr(var.value, "disk"))      opt_autoloadwarp |= AUTOLOADWARP_DISK;
+      else if (strstr(var.value, "tape"))      opt_autoloadwarp |= AUTOLOADWARP_TAPE;
       else                                     opt_autoloadwarp = AUTOLOADWARP_DISK | AUTOLOADWARP_TAPE;
+
+      if      (strstr(var.value, "mute"))      opt_autoloadwarp |= AUTOLOADWARP_MUTE;
+      else if (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
 
       /* Silently restore sounds when autoloadwarp is disabled and DSE is enabled */
       if (retro_ui_finalized && vice_opt.DriveSoundEmulation && vice_opt.DriveTrueEmulation &&
@@ -6433,6 +6469,7 @@ bool retro_disk_set_eject_state(bool ejected)
                break;
             case 1:
                tape_image_attach(unit, dc->files[dc->index]);
+               datasette_control(DATASETTE_CONTROL_START);
                break;
             default:
                file_system_attach_disk(unit, 0, dc->files[dc->index]);
@@ -7291,6 +7328,9 @@ void retro_run(void)
 
       if (perf_cb.get_time_usec && frame_max > 1)
          frame_max = 1000000 / (retro_refresh / 5) / (retro_ticks() - frame_time);
+
+      if (frame_count > 0 && (!retro_warp_mode_enabled() || is_audio_playing_while_autoloadwarping()))
+         frame_max = 1;
    }
 
    /* LED interface */

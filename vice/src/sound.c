@@ -64,6 +64,7 @@
 #include "sid.h"
 #include "libretro-core.h"
 extern void sound_volume_counter_reset(void);
+extern int16_t *audio_buffer;
 #endif
 
 static log_t sound_log = LOG_ERR;
@@ -1237,7 +1238,9 @@ static int sound_run_sound(void)
 
     snddata.bufptr += nr;
     snddata.lastclk = maincpu_clk;
-
+#ifdef __LIBRETRO__
+    audio_buffer = snddata.buffer;
+#endif
     return 0;
 }
 

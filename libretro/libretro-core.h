@@ -124,6 +124,7 @@ extern unsigned short int pix_bytes;
 /* Autoloadwarp */
 #define AUTOLOADWARP_DISK 0x01
 #define AUTOLOADWARP_TAPE 0x02
+#define AUTOLOADWARP_MUTE 0x04
 
 /* Variables */
 extern unsigned int retro_renderloop;
@@ -142,6 +143,10 @@ extern unsigned int opt_statusbar;
 extern unsigned int cur_port;
 extern unsigned int retro_region;
 extern int request_model_set;
+
+extern unsigned int retro_warpmode;
+extern int retro_warp_mode_enabled(void);
+extern bool audio_playing(void);
 
 extern bool retro_message;
 extern char retro_message_msg[1024];

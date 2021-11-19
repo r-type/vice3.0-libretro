@@ -48,8 +48,6 @@ extern unsigned int mouse_value[2 + 1];
 extern unsigned int vice_led_state[3];
 extern unsigned int opt_joyport_type;
 extern unsigned int opt_autoloadwarp;
-extern unsigned int retro_warpmode;
-extern int retro_warp_mode_enabled();
 extern int RGBc(int r, int g, int b);
 
 /* ----------------------------------------------------------------- */
@@ -506,14 +504,16 @@ static void display_tape(void)
 
     if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || retro_warp_mode_enabled()) && !retro_warpmode)
     {
-        if (tape_control == 1 && tape_motor && !retro_warp_mode_enabled())
+        bool audio = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) && opt_autoloadwarp & AUTOLOADWARP_TAPE ? audio_playing() : false;
+
+        if (tape_control == 1 && tape_motor == 2 && !audio && !retro_warp_mode_enabled())
         {
             resources_set_int("WarpMode", 1);
 #if 0
             printf("Tape Warp ON\n");
 #endif
         }
-        else if ((tape_control != 1 || !tape_motor) && retro_warp_mode_enabled() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
+        else if ((tape_control != 1 || !tape_motor || audio) && retro_warp_mode_enabled() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
         {
             resources_set_int("WarpMode", 0);
 #if 0
@@ -557,6 +557,9 @@ void ui_display_tape_counter(int counter)
 {
     if (tape_counter != counter) {
         display_tape();
+
+        if (tape_motor)
+           tape_motor = 2;
     }
 
     tape_counter = counter;

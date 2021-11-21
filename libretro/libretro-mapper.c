@@ -600,6 +600,14 @@ void update_input(unsigned disable_keys)
                   mapper_flag[cur_port][JOYPAD_FIRE2] = 1;
                else if (mapper_keys[i] == JOYSTICK_FIRE3)
                   mapper_flag[cur_port][JOYPAD_FIRE3] = 1;
+               else if (mapper_keys[i] == JOYSTICK_UP)
+                  mapper_flag[cur_port][JOYPAD_N] = 1;
+               else if (mapper_keys[i] == JOYSTICK_DOWN)
+                  mapper_flag[cur_port][JOYPAD_S] = 1;
+               else if (mapper_keys[i] == JOYSTICK_LEFT)
+                  mapper_flag[cur_port][JOYPAD_W] = 1;
+               else if (mapper_keys[i] == JOYSTICK_RIGHT)
+                  mapper_flag[cur_port][JOYPAD_E] = 1;
                else if (mapper_keys[i] == OTHERJOY_FIRE)
                   mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_FIRE] = 1;
                else if (mapper_keys[i] == OTHERJOY_UP)
@@ -665,6 +673,14 @@ void update_input(unsigned disable_keys)
                   mapper_flag[cur_port][JOYPAD_FIRE2] = 0;
                else if (mapper_keys[i] == JOYSTICK_FIRE3)
                   mapper_flag[cur_port][JOYPAD_FIRE3] = 0;
+               else if (mapper_keys[i] == JOYSTICK_UP)
+                  mapper_flag[cur_port][JOYPAD_N] = 0;
+               else if (mapper_keys[i] == JOYSTICK_DOWN)
+                  mapper_flag[cur_port][JOYPAD_S] = 0;
+               else if (mapper_keys[i] == JOYSTICK_LEFT)
+                  mapper_flag[cur_port][JOYPAD_W] = 0;
+               else if (mapper_keys[i] == JOYSTICK_RIGHT)
+                  mapper_flag[cur_port][JOYPAD_E] = 0;
                else if (mapper_keys[i] == OTHERJOY_FIRE)
                   mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_FIRE] = 0;
                else if (mapper_keys[i] == OTHERJOY_UP)

@@ -255,6 +255,8 @@ void draw_hline_bmp16(uint16_t *buffer, int x, int y, int dx, int dy, uint16_t c
    for (i=x; i<x+dx; i++)
    {
       idx = i+y*retrow;
+      if (idx < 0)
+         continue;
       buffer[idx] = color;
    }
 }
@@ -268,6 +270,8 @@ void draw_hline_bmp32(uint32_t *buffer, int x, int y, int dx, int dy, uint32_t c
    for (i=x; i<x+dx; i++)
    {
       idx = i+y*retrow;
+      if (idx < 0)
+         continue;
       buffer[idx] = color;
    }
 }
@@ -289,6 +293,8 @@ void draw_vline_bmp16(uint16_t *buffer, int x, int y, int dx, int dy, uint16_t c
    for (j=y; j<y+dy; j++)
    {
       idx = x+j*retrow;
+      if (idx < 0)
+         continue;
       buffer[idx] = color;
    }
 }
@@ -302,6 +308,8 @@ void draw_vline_bmp32(uint32_t *buffer, int x, int y, int dx, int dy, uint32_t c
    for (j=y; j<y+dy; j++)
    {
       idx = x+j*retrow;
+      if (idx < 0)
+         continue;
       buffer[idx] = color;
    }
 }

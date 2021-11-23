@@ -115,6 +115,7 @@ int retro_ui_get_pointer_state(int *px, int *py, unsigned int *pbuttons)
    if (opt_joyport_pointer_color > -1)
    {
       unsigned pointer_color = 0;
+      unsigned pointer_white = RGBc(255, 255, 255);
       switch (opt_joyport_pointer_color)
       {
          case 0: pointer_color = RGBc(  0,   0,   0); break; /* Black */
@@ -127,10 +128,17 @@ int retro_ui_get_pointer_state(int *px, int *py, unsigned int *pbuttons)
          case 7: pointer_color = RGBc(255,   0, 255); break; /* Purple */
       }
 
-      draw_hline(*px - 2, *py, 2, 1, pointer_color);
-      draw_hline(*px + 1, *py, 2, 1, pointer_color);
-      draw_vline(*px, *py - 2, 1, 2, pointer_color);
-      draw_vline(*px, *py + 1, 1, 2, pointer_color);
+      draw_hline(*px - 3, *py, 3, 1, pointer_color);
+      draw_hline(*px - 2, *py, 1, 1, pointer_white);
+
+      draw_hline(*px + 1, *py, 3, 1, pointer_color);
+      draw_hline(*px + 2, *py, 1, 1, pointer_white);
+
+      draw_vline(*px, *py - 3, 1, 3, pointer_color);
+      draw_vline(*px, *py - 2, 1, 1, pointer_white);
+
+      draw_vline(*px, *py + 1, 1, 3, pointer_color);
+      draw_vline(*px, *py + 2, 1, 1, pointer_white);
    }
 
    return 1;

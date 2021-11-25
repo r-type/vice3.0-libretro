@@ -397,6 +397,9 @@ int ui_init_finalize(void)
       log_resources_set_int("DatasetteSound", 1);
    else
       log_resources_set_int("DatasetteSound", 0);
+
+   if (opt_autoloadwarp & AUTOLOADWARP_TAPE)
+      log_resources_set_int("DatasetteSound", 0);
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__)

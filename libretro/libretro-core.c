@@ -2249,7 +2249,7 @@ static void retro_set_core_options()
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
          "Automatic Load Warp",
-         "Toggle warp mode during disk and/or tape access if there is no audio output. Mutes 'Drive Sound Emulation'.\n'True Drive Emulation' required!",
+         "Toggle warp mode during disk and/or tape access if there is no audio output. Mutes 'Drive Sound Emulation' and 'Datasette Sound'.\n'True Drive Emulation' required!",
          NULL,
          "media",
          {
@@ -4467,10 +4467,17 @@ static void update_variables(void)
       if      (strstr(var.value, "mute"))      opt_autoloadwarp |= AUTOLOADWARP_MUTE;
       else if (!strcmp(var.value, "disabled")) opt_autoloadwarp = 0;
 
-      /* Silently restore sounds when autoloadwarp is disabled and DSE is enabled */
+      /* Silently restore drive sounds when autoloadwarp is disabled and DSE is enabled */
       if (retro_ui_finalized && vice_opt.DriveSoundEmulation && vice_opt.DriveTrueEmulation &&
           !(opt_autoloadwarp & AUTOLOADWARP_DISK))
          resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
+
+#if !defined(__XSCPU64__) && !defined(__X64DTV__)
+      /* Silently restore tape sounds when autoloadwarp is disabled */
+      if (retro_ui_finalized && vice_opt.DatasetteSound &&
+          !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
+         resources_set_int("DatasetteSound", vice_opt.DatasetteSound);
+#endif
    }
 
    var.key = "vice_floppy_write_protection";
@@ -4619,6 +4626,10 @@ static void update_variables(void)
       }
 
       vice_opt.DatasetteSound = val;
+
+      /* Silently mute sounds with autoloadwarping */
+      if (retro_ui_finalized && vice_opt.DatasetteSound && opt_autoloadwarp & AUTOLOADWARP_TAPE)
+         resources_set_int("DatasetteSound", 0);
    }
 #endif
 

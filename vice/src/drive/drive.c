@@ -735,7 +735,7 @@ void drive_gcr_data_writeback_all(void)
     drive_t *drive;
     unsigned int i, j;
 #ifdef __LIBRETRO__
-    if(!diskunit_context[0])
+    if (!diskunit_context[0])
         return;
 #endif
 
@@ -870,7 +870,7 @@ void drive_update_ui_status(void)
                     if (warpmode_counter_ledon > 998)
                         warp = 2;
                 }
-                else if ((drive_half_track == drive_half_track_prev && !drive_led_status) && retro_warp_mode_enabled())
+                else if ((drive_half_track == drive_half_track_prev && !drive_led_status) && retro_warp_mode_enabled() && !audio)
                 {
                     warpmode_counter_ledon = 0;
                     warpmode_counter_ledoff++;

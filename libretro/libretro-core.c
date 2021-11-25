@@ -7329,7 +7329,7 @@ void retro_run(void)
       if (perf_cb.get_time_usec && frame_max > 1)
          frame_max = 1000000 / (retro_refresh / 5) / (retro_ticks() - frame_time);
 
-      if (frame_count > 0 && (!retro_warp_mode_enabled() || is_audio_playing_while_autoloadwarping()))
+      if (frame_max > 1 && (!retro_warp_mode_enabled() || is_audio_playing_while_autoloadwarping()))
          frame_max = 1;
    }
 

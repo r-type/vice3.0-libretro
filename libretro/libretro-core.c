@@ -1728,14 +1728,15 @@ void retro_fastforwarding(bool enabled)
 
 bool audio_playing(void)
 {
-   if (audio_buffer && audio_buffer[0])
+   if (audio_buffer)
    {
       for (unsigned i = 2; i < 20; i++)
       {
          int target = (i % 2 == 0) ? 0 : 1;
          if (audio_buffer[i] != audio_buffer[target] &&
-             audio_buffer[i] != 0 &&
-             audio_buffer[target] != 0)
+             abs(audio_buffer[i] - audio_buffer[target]) > 2 &&
+             abs(audio_buffer[i] - audio_buffer[target]) < 30000 &&
+             !(audio_buffer[i] == 0 || audio_buffer[target] == 0))
          {
             audio_is_playing = true;
             return true;

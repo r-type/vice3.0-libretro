@@ -894,9 +894,9 @@ void drive_update_ui_status(void)
                 {
                     resources_set_int("WarpMode", (warp > 1) ? 0 : warp);
 #if 0
-                    printf("Disk Warp:%2d track:%3d prev:%3d led:%d timer:%3d,%3d\n",
+                    printf("Disk Warp:%2d track:%3d prev:%3d led:%d audio:%d timer:%3d,%3d\n",
                             warp, drive_half_track, drive_half_track_prev, drive_led_status,
-                            warpmode_counter_ledoff, warpmode_counter_ledon);
+                            audio, warpmode_counter_ledoff, warpmode_counter_ledon);
 #endif
                 }
                 drive_half_track_prev = drive_half_track;

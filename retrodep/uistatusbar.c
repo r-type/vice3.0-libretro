@@ -510,14 +510,14 @@ static void display_tape(void)
         {
             resources_set_int("WarpMode", 1);
 #if 0
-            printf("Tape Warp ON\n");
+            printf("Tape Warp  ON, control:%d motor:%d audio:%d\n", tape_control, tape_motor, audio);
 #endif
         }
         else if ((tape_control != 1 || !tape_motor || audio) && retro_warp_mode_enabled() || !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
         {
             resources_set_int("WarpMode", 0);
 #if 0
-            printf("Tape Warp OFF\n");
+            printf("Tape Warp OFF, control:%d motor:%d audio:%d\n", tape_control, tape_motor, audio);
 #endif
         }
     }

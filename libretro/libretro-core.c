@@ -2250,7 +2250,7 @@ static void retro_set_core_options()
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
          "Automatic Load Warp",
-         "Toggle warp mode during disk and/or tape access if there is no audio output. Mutes 'Drive Sound Emulation' and 'Datasette Sound'.\n'True Drive Emulation' required!",
+         "Toggle warp mode during disk and/or tape access if there is no audio output. Mutes 'Drive Sound Emulation', 'Datasette Sound' and 'Audio Leak Emulation' when not ignoring audio.\n'True Drive Emulation' required with disks!",
          NULL,
          "media",
          {
@@ -4470,15 +4470,20 @@ static void update_variables(void)
 
       /* Silently restore drive sounds when autoloadwarp is disabled and DSE is enabled */
       if (retro_ui_finalized && vice_opt.DriveSoundEmulation && vice_opt.DriveTrueEmulation &&
-          !(opt_autoloadwarp & AUTOLOADWARP_DISK))
+          (!(opt_autoloadwarp & AUTOLOADWARP_DISK) && !(opt_autoloadwarp & AUTOLOADWARP_MUTE)))
          resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
 
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
       /* Silently restore tape sounds when autoloadwarp is disabled */
       if (retro_ui_finalized && vice_opt.DatasetteSound &&
-          !(opt_autoloadwarp & AUTOLOADWARP_TAPE))
+          (!(opt_autoloadwarp & AUTOLOADWARP_TAPE) && !(opt_autoloadwarp & AUTOLOADWARP_MUTE)))
          resources_set_int("DatasetteSound", vice_opt.DatasetteSound);
 #endif
+
+      /* Silently restore audio leak when autoloadwarp is disabled */
+      if (retro_ui_finalized && vice_opt.AudioLeak &&
+          (!opt_autoloadwarp || opt_autoloadwarp & AUTOLOADWARP_MUTE))
+         resources_set_int(AUDIOLEAK_RESOURCE, vice_opt.AudioLeak);
    }
 
    var.key = "vice_floppy_write_protection";
@@ -4606,7 +4611,8 @@ static void update_variables(void)
        * because motor sound will not stop if TDE is changed during motor spinning
        * and also with autoloadwarping, because warping is muted anyway */
       if (retro_ui_finalized && vice_opt.DriveSoundEmulation &&
-          (!vice_opt.DriveTrueEmulation || opt_autoloadwarp & AUTOLOADWARP_DISK))
+            (!vice_opt.DriveTrueEmulation ||
+            (opt_autoloadwarp & AUTOLOADWARP_DISK && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))))
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
 
@@ -4629,7 +4635,8 @@ static void update_variables(void)
       vice_opt.DatasetteSound = val;
 
       /* Silently mute sounds with autoloadwarping */
-      if (retro_ui_finalized && vice_opt.DatasetteSound && opt_autoloadwarp & AUTOLOADWARP_TAPE)
+      if (retro_ui_finalized && vice_opt.DatasetteSound &&
+            (opt_autoloadwarp & AUTOLOADWARP_TAPE && !(opt_autoloadwarp & AUTOLOADWARP_MUTE)))
          resources_set_int("DatasetteSound", 0);
    }
 #endif
@@ -4646,14 +4653,14 @@ static void update_variables(void)
       else                                audioleak = 1;
 
       if (retro_ui_finalized && vice_opt.AudioLeak != audioleak)
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-         log_resources_set_int("VICIIAudioLeak", audioleak);
-#elif defined(__XVIC__)
-         log_resources_set_int("VICAudioLeak", audioleak);
-#elif defined(__XPLUS4__)
-         log_resources_set_int("TEDAudioLeak", audioleak);
-#endif
+         log_resources_set_int(AUDIOLEAK_RESOURCE, audioleak);
+
       vice_opt.AudioLeak = audioleak;
+
+      /* Silently mute leak with autoloadwarping */
+      if (retro_ui_finalized && vice_opt.AudioLeak &&
+            (opt_autoloadwarp && !(opt_autoloadwarp & AUTOLOADWARP_MUTE)))
+         resources_set_int(AUDIOLEAK_RESOURCE, 0);
    }
 #endif
 

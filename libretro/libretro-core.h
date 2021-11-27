@@ -234,6 +234,14 @@ struct vice_core_options
 
 extern struct vice_core_options vice_opt;
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+#define AUDIOLEAK_RESOURCE "VICIIAudioLeak"
+#elif defined(__XVIC__)
+#define AUDIOLEAK_RESOURCE "VICAudioLeak"
+#elif defined(__XPLUS4__)
+#define AUDIOLEAK_RESOURCE "TEDAudioLeak"
+#endif
+
 /* Dynamic cartridge core option info */
 struct vice_cart_info
 {

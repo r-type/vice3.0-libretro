@@ -1095,11 +1095,10 @@ int sid_engine_get_max_sids(int engine)
         case SID_ENGINE_FASTSID:
             return SID_ENGINE_FASTSID_NUM_SIDS;
         case SID_ENGINE_RESID:
-            return SID_ENGINE_RESID_NUM_SIDS;
 #ifdef ___LIBRETRO__
         case SID_ENGINE_RESIDFP:
-            return 2;
 #endif
+            return SID_ENGINE_RESID_NUM_SIDS;
        case SID_ENGINE_CATWEASELMKIII:
             return SID_ENGINE_CATWEASELMKIII_NUM_SIDS;
         case SID_ENGINE_HARDSID:

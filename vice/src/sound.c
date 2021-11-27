@@ -65,6 +65,7 @@
 #include "libretro-core.h"
 extern void sound_volume_counter_reset(void);
 extern int16_t *audio_buffer;
+extern int tape_enabled;
 #endif
 
 static log_t sound_log = LOG_ERR;
@@ -1633,6 +1634,12 @@ void sound_set_warp_mode(int value)
     if (vice_opt.SidEngine != SID_ENGINE_FASTSID)
     {
         resources_set_int("SidEngine", (value) ? SID_ENGINE_FASTSID : vice_opt.SidEngine);
+
+        /* Reset SID when entering warp in disk mode only,
+         * otherwise tape loading music is affected (?!) */
+        if (value && !tape_enabled)
+            sid_reset();
+
         /* 6581 init pop muting */
         if (!value)
             sound_volume_counter_reset();

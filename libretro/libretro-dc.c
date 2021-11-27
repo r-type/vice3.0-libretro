@@ -540,6 +540,16 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
          image_label[0] = '\0';
          fill_short_pathname_representation(image_label, full_path_replace, sizeof(image_label));
 
+         /* Dupecheck */
+         for (unsigned i = 0; i < dc->count - 1; i++)
+         {
+            if (!strcmp(dc->files[i], full_path_replace))
+            {
+               dc_remove_file(dc, index);
+               return true;
+            }
+         }
+
          dc->files[index]       = strdup(full_path_replace);
          dc->labels[index]      = strdup(image_label);
          dc->disk_labels[index] = get_label(full_path_replace);

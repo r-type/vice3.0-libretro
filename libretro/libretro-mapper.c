@@ -115,6 +115,7 @@ int retro_ui_get_pointer_state(int *px, int *py, unsigned int *pbuttons)
    if (opt_joyport_pointer_color > -1)
    {
       unsigned pointer_color = 0;
+      unsigned pointer_white = RGBc(255, 255, 255);
       switch (opt_joyport_pointer_color)
       {
          case 0: pointer_color = RGBc(  0,   0,   0); break; /* Black */
@@ -127,10 +128,17 @@ int retro_ui_get_pointer_state(int *px, int *py, unsigned int *pbuttons)
          case 7: pointer_color = RGBc(255,   0, 255); break; /* Purple */
       }
 
-      draw_hline(*px - 2, *py, 2, 1, pointer_color);
-      draw_hline(*px + 1, *py, 2, 1, pointer_color);
-      draw_vline(*px, *py - 2, 1, 2, pointer_color);
-      draw_vline(*px, *py + 1, 1, 2, pointer_color);
+      draw_hline(*px - 3, *py, 3, 1, pointer_color);
+      draw_hline(*px - 2, *py, 1, 1, pointer_white);
+
+      draw_hline(*px + 1, *py, 3, 1, pointer_color);
+      draw_hline(*px + 2, *py, 1, 1, pointer_white);
+
+      draw_vline(*px, *py - 3, 1, 3, pointer_color);
+      draw_vline(*px, *py - 2, 1, 1, pointer_white);
+
+      draw_vline(*px, *py + 1, 1, 3, pointer_color);
+      draw_vline(*px, *py + 2, 1, 1, pointer_white);
    }
 
    return 1;
@@ -600,6 +608,14 @@ void update_input(unsigned disable_keys)
                   mapper_flag[cur_port][JOYPAD_FIRE2] = 1;
                else if (mapper_keys[i] == JOYSTICK_FIRE3)
                   mapper_flag[cur_port][JOYPAD_FIRE3] = 1;
+               else if (mapper_keys[i] == JOYSTICK_UP)
+                  mapper_flag[cur_port][JOYPAD_N] = 1;
+               else if (mapper_keys[i] == JOYSTICK_DOWN)
+                  mapper_flag[cur_port][JOYPAD_S] = 1;
+               else if (mapper_keys[i] == JOYSTICK_LEFT)
+                  mapper_flag[cur_port][JOYPAD_W] = 1;
+               else if (mapper_keys[i] == JOYSTICK_RIGHT)
+                  mapper_flag[cur_port][JOYPAD_E] = 1;
                else if (mapper_keys[i] == OTHERJOY_FIRE)
                   mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_FIRE] = 1;
                else if (mapper_keys[i] == OTHERJOY_UP)
@@ -665,6 +681,14 @@ void update_input(unsigned disable_keys)
                   mapper_flag[cur_port][JOYPAD_FIRE2] = 0;
                else if (mapper_keys[i] == JOYSTICK_FIRE3)
                   mapper_flag[cur_port][JOYPAD_FIRE3] = 0;
+               else if (mapper_keys[i] == JOYSTICK_UP)
+                  mapper_flag[cur_port][JOYPAD_N] = 0;
+               else if (mapper_keys[i] == JOYSTICK_DOWN)
+                  mapper_flag[cur_port][JOYPAD_S] = 0;
+               else if (mapper_keys[i] == JOYSTICK_LEFT)
+                  mapper_flag[cur_port][JOYPAD_W] = 0;
+               else if (mapper_keys[i] == JOYSTICK_RIGHT)
+                  mapper_flag[cur_port][JOYPAD_E] = 0;
                else if (mapper_keys[i] == OTHERJOY_FIRE)
                   mapper_flag[(cur_port == 2) ? 1 : 2][JOYPAD_FIRE] = 0;
                else if (mapper_keys[i] == OTHERJOY_UP)

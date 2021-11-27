@@ -36,19 +36,23 @@
 
 #define RETRO_MAPPER_LAST               39
 
-#define TOGGLE_VKBD                     -11
-#define TOGGLE_STATUSBAR                -12
-#define SWITCH_JOYPORT                  -13
+#define TOGGLE_VKBD                     -31
+#define TOGGLE_STATUSBAR                -32
+#define SWITCH_JOYPORT                  -33
 #define MOUSE_SLOWER                    -5
 #define MOUSE_FASTER                    -6
-#define JOYSTICK_FIRE                   -7
-#define JOYSTICK_FIRE2                  -8
-#define JOYSTICK_FIRE3                  -9
-#define OTHERJOY_FIRE                   -21
-#define OTHERJOY_UP                     -22
-#define OTHERJOY_DOWN                   -23
-#define OTHERJOY_LEFT                   -24
-#define OTHERJOY_RIGHT                  -25
+#define JOYSTICK_UP                     -11
+#define JOYSTICK_DOWN                   -12
+#define JOYSTICK_LEFT                   -13
+#define JOYSTICK_RIGHT                  -14
+#define JOYSTICK_FIRE                   -15
+#define JOYSTICK_FIRE2                  -16
+#define JOYSTICK_FIRE3                  -17
+#define OTHERJOY_UP                     -21
+#define OTHERJOY_DOWN                   -22
+#define OTHERJOY_LEFT                   -23
+#define OTHERJOY_RIGHT                  -24
+#define OTHERJOY_FIRE                   -25
 
 #define JOYPAD_N                        0x01
 #define JOYPAD_S                        0x02
@@ -81,14 +85,18 @@ static retro_keymap retro_keys[RETROK_LAST] =
    {TOGGLE_VKBD,        "TOGGLE_VKBD",         "Toggle Virtual Keyboard"},
    {TOGGLE_STATUSBAR,   "TOGGLE_STATUSBAR",    "Toggle Statusbar"},
    {SWITCH_JOYPORT,     "SWITCH_JOYPORT",      "Switch Joyport"},
+   {JOYSTICK_UP,        "JOYSTICK_UP",         "Joystick Up"},
+   {JOYSTICK_DOWN,      "JOYSTICK_DOWN",       "Joystick Down"},
+   {JOYSTICK_LEFT,      "JOYSTICK_LEFT",       "Joystick Left"},
+   {JOYSTICK_RIGHT,     "JOYSTICK_RIGHT",      "Joystick Right"},
    {JOYSTICK_FIRE,      "JOYSTICK_FIRE",       "Joystick Fire"},
    {JOYSTICK_FIRE2,     "JOYSTICK_FIRE2",      "Joystick Fire 2"},
    {JOYSTICK_FIRE3,     "JOYSTICK_FIRE3",      "Joystick Fire 3"},
-   {OTHERJOY_FIRE,      "OTHERJOY_FIRE",       "Other Joyport Fire"},
    {OTHERJOY_UP,        "OTHERJOY_UP",         "Other Joyport Up"},
    {OTHERJOY_DOWN,      "OTHERJOY_DOWN",       "Other Joyport Down"},
    {OTHERJOY_LEFT,      "OTHERJOY_LEFT",       "Other Joyport Left"},
    {OTHERJOY_RIGHT,     "OTHERJOY_RIGHT",      "Other Joyport Right"},
+   {OTHERJOY_FIRE,      "OTHERJOY_FIRE",       "Other Joyport Fire"},
    {MOUSE_SLOWER,       "MOUSE_SLOWER",        "Mouse Slower"},
    {MOUSE_FASTER,       "MOUSE_FASTER",        "Mouse Faster"},
    {RETROK_BACKSPACE,   "RETROK_BACKSPACE",    "Keyboard Backspace"},
@@ -104,10 +112,10 @@ static retro_keymap retro_keys[RETROK_LAST] =
 /* {RETROK_DOLLAR,      "RETROK_DOLLAR",       "Keyboard $"}, */
 /* {RETROK_AMPERSAND,   "RETROK_AMPERSAND",    "Keyboard &"}, */
    {RETROK_QUOTE,       "RETROK_QUOTE",        "Keyboard \'"},
-   {RETROK_LEFTPAREN,   "RETROK_LEFTPAREN",    "Keyboard ("},
-   {RETROK_RIGHTPAREN,  "RETROK_RIGHTPAREN",   "Keyboard )"},
-   {RETROK_ASTERISK,    "RETROK_ASTERISK",     "Keyboard *"},
-   {RETROK_PLUS,        "RETROK_PLUS",         "Keyboard +"},
+/* {RETROK_LEFTPAREN,   "RETROK_LEFTPAREN",    "Keyboard ("}, */
+/* {RETROK_RIGHTPAREN,  "RETROK_RIGHTPAREN",   "Keyboard )"}, */
+/* {RETROK_ASTERISK,    "RETROK_ASTERISK",     "Keyboard *"}, */
+/* {RETROK_PLUS,        "RETROK_PLUS",         "Keyboard +"}, */
    {RETROK_COMMA,       "RETROK_COMMA",        "Keyboard ,"},
    {RETROK_MINUS,       "RETROK_MINUS",        "Keyboard -"},
    {RETROK_PERIOD,      "RETROK_PERIOD",       "Keyboard ."},
@@ -122,18 +130,18 @@ static retro_keymap retro_keys[RETROK_LAST] =
    {RETROK_7,           "RETROK_7",            "Keyboard 7"},
    {RETROK_8,           "RETROK_8",            "Keyboard 8"},
    {RETROK_9,           "RETROK_9",            "Keyboard 9"},
-   {RETROK_COLON,       "RETROK_COLON",        "Keyboard :"},
+/* {RETROK_COLON,       "RETROK_COLON",        "Keyboard :"}, */
    {RETROK_SEMICOLON,   "RETROK_SEMICOLON",    "Keyboard ;"},
-   {RETROK_LESS,        "RETROK_LESS",         "Keyboard <"},
+/* {RETROK_LESS,        "RETROK_LESS",         "Keyboard <"}, */
    {RETROK_EQUALS,      "RETROK_EQUALS",       "Keyboard ="},
-   {RETROK_GREATER,     "RETROK_GREATER",      "Keyboard >"},
+/* {RETROK_GREATER,     "RETROK_GREATER",      "Keyboard >"}, */
 /* {RETROK_QUESTION,    "RETROK_QUESTION",     "Keyboard ?"}, */
 /* {RETROK_AT,          "RETROK_AT",           "Keyboard @"}, */
    {RETROK_LEFTBRACKET, "RETROK_LEFTBRACKET",  "Keyboard ["},
    {RETROK_BACKSLASH,   "RETROK_BACKSLASH",    "Keyboard \\"},
    {RETROK_RIGHTBRACKET,"RETROK_RIGHTBRACKET", "Keyboard ]"},
-   {RETROK_CARET,       "RETROK_CARET",        "Keyboard ^"},
-   {RETROK_UNDERSCORE,  "RETROK_UNDERSCORE",   "Keyboard _"},
+/* {RETROK_CARET,       "RETROK_CARET",        "Keyboard ^"}, */
+/* {RETROK_UNDERSCORE,  "RETROK_UNDERSCORE",   "Keyboard _"}, */
    {RETROK_BACKQUOTE,   "RETROK_BACKQUOTE",    "Keyboard `"},
    {RETROK_a,           "RETROK_a",            "Keyboard A"},
    {RETROK_b,           "RETROK_b",            "Keyboard B"},

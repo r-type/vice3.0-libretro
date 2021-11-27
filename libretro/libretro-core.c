@@ -7546,7 +7546,8 @@ static void load_trap(uint16_t addr, void *success)
 static void retro_unserialize_post(void)
 {
    /* Disable warp */
-   resources_set_int("WarpMode", 0);
+   if (retro_warp_mode_enabled())
+      resources_set_int("WarpMode", 0);
    /* Dismiss possible restart request */
    request_restart = false;
    /* Sync Disc Control index for D64 multidisks */

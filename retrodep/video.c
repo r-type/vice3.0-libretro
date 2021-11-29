@@ -111,6 +111,119 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
          0, 0, /*xi, yi,*/
          retrow*pix_bytes, 8*pix_bytes
    );
+
+   /* Automatic Zoom (pixel difference scanning in border areas) */
+   if (zoom_mode_id == ZOOM_MODE_AUTO && retroh > 0)
+   {
+      unsigned i = 0;
+      unsigned j = 0;
+
+      /* Pixel color per row must return to the background color
+       * in order to count as a show-worthy row, otherwise
+       * loaders with flashing borders would count as hits */
+      unsigned color_diff         = 3000 * pix_bytes;
+      unsigned zoom_bottom_border = ZOOM_TOP_BORDER + ZOOM_HEIGHT_MAX;
+
+      /* Reset to maximum zoom */
+      vice_raster.first_line = ZOOM_TOP_BORDER;
+      vice_raster.last_line  = vice_raster.first_line + ZOOM_HEIGHT_MAX;
+
+      /* Top border, start from top */
+      for (i = 0; i < ZOOM_TOP_BORDER; i++)
+      {
+         unsigned row   = i * (retrow << (pix_bytes >> 2));
+         unsigned col_x = row + (ZOOM_LEFT_BORDER + 3) * (pix_bytes >> 1);
+         unsigned color = retro_bmp[col_x];
+         unsigned found = 0;
+
+         for (j = ZOOM_LEFT_BORDER; j < retrow - ZOOM_LEFT_BORDER; j++)
+         {
+            unsigned pixel = row + j * (pix_bytes >> 1);
+
+            if (abs(retro_bmp[pixel] - color) > color_diff)
+               found++;
+
+            /* Crazy Cars III FFS.. */
+            if (i < 6 && j > 265 && j < 290)
+               found = 0;
+
+            if (found && retro_bmp[pixel] == color)
+            {
+#if 0
+               printf("%s: FRST %3d %3d, %2d %d\n", __func__, i, j, found, color);
+#endif
+               vice_raster.first_line = i;
+               break;
+            }
+         }
+
+         if (vice_raster.first_line < ZOOM_TOP_BORDER)
+            break;
+      }
+
+      /* Allow bottom border upwards a few rows if top border is not used much.
+       * For oddly shifted cases: Alien Syndrome, Out Run Europa */
+      if (vice_raster.first_line > 20)
+         zoom_bottom_border -= 5;
+
+      /* Bottom border, start from bottom, almost */
+      for (i = retroh - 2; i > zoom_bottom_border; i--)
+      {
+         unsigned row   = i * (retrow << (pix_bytes >> 2));
+         unsigned col_x = row + (ZOOM_LEFT_BORDER + 3) * (pix_bytes >> 1);
+         unsigned color = retro_bmp[col_x];
+         unsigned found = 0;
+
+         for (j = ZOOM_LEFT_BORDER; j < retrow - ZOOM_LEFT_BORDER; j++)
+         {
+            unsigned pixel = row + j * (pix_bytes >> 1);
+
+            if (abs(retro_bmp[pixel] - color) > color_diff)
+               found++;
+
+            if (found && retro_bmp[pixel] == color)
+            {
+#if 0
+               printf("%s: LAST %3d %3d, %2d %d\n", __func__, i, j, found, color);
+#endif
+               vice_raster.last_line = i + 1;
+               break;
+            }
+         }
+
+         if (vice_raster.last_line > ZOOM_TOP_BORDER + ZOOM_HEIGHT_MAX)
+            break;
+      }
+
+      /* Result pondering */
+      if (vice_raster.first_line != vice_raster.first_line_prev ||
+          vice_raster.last_line  != vice_raster.last_line_prev)
+      {
+         vice_raster.counter = 0;
+
+         vice_raster.first_line_maybe = vice_raster.first_line;
+         vice_raster.last_line_maybe  = vice_raster.last_line;
+      }
+      else
+      if (vice_raster.first_line  == vice_raster.first_line_maybe &&
+          vice_raster.last_line   == vice_raster.last_line_maybe &&
+          (vice_raster.first_line != vice_raster.first_line_active ||
+           vice_raster.last_line  != vice_raster.last_line_active))
+      {
+         vice_raster.counter++;
+
+         if (vice_raster.counter > 4)
+         {
+            zoom_mode_id_prev   = -1;
+            vice_raster.counter = 0;
+            vice_raster.first_line_active = vice_raster.first_line;
+            vice_raster.last_line_active  = vice_raster.last_line;
+         }
+      }
+
+      vice_raster.first_line_prev = vice_raster.first_line;
+      vice_raster.last_line_prev  = vice_raster.last_line;
+   }
 }
 
 int video_init()

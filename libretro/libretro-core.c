@@ -1736,7 +1736,8 @@ bool audio_playing(void)
          if (audio_buffer[i] != audio_buffer[target] &&
              abs(audio_buffer[i] - audio_buffer[target]) > 2 &&
              abs(audio_buffer[i] - audio_buffer[target]) < 30000 &&
-             !(audio_buffer[i] == 0 || audio_buffer[target] == 0))
+             !(audio_buffer[i] == 0 || audio_buffer[target] == 0) &&
+             !(audio_buffer[i] == 1 || audio_buffer[target] == 1))
          {
             audio_is_playing = true;
             return true;
@@ -6382,7 +6383,8 @@ void emu_reset(int type)
    keyboard_clear_keymatrix();
 
    /* Disable Warp */
-   resources_set_int("WarpMode", 0);
+   if (retro_warp_mode_enabled())
+      resources_set_int("WarpMode", 0);
 
    /* Changing opt_read_vicerc requires reloading */
    if (request_reload_restart)

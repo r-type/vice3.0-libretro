@@ -147,6 +147,37 @@ extern int request_model_set;
 extern unsigned int retro_warpmode;
 extern int retro_warp_mode_enabled(void);
 extern bool audio_playing(void);
+extern unsigned int zoom_mode_id;
+extern int zoom_mode_id_prev;
+
+#define ZOOM_MODE_NONE    0
+#define ZOOM_MODE_SMALL   1
+#define ZOOM_MODE_MEDIUM  2
+#define ZOOM_MODE_MAXIMUM 3
+#define ZOOM_MODE_MANUAL  4
+#define ZOOM_MODE_AUTO    5
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+/* PAL: 384x272, NTSC: 384x247, VIC-II: 320x200 */
+#include "viciitypes.h"
+#include "vicii-timing.h"
+#define ZOOM_WIDTH_MAX   320
+#define ZOOM_HEIGHT_MAX  200
+#define ZOOM_TOP_BORDER  VICII_NO_BORDER_FIRST_DISPLAYED_LINE - vicii.first_displayed_line
+#define ZOOM_LEFT_BORDER vicii.screen_leftborderwidth
+#elif defined(__XVIC__)
+/* PAL: 448x284, NTSC: 400x234, VIC: 352x184 */
+#define ZOOM_WIDTH_MAX   352
+#define ZOOM_HEIGHT_MAX  184
+#define ZOOM_TOP_BORDER  48
+#define ZOOM_LEFT_BORDER 48
+#else /*#elif defined(__XPLUS4__)*/
+/* PAL: 384x288, NTSC: 384x242, TED: 320x200 */
+#define ZOOM_WIDTH_MAX   320
+#define ZOOM_HEIGHT_MAX  200
+#define ZOOM_TOP_BORDER  40
+#define ZOOM_LEFT_BORDER 32
+#endif
 
 extern bool retro_message;
 extern char retro_message_msg[1024];
@@ -241,6 +272,25 @@ extern struct vice_core_options vice_opt;
 #elif defined(__XPLUS4__)
 #define AUDIOLEAK_RESOURCE "TEDAudioLeak"
 #endif
+
+struct vice_raster_s
+{
+   unsigned first_line;
+   unsigned first_line_prev;
+   unsigned first_line_maybe;
+   unsigned first_line_active;
+
+   unsigned last_line;
+   unsigned last_line_prev;
+   unsigned last_line_maybe;
+   unsigned last_line_active;
+
+   unsigned counter;
+};
+
+#define VICE_RASTER_COUNT 8
+
+extern struct vice_raster_s vice_raster;
 
 /* Dynamic cartridge core option info */
 struct vice_cart_info

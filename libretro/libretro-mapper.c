@@ -175,7 +175,8 @@ void emu_function(int function)
 #endif
          cur_port++;
          unsigned max_port = (vice_opt.UserportJoyType != -1) ? 4 : 2;
-         if (cur_port > max_port) cur_port = 1;
+         if (cur_port > max_port)
+            cur_port = 1;
 
          /* Lock current port */
          cur_port_locked = true;
@@ -202,9 +203,10 @@ void emu_function(int function)
          break;
       case EMU_ASPECT_RATIO:
          if (opt_aspect_ratio == 0)
-            opt_aspect_ratio = (retro_region == RETRO_REGION_NTSC) ? 1 : 2;
+            opt_aspect_ratio = (retro_region == RETRO_REGION_NTSC) ? 2 : 1;
          opt_aspect_ratio++;
-         if (opt_aspect_ratio > 3) opt_aspect_ratio = 1;
+         if (opt_aspect_ratio > 3)
+            opt_aspect_ratio = 1;
          /* Reset zoom */
          zoom_mode_id_prev = -1;
          /* Lock aspect ratio */

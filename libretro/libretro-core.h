@@ -341,4 +341,6 @@ struct vice_cart_info
 #include "petmodel.h"
 #endif
 
+#define DISK_IMAGE_TYPE_FS 0xFFFF
+
 #endif /* LIBRETRO_CORE_H */

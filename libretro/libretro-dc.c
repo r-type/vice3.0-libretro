@@ -334,10 +334,15 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
    if (!filename || (*filename == '\0'))
       return false;
 
-   /* Dupecheck */
+   /* Dupecheck, allow same file with different labels */
    for (index = 0; index < dc->count; index++)
-      if (!strcmp(dc->files[index], filename))
+   {
+      if (!strcmp(dc->files[index], filename) && !strcmp(dc->labels[index], label))
+      {
+         log_cb(RETRO_LOG_WARN, "File '%s' with label '%s' ignored as duplicate!\n", filename, label);
          return true;
+      }
+   }
 
    /* Get 'name' - just the filename without extension
     * > It would be nice to make use of the image label
@@ -892,8 +897,18 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             char *token = strtok((char*)file_name, ":");
             while (token != NULL)
             {
-               snprintf(image_prg, sizeof(image_prg), "%s", token);
+               char *token_temp;
+
+               /* Quote handling */
+               if (strstr(token, "\""))
+                  token_temp = string_replace_substring(token, "\"", "");
+               else
+                  token_temp = strdup(token);
+               snprintf(image_prg, sizeof(image_prg), "%s", token_temp);
                token = strtok(NULL, ":");
+
+               free(token_temp);
+               token_temp = NULL;
             }
          }
 
@@ -1004,7 +1019,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
          if (path_is_valid(file_path))
             dc_add_file(dc, file_path, file_label, label, image_prg);
          else
-            log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found in dir '%s'\n", file_name, list_file, basedir);
+            log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found!\n", file_name, list_file);
       }
 
       /* Throw away the label and image name */

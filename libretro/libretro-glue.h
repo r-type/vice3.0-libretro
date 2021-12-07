@@ -29,6 +29,7 @@ bool strstartswith(const char* str, const char* start);
 bool strendswith(const char* str, const char* end);
 void path_join(char* out, const char* basedir, const char* filename);
 char *path_remove_program(char *path);
+char *first_file_in_dir(char *path);
 
 /* VICE helpers */
 extern int log_resources_set_int(const char *name, int value);

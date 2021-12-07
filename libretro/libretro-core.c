@@ -50,6 +50,7 @@ libretro_graph_alpha_t opt_vkbd_alpha = GRAPH_ALPHA_75;
 
 /* Core vars */
 static bool autosys = true;
+static bool autoload = false;
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char* autostartProgram = NULL;
@@ -1048,6 +1049,10 @@ static int process_cmdline(const char* argv)
          Add_Option("-device8");
          Add_Option("1");
          Add_Option("-fs8");
+
+         /* Delayed autoload via kbdbuf_feed */
+         if (!noautostart)
+            autoload = true;
       }
 
       if (!is_fliplist)
@@ -7447,6 +7452,26 @@ void retro_run(void)
          vic20_autosys_run(full_path);
       }
 #endif
+      /* Delayed autoload for FileSystem, which isn't resolving "*"
+       * as the first file available */
+      if (autoload)
+      {
+         char program[48];
+         char command[64];
+
+         autoload = false;
+
+         snprintf(program, sizeof(program), "%s", first_file_in_dir(full_path));
+         if (!string_is_empty(program))
+            charset_petconvstring((uint8_t *)program, 0);
+
+         snprintf(command, sizeof(command), "LOAD\"%s\",8,1\r", program);
+         if (!string_is_empty(command))
+         {
+            kbdbuf_feed(command);
+            kbdbuf_feed("RUN:\r");
+         }
+      }
    }
 
    /* Input poll */

@@ -688,6 +688,7 @@ bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
       unsigned save_disk_index = 0;
       unsigned index = 0;
       char save_disk_label[64] = {0};
+      char message[1024] = {0};
 
       snprintf(save_disk_label, 64, "%s %u",
             M3U_SAVEDISK_LABEL, 0);
@@ -712,10 +713,10 @@ bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
       retro_disk_set_eject_state(false);
 
       /* Widget notification */
-      snprintf(retro_message_msg, sizeof(retro_message_msg),
+      snprintf(message, sizeof(message),
                "%d/%d - %s",
                dc->index+1, dc->count, path_basename(dc->labels[dc->index]));
-      retro_message = true;
+      display_retro_message(message);
    }
    else
       log_cb(RETRO_LOG_INFO, "Save Disk 0 appended\n");

@@ -179,9 +179,6 @@ extern int zoom_mode_id_prev;
 #define ZOOM_LEFT_BORDER 32
 #endif
 
-extern bool retro_message;
-extern char retro_message_msg[1024];
-
 enum
 {
    RUNSTATE_FIRST_START = 0,
@@ -194,6 +191,7 @@ extern long retro_ticks(void);
 extern void reload_restart(void);
 extern void emu_reset(int type);
 extern int RGBc(int r, int g, int b);
+extern void display_retro_message(const char *message);
 
 extern void emu_function(int function);
 enum EMU_FUNCTIONS

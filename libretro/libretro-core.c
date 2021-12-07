@@ -278,8 +278,14 @@ static const char* xargv_cmd[64];
 static int PARAMCOUNT = 0;
 
 /* Display message on next retro_run */
-bool retro_message = false;
-char retro_message_msg[1024] = {0};
+static bool retro_message = false;
+static char retro_message_msg[1024] = {0};
+void display_retro_message(const char *message)
+{
+   snprintf(retro_message_msg, sizeof(retro_message_msg), "%s", message);
+   retro_message = true;
+}
+
 extern void display_current_image(const char *image, bool inserted);
 
 extern int skel_main(int argc, char *argv[]);
@@ -7720,7 +7726,6 @@ size_t retro_serialize_size(void)
          else
          {
             log_cb(RETRO_LOG_INFO, "Failed to calculate snapshot size\n");
-            snapshot_display_error();
          }
          snapshot_fclose(snapshot_stream);
          snapshot_stream = NULL;
@@ -7763,7 +7768,6 @@ bool retro_serialize(void *data_, size_t size)
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to serialize snapshot\n");
-      snapshot_display_error();
    }
    return false;
 }
@@ -7789,7 +7793,6 @@ bool retro_unserialize(const void *data_, size_t size)
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");
-      snapshot_display_error();
    }
    return false;
 }

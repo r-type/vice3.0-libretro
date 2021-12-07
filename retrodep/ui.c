@@ -128,6 +128,7 @@ void ui_error(const char *format, ...)
    vsprintf(text, format, ap);
    va_end(ap);
    log_cb(RETRO_LOG_ERROR, "%s\n", text);
+   display_retro_message(text);
 }
 
 int ui_emulation_is_paused(void)

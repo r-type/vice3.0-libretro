@@ -128,6 +128,7 @@ void ui_error(const char *format, ...)
    vsprintf(text, format, ap);
    va_end(ap);
    log_cb(RETRO_LOG_ERROR, "%s\n", text);
+   display_retro_message(text);
 }
 
 int ui_emulation_is_paused(void)
@@ -182,8 +183,7 @@ int ui_init_finalize(void)
    log_resources_set_int("Printer4", 1);
    log_resources_set_int("AutostartPrgMode", 1);
    log_resources_set_int("AutostartDelayRandom", 0);
-   log_resources_set_int("FileSystemDevice8", 0);
-   log_resources_set_int("FSDevice8ConvertP00", 0);
+   log_resources_set_int("FSDeviceLongNames", 1);
 
    /* Machine specific defaults */
 #if defined(__X64DTV__)

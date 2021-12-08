@@ -334,10 +334,15 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
    if (!filename || (*filename == '\0'))
       return false;
 
-   /* Dupecheck */
+   /* Dupecheck, allow same file with different labels */
    for (index = 0; index < dc->count; index++)
-      if (!strcmp(dc->files[index], filename))
+   {
+      if (!strcmp(dc->files[index], filename) && !strcmp(dc->labels[index], label))
+      {
+         log_cb(RETRO_LOG_WARN, "File '%s' with label '%s' ignored as duplicate!\n", filename, label);
          return true;
+      }
+   }
 
    /* Get 'name' - just the filename without extension
     * > It would be nice to make use of the image label
@@ -683,6 +688,7 @@ bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
       unsigned save_disk_index = 0;
       unsigned index = 0;
       char save_disk_label[64] = {0};
+      char message[1024] = {0};
 
       snprintf(save_disk_label, 64, "%s %u",
             M3U_SAVEDISK_LABEL, 0);
@@ -707,10 +713,10 @@ bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select)
       retro_disk_set_eject_state(false);
 
       /* Widget notification */
-      snprintf(retro_message_msg, sizeof(retro_message_msg),
+      snprintf(message, sizeof(message),
                "%d/%d - %s",
                dc->index+1, dc->count, path_basename(dc->labels[dc->index]));
-      retro_message = true;
+      display_retro_message(message);
    }
    else
       log_cb(RETRO_LOG_INFO, "Save Disk 0 appended\n");
@@ -892,8 +898,18 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             char *token = strtok((char*)file_name, ":");
             while (token != NULL)
             {
-               snprintf(image_prg, sizeof(image_prg), "%s", token);
+               char *token_temp;
+
+               /* Quote handling */
+               if (strstr(token, "\""))
+                  token_temp = string_replace_substring(token, "\"", "");
+               else
+                  token_temp = strdup(token);
+               snprintf(image_prg, sizeof(image_prg), "%s", token_temp);
                token = strtok(NULL, ":");
+
+               free(token_temp);
+               token_temp = NULL;
             }
          }
 
@@ -1004,7 +1020,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
          if (path_is_valid(file_path))
             dc_add_file(dc, file_path, file_label, label, image_prg);
          else
-            log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found in dir '%s'\n", file_name, list_file, basedir);
+            log_cb(RETRO_LOG_WARN, "File '%s' from list '%s' not found!\n", file_name, list_file);
       }
 
       /* Throw away the label and image name */

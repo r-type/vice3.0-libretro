@@ -13,6 +13,7 @@
 #include "drive.h"
 #include "tape.h"
 #include "diskimage.h"
+#include "fsdevice.h"
 #include "vdrive.h"
 #include "vdrive-internal.h"
 #include "charset.h"
@@ -49,6 +50,7 @@ libretro_graph_alpha_t opt_vkbd_alpha = GRAPH_ALPHA_75;
 
 /* Core vars */
 static bool autosys = true;
+static bool autoload = false;
 static bool noautostart = false;
 static char* autostartString = NULL;
 static char* autostartProgram = NULL;
@@ -181,6 +183,8 @@ extern bool turbo_fire_locked;
 extern unsigned int turbo_fire_button;
 extern unsigned int turbo_pulse;
 
+extern char *fsdevice_get_path(unsigned int unit);
+
 #if defined(__XVIC__)
 void cartridge_trigger_freeze(void) {}
 #elif defined(__XCBM2__) || defined(__XCBM5x0__)
@@ -274,8 +278,14 @@ static const char* xargv_cmd[64];
 static int PARAMCOUNT = 0;
 
 /* Display message on next retro_run */
-bool retro_message = false;
-char retro_message_msg[1024] = {0};
+static bool retro_message = false;
+static char retro_message_msg[1024] = {0};
+void display_retro_message(const char *message)
+{
+   snprintf(retro_message_msg, sizeof(retro_message_msg), "%s", message);
+   retro_message = true;
+}
+
 extern void display_current_image(const char *image, bool inserted);
 
 extern int skel_main(int argc, char *argv[]);
@@ -1039,6 +1049,17 @@ static int process_cmdline(const char* argv)
          dc_parse_vfl(dc, argv);
          is_fliplist = true;
       }
+      else if (path_is_directory(argv))
+      {
+         Add_Option("-iecdevice8");
+         Add_Option("-device8");
+         Add_Option("1");
+         Add_Option("-fs8");
+
+         /* Delayed autoload via kbdbuf_feed */
+         if (!noautostart)
+            autoload = true;
+      }
 
       if (!is_fliplist)
       {
@@ -1239,50 +1260,74 @@ static void autodetect_drivetype(int unit)
 
 void update_work_disk()
 {
-   request_update_work_disk = false;
+   request_update_work_disk   = false;
    const char* attached_image = NULL;
+   unsigned work_disk_type    = opt_work_disk_type;
+   unsigned work_disk_unit    = opt_work_disk_unit;
+
+   /* Path vars */
+   char work_disk_basename[10]             = "vice_work";
+   char work_disk_filename[RETRO_PATH_MAX] = {0};
+   char work_disk_filepath[RETRO_PATH_MAX] = {0};
+   char work_disk_extension[4]             = {0};
+   switch (work_disk_type)
+   {
+      default:
+      case DISK_IMAGE_TYPE_D64:
+         snprintf(work_disk_extension, sizeof(work_disk_extension), "%s", "d64");
+         break;
+      case DISK_IMAGE_TYPE_D71:
+         snprintf(work_disk_extension, sizeof(work_disk_extension), "%s", "d71");
+         break;
+      case DISK_IMAGE_TYPE_D81:
+         snprintf(work_disk_extension, sizeof(work_disk_extension), "%s", "d81");
+         break;
+      case DISK_IMAGE_TYPE_FS:
+         snprintf(work_disk_extension, sizeof(work_disk_extension), "%s", "");
+         break;
+   }
+
+   if (strcmp(work_disk_extension, ""))
+      snprintf(work_disk_filename, sizeof(work_disk_filename), "%s.%s", work_disk_basename, work_disk_extension);
+   else
+      snprintf(work_disk_filename, sizeof(work_disk_filename), work_disk_basename);
+
+   path_join((char*)&work_disk_filepath, retro_save_directory, work_disk_filename);
 
    /* Skip if device unit collides with autostart */
-   if (!string_is_empty(full_path) && opt_work_disk_unit == 8)
-      opt_work_disk_type = 0;
-   if (opt_work_disk_type)
+   if (!string_is_empty(full_path) && work_disk_unit == 8)
+      work_disk_type = 0;
+   if (work_disk_type)
    {
-      /* Path vars */
-      char opt_work_disk_filename[RETRO_PATH_MAX] = {0};
-      char opt_work_disk_filepath[RETRO_PATH_MAX] = {0};
-      char opt_work_disk_extension[4] = {0};
-      switch (opt_work_disk_type)
-      {
-         default:
-         case DISK_IMAGE_TYPE_D64:
-            snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d64");
-            break;
-         case DISK_IMAGE_TYPE_D71:
-            snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d71");
-            break;
-         case DISK_IMAGE_TYPE_D81:
-            snprintf(opt_work_disk_extension, sizeof(opt_work_disk_extension), "%s", "d81");
-            break;
-      }
-      snprintf(opt_work_disk_filename, sizeof(opt_work_disk_filename), "vice_work.%s", opt_work_disk_extension);
-      path_join((char*)&opt_work_disk_filepath, retro_save_directory, opt_work_disk_filename);
-
       /* Create disk */
-      if (!path_is_valid(opt_work_disk_filepath))
+      if (!path_is_valid(work_disk_filepath))
       {
-         /* Label format */
-         char format_name[28];
-         snprintf(format_name, sizeof(format_name), "%s-%s", "work", opt_work_disk_extension);
-         charset_petconvstring((uint8_t *)format_name, 0);
+         switch (work_disk_type)
+         {
+            default:
+               {
+                  /* Label format */
+                  char format_name[28];
+                  snprintf(format_name, sizeof(format_name), "%s-%s", "work", work_disk_extension);
+                  charset_petconvstring((uint8_t *)format_name, 0);
 
-         if (vdrive_internal_create_format_disk_image(opt_work_disk_filepath, format_name, opt_work_disk_type))
-            log_cb(RETRO_LOG_INFO, "Work disk creation failed: '%s'\n", opt_work_disk_filepath);
-         else
-            log_cb(RETRO_LOG_INFO, "Work disk created: '%s'\n", opt_work_disk_filepath);
+                  if (vdrive_internal_create_format_disk_image(work_disk_filepath, format_name, work_disk_type))
+                     log_cb(RETRO_LOG_INFO, "Work disk creation failed: '%s'\n", work_disk_filepath);
+                  else
+                     log_cb(RETRO_LOG_INFO, "Work disk created: '%s'\n", work_disk_filepath);
+               }
+               break;
+            case DISK_IMAGE_TYPE_FS:
+               if (path_mkdir(work_disk_filepath))
+                  log_cb(RETRO_LOG_INFO, "Work directory creation failed: '%s'\n", work_disk_filepath);
+               else
+                  log_cb(RETRO_LOG_INFO, "Work directory created: '%s'\n", work_disk_filepath);
+               break;
+         }
       }
 
       /* Attach disk */
-      if (path_is_valid(opt_work_disk_filepath))
+      if (path_is_valid(work_disk_filepath))
       {
          /* Detach previous disks */
          if ((attached_image = file_system_get_disk_name(8, 0)) != NULL)
@@ -1294,33 +1339,92 @@ void update_work_disk()
             log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
          }
 
-         if (opt_work_disk_unit == 9)
-            log_resources_set_int("Drive9Type", opt_work_disk_type);
-         file_system_attach_disk(opt_work_disk_unit, 0, opt_work_disk_filepath);
-         autodetect_drivetype(opt_work_disk_unit);
-         log_cb(RETRO_LOG_INFO, "Work disk '%s' attached in drive #%d\n", opt_work_disk_filepath, opt_work_disk_unit);
-         display_current_image(opt_work_disk_filename, true);
+         if ((attached_image = fsdevice_get_path(8)) != NULL)
+         {
+            log_resources_set_int("IECDevice8", 0);
+            log_resources_set_int("FileSystemDevice8", 0);
+            log_resources_set_string("FSDevice8Dir", "");
+         }
+
+         if ((attached_image = fsdevice_get_path(9)) != NULL)
+         {
+            log_resources_set_int("IECDevice9", 0);
+            log_resources_set_int("FileSystemDevice9", 0);
+            log_resources_set_string("FSDevice9Dir", "");
+         }
+
+         drive_reset();
+
+         switch (work_disk_type)
+         {
+            default:
+               if (work_disk_unit == 9)
+                  log_resources_set_int("Drive9Type", work_disk_type);
+               file_system_attach_disk(work_disk_unit, 0, work_disk_filepath);
+               autodetect_drivetype(work_disk_unit);
+               log_cb(RETRO_LOG_INFO, "Work disk '%s' attached to drive #%d\n", work_disk_filepath, work_disk_unit);
+               break;
+            case DISK_IMAGE_TYPE_FS:
+               switch (work_disk_unit)
+               {
+                  default:
+                  case 8:
+                     log_resources_set_int("IECDevice8", 1);
+                     log_resources_set_int("FileSystemDevice8", 1);
+                     log_resources_set_string("FSDevice8Dir", work_disk_filepath);
+                     break;
+                  case 9:
+                     log_resources_set_int("IECDevice9", 1);
+                     log_resources_set_int("FileSystemDevice9", 1);
+                     log_resources_set_string("FSDevice9Dir", work_disk_filepath);
+                     break;
+               }
+               log_cb(RETRO_LOG_INFO, "Work directory '%s' attached to drive #%d\n", work_disk_filepath, work_disk_unit);
+               break;
+         }
+
+         display_current_image(work_disk_filename, true);
       }
    }
    else
    {
       /* Detach work disk if disabled while running */
-      if ((attached_image = file_system_get_disk_name(8, 0)) != NULL && strstr(attached_image, "vice_work"))
+      if ((attached_image = file_system_get_disk_name(8, 0)) != NULL && strstr(attached_image, work_disk_basename))
       {
-         if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, "vice_work")))
+         if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, work_disk_filename)))
          {
             log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
             file_system_detach_disk(8, 0);
             log_resources_set_int("Drive8Type", DRIVE_TYPE_DEFAULT);
-            display_current_image(attached_image, false);
+            display_current_image("", false);
          }
       }
 
-      if ((attached_image = file_system_get_disk_name(9, 0)) != NULL && strstr(attached_image, "vice_work"))
+      if ((attached_image = fsdevice_get_path(8)) != NULL && strstr(attached_image, work_disk_basename))
+      {
+         if (string_is_empty(full_path) || (!string_is_empty(full_path) && !strstr(full_path, work_disk_filename)))
+         {
+            log_cb(RETRO_LOG_INFO, "Work directory '%s' detached from drive #%d\n", attached_image, 8);
+            log_resources_set_int("IECDevice8", 0);
+            log_resources_set_int("FileSystemDevice8", 0);
+            display_current_image("", false);
+         }
+      }
+
+      if ((attached_image = file_system_get_disk_name(9, 0)) != NULL && strstr(attached_image, work_disk_basename))
       {
          log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 9);
          file_system_detach_disk(9, 0);
          log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
+         display_current_image("", false);
+      }
+
+      if ((attached_image = fsdevice_get_path(9)) != NULL && strstr(attached_image, work_disk_basename))
+      {
+         log_cb(RETRO_LOG_INFO, "Work directory '%s' detached from drive #%d\n", attached_image, 9);
+         log_resources_set_int("IECDevice9", 0);
+         log_resources_set_int("FileSystemDevice9", 0);
+         display_current_image("", false);
       }
    }
 }
@@ -2330,7 +2434,7 @@ static void retro_set_core_options()
          "vice_work_disk",
          "Media > Global Work Disk",
          "Global Work Disk",
-         "Global disk in device 8 is only inserted when core is started without content.",
+         "Global disk in device 8 is only inserted when core is started without content. Files and directories are named 'vice_work'.\n",
          NULL,
          "media",
          {
@@ -2341,6 +2445,8 @@ static void retro_set_core_options()
             { "9_d71", "D71 - 1328 blocks, 340kB - Device 9" },
             { "8_d81", "D81 - 3160 blocks, 800kB - Device 8" },
             { "9_d81", "D81 - 3160 blocks, 800kB - Device 9" },
+            { "8_fs", "FileSystem - Device 8" },
+            { "9_fs", "FileSystem - Device 9" },
             { NULL, NULL },
          },
          "disabled"
@@ -4540,6 +4646,7 @@ static void update_variables(void)
          if      (strstr(var.value, "_d64")) opt_work_disk_type = DISK_IMAGE_TYPE_D64;
          else if (strstr(var.value, "_d71")) opt_work_disk_type = DISK_IMAGE_TYPE_D71;
          else if (strstr(var.value, "_d81")) opt_work_disk_type = DISK_IMAGE_TYPE_D81;
+         else if (strstr(var.value, "_fs"))  opt_work_disk_type = DISK_IMAGE_TYPE_FS;
 
          if      (strstr(var.value, "8_"))   opt_work_disk_unit = 8;
          else if (strstr(var.value, "9_"))   opt_work_disk_unit = 9;
@@ -7351,6 +7458,26 @@ void retro_run(void)
          vic20_autosys_run(full_path);
       }
 #endif
+      /* Delayed autoload for FileSystem, which isn't resolving "*"
+       * as the first file available */
+      if (autoload)
+      {
+         char program[48];
+         char command[64];
+
+         autoload = false;
+
+         snprintf(program, sizeof(program), "%s", first_file_in_dir(full_path));
+         if (!string_is_empty(program))
+            charset_petconvstring((uint8_t *)program, 0);
+
+         snprintf(command, sizeof(command), "LOAD\"%s\",8,1\r", program);
+         if (!string_is_empty(command))
+         {
+            kbdbuf_feed(command);
+            kbdbuf_feed("RUN:\r");
+         }
+      }
    }
 
    /* Input poll */
@@ -7422,7 +7549,7 @@ bool retro_load_game(const struct retro_game_info *info)
       local_path = utf8_to_local_string_alloc(info->path);
       if (local_path)
       {
-         if (path_is_valid(info->path) && !path_is_directory(info->path))
+         if (path_is_valid(info->path))
             process_cmdline(local_path);
          else
             process_cmdline("");
@@ -7599,7 +7726,6 @@ size_t retro_serialize_size(void)
          else
          {
             log_cb(RETRO_LOG_INFO, "Failed to calculate snapshot size\n");
-            snapshot_display_error();
          }
          snapshot_fclose(snapshot_stream);
          snapshot_stream = NULL;
@@ -7642,7 +7768,6 @@ bool retro_serialize(void *data_, size_t size)
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to serialize snapshot\n");
-      snapshot_display_error();
    }
    return false;
 }
@@ -7668,7 +7793,6 @@ bool retro_unserialize(const void *data_, size_t size)
          return true;
       }
       log_cb(RETRO_LOG_INFO, "Failed to unserialize snapshot\n");
-      snapshot_display_error();
    }
    return false;
 }

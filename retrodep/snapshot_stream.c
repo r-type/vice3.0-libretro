@@ -1128,6 +1128,9 @@ snapshot_t *snapshot_create_from_stream(snapshot_stream_t *f, uint8_t major_vers
     return s;
 
 fail:
+#ifdef __LIBRETRO__
+    snapshot_display_error();
+#endif
     return NULL;
 }
 
@@ -1219,6 +1222,9 @@ snapshot_t *snapshot_open_from_stream(snapshot_stream_t *f, uint8_t *major_versi
     return s;
 
 fail:
+#ifdef __LIBRETRO__
+    snapshot_display_error();
+#endif
     return NULL;
 }
 

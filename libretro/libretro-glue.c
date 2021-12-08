@@ -141,6 +141,25 @@ char *path_remove_program(char *path)
    return path;
 }
 
+char *first_file_in_dir(char *path)
+{
+   DIR *path_dir;
+   struct dirent *path_dirp;
+
+   path_dir = opendir(path);
+   char *path_lastfile = {0};
+   while ((path_dirp = readdir(path_dir)) != NULL && string_is_empty(path_lastfile))
+   {
+      if (path_dirp->d_name[0] == '.')
+         continue;
+
+      path_lastfile = local_to_utf8_string_alloc(path_dirp->d_name);
+   }
+   closedir(path_dir);
+
+   return path_lastfile;
+}
+
 /* zlib */
 void zip_uncompress(char *in, char *out, char *lastfile)
 {

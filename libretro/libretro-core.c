@@ -2502,6 +2502,7 @@ static void retro_set_core_options()
             /* Automatic only for VIC-II */
             { "auto", "Automatic" },
 #endif
+            { "auto_disable", "Auto-Disable" },
             { "manual", "Manual" },
             { NULL, NULL },
          },
@@ -5304,12 +5305,13 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if      (!strcmp(var.value, "disabled")) zoom_mode_id = ZOOM_MODE_NONE;
-      else if (!strcmp(var.value, "small"))    zoom_mode_id = ZOOM_MODE_SMALL;
-      else if (!strcmp(var.value, "medium"))   zoom_mode_id = ZOOM_MODE_MEDIUM;
-      else if (!strcmp(var.value, "maximum"))  zoom_mode_id = ZOOM_MODE_MAXIMUM;
-      else if (!strcmp(var.value, "manual"))   zoom_mode_id = ZOOM_MODE_MANUAL;
-      else if (!strcmp(var.value, "auto"))     zoom_mode_id = ZOOM_MODE_AUTO;
+      if      (!strcmp(var.value, "disabled"))     zoom_mode_id = ZOOM_MODE_NONE;
+      else if (!strcmp(var.value, "small"))        zoom_mode_id = ZOOM_MODE_SMALL;
+      else if (!strcmp(var.value, "medium"))       zoom_mode_id = ZOOM_MODE_MEDIUM;
+      else if (!strcmp(var.value, "maximum"))      zoom_mode_id = ZOOM_MODE_MAXIMUM;
+      else if (!strcmp(var.value, "manual"))       zoom_mode_id = ZOOM_MODE_MANUAL;
+      else if (!strcmp(var.value, "auto"))         zoom_mode_id = ZOOM_MODE_AUTO;
+      else if (!strcmp(var.value, "auto_disable")) zoom_mode_id = ZOOM_MODE_AUTO_DISABLE;
 
 #if defined(__X128__)
       if (!vice_opt.C128ColumnKey)
@@ -7083,6 +7085,7 @@ void update_geometry(int mode)
                      case ZOOM_MODE_MAXIMUM:
                         break;
                      case ZOOM_MODE_AUTO:
+                     case ZOOM_MODE_AUTO_DISABLE:
                         zoom_border_height = vice_raster.last_line - vice_raster.first_line - ZOOM_HEIGHT_MAX;
                         if (zoom_border_height < 0)
                            zoom_border_height = 0;

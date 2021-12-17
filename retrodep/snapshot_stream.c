@@ -1371,7 +1371,9 @@ void snapshot_display_error(void)
             ui_error("Cannot open snapshot %s for reading", current_filename);
             break;
         case SNAPSHOT_MAGIC_STRING_MISMATCH_ERROR:
+#if 0
             ui_error("Magic string mismatch in snapshot %s", current_filename);
+#endif
             break;
         case SNAPSHOT_CANNOT_READ_VERSION_ERROR:
             ui_error("Cannot read version from snapshot %s", current_filename);

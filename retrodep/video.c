@@ -237,13 +237,29 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
             vice_raster.last_line  = retroh;
          }
 
-         /* Result pondering immediately */
+         /* Result pondering with stabilization period */
          if (vice_raster.first_line != vice_raster.first_line_prev ||
              vice_raster.last_line  != vice_raster.last_line_prev)
          {
-            zoom_mode_id_prev   = -1;
-            vice_raster.first_line_active = vice_raster.first_line;
-            vice_raster.last_line_active  = vice_raster.last_line;
+            vice_raster.counter = 0;
+            vice_raster.first_line_maybe = vice_raster.first_line;
+            vice_raster.last_line_maybe  = vice_raster.last_line;
+         }
+         else
+         if (vice_raster.first_line  == vice_raster.first_line_maybe &&
+             vice_raster.last_line   == vice_raster.last_line_maybe &&
+             (vice_raster.first_line != vice_raster.first_line_active ||
+              vice_raster.last_line  != vice_raster.last_line_active))
+         {
+            vice_raster.counter++;
+
+            if (vice_raster.counter > 1)
+            {
+               zoom_mode_id_prev   = -1;
+               vice_raster.counter = 0;
+               vice_raster.first_line_active = vice_raster.first_line;
+               vice_raster.last_line_active  = vice_raster.last_line;
+            }
          }
          break;
 

@@ -150,12 +150,13 @@ extern bool audio_playing(void);
 extern unsigned int zoom_mode_id;
 extern int zoom_mode_id_prev;
 
-#define ZOOM_MODE_NONE    0
-#define ZOOM_MODE_SMALL   1
-#define ZOOM_MODE_MEDIUM  2
-#define ZOOM_MODE_MAXIMUM 3
-#define ZOOM_MODE_MANUAL  4
-#define ZOOM_MODE_AUTO    5
+#define ZOOM_MODE_NONE         0
+#define ZOOM_MODE_SMALL        1
+#define ZOOM_MODE_MEDIUM       2
+#define ZOOM_MODE_MAXIMUM      3
+#define ZOOM_MODE_MANUAL       4
+#define ZOOM_MODE_AUTO         5
+#define ZOOM_MODE_AUTO_DISABLE 6
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
 /* PAL: 384x272, NTSC: 384x247, VIC-II: 320x200 */
@@ -284,6 +285,7 @@ struct vice_raster_s
    unsigned last_line_active;
 
    unsigned counter;
+   unsigned blanked;
 };
 
 #define VICE_RASTER_COUNT 8

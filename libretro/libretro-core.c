@@ -2712,7 +2712,7 @@ static void retro_set_core_options()
             { "enabled_medblur", "50% blur" },
             { "enabled_lowblur", "10% blur" },
          },
-         "disabled"
+         "enabled"
       },
 #if defined(__XVIC__)
       {

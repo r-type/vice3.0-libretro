@@ -456,6 +456,15 @@ int ui_init_finalize(void)
 #endif
 
    /* Misc model specific */
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   if (vice_opt.REUsize)
+   {
+      log_resources_set_int("REUsize", vice_opt.REUsize);
+      log_resources_set_int("REU", 1);
+   }
+   else
+      log_resources_set_int("REU", 0);
+#endif
 #if defined(__X128__)
    log_resources_set_int("Go64Mode", vice_opt.Go64Mode);
    log_resources_set_int("C128ColumnKey", vice_opt.C128ColumnKey);
@@ -501,14 +510,6 @@ int ui_init_finalize(void)
    log_resources_set_int("RAMBlock2", (vic_blocks & VIC_BLK2) ? 1 : 0);
    log_resources_set_int("RAMBlock3", (vic_blocks & VIC_BLK3) ? 1 : 0);
    log_resources_set_int("RAMBlock5", (vic_blocks & VIC_BLK5) ? 1 : 0);
-#elif defined(__X64__) || defined(__X64SC__)
-   if (vice_opt.REUsize)
-   {
-      log_resources_set_int("REUsize", vice_opt.REUsize);
-      log_resources_set_int("REU", 1);
-   }
-   else
-      log_resources_set_int("REU", 0);
 #elif defined(__XSCPU64__)
    log_resources_set_int("SIMMSize", vice_opt.SIMMSize);
    log_resources_set_int("SpeedSwitch", vice_opt.SpeedSwitch);

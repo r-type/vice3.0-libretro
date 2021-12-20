@@ -2060,6 +2060,27 @@ static void retro_set_core_options()
          "C128 PAL"
       },
       {
+         "vice_c128_ram_expansion_unit",
+         "RAM Expansion Unit",
+         NULL,
+         "Changing while running resets the system!",
+         NULL,
+         NULL,
+         {
+            { "none", "disabled" },
+            { "128kB", "128kB (1700)" },
+            { "256kB", "256kB (1764)" },
+            { "512kB", "512kB (1750)" },
+            { "1024kB", "1024kB" },
+            { "2048kB", "2048kB" },
+            { "4096kB", "4096kB" },
+            { "8192kB", "8192kB" },
+            { "16384kB", "16384kB" },
+            { NULL, NULL },
+         },
+         "none"
+      },
+      {
          "vice_c128_video_output",
          "Video Output",
          NULL,
@@ -4917,6 +4938,30 @@ static void update_variables(void)
       }
 
       vice_opt.Model = model;
+   }
+
+   var.key = "vice_c128_ram_expansion_unit";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int reusize = 0;
+
+      if (strcmp(var.value, "none"))
+         reusize = atoi(var.value);
+
+      if (retro_ui_finalized && vice_opt.REUsize != reusize)
+      {
+         if (!reusize)
+            log_resources_set_int("REU", 0);
+         else
+         {
+            log_resources_set_int("REUsize", reusize);
+            log_resources_set_int("REU", 1);
+         }
+         request_restart = true;
+      }
+
+      vice_opt.REUsize = reusize;
    }
 
    var.key = "vice_c128_video_output";

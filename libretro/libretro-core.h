@@ -249,11 +249,12 @@ struct vice_core_options
 #if !defined(__XPET__)
    char CartridgeFile[RETRO_PATH_MAX];
 #endif
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__)
+   int REUsize;
+#endif
 #if defined(__X128__)
    int C128ColumnKey;
    int Go64Mode;
-#elif defined(__X64__) || defined(__X64SC__)
-   int REUsize;
 #elif defined(__XSCPU64__)
    int SIMMSize;
    int SpeedSwitch;

@@ -62,6 +62,52 @@ void remove_recurse(const char *path)
       archdep_rmdir(path);
 }
 
+void m3u_scan_recurse(const char *path, zip_m3u_t *list)
+{
+   DIR *zip_dir;
+   struct dirent *zip_dirp;
+   char *zip_lastfile = {0};
+
+   zip_dir = opendir(path);
+
+   while ((zip_dirp = readdir(zip_dir)) != NULL)
+   {
+      char zip_fullpath[RETRO_PATH_MAX] = {0};
+
+      if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || list->mode > 1)
+         continue;
+
+      path_join(zip_fullpath, retro_temp_directory, zip_dirp->d_name);
+      if (path_is_directory(zip_fullpath))
+      {
+         m3u_scan_recurse(zip_fullpath, list);
+         continue;
+      }
+
+      path_join(zip_fullpath, path, zip_dirp->d_name);
+      if (!strcmp(path, retro_temp_directory))
+         zip_lastfile = local_to_utf8_string_alloc(zip_dirp->d_name);
+      else
+         zip_lastfile = local_to_utf8_string_alloc(zip_fullpath);
+
+      /* Multi file mode, generate playlist */
+      if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
+       || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
+       || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM
+      )
+      {
+         list->mode = 1;
+         list->num++;
+         snprintf(list->list[list->num-1], RETRO_PATH_MAX, "%s", zip_lastfile);
+      }
+   }
+   closedir(zip_dir);
+
+   if (zip_lastfile)
+      free(zip_lastfile);
+   zip_lastfile = NULL;
+}
+
 void path_join(char* out, const char* basedir, const char* filename)
 {
 	snprintf(out, RETRO_PATH_MAX, "%s%s%s", basedir, FSDEV_DIR_SEP_STR, filename);

@@ -1,5 +1,6 @@
 #ifndef LIBRETRO_GLUE_H
 #define LIBRETRO_GLUE_H
+#include "libretro-dc.h"
 
 /* zlib */
 #include "deps/libz/zlib.h"
@@ -20,6 +21,7 @@ int nib_convert(char *in, char *out);
 /* Misc */
 int qstrcmp(const void *a, const void *b);
 void remove_recurse(const char *path);
+void m3u_scan_recurse(const char *path, zip_m3u_t *list);
 
 /* String helpers functions */
 char* trimwhitespace(char *str);

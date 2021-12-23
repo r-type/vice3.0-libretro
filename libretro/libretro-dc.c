@@ -454,16 +454,14 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
             sevenzip_uncompress(full_path_replace, retro_temp_directory, NULL);
 
          /* Default to directory mode */
-         int zip_mode = 0;
          snprintf(full_path_replace, sizeof(full_path_replace), "%s", retro_temp_directory);
 
          FILE *zip_m3u;
-         char zip_m3u_list[DC_MAX_SIZE][RETRO_PATH_MAX] = {0};
-         char zip_m3u_path[RETRO_PATH_MAX] = {0};
-         snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_basename);
-         int zip_m3u_num = 0;
+         zip_m3u_t zip_m3u_list = {0};
+         snprintf(zip_m3u_list.path, sizeof(zip_m3u_list.path), "%s%s%s.m3u",
+               retro_temp_directory, FSDEV_DIR_SEP_STR, utf8_to_local_string_alloc(zip_basename));
 
-         DIR *zip_dir = NULL;
+         DIR *zip_dir;
          struct dirent *zip_dirp;
 
          /* Convert all NIBs to G64 */
@@ -479,45 +477,29 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
          }
          closedir(zip_dir);
 
-         zip_dir = opendir(retro_temp_directory);
-         while ((zip_dirp = readdir(zip_dir)) != NULL)
-         {
-            if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, "m3u") || zip_mode > 1)
-               continue;
+         m3u_scan_recurse(retro_temp_directory, &zip_m3u_list);
 
-            /* Multi file mode, generate playlist */
-            if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
-             || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
-             || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM
-            )
-            {
-               zip_mode = 1;
-               zip_m3u_num++;
-               snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_dirp->d_name);
-            }
-         }
-         closedir(zip_dir);
-
-         switch (zip_mode)
+         switch (zip_m3u_list.mode)
          {
             case 0: /* Extracted path */
                dc_reset(dc);
                return true;
                break;
             case 1: /* Generated playlist */
-               if (zip_m3u_num == 1)
+               if (zip_m3u_list.num == 1)
                {
-                  snprintf(full_path_replace, sizeof(full_path_replace), "%s%s%s", retro_temp_directory, FSDEV_DIR_SEP_STR, zip_m3u_list[0]);
+                  snprintf(full_path_replace, sizeof(full_path_replace), "%s%s%s",
+                        retro_temp_directory, FSDEV_DIR_SEP_STR, zip_m3u_list.list[0]);
                }
                else
                {
-                  zip_m3u = fopen(zip_m3u_path, "w");
-                  qsort(zip_m3u_list, zip_m3u_num, RETRO_PATH_MAX, qstrcmp);
-                  for (int l = 0; l < zip_m3u_num; l++)
-                     fprintf(zip_m3u, "%s\n", zip_m3u_list[l]);
+                  zip_m3u = fopen(zip_m3u_list.path, "w");
+                  qsort(zip_m3u_list.list, zip_m3u_list.num, RETRO_PATH_MAX, qstrcmp);
+                  for (int l = 0; l < zip_m3u_list.num; l++)
+                     fprintf(zip_m3u, "%s\n", zip_m3u_list.list[l]);
                   fclose(zip_m3u);
-                  snprintf(full_path_replace, sizeof(full_path_replace), "%s", zip_m3u_path);
-                  log_cb(RETRO_LOG_INFO, "->M3U: %s\n", zip_m3u_path);
+                  snprintf(full_path_replace, sizeof(full_path_replace), "%s", zip_m3u_list.path);
+                  log_cb(RETRO_LOG_INFO, "->M3U: %s\n", zip_m3u_list.path);
                }
                break;
          }
@@ -893,7 +875,7 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
 
          /* Parse direct PRG load */
          char image_prg[D64_NAME_LEN + 1] = {0};
-         if (strstr(file_name, ":"))
+         if (strstr(file_name, ":") && file_name[1] != ':' && file_name[2] != ':')
          {
             char *token = strtok((char*)file_name, ":");
             while (token != NULL)

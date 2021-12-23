@@ -52,6 +52,7 @@ extern int disk_label_mode;
 
 /* Disk control structure and functions */
 #define DC_MAX_SIZE 20
+#define RETRO_PATH_MAX 512
 
 enum dc_image_type
 {
@@ -90,5 +91,13 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename);
 bool dc_remove_file(dc_storage* dc, int index);
 enum dc_image_type dc_get_image_type(const char* filename);
 bool dc_save_disk_toggle(dc_storage* dc, bool file_check, bool select);
+
+typedef struct zip_m3u_t
+{
+   int mode;
+   int num;
+   char list[DC_MAX_SIZE][RETRO_PATH_MAX];
+   char path[RETRO_PATH_MAX];
+} zip_m3u_t;
 
 #endif /* LIBRETRO_DC_H */

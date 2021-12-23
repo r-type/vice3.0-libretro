@@ -1307,7 +1307,7 @@ void update_work_disk()
       if (path_is_valid(work_disk_filepath))
       {
          /* Detach previous disks */
-         if ((attached_image = file_system_get_disk_name(8, 0)) != NULL)
+         if (string_is_empty(full_path) && (attached_image = file_system_get_disk_name(8, 0)) != NULL)
             file_system_detach_disk(8, 0);
 
          if ((attached_image = file_system_get_disk_name(9, 0)) != NULL)
@@ -1316,7 +1316,7 @@ void update_work_disk()
             log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
          }
 
-         if ((attached_image = fsdevice_get_path(8)) != NULL)
+         if (string_is_empty(full_path) && (attached_image = fsdevice_get_path(8)) != NULL)
          {
             log_resources_set_int("IECDevice8", 0);
             log_resources_set_int("FileSystemDevice8", 0);
@@ -1329,8 +1329,6 @@ void update_work_disk()
             log_resources_set_int("FileSystemDevice9", 0);
             log_resources_set_string("FSDevice9Dir", "");
          }
-
-         drive_reset();
 
          switch (work_disk_type)
          {
@@ -1360,7 +1358,8 @@ void update_work_disk()
                break;
          }
 
-         display_current_image(work_disk_filename, true);
+         if (string_is_empty(full_path))
+            display_current_image(work_disk_filename, true);
       }
    }
    else
@@ -1373,7 +1372,8 @@ void update_work_disk()
             log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
             file_system_detach_disk(8, 0);
             log_resources_set_int("Drive8Type", DRIVE_TYPE_DEFAULT);
-            display_current_image("", false);
+            if (string_is_empty(full_path))
+               display_current_image("", false);
          }
       }
 
@@ -1384,7 +1384,8 @@ void update_work_disk()
             log_cb(RETRO_LOG_INFO, "Work directory '%s' detached from drive #%d\n", attached_image, 8);
             log_resources_set_int("IECDevice8", 0);
             log_resources_set_int("FileSystemDevice8", 0);
-            display_current_image("", false);
+            if (string_is_empty(full_path))
+               display_current_image("", false);
          }
       }
 
@@ -1393,7 +1394,8 @@ void update_work_disk()
          log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 9);
          file_system_detach_disk(9, 0);
          log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
-         display_current_image("", false);
+         if (string_is_empty(full_path))
+            display_current_image("", false);
       }
 
       if ((attached_image = fsdevice_get_path(9)) != NULL && strstr(attached_image, work_disk_basename))
@@ -1401,7 +1403,8 @@ void update_work_disk()
          log_cb(RETRO_LOG_INFO, "Work directory '%s' detached from drive #%d\n", attached_image, 9);
          log_resources_set_int("IECDevice9", 0);
          log_resources_set_int("FileSystemDevice9", 0);
-         display_current_image("", false);
+         if (string_is_empty(full_path))
+            display_current_image("", false);
       }
    }
 }

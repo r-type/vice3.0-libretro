@@ -68,6 +68,9 @@
 
 #ifdef __LIBRETRO__
 #include "libretro-core.h"
+#ifndef GIT_VERSION
+#define GIT_VERSION ""
+#endif
 #define LOG_HR "--------------------------------------------------------------------------------"
 #endif
 
@@ -228,15 +231,7 @@ int main_program(int argc, char **argv)
     /* VICE boot sequence.  */
 #ifdef __LIBRETRO__
     log_message(LOG_DEFAULT, LOG_HR);
-    log_message(LOG_DEFAULT, "VICE %s", VERSION);
-#ifdef GIT_VERSION
-    log_message(LOG_DEFAULT, "Git commit:%s", GIT_VERSION);
-#endif
-    log_message(LOG_DEFAULT, "Build date: " __DATE__ " " __TIME__);
-    log_message(LOG_DEFAULT, "%s", "");
-    log_message(LOG_DEFAULT, "Welcome to %s, the free portable %s Emulator.", program_name, machine_name);
-    log_message(LOG_DEFAULT, "%s", "");
-    log_message(LOG_DEFAULT, "This is free software with ABSOLUTELY NO WARRANTY.");
+    log_message(LOG_DEFAULT, "VICE %s (%s) %s%s, %s %s", program_name, machine_name, VERSION, GIT_VERSION, __DATE__, __TIME__);
     log_message(LOG_DEFAULT, LOG_HR);
 #else /* __LIBRETRO __ */
     log_message(LOG_DEFAULT, " ");

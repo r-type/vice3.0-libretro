@@ -850,7 +850,7 @@ void drive_update_ui_status(void)
                 }
             }
 #ifdef __LIBRETRO__
-            if (opt_autoloadwarp & AUTOLOADWARP_DISK && !retro_warpmode && !retro_disk_get_eject_state())
+            if (opt_autoloadwarp & AUTOLOADWARP_DISK && !retro_warpmode && !retro_disk_get_eject_state() && i == 0)
             {
                 int warp = -1;
                 int drive_half_track = drive0->current_half_track;

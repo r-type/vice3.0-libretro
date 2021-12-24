@@ -21,6 +21,21 @@
 #include "encodings/utf.h"
 #include "compat/strcasestr.h"
 
+/* Log */
+#if defined(__ANDROID__) || defined(ANDROID)
+#include <android/log.h>
+#define LOG_TAG "RetroArch.vice"
+#endif
+
+/* File helpers functions */
+#define RETRO_PATH_MAX 512
+
+/* Types */
+#define UINT16 uint16_t
+#define UINT32 uint32_t
+typedef uint32_t uint32;
+typedef uint8_t uint8;
+
 #define RGB565(r, g, b) ((((r>>3)<<11) | ((g>>2)<<5) | (b>>3)))
 #define RGB888(r, g, b) (((r * 255 / 31) << 16) | ((g * 255 / 31) << 8) | (b * 255 / 31))
 #define ARGB888(a, r, g, b) ((a << 24) | (r << 16) | (g << 8) | b)
@@ -28,21 +43,6 @@
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
-
-/* File helpers functions */
-#define RETRO_PATH_MAX              512
-
-/* Log */
-#if defined(__ANDROID__) || defined(ANDROID)
-#include <android/log.h>
-#define LOG_TAG "RetroArch.vice"
-#endif
-
-/* Types */
-#define UINT16 uint16_t
-#define UINT32 uint32_t
-typedef uint32_t uint32;
-typedef uint8_t uint8;
 
 /* Screen */
 #if defined(__X128__)

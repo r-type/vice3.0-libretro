@@ -674,15 +674,12 @@ static int process_cmdline(const char* argv)
             sevenzip_uncompress(full_path, retro_temp_directory, NULL);
 
          /* Default to directory mode */
-         int zip_mode = 0;
          snprintf(full_path, sizeof(full_path), "%s", retro_temp_directory);
 
          FILE *zip_m3u;
-         char zip_m3u_list[DC_MAX_SIZE][RETRO_PATH_MAX] = {0};
-         char zip_m3u_path[RETRO_PATH_MAX] = {0};
-         snprintf(zip_m3u_path, sizeof(zip_m3u_path), "%s%s%s.m3u",
+         zip_m3u_t zip_m3u_list = {0};
+         snprintf(zip_m3u_list.path, sizeof(zip_m3u_list.path), "%s%s%s.m3u",
                retro_temp_directory, FSDEV_DIR_SEP_STR, utf8_to_local_string_alloc(zip_basename));
-         int zip_m3u_num = 0;
 
          DIR *zip_dir;
          struct dirent *zip_dirp;
@@ -700,29 +697,10 @@ static int process_cmdline(const char* argv)
          }
          closedir(zip_dir);
 
-         zip_dir = opendir(retro_temp_directory);
-         char *zip_lastfile = {0};
-         while ((zip_dirp = readdir(zip_dir)) != NULL)
-         {
-            if (zip_dirp->d_name[0] == '.' || strendswith(zip_dirp->d_name, ".m3u") || zip_mode > 1 || browsed_file[0] != '\0')
-               continue;
+         if (string_is_empty(browsed_file))
+            m3u_scan_recurse(retro_temp_directory, &zip_m3u_list);
 
-            zip_lastfile = local_to_utf8_string_alloc(zip_dirp->d_name);
-
-            /* Multi file mode, generate playlist */
-            if (dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_FLOPPY
-             || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_TAPE
-             || dc_get_image_type(zip_dirp->d_name) == DC_IMAGE_TYPE_MEM
-            )
-            {
-               zip_mode = 1;
-               zip_m3u_num++;
-               snprintf(zip_m3u_list[zip_m3u_num-1], RETRO_PATH_MAX, "%s", zip_lastfile);
-            }
-         }
-         closedir(zip_dir);
-
-         switch (zip_mode)
+         switch (zip_m3u_list.mode)
          {
             case 0: /* Extracted path */
                if (browsed_file[0] != '\0')
@@ -734,21 +712,17 @@ static int process_cmdline(const char* argv)
                }
                break;
             case 1: /* Generated playlist */
-               zip_m3u = fopen(zip_m3u_path, "w");
-               qsort(zip_m3u_list, zip_m3u_num, RETRO_PATH_MAX, qstrcmp);
-               for (int l = 0; l < zip_m3u_num; l++)
-                  fprintf(zip_m3u, "%s\n", zip_m3u_list[l]);
+               zip_m3u = fopen(zip_m3u_list.path, "w");
+               qsort(zip_m3u_list.list, zip_m3u_list.num, RETRO_PATH_MAX, qstrcmp);
+               for (int l = 0; l < zip_m3u_list.num; l++)
+                  fprintf(zip_m3u, "%s\n", zip_m3u_list.list[l]);
                fclose(zip_m3u);
-               snprintf(full_path, sizeof(full_path), "%s", zip_m3u_path);
-               log_cb(RETRO_LOG_INFO, "->M3U: %s\n", zip_m3u_path);
+               snprintf(full_path, sizeof(full_path), "%s", zip_m3u_list.path);
+               log_cb(RETRO_LOG_INFO, "->M3U: %s\n", zip_m3u_list.path);
                break;
          }
 
          argv = full_path;
-
-         if (zip_lastfile)
-            free(zip_lastfile);
-         zip_lastfile = NULL;
       }
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
@@ -1333,7 +1307,7 @@ void update_work_disk()
       if (path_is_valid(work_disk_filepath))
       {
          /* Detach previous disks */
-         if ((attached_image = file_system_get_disk_name(8, 0)) != NULL)
+         if (string_is_empty(full_path) && (attached_image = file_system_get_disk_name(8, 0)) != NULL)
             file_system_detach_disk(8, 0);
 
          if ((attached_image = file_system_get_disk_name(9, 0)) != NULL)
@@ -1342,7 +1316,7 @@ void update_work_disk()
             log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
          }
 
-         if ((attached_image = fsdevice_get_path(8)) != NULL)
+         if (string_is_empty(full_path) && (attached_image = fsdevice_get_path(8)) != NULL)
          {
             log_resources_set_int("IECDevice8", 0);
             log_resources_set_int("FileSystemDevice8", 0);
@@ -1355,8 +1329,6 @@ void update_work_disk()
             log_resources_set_int("FileSystemDevice9", 0);
             log_resources_set_string("FSDevice9Dir", "");
          }
-
-         drive_reset();
 
          switch (work_disk_type)
          {
@@ -1386,7 +1358,8 @@ void update_work_disk()
                break;
          }
 
-         display_current_image(work_disk_filename, true);
+         if (string_is_empty(full_path))
+            display_current_image(work_disk_filename, true);
       }
    }
    else
@@ -1399,7 +1372,8 @@ void update_work_disk()
             log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 8);
             file_system_detach_disk(8, 0);
             log_resources_set_int("Drive8Type", DRIVE_TYPE_DEFAULT);
-            display_current_image("", false);
+            if (string_is_empty(full_path))
+               display_current_image("", false);
          }
       }
 
@@ -1410,7 +1384,8 @@ void update_work_disk()
             log_cb(RETRO_LOG_INFO, "Work directory '%s' detached from drive #%d\n", attached_image, 8);
             log_resources_set_int("IECDevice8", 0);
             log_resources_set_int("FileSystemDevice8", 0);
-            display_current_image("", false);
+            if (string_is_empty(full_path))
+               display_current_image("", false);
          }
       }
 
@@ -1419,7 +1394,8 @@ void update_work_disk()
          log_cb(RETRO_LOG_INFO, "Work disk '%s' detached from drive #%d\n", attached_image, 9);
          file_system_detach_disk(9, 0);
          log_resources_set_int("Drive9Type", DRIVE_TYPE_NONE);
-         display_current_image("", false);
+         if (string_is_empty(full_path))
+            display_current_image("", false);
       }
 
       if ((attached_image = fsdevice_get_path(9)) != NULL && strstr(attached_image, work_disk_basename))
@@ -1427,7 +1403,8 @@ void update_work_disk()
          log_cb(RETRO_LOG_INFO, "Work directory '%s' detached from drive #%d\n", attached_image, 9);
          log_resources_set_int("IECDevice9", 0);
          log_resources_set_int("FileSystemDevice9", 0);
-         display_current_image("", false);
+         if (string_is_empty(full_path))
+            display_current_image("", false);
       }
    }
 }

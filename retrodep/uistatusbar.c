@@ -43,6 +43,7 @@
 
 #include "libretro-core.h"
 #include "libretro-graph.h"
+#include "libretro-mapper.h"
 
 extern unsigned int mouse_value[2 + 1];
 extern unsigned int vice_led_state[3];
@@ -86,25 +87,29 @@ static unsigned char* joystick_value_human(char val, int vice_device)
     static unsigned char str[6] = {0};
     snprintf(str, sizeof(str), "%3s", "   ");
 
-    if (val & 0x01) /* UP */
+    if (val & JOYPAD_N)
         str[1] = 30;
 
-    else if (val & 0x02) /* DOWN */
+    else if (val & JOYPAD_S)
         str[1] = 28;
 
-    if (val & 0x04) /* LEFT */
+    if (val & JOYPAD_W)
         str[0] = 27;
 
-    else if (val & 0x08) /* RIGHT */
+    else if (val & JOYPAD_E)
         str[2] = 29;
 
-    str[1] = (val & 0x10) ? (str[1] | 0x80) : str[1];
-
-    if (vice_device > 0)
+    if (vice_device == 0)
     {
-        str[1] = (val & 0x10) ? ('L' | 0x80) : str[1];
-        str[1] = (val & 0x20) ? ('R' | 0x80) : str[1];
-        str[1] = (val & 0x40) ? ('M' | 0x80) : str[1];
+        str[1] = (val & JOYPAD_FIRE)  ? (str[1] | 0x80) : str[1];
+        str[1] = (val & JOYPAD_FIRE2) ? ('2' | 0x80) : str[1];
+        str[1] = (val & JOYPAD_FIRE3) ? ('3' | 0x80) : str[1];
+    }
+    else if (vice_device > 0)
+    {
+        str[1] = (val & JOYPAD_FIRE)  ? ('L' | 0x80) : str[1];
+        str[1] = (val & JOYPAD_FIRE2) ? ('R' | 0x80) : str[1];
+        str[1] = (val & JOYPAD_FIRE3) ? ('M' | 0x80) : str[1];
     }
 
     return str;

@@ -166,7 +166,7 @@ unsigned int opt_reset_type = 0;
 bool opt_keyrah_keypad = false;
 bool opt_keyboard_pass_through = false;
 unsigned int opt_keyboard_keymap = KBD_INDEX_POS;
-unsigned int opt_retropad_options = 0;
+unsigned int opt_retropad_options = RETROPAD_OPTIONS_DISABLED;
 unsigned int opt_joyport_type = 0;
 int opt_joyport_pointer_color = -1;
 unsigned int opt_dpadmouse_speed = 6;
@@ -3723,7 +3723,7 @@ static void retro_set_core_options()
          "vice_mapper_a",
          "RetroPad > A",
          "A",
-         "VKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
+         "Unmapped defaults to 2nd fire button.\nVKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
          NULL,
          "retropad",
          {{ NULL, NULL }},
@@ -4051,9 +4051,9 @@ static void retro_set_core_options()
          NULL,
          "input",
          {
-            { "disabled", "B = Fire" },
+            { "disabled", "B = Fire, A = 2nd fire" },
             { "jump", "B = Fire, A = Up" },
-            { "rotate", "Y = Fire" },
+            { "rotate", "Y = Fire, B = 2nd fire" },
             { "rotate_jump", "Y = Fire, B = Up" },
             { NULL, NULL },
          },
@@ -5853,10 +5853,10 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if      (!strcmp(var.value, "disabled"))    opt_retropad_options = 0;
-      else if (!strcmp(var.value, "rotate"))      opt_retropad_options = 1;
-      else if (!strcmp(var.value, "jump"))        opt_retropad_options = 2;
-      else if (!strcmp(var.value, "rotate_jump")) opt_retropad_options = 3;
+      if      (!strcmp(var.value, "disabled"))    opt_retropad_options = RETROPAD_OPTIONS_DISABLED;
+      else if (!strcmp(var.value, "rotate"))      opt_retropad_options = RETROPAD_OPTIONS_ROTATE;
+      else if (!strcmp(var.value, "jump"))        opt_retropad_options = RETROPAD_OPTIONS_JUMP;
+      else if (!strcmp(var.value, "rotate_jump")) opt_retropad_options = RETROPAD_OPTIONS_ROTATE_JUMP;
    }
 
    var.key = "vice_turbo_fire";

@@ -63,6 +63,7 @@
 #ifdef __LIBRETRO__
 #include "sid.h"
 #include "libretro-core.h"
+extern unsigned int opt_warp_boost;
 extern void sound_volume_counter_reset(void);
 extern int16_t *audio_buffer;
 extern int tape_enabled;
@@ -1631,7 +1632,7 @@ void sound_set_warp_mode(int value)
     warp_mode_enabled = value;
 
 #ifdef __LIBRETRO__
-    if (vice_opt.SidEngine != SID_ENGINE_FASTSID)
+    if (opt_warp_boost && vice_opt.SidEngine != SID_ENGINE_FASTSID)
     {
         resources_set_int("SidEngine", (value) ? SID_ENGINE_FASTSID : vice_opt.SidEngine);
 

@@ -147,6 +147,7 @@ static bool opt_model_auto = true;
 static bool opt_model_auto_locked = false;
 unsigned int opt_autostart = 1;
 unsigned int opt_autoloadwarp = 0;
+unsigned int opt_warp_boost = 1;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_work_disk_type = 0;
 static unsigned int opt_work_disk_unit = 8;
@@ -2372,6 +2373,20 @@ static void retro_set_core_options()
             { NULL, NULL },
          },
          "disabled"
+      },
+      {
+         "vice_warp_boost",
+         "Media > Warp Boost",
+         "Warp Boost",
+         "Make Warp Mode much faster by temporary changing SID emulation to 'FastSID' while warping.",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
       },
       {
          "vice_drive_true_emulation",
@@ -4672,6 +4687,14 @@ static void update_variables(void)
 
       if (!strcmp(var.value, "disabled")) vice_opt.VirtualDevices = 0;
       else                                vice_opt.VirtualDevices = 1;
+   }
+
+   var.key = "vice_warp_boost";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "disabled")) opt_warp_boost = 0;
+      else                                opt_warp_boost = 1;
    }
 
    var.key = "vice_drive_true_emulation";

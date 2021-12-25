@@ -7750,6 +7750,8 @@ static void retro_unserialize_post(void)
    /* Disable warp */
    if (retro_warp_mode_enabled())
       resources_set_int("WarpMode", 0);
+   /* Make rewinding sound less jarring */
+   sound_volume_counter_reset();
    /* Dismiss possible restart request */
    request_restart = false;
    /* Sync Disc Control index for D64 multidisks */

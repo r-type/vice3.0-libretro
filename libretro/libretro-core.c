@@ -147,6 +147,7 @@ static bool opt_model_auto = true;
 static bool opt_model_auto_locked = false;
 unsigned int opt_autostart = 1;
 unsigned int opt_autoloadwarp = 0;
+unsigned int opt_warp_boost = 1;
 unsigned int opt_read_vicerc = 0;
 static unsigned int opt_work_disk_type = 0;
 static unsigned int opt_work_disk_unit = 8;
@@ -165,7 +166,7 @@ unsigned int opt_reset_type = 0;
 bool opt_keyrah_keypad = false;
 bool opt_keyboard_pass_through = false;
 unsigned int opt_keyboard_keymap = KBD_INDEX_POS;
-unsigned int opt_retropad_options = 0;
+unsigned int opt_retropad_options = RETROPAD_OPTIONS_DISABLED;
 unsigned int opt_joyport_type = 0;
 int opt_joyport_pointer_color = -1;
 unsigned int opt_dpadmouse_speed = 6;
@@ -2374,6 +2375,20 @@ static void retro_set_core_options()
          "disabled"
       },
       {
+         "vice_warp_boost",
+         "Media > Warp Boost",
+         "Warp Boost",
+         "Make Warp Mode much faster by temporary changing SID emulation to 'FastSID' while warping.",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
+      {
          "vice_drive_true_emulation",
          "Media > True Drive Emulation",
          "True Drive Emulation",
@@ -3708,7 +3723,7 @@ static void retro_set_core_options()
          "vice_mapper_a",
          "RetroPad > A",
          "A",
-         "VKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
+         "Unmapped defaults to 2nd fire button.\nVKBD: Toggle transparency. Remapping to non-keyboard keys overrides VKBD function!",
          NULL,
          "retropad",
          {{ NULL, NULL }},
@@ -4036,9 +4051,9 @@ static void retro_set_core_options()
          NULL,
          "input",
          {
-            { "disabled", "B = Fire" },
+            { "disabled", "B = Fire, A = 2nd fire" },
             { "jump", "B = Fire, A = Up" },
-            { "rotate", "Y = Fire" },
+            { "rotate", "Y = Fire, B = 2nd fire" },
             { "rotate_jump", "Y = Fire, B = Up" },
             { NULL, NULL },
          },
@@ -4672,6 +4687,14 @@ static void update_variables(void)
 
       if (!strcmp(var.value, "disabled")) vice_opt.VirtualDevices = 0;
       else                                vice_opt.VirtualDevices = 1;
+   }
+
+   var.key = "vice_warp_boost";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "disabled")) opt_warp_boost = 0;
+      else                                opt_warp_boost = 1;
    }
 
    var.key = "vice_drive_true_emulation";
@@ -5830,10 +5853,10 @@ static void update_variables(void)
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
-      if      (!strcmp(var.value, "disabled"))    opt_retropad_options = 0;
-      else if (!strcmp(var.value, "rotate"))      opt_retropad_options = 1;
-      else if (!strcmp(var.value, "jump"))        opt_retropad_options = 2;
-      else if (!strcmp(var.value, "rotate_jump")) opt_retropad_options = 3;
+      if      (!strcmp(var.value, "disabled"))    opt_retropad_options = RETROPAD_OPTIONS_DISABLED;
+      else if (!strcmp(var.value, "rotate"))      opt_retropad_options = RETROPAD_OPTIONS_ROTATE;
+      else if (!strcmp(var.value, "jump"))        opt_retropad_options = RETROPAD_OPTIONS_JUMP;
+      else if (!strcmp(var.value, "rotate_jump")) opt_retropad_options = RETROPAD_OPTIONS_ROTATE_JUMP;
    }
 
    var.key = "vice_turbo_fire";
@@ -7727,6 +7750,8 @@ static void retro_unserialize_post(void)
    /* Disable warp */
    if (retro_warp_mode_enabled())
       resources_set_int("WarpMode", 0);
+   /* Make rewinding sound less jarring */
+   sound_volume_counter_reset();
    /* Dismiss possible restart request */
    request_restart = false;
    /* Sync Disc Control index for D64 multidisks */

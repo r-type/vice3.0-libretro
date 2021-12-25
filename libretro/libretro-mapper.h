@@ -68,6 +68,9 @@ extern void retro_poll_event();
 extern void retro_keyboard_event(bool, unsigned, uint32_t, uint16_t);
 extern unsigned retro_key_state_internal[RETROK_LAST];
 
+extern unsigned int opt_retropad_options;
+extern bool opt_keyrah_keypad;
+
 extern void retro_key_up(int);
 extern void retro_key_down(int);
 extern unsigned int retro_devices[RETRO_DEVICES];

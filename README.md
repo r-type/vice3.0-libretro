@@ -12,7 +12,8 @@ Supported platforms: Linux, Windows, Apple, Android, emscripten, Switch, Vita
 |-----------------|-------------------------|
 | D-Pad           | Joystick                |
 | Left Analog     | Mouse/paddles           |
-| B               | Fire button             |
+| B               | Fire button 1 / Handle  |
+| A               | Fire button 2 / Base    |
 | X               | Space                   |
 | L2              | Escape (RUN/STOP)       |
 | R2              | Enter (RETURN)          |
@@ -196,6 +197,9 @@ xvic -memory 20 "/path/to/rom/some-8k-game.d64"
 
 ## Latest features
 
+- Automatic Zoom & Auto-Disable Zoom
+- Automatic Load Warp
+- Paddles in both joyports (4 paddles total)
 - Automatic VIC-20 Mega-Cart support (with NVRAM)
 - Automatic NIB->G64 conversion
 - Region (PAL/NTSC) filepath tags for C64 & VIC-20

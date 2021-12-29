@@ -2724,6 +2724,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { "enabled_medblur", "50% blur" },
             { "enabled_lowblur", "10% blur" },
+            { "enabled_noblur", "0% blur" },
          },
 #if defined(__X64__) || defined(__XCBM5x0__) || defined(__XCBM2__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
          "disabled"
@@ -5472,11 +5473,12 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int filter = strcmp(var.value, "disabled");
-      int blur = 0;
+      int blur = -1;
 
       if (filter)
       {
-         if      (strstr(var.value, "lowblur")) blur = 50;
+         if      (strstr(var.value, "noblur"))  blur = 0;
+         else if (strstr(var.value, "lowblur")) blur = 50;
          else if (strstr(var.value, "medblur")) blur = 250;
          else                                   blur = 500;
       }

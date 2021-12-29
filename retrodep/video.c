@@ -137,25 +137,22 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
          for (i = 0; i < ZOOM_TOP_BORDER && !vice_raster.blanked; i++)
          {
             unsigned row   = i * (retrow << (pix_bytes >> 2));
-            unsigned col_x = row + (ZOOM_LEFT_BORDER + 3) * (pix_bytes >> 1);
+            unsigned pad   = 8;
+            unsigned col_x = row + (ZOOM_LEFT_BORDER + pad) * (pix_bytes >> 1);
             unsigned color = retro_bmp[col_x];
             unsigned found = 0;
 
-            for (j = ZOOM_LEFT_BORDER; j < retrow - ZOOM_LEFT_BORDER; j++)
+            for (j = ZOOM_LEFT_BORDER + pad; j < retrow - ZOOM_LEFT_BORDER - pad; j++)
             {
                unsigned pixel = row + j * (pix_bytes >> 1);
 
                if (abs(retro_bmp[pixel] - color) > color_diff)
                   found++;
 
-               /* Crazy Cars III FFS.. */
-               if (i < 6 && j > 265 && j < 290)
-                  found = 0;
-
                if (found && retro_bmp[pixel] == color)
                {
 #if 0
-                  printf("%s: FRST %3d %3d, %2d %d\n", __func__, i, j, found, color);
+                  printf("%s: FRST %3d %3d, %3d %d\n", __func__, i, j, found, color);
 #endif
                   vice_raster.first_line = i;
                   break;
@@ -175,11 +172,12 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
          for (i = retroh - 2; i > zoom_bottom_border && !vice_raster.blanked; i--)
          {
             unsigned row   = i * (retrow << (pix_bytes >> 2));
-            unsigned col_x = row + (ZOOM_LEFT_BORDER + 3) * (pix_bytes >> 1);
+            unsigned pad   = 8;
+            unsigned col_x = row + (ZOOM_LEFT_BORDER + pad) * (pix_bytes >> 1);
             unsigned color = retro_bmp[col_x];
             unsigned found = 0;
 
-            for (j = ZOOM_LEFT_BORDER; j < retrow - ZOOM_LEFT_BORDER; j++)
+            for (j = ZOOM_LEFT_BORDER + pad; j < retrow - ZOOM_LEFT_BORDER - pad; j++)
             {
                unsigned pixel = row + j * (pix_bytes >> 1);
 
@@ -189,7 +187,7 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
                if (found && retro_bmp[pixel] == color)
                {
 #if 0
-                  printf("%s: LAST %3d %3d, %2d %d\n", __func__, i, j, found, color);
+                  printf("%s: LAST %3d %3d, %3d %d\n", __func__, i, j, found, color);
 #endif
                   vice_raster.last_line = i + 1;
                   break;
@@ -207,9 +205,9 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
             vice_raster.counter = 0;
 
             /* Require a line step bigger than one */
-            if (abs(vice_raster.first_line_prev - vice_raster.first_line) > 1)
+            if (abs(vice_raster.first_line_active - vice_raster.first_line) > 1)
                vice_raster.first_line_maybe = vice_raster.first_line;
-            if (abs(vice_raster.last_line_prev - vice_raster.last_line) > 1)
+            if (abs(vice_raster.last_line_active - vice_raster.last_line) > 1)
                vice_raster.last_line_maybe  = vice_raster.last_line;
          }
          else
@@ -228,6 +226,12 @@ void video_canvas_refresh(struct video_canvas_s *canvas,
                vice_raster.last_line_active  = vice_raster.last_line;
             }
          }
+#if 0
+         printf("%s: %d, first=%d active=%d maybe=%d prev=%d, last=%d active=%d maybe=%d prev=%d\n", __func__,
+               vice_raster.counter,
+               vice_raster.first_line, vice_raster.first_line_active, vice_raster.first_line_maybe, vice_raster.first_line_prev,
+               vice_raster.last_line, vice_raster.last_line_active, vice_raster.last_line_maybe, vice_raster.last_line_prev);
+#endif
          break;
 
       case ZOOM_MODE_AUTO_DISABLE:

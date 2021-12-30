@@ -1928,6 +1928,11 @@ static void retro_set_core_options()
    static struct retro_core_option_v2_category option_cats_us[] =
    {
       {
+         "system",
+         "System",
+         "Configure system options."
+      },
+      {
          "audio",
          "Audio",
          "Configure audio options."
@@ -1957,6 +1962,11 @@ static void retro_set_core_options()
          "RetroPad Mapping",
          "Configure RetroPad mapping options."
       },
+      {
+         "osd",
+         "On-Screen Display",
+         "Configure OSD options."
+      },
       { NULL, NULL, NULL },
    };
 
@@ -1966,11 +1976,11 @@ static void retro_set_core_options()
 #if defined(__XVIC__)
       {
          "vice_vic20_model",
+         "System > Model",
          "Model",
-         NULL,
          "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "VIC20 PAL auto", "VIC-20 PAL Automatic" },
             { "VIC20 NTSC auto", "VIC-20 NTSC Automatic" },
@@ -1983,11 +1993,11 @@ static void retro_set_core_options()
       },
       {
          "vice_vic20_memory_expansions",
+         "System > Memory Expansion",
          "Memory Expansion",
-         NULL,
          "Can be forced with filename tags '(8k)' & '(8kb)' or directory tags '8k' & '8kb'.\nChanging while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "none", "disabled" },
             { "3kB", "3kB" },
@@ -2002,11 +2012,11 @@ static void retro_set_core_options()
 #elif defined(__XPLUS4__)
       {
          "vice_plus4_model",
+         "System > Model",
          "Model",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "C16 PAL", "C16 PAL" },
             { "C16 NTSC", "C16 NTSC" },
@@ -2021,11 +2031,11 @@ static void retro_set_core_options()
 #elif defined(__X128__)
       {
          "vice_c128_model",
+         "System > Model",
          "Model",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "C128 PAL", "C128 PAL" },
             { "C128 NTSC", "C128 NTSC" },
@@ -2039,11 +2049,11 @@ static void retro_set_core_options()
       },
       {
          "vice_c128_ram_expansion_unit",
+         "System > RAM Expansion Unit",
          "RAM Expansion Unit",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "none", "disabled" },
             { "128kB", "128kB (1700)" },
@@ -2060,11 +2070,11 @@ static void retro_set_core_options()
       },
       {
          "vice_c128_video_output",
+         "System > Video Output",
          "Video Output",
-         NULL,
          "",
          NULL,
-         NULL,
+         "system",
          {
             { "VICII", "VIC-II (40 cols)" },
             { "VDC", "VDC (80 cols)" },
@@ -2074,11 +2084,11 @@ static void retro_set_core_options()
       },
       {
          "vice_c128_go64",
+         "System > GO64",
          "GO64",
-         NULL,
          "Start in C64 compatibility mode.\nChanging while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2089,11 +2099,11 @@ static void retro_set_core_options()
 #elif defined(__XPET__)
       {
          "vice_pet_model",
+         "System > Model",
          "Model",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "2001", "PET 2001" },
             { "3008", "PET 3008" },
@@ -2114,11 +2124,11 @@ static void retro_set_core_options()
 #elif defined(__XCBM2__)
       {
          "vice_cbm2_model",
+         "System > Model",
          "Model",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "610 PAL", "CBM 610 PAL" },
             { "610 NTSC", "CBM 610 NTSC" },
@@ -2136,11 +2146,11 @@ static void retro_set_core_options()
 #elif defined(__XCBM5x0__)
       {
          "vice_cbm5x0_model",
+         "System > Model",
          "Model",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "510 PAL", "CBM 510 PAL" },
             { "510 NTSC", "CBM 510 NTSC" },
@@ -2151,11 +2161,11 @@ static void retro_set_core_options()
 #elif defined(__X64DTV__)
       {
          "vice_c64dtv_model",
+         "System > Model",
          "Model",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "DTV2 PAL", "DTV v2 PAL" },
             { "DTV2 NTSC", "DTV v2 NTSC" },
@@ -2169,11 +2179,11 @@ static void retro_set_core_options()
 #else
       {
          "vice_c64_model",
+         "System > Model",
          "Model",
-         NULL,
          "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "C64 PAL auto", "C64 PAL Automatic" },
             { "C64 NTSC auto", "C64 NTSC Automatic" },
@@ -2201,11 +2211,11 @@ static void retro_set_core_options()
 #if defined(__XSCPU64__)
       {
          "vice_supercpu_simm_size",
+         "System > SuperCPU SIMM Size",
          "SuperCPU SIMM Size",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "0", "disabled" },
             { "1", "1024kB" },
@@ -2220,11 +2230,11 @@ static void retro_set_core_options()
 #else
       {
          "vice_ram_expansion_unit",
+         "System > RAM Expansion Unit",
          "RAM Expansion Unit",
-         NULL,
          "Changing while running resets the system!",
          NULL,
-         NULL,
+         "system",
          {
             { "none", "disabled" },
             { "128kB", "128kB (1700)" },
@@ -2244,11 +2254,11 @@ static void retro_set_core_options()
 #if defined(__XSCPU64__)
       {
          "vice_supercpu_speed_switch",
+         "System > SuperCPU Speed Switch",
          "SuperCPU Speed Switch",
-         NULL,
          "",
          NULL,
-         NULL,
+         "system",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2258,11 +2268,11 @@ static void retro_set_core_options()
       },
       {
          "vice_supercpu_kernal",
+         "System > SuperCPU Kernal",
          "SuperCPU Kernal",
-         NULL,
          "JiffyDOS does not work with the internal kernal! ROMs required in 'system/vice/SCPU64':\n- 'scpu-dos-1.4.bin'\n- 'scpu-dos-2.04.bin'",
          NULL,
-         NULL,
+         "system",
          {
             { "0", "Internal" },
             { "1", "1.40" },
@@ -2275,15 +2285,15 @@ static void retro_set_core_options()
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
       {
          "vice_jiffydos",
+         "System > JiffyDOS",
          "JiffyDOS",
-         NULL,
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
          "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C64.bin'\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #elif defined(__X128__)
          "'True Drive Emulation' & 1541/1571/1581 drive & ROMs required in 'system/vice':\n- 'JiffyDOS_C128.bin'\n- 'JiffyDOS_C64.bin' (GO64)\n- 'JiffyDOS_1541-II.bin'\n- 'JiffyDOS_1571_repl310654.bin'\n- 'JiffyDOS_1581.bin'",
 #endif
          NULL,
-         NULL,
+         "system",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2294,11 +2304,11 @@ static void retro_set_core_options()
 #endif
       {
          "vice_read_vicerc",
+         "System > Read 'vicerc'",
          "Read 'vicerc'",
-         NULL,
          "Process first found 'vicerc' in this order:\n1. 'saves/[content].vicerc'\n2. 'saves/vicerc'\n3. 'system/vice/vicerc'",
          NULL,
-         NULL,
+         "system",
          {
             { "disabled", NULL },
             { "enabled", NULL },
@@ -2309,11 +2319,11 @@ static void retro_set_core_options()
 #if !defined(__X64DTV__)
       {
          "vice_reset",
+         "System > Reset Type",
          "Reset Type",
-         NULL,
          "- 'Autostart' hard resets and reruns content.\n- 'Soft' keeps some code in memory.\n- 'Hard' erases all memory.\n- 'Freeze' is for cartridges.",
          NULL,
-         NULL,
+         "system",
          {
             { "autostart", "Autostart" },
             { "soft", "Soft" },
@@ -2606,99 +2616,6 @@ static void retro_set_core_options()
       },
 #endif
       {
-         "vice_statusbar",
-         "Video > Statusbar Mode",
-         "Statusbar Mode",
-         "- 'Full': Joyports + Current image + LEDs\n- 'Basic': Current image + LEDs\n- 'Minimal': Track number + FPS hidden",
-         NULL,
-         "video",
-         {
-            { "bottom", "Bottom Full" },
-            { "bottom_minimal", "Bottom Full Minimal" },
-            { "bottom_basic", "Bottom Basic" },
-            { "bottom_basic_minimal", "Bottom Basic Minimal" },
-            { "top", "Top Full" },
-            { "top_minimal", "Top Full Minimal" },
-            { "top_basic", "Top Basic" },
-            { "top_basic_minimal", "Top Basic Minimal" },
-            { NULL, NULL },
-         },
-         "bottom"
-      },
-      {
-         "vice_vkbd_theme",
-         "Video > Virtual KBD Theme",
-         "Virtual KBD Theme",
-         "The keyboard comes up with RetroPad Select by default.",
-         NULL,
-         "video",
-         {
-            { "auto", "Automatic (shadow)" },
-            { "auto_outline", "Automatic (outline)" },
-            { "brown", "Brown (shadow)" },
-            { "brown_outline", "Brown (outline)" },
-            { "beige", "Beige (shadow)" },
-            { "beige_outline", "Beige (outline)" },
-            { "dark", "Dark (shadow)" },
-            { "dark_outline", "Dark (outline)" },
-            { "light", "Light (shadow)" },
-            { "light_outline", "Light (outline)" },
-            { NULL, NULL },
-         },
-         "auto"
-      },
-      {
-         "vice_vkbd_transparency",
-         "Video > Virtual KBD Transparency",
-         "Virtual KBD Transparency",
-         "Keyboard transparency can be toggled with RetroPad A.",
-         NULL,
-         "video",
-         {
-            { "0%",   NULL },
-            { "25%",  NULL },
-            { "50%",  NULL },
-            { "75%",  NULL },
-            { "100%", NULL },
-            { NULL, NULL },
-         },
-         "25%"
-      },
-      {
-         "vice_gfx_colors",
-         "Video > Color Depth",
-         "Color Depth",
-         "24-bit is slower and not available on all platforms. Full restart required.",
-         NULL,
-         "video",
-         {
-            { "16bit", "Thousands (16-bit)" },
-            { "24bit", "Millions (24-bit)" },
-            { NULL, NULL },
-         },
-         "16bit"
-      },
-      {
-         "vice_joyport_pointer_color",
-         "Video > Light Pen/Gun Pointer Color",
-         "Light Pen/Gun Pointer Color",
-         "Crosshair color for light pens and guns.",
-         NULL,
-         "video",
-         {
-            { "disabled", NULL },
-            { "black", "Black" },
-            { "white", "White" },
-            { "red", "Red" },
-            { "green", "Green" },
-            { "blue", "Blue" },
-            { "yellow", "Yellow" },
-            { "purple", "Purple" },
-            { NULL, NULL },
-         },
-         "blue"
-      },
-      {
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
          "vice_vicii_filter",
          "Video > VIC-II Filter",
@@ -2937,6 +2854,99 @@ static void retro_set_core_options()
          "1000"
       },
 #endif
+      {
+         "vice_gfx_colors",
+         "Video > Color Depth",
+         "Color Depth",
+         "24-bit is slower and not available on all platforms. Full restart required.",
+         NULL,
+         "video",
+         {
+            { "16bit", "Thousands (16-bit)" },
+            { "24bit", "Millions (24-bit)" },
+            { NULL, NULL },
+         },
+         "16bit"
+      },
+      {
+         "vice_vkbd_theme",
+         "OSD > Virtual KBD Theme",
+         "Virtual KBD Theme",
+         "The keyboard comes up with RetroPad Select by default.",
+         NULL,
+         "osd",
+         {
+            { "auto", "Automatic (shadow)" },
+            { "auto_outline", "Automatic (outline)" },
+            { "brown", "Brown (shadow)" },
+            { "brown_outline", "Brown (outline)" },
+            { "beige", "Beige (shadow)" },
+            { "beige_outline", "Beige (outline)" },
+            { "dark", "Dark (shadow)" },
+            { "dark_outline", "Dark (outline)" },
+            { "light", "Light (shadow)" },
+            { "light_outline", "Light (outline)" },
+            { NULL, NULL },
+         },
+         "auto"
+      },
+      {
+         "vice_vkbd_transparency",
+         "OSD > Virtual KBD Transparency",
+         "Virtual KBD Transparency",
+         "Keyboard transparency can be toggled with RetroPad A.",
+         NULL,
+         "osd",
+         {
+            { "0%",   NULL },
+            { "25%",  NULL },
+            { "50%",  NULL },
+            { "75%",  NULL },
+            { "100%", NULL },
+            { NULL, NULL },
+         },
+         "25%"
+      },
+      {
+         "vice_statusbar",
+         "OSD > Statusbar Mode",
+         "Statusbar Mode",
+         "- 'Full': Joyports + Current image + LEDs\n- 'Basic': Current image + LEDs\n- 'Minimal': Track number + FPS hidden",
+         NULL,
+         "osd",
+         {
+            { "bottom", "Bottom Full" },
+            { "bottom_minimal", "Bottom Full Minimal" },
+            { "bottom_basic", "Bottom Basic" },
+            { "bottom_basic_minimal", "Bottom Basic Minimal" },
+            { "top", "Top Full" },
+            { "top_minimal", "Top Full Minimal" },
+            { "top_basic", "Top Basic" },
+            { "top_basic_minimal", "Top Basic Minimal" },
+            { NULL, NULL },
+         },
+         "bottom"
+      },
+      {
+         "vice_joyport_pointer_color",
+         "OSD > Light Pen/Gun Pointer Color",
+         "Light Pen/Gun Pointer Color",
+         "Crosshair color for light pens and guns.",
+         NULL,
+         "osd",
+         {
+            { "disabled", NULL },
+            { "black", "Black" },
+            { "white", "White" },
+            { "red", "Red" },
+            { "green", "Green" },
+            { "blue", "Blue" },
+            { "yellow", "Yellow" },
+            { "purple", "Purple" },
+            { NULL, NULL },
+         },
+         "blue"
+      },
       {
          "vice_audio_options_display",
          "Show Audio Options",

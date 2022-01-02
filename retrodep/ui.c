@@ -242,15 +242,23 @@ int ui_init_finalize(void)
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
    log_resources_set_int("VICIIFilter", (vice_opt.Filter > -1) ? 1 : 0);
    log_resources_set_int("VICIIPALBlur", vice_opt.Filter);
+   log_resources_set_int("VICIIPALOddLinePhase", vice_opt.FilterOddLinePhase);
+   log_resources_set_int("VICIIPALOddLineOffset", vice_opt.FilterOddLineOffset);
 #elif defined(__XVIC__)
    log_resources_set_int("VICFilter", (vice_opt.Filter > -1) ? 1 : 0);
    log_resources_set_int("VICPALBlur", vice_opt.Filter);
+   log_resources_set_int("VICPALOddLinePhase", vice_opt.FilterOddLinePhase);
+   log_resources_set_int("VICPALOddLineOffset", vice_opt.FilterOddLineOffset);
 #elif defined(__XPLUS4__)
    log_resources_set_int("TEDFilter", (vice_opt.Filter > -1) ? 1 : 0);
    log_resources_set_int("TEDPALBlur", vice_opt.Filter);
+   log_resources_set_int("TEDPALOddLinePhase", vice_opt.FilterOddLinePhase);
+   log_resources_set_int("TEDPALOddLineOffset", vice_opt.FilterOddLineOffset);
 #elif defined(__XPET__) || defined(__XCBM2__)
    log_resources_set_int("CrtcFilter", (vice_opt.Filter > -1) ? 1 : 0);
    log_resources_set_int("CrtcPALBlur", vice_opt.Filter);
+   log_resources_set_int("CrtcPALOddLinePhase", vice_opt.FilterOddLinePhase);
+   log_resources_set_int("CrtcPALOddLineOffset", vice_opt.FilterOddLineOffset);
 #endif
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)

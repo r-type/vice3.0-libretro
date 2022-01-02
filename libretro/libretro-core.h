@@ -249,6 +249,8 @@ struct vice_core_options
    int SFXSoundExpanderChip;
    char ExternalPalette[RETRO_PATH_MAX];
    int Filter;
+   int FilterOddLinePhase;
+   int FilterOddLineOffset;
    int ColorGamma;
    int ColorTint;
    int ColorSaturation;

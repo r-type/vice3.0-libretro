@@ -2633,7 +2633,7 @@ static void retro_set_core_options()
          "Video > CRTC Filter",
          "CRTC Filter",
 #endif
-         "CRT emulation filter with custom horizontal blur.",
+         "PAL emulation filter with custom horizontal blur.",
          NULL,
          "video",
          {
@@ -2643,11 +2643,59 @@ static void retro_set_core_options()
             { "enabled_lowblur", "10% blur" },
             { "enabled_noblur", "0% blur" },
          },
-#if defined(__X64__) || defined(__XCBM5x0__) || defined(__XCBM2__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
+#if defined(__X64__) || defined(PSP) || defined(VITA) || defined(__SWITCH__) || defined(DINGUX) || defined(ANDROID)
          "disabled"
 #else
          "enabled"
 #endif
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_filter_oddline_phase",
+         "Video > VIC-II Filter Oddline Phase",
+         "VIC-II Filter Oddline Phase",
+#elif defined(__XVIC__)
+         "vice_vic_filter_oddline_phase",
+         "Video > VIC Filter Oddline Phase",
+         "VIC Filter Oddline Phase",
+#elif defined(__XPLUS4__)
+         "vice_ted_filter_oddline_phase",
+         "Video > TED Filter Oddline Phase",
+         "TED Filter Oddline Phase",
+#elif defined(__XPET__) || defined(__XCBM2__)
+         "vice_crtc_filter_oddline_phase",
+         "Video > CRTC Filter Oddline Phase",
+         "CRTC Filter Oddline Phase",
+#endif
+         "PAL emulation filter oddline phase. Applies with 'Internal' palette only!",
+         NULL,
+         "video",
+         PALETTE_COLOR_OPTIONS,
+         "1000"
+      },
+      {
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         "vice_vicii_filter_oddline_offset",
+         "Video > VIC-II Filter Oddline Offset",
+         "VIC-II Filter Oddline Offset",
+#elif defined(__XVIC__)
+         "vice_vic_filter_oddline_offset",
+         "Video > VIC Filter Oddline Offset",
+         "VIC Filter Oddline Offset",
+#elif defined(__XPLUS4__)
+         "vice_ted_filter_oddline_offset",
+         "Video > TED Filter Oddline Offset",
+         "TED Filter Oddline Offset",
+#elif defined(__XPET__) || defined(__XCBM2__)
+         "vice_crtc_filter_oddline_offset",
+         "Video > CRTC Filter Oddline Offset",
+         "CRTC Filter Oddline Offset",
+#endif
+         "PAL emulation filter oddline offset.",
+         NULL,
+         "video",
+         PALETTE_COLOR_OPTIONS,
+         "1000"
       },
 #if defined(__XVIC__)
       {
@@ -5513,6 +5561,62 @@ static void update_variables(void)
       vice_opt.Filter = blur;
    }
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+   var.key = "vice_vicii_filter_oddline_phase";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_filter_oddline_phase";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_filter_oddline_phase";
+#elif defined(__XPET__) || defined(__XCBM2__)
+   var.key = "vice_crtc_filter_oddline_phase";
+#endif
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int oddline_phase = atoi(var.value);
+
+      if (retro_ui_finalized && vice_opt.FilterOddLinePhase != oddline_phase)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         log_resources_set_int("VICIIPALOddLinePhase", oddline_phase);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICPALOddLinePhase", oddline_phase);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDPALOddLinePhase", oddline_phase);
+#elif defined(__XPET__) || defined(__XCBM2__)
+         log_resources_set_int("CrtcPALOddLinePhase", oddline_phase);
+#endif
+
+      vice_opt.FilterOddLinePhase = oddline_phase;
+   }
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+   var.key = "vice_vicii_filter_oddline_offset";
+#elif defined(__XVIC__)
+   var.key = "vice_vic_filter_oddline_offset";
+#elif defined(__XPLUS4__)
+   var.key = "vice_ted_filter_oddline_offset";
+#elif defined(__XPET__) || defined(__XCBM2__)
+   var.key = "vice_crtc_filter_oddline_offset";
+#endif
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      int oddline_offset = atoi(var.value);
+
+      if (retro_ui_finalized && vice_opt.FilterOddLineOffset != oddline_offset)
+#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
+         log_resources_set_int("VICIIPALOddLineOffset", oddline_offset);
+#elif defined(__XVIC__)
+         log_resources_set_int("VICPALOddLineOffset", oddline_offset);
+#elif defined(__XPLUS4__)
+         log_resources_set_int("TEDPALOddLineOffset", oddline_offset);
+#elif defined(__XPET__) || defined(__XCBM2__)
+         log_resources_set_int("CrtcPALOddLineOffset", oddline_offset);
+#endif
+
+      vice_opt.FilterOddLineOffset = oddline_offset;
+   }
+
 #if defined(__XVIC__)
    var.key = "vice_vic20_external_palette";
    var.value = NULL;
@@ -6476,9 +6580,9 @@ static void update_variables(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_gfx_colors";
-   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_joyport_pointer_color";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_gfx_colors";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    option_display.key = "vice_zoom_mode";
@@ -6499,57 +6603,77 @@ static void update_variables(void)
 #if defined(__XVIC__)
    option_display.key = "vice_vic20_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vic_filter",
+   option_display.key = "vice_vic_filter";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vic_color_gamma",
+   option_display.key = "vice_vic_filter_oddline_phase";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vic_color_tint",
+   option_display.key = "vice_vic_filter_oddline_offset";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vic_color_saturation",
+   option_display.key = "vice_vic_color_gamma";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vic_color_contrast",
+   option_display.key = "vice_vic_color_tint";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vic_color_brightness",
+   option_display.key = "vice_vic_color_saturation";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vic_color_contrast";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vic_color_brightness";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #elif defined(__XPLUS4__)
    option_display.key = "vice_plus4_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_ted_filter",
+   option_display.key = "vice_ted_filter";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_ted_color_gamma",
+   option_display.key = "vice_ted_filter_oddline_phase";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_ted_color_tint",
+   option_display.key = "vice_ted_filter_oddline_offset";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_ted_color_saturation",
+   option_display.key = "vice_ted_color_gamma";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_ted_color_contrast",
+   option_display.key = "vice_ted_color_tint";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_ted_color_brightness",
+   option_display.key = "vice_ted_color_saturation";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_ted_color_contrast";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_ted_color_brightness";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #elif defined(__XPET__)
    option_display.key = "vice_pet_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_crtc_filter",
+   option_display.key = "vice_crtc_filter";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_crtc_filter_oddline_phase";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_crtc_filter_oddline_offset";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #elif defined(__XCBM2__)
    option_display.key = "vice_cbm2_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_crtc_filter",
+   option_display.key = "vice_crtc_filter";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_crtc_filter_oddline_phase";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_crtc_filter_oddline_offset";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #else
    option_display.key = "vice_external_palette";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vicii_filter",
+   option_display.key = "vice_vicii_filter";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vicii_color_gamma",
+   option_display.key = "vice_vicii_filter_oddline_phase";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vicii_color_tint",
+   option_display.key = "vice_vicii_filter_oddline_offset";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vicii_color_saturation",
+   option_display.key = "vice_vicii_color_gamma";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vicii_color_contrast",
+   option_display.key = "vice_vicii_color_tint";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
-   option_display.key = "vice_vicii_color_brightness",
+   option_display.key = "vice_vicii_color_saturation";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vicii_color_contrast";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_vicii_color_brightness";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
 #endif
 }

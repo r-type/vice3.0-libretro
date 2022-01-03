@@ -149,8 +149,8 @@ unsigned int opt_autostart = 1;
 unsigned int opt_autoloadwarp = 0;
 unsigned int opt_warp_boost = 1;
 unsigned int opt_read_vicerc = 0;
-static unsigned int opt_work_disk_type = 0;
-static unsigned int opt_work_disk_unit = 8;
+unsigned int opt_work_disk_type = 0;
+unsigned int opt_work_disk_unit = 8;
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
 static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
@@ -1273,7 +1273,7 @@ void update_work_disk()
    path_join((char*)&work_disk_filepath, retro_save_directory, work_disk_filename);
 
    /* Skip if device unit collides with autostart */
-   if (!string_is_empty(full_path) && work_disk_unit == 8)
+   if (!string_is_empty(full_path) && work_disk_unit == 8 && dc->unit == 8)
       work_disk_type = 0;
    if (work_disk_type)
    {
@@ -1644,7 +1644,7 @@ void update_from_vice()
       dc->eject_state = false;
       display_current_image(vsf_label, true);
    }
-   else
+   else if (!opt_work_disk_type)
    {
       dc->eject_state = true;
       display_current_image("", false);
@@ -2460,7 +2460,7 @@ static void retro_set_core_options()
          "vice_work_disk",
          "Media > Global Work Disk",
          "Global Work Disk",
-         "Global disk in device 8 is only inserted when core is started without content. Files and directories are named 'vice_work'.\n",
+         "Work disk in device 8 will not be inserted when floppy content is launched. Files and directories are named 'vice_work'.",
          NULL,
          "media",
          {

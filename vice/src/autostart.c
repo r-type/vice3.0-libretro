@@ -86,6 +86,8 @@
 #include "libretro.h"
 #include "libretro-glue.h"
 extern unsigned int opt_autostart;
+extern unsigned int opt_work_disk_type;
+extern unsigned int opt_work_disk_unit;
 #endif
 
 #ifdef DEBUG_AUTOSTART
@@ -1565,7 +1567,7 @@ int autostart_disk(int unit, int drive, const char *file_name, const char *progr
             return 0;
         }
 #ifdef __LIBRETRO__
-        else if (!strendswith(file_name, "vsf"))
+        else if (!strendswith(file_name, "vsf") && !opt_work_disk_type)
             resources_set_int("Drive8Type", 0);
 #endif
     }

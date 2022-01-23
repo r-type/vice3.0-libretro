@@ -79,6 +79,7 @@
 #include "libretro-core.h"
 extern unsigned int opt_read_vicerc;
 extern char full_path[RETRO_PATH_MAX];
+extern char retro_temp_directory[RETRO_PATH_MAX];
 
 static char *argv0 = NULL;
 static char *boot_path = NULL;
@@ -518,7 +519,9 @@ char *archdep_tmpnam(void)
     lib_free(tmpName);
     return lib_strdup(tmpName);
 #elif __LIBRETRO__
-    return NULL;
+    char tmp_name[RETRO_PATH_MAX];
+    snprintf(tmp_name, sizeof(tmp_name), "%s%s%s%d", retro_temp_directory, FSDEV_DIR_SEP_STR, "vice-tmp-", rand());
+    return lib_strdup(tmp_name);
 #else
     return lib_strdup(tmpnam(NULL));
 #endif

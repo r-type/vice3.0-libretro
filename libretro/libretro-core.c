@@ -2524,8 +2524,8 @@ static void retro_set_core_options()
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
             /* Automatic only for VIC-II */
             { "auto", "Automatic" },
-#endif
             { "auto_disable", "Auto-Disable" },
+#endif
             { "manual", "Manual" },
             { NULL, NULL },
          },
@@ -3221,7 +3221,7 @@ static void retro_set_core_options()
          "vice_resid_gain",
          "Audio > ReSID Filter Gain",
          "ReSID Filter Gain",
-         "Gain in percent.",
+         "Filter gain in percent.",
          NULL,
          "audio",
          {

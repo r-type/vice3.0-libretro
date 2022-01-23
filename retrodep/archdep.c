@@ -73,6 +73,7 @@
 #include "arch/shared/archdep_extra_title_text.c"
 #include "arch/shared/archdep_default_portable_resource_file_name.c"
 #include "arch/shared/archdep_join_paths.c"
+#include "arch/shared/archdep_kbd_get_host_mapping.h"
 #include "arch/shared/archdep_stat.c"
 #include "arch/shared/archdep_quote_unzip.c"
 
@@ -687,8 +688,9 @@ char *archdep_get_runtime_cpu(void)
 }
 
 /* 3.5 -> */
-void archdep_kbd_get_host_mapping(void)
+int archdep_kbd_get_host_mapping(void)
 {
+    return KBD_MAPPING_US;
 }
 
 int archdep_is_haiku(void)

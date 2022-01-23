@@ -129,6 +129,9 @@ include:
     file: '/tvos-arm64.yml'
 
   #################################### MISC ##################################
+  # Emscripten
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/emscripten-static.yml'
 
 # Stages for building
 stages:
@@ -278,6 +281,13 @@ libretro-build-vita:
     - .libretro-vita-static-retroarch-master
     - .core-defs
 
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
+    - .core-defs
+
 ################
 ## vice_x64sc ##
 ################
@@ -403,6 +413,13 @@ libretro-build-vita-x64sc:
     - .libretro-vita-static-retroarch-master
     - .core-defs-x64sc
 
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten-x64sc:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
+    - .core-defs-x64sc
+
 ###############
 ## vice_x128 ##
 ###############
@@ -519,6 +536,13 @@ libretro-build-wiiu-x128:
     - .libretro-wiiu-static-retroarch-master
     - .core-defs-x128
 
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten-x128:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
+    - .core-defs-x128
+
 ################
 ## vice_xcbm2 ##
 ################
@@ -633,6 +657,13 @@ libretro-build-wii-xcbm2:
 libretro-build-wiiu-xcbm2:
   extends:
     - .libretro-wiiu-static-retroarch-master
+    - .core-defs-xcbm2
+
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten-xcbm2:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
     - .core-defs-xcbm2
 
 ##################
@@ -759,6 +790,13 @@ libretro-build-wiiu-xcbm5x0:
     - .libretro-wiiu-static-retroarch-master
     - .core-defs-xcbm5x0
 
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten-xcbm5x0:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
+    - .core-defs-xcbm5x0
+
 ###############
 ## vice_xpet ##
 ###############
@@ -875,6 +913,13 @@ libretro-build-wiiu-xpet:
     - .libretro-wiiu-static-retroarch-master
     - .core-defs-xpet
 
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten-xpet:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
+    - .core-defs-xpet
+
 #################
 ## vice_xplus4 ##
 #################
@@ -989,6 +1034,13 @@ libretro-build-wii-xplus4:
 libretro-build-wiiu-xplus4:
   extends:
     - .libretro-wiiu-static-retroarch-master
+    - .core-defs-xplus4
+
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten-xplus4:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
     - .core-defs-xplus4
 
 ##################
@@ -1115,6 +1167,13 @@ libretro-build-wiiu-xscpu64:
     - .libretro-wiiu-static-retroarch-master
     - .core-defs-xscpu64
 
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten-xscpu64:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
+    - .core-defs-xscpu64
+
 ###############
 ## vice_xvic ##
 ###############
@@ -1229,4 +1288,11 @@ libretro-build-wii-xvic:
 libretro-build-wiiu-xvic:
   extends:
     - .libretro-wiiu-static-retroarch-master
+    - .core-defs-xvic
+
+################################### MISC #####################################
+# Emscripten
+libretro-build-emscripten-xvic:
+  extends:
+    - .libretro-emscripten-static-retroarch-master
     - .core-defs-xvic

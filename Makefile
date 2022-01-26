@@ -150,7 +150,7 @@ else ifeq ($(platform), osx)
       OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
    endif
 ifeq ($(OSX_LT_MAVERICKS),YES)
-   MINVERSION = -mmacosx-version-min=10.1
+   MINVERSION = -mmacosx-version-min=10.4
 else
    fpic += -stdlib=libc++
 endif

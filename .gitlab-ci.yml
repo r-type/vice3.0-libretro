@@ -86,6 +86,10 @@ include:
   - project: 'libretro-infrastructure/ci-templates'
     file: '/osx-arm64.yml'
 
+  # MacOS PPC
+  - project: 'libretro-infrastructure/ci-templates'
+    file: '/osx-ppc.yml'
+
   ################################## CELLULAR ################################
   # Android
   - project: 'libretro-infrastructure/ci-templates'
@@ -185,7 +189,13 @@ libretro-build-osx-arm64:
   extends:
     - .libretro-osx-arm64-make-default
     - .core-defs
-    
+
+# MacOS PPC
+libretro-build-osx-ppc:
+  extends:
+    - .libretro-osx-ppc-make-default
+    - .core-defs
+
 ################################### CELLULAR #################################
 # Android ARMv7a
 android-armeabi-v7a:
@@ -323,6 +333,12 @@ libretro-build-osx-arm64-x64sc:
     - .libretro-osx-arm64-make-default
     - .core-defs-x64sc
 
+# MacOS PPC
+libretro-build-osx-ppc-x64sc:
+  extends:
+    - .libretro-osx-ppc-make-default
+    - .core-defs-x64sc
+
 ################################### CELLULAR #################################
 # Android ARMv7a
 android-armeabi-v7a-x64sc:
@@ -448,6 +464,12 @@ libretro-build-osx-arm64-x128:
     - .libretro-osx-arm64-make-default
     - .core-defs-x128
 
+# MacOS PPC
+libretro-build-osx-ppc-x128:
+  extends:
+    - .libretro-osx-ppc-make-default
+    - .core-defs-x128
+
 # Android
 android-armeabi-v7a-x128:
   extends:
@@ -564,6 +586,12 @@ libretro-build-osx-arm64-xcbm2:
     - .libretro-osx-arm64-make-default
     - .core-defs-xcbm2
 
+# MacOS PPC
+libretro-build-osx-ppc-xcbm2:
+  extends:
+    - .libretro-osx-ppc-make-default
+    - .core-defs-xcbm2
+
 # Android
 android-armeabi-v7a-xcbm2:
   extends:
@@ -678,6 +706,12 @@ libretro-build-osx-arm64-xcbm5x0:
     - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
+    - .core-defs-xcbm5x0
+
+# MacOS PPC
+libretro-build-osx-ppc-xcbm5x0:
+  extends:
+    - .libretro-osx-ppc-make-default
     - .core-defs-xcbm5x0
 
 # Android
@@ -804,6 +838,12 @@ libretro-build-osx-arm64-xpet:
     - .libretro-osx-arm64-make-default
     - .core-defs-xpet
 
+# MacOS PPC
+libretro-build-osx-ppc-xpet:
+  extends:
+    - .libretro-osx-ppc-make-default
+    - .core-defs-xpet
+
 # Android
 android-armeabi-v7a-xpet:
   extends:
@@ -920,6 +960,12 @@ libretro-build-osx-arm64-xplus4:
     - .libretro-osx-arm64-make-default
     - .core-defs-xplus4
 
+# MacOS PPC
+libretro-build-osx-ppc-xplus4:
+  extends:
+    - .libretro-osx-ppc-make-default
+    - .core-defs-xplus4
+
 # Android
 android-armeabi-v7a-xplus4:
   extends:
@@ -1034,6 +1080,12 @@ libretro-build-osx-arm64-xscpu64:
     - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
+    - .core-defs-xscpu64
+
+# MacOS PPC
+libretro-build-osx-ppc-xscpu64:
+  extends:
+    - .libretro-osx-ppc-make-default
     - .core-defs-xscpu64
 
 # Android
@@ -1158,6 +1210,12 @@ libretro-build-osx-arm64-xvic:
     - macosx-packaging
   extends:
     - .libretro-osx-arm64-make-default
+    - .core-defs-xvic
+
+# MacOS PPC
+libretro-build-osx-ppc-xvic:
+  extends:
+    - .libretro-osx-ppc-make-default
     - .core-defs-xvic
 
 # Android

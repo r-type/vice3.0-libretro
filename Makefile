@@ -144,17 +144,21 @@ else ifeq ($(platform), osx)
    MINVERSION :=
    ifeq ($(arch),ppc)
       COMMONFLAGS += -DBLARGG_BIG_ENDIAN=1 -D__ppc__
+      OSX_LT_MAVERICKS = YES
+   else
+      OSXVER = `sw_vers -productVersion | cut -d. -f 2`
+      OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
    endif
-   OSXVER = `sw_vers -productVersion | cut -d. -f 2`
-   OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
 ifeq ($(OSX_LT_MAVERICKS),YES)
-   MINVERSION = -mmacosx-version-min=10.1
+   MINVERSION = -mmacosx-version-min=10.4
 else
    fpic += -stdlib=libc++
 endif
    fpic += $(MINVERSION)
    CFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
    CXXFLAGS += -DHAVE_STRLCPY -DHAVE_VSNPRINTF -DHAVE_SNPRINTF -DHAVE_STPCPY -D_INTTYPES_H
+
+   CFLAGS += -std=gnu99
    ifeq ($(CROSS_COMPILE),1)
 	TARGET_RULE   = -target $(LIBRETRO_APPLE_PLATFORM) -isysroot $(LIBRETRO_APPLE_ISYSROOT)
 	CFLAGS     += $(TARGET_RULE)

@@ -81,6 +81,7 @@
 #include "mon_ui.h"
 #include "mon_util.h"
 #include "monitor.h"
+#include "monitor_binary.h"
 #include "monitor_network.h"
 #include "montypes.h"
 #include "resources.h"
@@ -88,7 +89,9 @@
 #include "sysfile.h"
 #include "traps.h"
 #include "types.h"
+#endif
 #include "uiapi.h"
+#if 0
 #include "uimon.h"
 #include "util.h"
 #include "vsync.h"
@@ -858,8 +861,9 @@ int monitor_is_binary(void)
    return 0;
 }
 
-void monitor_binary_ui_jam_dialog(const char *format, ...)
+ui_jam_action_t monitor_binary_ui_jam_dialog(const char *format, ...)
 {
+   return UI_JAM_NONE;
 }
 
 void monitor_reset_hook(void)

@@ -144,9 +144,11 @@ else ifeq ($(platform), osx)
    MINVERSION :=
    ifeq ($(arch),ppc)
       COMMONFLAGS += -DBLARGG_BIG_ENDIAN=1 -D__ppc__
+      OSX_LT_MAVERICKS = YES
+   else
+      OSXVER = `sw_vers -productVersion | cut -d. -f 2`
+      OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
    endif
-   OSXVER = `sw_vers -productVersion | cut -d. -f 2`
-   OSX_LT_MAVERICKS = `(( $(OSXVER) <= 9)) && echo "YES"`
 ifeq ($(OSX_LT_MAVERICKS),YES)
    MINVERSION = -mmacosx-version-min=10.1
 else

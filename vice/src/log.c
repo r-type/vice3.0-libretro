@@ -497,7 +497,7 @@ int log_debug(const char *format, ...)
     int rc;
 
     va_start(ap, format);
-#if 1
+#if 0
     vprintf(format, ap);
     printf("\n");
 #else

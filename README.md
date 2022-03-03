@@ -214,8 +214,6 @@ xvic -memory 20 "/path/to/rom/some-8k-game.d64"
 
 ## Build instructions
 
-Remember to run `make clean EMUTYPE=x` when building different EMUTYPEs.
-
 Currently working EMUTYPEs:
 
 - `x64`
@@ -229,22 +227,20 @@ Currently working EMUTYPEs:
 - `xscpu64`
 - `xvic`
 
-### Linux
+Remember to run `make clean EMUTYPE=x` or `make objectclean EMUTYPE=x` first before `make EMUTYPE=x` when building different EMUTYPEs.
+
+`x64` is the default when `EMUTYPE` is not defined.
+
+### Linux & Windows
 
 ```
-CC=gcc make -j4
-```
-
-### Windows
-
-```
-make -j4
+make
 ```
 
 ### Win64 (crossbuild)
 
 ```
-make platform=wincross64 -j4
+make platform=wincross64
 ```
 
 ### Android standalone toolchain Build
@@ -254,7 +250,7 @@ export path to your standalone toolchain like
 
 export PATH=$PATH:/opt/standtc/bin
 
-make platform=androidstc -j4
+make platform=androidstc
 ```
 
 ### Android ndk Build

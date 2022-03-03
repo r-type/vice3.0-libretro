@@ -1579,6 +1579,16 @@ void update_from_vice()
                file_system_attach_disk(dc->unit, 0, attachedImage);
             }
          }
+#if defined(__XPLUS4__)
+         /* Band-aid for disk drive issues:
+          * - D64s fail to read
+          * - D81s fail to stop drive sound emulation */
+         if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_FLOPPY)
+         {
+            log_resources_set_int("Drive8Type", 0);
+            autodetect_drivetype(dc->unit);
+         }
+#endif
       }
       else if (dc->unit == 0)
       {

@@ -540,12 +540,11 @@ void vsync_do_end_of_line(void)
              */
 
             sync_target_tick += sync_emulated_ticks;
-#ifndef __LIBRETRO__
+
             /* Some tricky wrap around cases to deal with */
             if (sync_target_tick - tick_now > 0 && sync_target_tick - tick_now < tick_per_second()) {
                 tick_sleep(sync_target_tick - tick_now);
             }
-#endif
         }
         
         last_sync_tick = tick_now;

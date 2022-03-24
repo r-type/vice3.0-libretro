@@ -3,8 +3,6 @@
  *
  */
 
-#ifdef __LIBRETRO__
-
 #include "vice.h"
 #include "sound.h"
 
@@ -20,7 +18,7 @@ static int retro_sound_init(const char *param, int *speed, int *fragsize, int *f
     return 0;
 }
 
-static int retro_write(SWORD *pbuf, size_t nr)
+static int retro_sound_write(SWORD *pbuf, size_t nr)
 {
 #if 0
     printf("pbuf:%d nr:%d\n", *pbuf, nr);
@@ -29,24 +27,20 @@ static int retro_write(SWORD *pbuf, size_t nr)
     return 0;
 }
 
-static int retro_flush(char *state)
-{
-    return 0;
-}
-
 static sound_device_t retro_device =
 {
-    "retro",
-    retro_sound_init,
-    retro_write,
-    NULL,
-    NULL,/*retro_flush,*/
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    0,
-    2
+    "retro",            /* name */
+    retro_sound_init,   /* init */
+    retro_sound_write,  /* write */
+    NULL,               /* dump */
+    NULL,               /* flush */
+    NULL,               /* bufferspace */
+    NULL,               /* close */
+    NULL,               /* suspend */
+    NULL,               /* resume */
+    0,                  /* need_attenuation */
+    2,                  /* max_channels */
+    true                /* is_timing_source */
 };
 
 int sound_init_retro_device(void)
@@ -54,4 +48,3 @@ int sound_init_retro_device(void)
     return sound_register_device(&retro_device);
 }
 
-#endif

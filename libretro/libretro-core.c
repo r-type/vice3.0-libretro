@@ -111,6 +111,13 @@ static bool pix_bytes_initialized = false;
 unsigned short int retro_bmp[RETRO_BMP_SIZE] = {0};
 unsigned int retro_bmp_offset = 0;
 
+/* Audio output buffer */
+static struct {
+   int16_t *data;
+   int32_t size;
+   int32_t capacity;
+} output_audio_buffer = {NULL, 0, 0};
+
 /* Audio buffer copy for auto warp detection */
 int16_t *audio_buffer;
 static bool audio_is_playing = false;
@@ -1764,6 +1771,40 @@ void reload_restart(void)
 
    /* Now read disk image and autostart file (may be the same or not) from vice */
    update_from_vice();
+}
+
+/* Audio buffer */
+static void ensure_output_audio_buffer_capacity(int32_t capacity)
+{
+   if (capacity <= output_audio_buffer.capacity) {
+      return;
+   }
+
+   output_audio_buffer.data = realloc(output_audio_buffer.data, capacity * sizeof(*output_audio_buffer.data));
+   output_audio_buffer.capacity = capacity;
+   log_cb(RETRO_LOG_DEBUG, "Output audio buffer capacity set to %d\n", capacity);
+}
+
+static void init_output_audio_buffer(int32_t capacity)
+{
+   output_audio_buffer.data = NULL;
+   output_audio_buffer.size = 0;
+   output_audio_buffer.capacity = 0;
+   ensure_output_audio_buffer_capacity(capacity);
+}
+
+static void free_output_audio_buffer()
+{
+   free(output_audio_buffer.data);
+   output_audio_buffer.data = NULL;
+   output_audio_buffer.size = 0;
+   output_audio_buffer.capacity = 0;
+}
+
+static void upload_output_audio_buffer()
+{
+   audio_batch_cb(output_audio_buffer.data, output_audio_buffer.size / 2);
+   output_audio_buffer.size = 0;
 }
 
 /* FPS counter + mapper tick */
@@ -7072,6 +7113,7 @@ void retro_init(void)
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_ACHIEVEMENTS, &achievements);
 
    memset(retro_bmp, 0, sizeof(retro_bmp));
+   init_output_audio_buffer(2048);
 
    retro_ui_finalized = false;
    update_variables();
@@ -7098,6 +7140,9 @@ void retro_deinit(void)
 
    /* Free buffers uses by libretro-graph */
    libretro_graph_free();
+
+   /* Free audio buffer */
+   free_output_audio_buffer();
 
    /* 'Reset' troublesome static variables */
    libretro_supports_bitmasks = false;
@@ -7489,18 +7534,22 @@ void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb)
 
 #define RETRO_AUDIO_BATCH
 
-void retro_audio_render(const int16_t *data, size_t frames)
+void retro_audio_queue(const int16_t *data, int32_t samples)
 {
-   if ((frames < 1) || !runstate)
+   if ((samples < 1) || !runstate)
       return;
+
 #if ARCHDEP_SOUND_OUTPUT_MODE == SOUND_OUTPUT_STEREO
 #ifdef RETRO_AUDIO_BATCH
-   audio_batch_cb(data, frames >> 1);
+   if (output_audio_buffer.capacity - output_audio_buffer.size < samples)
+      ensure_output_audio_buffer_capacity((output_audio_buffer.capacity + samples) * 1.5);
+   memcpy(output_audio_buffer.data + output_audio_buffer.size, data, samples * sizeof(*output_audio_buffer.data));
+   output_audio_buffer.size += samples;
 #else
-   for (int x = 0; x < frames; x += 2) audio_cb(data[x], data[x+1]);
+   for (int x = 0; x < samples; x += 2) audio_cb(data[x], data[x + 1]);
 #endif
 #elif ARCHDEP_SOUND_OUTPUT_MODE == SOUND_OUTPUT_MONO
-   for (int x = 0; x < frames; x++) audio_cb(data[x], data[x]);
+   for (int x = 0; x < samples; x++) audio_cb(data[x], data[x]);
 #endif
 }
 
@@ -7725,6 +7774,9 @@ void retro_run(void)
 
    /* Video output */
    video_cb(retro_bmp + retro_bmp_offset, zoomed_width, zoomed_height, retrow << (pix_bytes >> 1));
+
+   /* Audio output */
+   upload_output_audio_buffer();
 
    /* Update geometry if model or zoom mode changes */
    if ((lastw == retrow && lasth == retroh) && zoom_mode_id != zoom_mode_id_prev)

@@ -7,7 +7,7 @@
 #include "sound.h"
 
 #include "libretro-core.h"
-extern void retro_audio_render(const int16_t *data, size_t frames);
+extern void retro_audio_queue(const int16_t *data, int32_t samples);
 
 static int retro_sound_init(const char *param, int *speed, int *fragsize, int *fragnr, int *channels)
 {
@@ -23,7 +23,7 @@ static int retro_sound_write(SWORD *pbuf, size_t nr)
 #if 0
     printf("pbuf:%d nr:%d\n", *pbuf, nr);
 #endif
-    retro_audio_render(pbuf, nr);
+    retro_audio_queue(pbuf, nr);
     return 0;
 }
 

@@ -135,9 +135,17 @@
 /* Can we use the ZLIB compression library? */
 #define HAVE_ZLIB 1
 
-/* Define to the full name of this package. */
+/* Name of package */
 #define PACKAGE "vice"
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "VICE"
+
 /* Define to the full name and version of this package. */
+#define PACKAGE_STRING "VICE 3.5"
+
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "3.5"
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void

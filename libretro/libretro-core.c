@@ -2442,7 +2442,7 @@ static void retro_set_core_options()
          "vice_warp_boost",
          "Media > Warp Boost",
          "Warp Boost",
-         "Make Warp Mode much faster by temporary changing SID emulation to 'FastSID' while warping.",
+         "Make warp mode much faster by changing SID emulation to 'FastSID' while warping.",
          NULL,
          "media",
          {

@@ -181,6 +181,16 @@ extern int zoom_mode_id_prev;
 #define ZOOM_LEFT_BORDER 32
 #endif
 
+/* LED interface */
+enum
+{
+   RETRO_LED_POWER = 0,
+   RETRO_LED_DRIVE,
+   RETRO_LED_TAPE,
+   RETRO_LED_NUM
+};
+
+/* Runstate */
 enum
 {
    RUNSTATE_FIRST_START = 0,
@@ -188,6 +198,7 @@ enum
    RUNSTATE_RUNNING
 };
 
+/* Retropad options */
 enum
 {
    RETROPAD_OPTIONS_DISABLED = 0,

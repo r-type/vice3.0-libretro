@@ -230,8 +230,6 @@ bool libretro_ff_enabled = false;
 static bool libretro_supports_option_categories = false;
 #define HAVE_NO_LANGEXTRA
 
-static unsigned int retro_led_state[3] = {0};
-unsigned int vice_led_state[3] = {0};
 
 char retro_save_directory[RETRO_PATH_MAX] = {0};
 char retro_temp_directory[RETRO_PATH_MAX] = {0};
@@ -1830,19 +1828,22 @@ static int retro_keymap_id(const char *val)
    return 0;
 }
 
+unsigned int vice_led_state[RETRO_LED_NUM] = {0};
+static unsigned int retro_led_state[RETRO_LED_NUM] = {0};
 static void retro_led_interface(void)
 {
    /* 0: Power
     * 1: Floppy
     * 2: Tape */
 
-   unsigned int led_state[3] = {0};
+   unsigned int led_state[RETRO_LED_NUM] = {0};
+   unsigned int l                        = 0;
 
-   led_state[0] = (request_restart) ? 0 : 1;
-   led_state[1] = (vice_opt.DriveTrueEmulation) ? vice_led_state[1] : 0;
-   led_state[2] = vice_led_state[2];
+   led_state[RETRO_LED_POWER] = (request_restart) ? 0 : 1;
+   led_state[RETRO_LED_DRIVE] = (vice_opt.DriveTrueEmulation) ? vice_led_state[RETRO_LED_DRIVE] : 0;
+   led_state[RETRO_LED_TAPE]  = vice_led_state[RETRO_LED_TAPE];
 
-   for (unsigned l = 0; l < sizeof(led_state)/sizeof(led_state[0]); l++)
+   for (l = 0; l < RETRO_LED_NUM; l++)
    {
       if (retro_led_state[l] != led_state[l])
       {
@@ -4625,9 +4626,9 @@ void retro_set_environment(retro_environment_t cb)
    bool support_no_game = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &support_no_game);
 
-   static struct retro_led_interface led_interface;
+   struct retro_led_interface led_interface;
    environ_cb(RETRO_ENVIRONMENT_GET_LED_INTERFACE, &led_interface);
-   if (led_interface.set_led_state)
+   if (led_interface.set_led_state && !led_state_cb)
       led_state_cb = led_interface.set_led_state;
 
 #ifdef USE_LIBRETRO_VFS
@@ -7782,7 +7783,8 @@ void retro_run(void)
    }
 
    /* LED interface */
-   retro_led_interface();
+   if (led_state_cb)
+      retro_led_interface();
 
    /* Virtual keyboard */
    if (retro_vkbd)

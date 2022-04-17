@@ -77,7 +77,7 @@
 #include <stdbool.h>
 #include "libretro-core.h"
 extern unsigned int opt_autoloadwarp;
-extern unsigned int vice_led_state[3];
+extern unsigned int vice_led_state[RETRO_LED_NUM];
 extern bool retro_disk_get_eject_state(void);
 static int warpmode_counter_ledon = 0;
 static int warpmode_counter_ledoff = 0;
@@ -854,7 +854,7 @@ void drive_update_ui_status(void)
             {
                 int warp = -1;
                 int drive_half_track = drive0->current_half_track;
-                int drive_led_status = vice_led_state[1];
+                int drive_led_status = vice_led_state[RETRO_LED_DRIVE];
                 bool audio           = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) ? audio_playing() : false;
 
                 if ((drive_half_track != drive_half_track_prev) && !retro_warp_mode_enabled() && !audio)

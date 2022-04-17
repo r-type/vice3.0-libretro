@@ -46,7 +46,7 @@
 #include "libretro-mapper.h"
 
 extern unsigned int mouse_value[2 + 1];
-extern unsigned int vice_led_state[3];
+extern unsigned int vice_led_state[RETRO_LED_NUM];
 extern unsigned int opt_joyport_type;
 extern unsigned int opt_autoloadwarp;
 extern int RGBc(int r, int g, int b);
@@ -471,7 +471,7 @@ void ui_display_drive_track(unsigned int drive_number, unsigned int drive_base, 
 void ui_display_drive_led(unsigned int drive_number, unsigned int drive_base, unsigned int pwm1, unsigned int led_pwm2)
 {
     drive_pwm = pwm1;
-    vice_led_state[1] = (drive_pwm > 1) ? 1 : 0;
+    vice_led_state[RETRO_LED_DRIVE] = (drive_pwm > 1) ? 1 : 0;
     return;
 
     char c;
@@ -510,7 +510,7 @@ static void display_tape(void)
         return;
 
     if (tape_enabled)
-        vice_led_state[2] = (tape_control == 1 && tape_motor) ? 1 : 0;
+        vice_led_state[RETRO_LED_TAPE] = (tape_control == 1 && tape_motor) ? 1 : 0;
 
     if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || retro_warp_mode_enabled()) && !retro_warpmode)
     {

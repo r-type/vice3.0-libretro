@@ -1606,6 +1606,7 @@ void update_from_vice()
       opt_jiffydos_allow = 0;
       opt_jiffydos = 0;
       reload_restart();
+      return;
    }
 #endif
 

@@ -181,6 +181,7 @@ unsigned int opt_jiffydos = 0;
 unsigned int opt_supercpu_kernal = 0;
 #endif
 static unsigned int sound_volume_counter = 3;
+bool sound_drive_mute = false;
 unsigned int opt_audio_leak_volume = 0;
 int opt_datasette_sound_volume = 0;
 unsigned int opt_statusbar = 0;
@@ -1831,8 +1832,18 @@ void reload_restart(void)
 
    /* Update resources from environment just like on fresh start of core */
    sound_volume_counter_reset();
+
+   /* Mute floppy startup sound when not using floppies */
+   if ((dc_get_image_type(full_path) != DC_IMAGE_TYPE_FLOPPY)
+    && (!string_is_empty(dc->files[dc->index]) && dc_get_image_type(dc->files[dc->index]) != DC_IMAGE_TYPE_FLOPPY))
+      sound_drive_mute = true;
+
+   /* Reset file path tag model force */
    request_model_prev = -1;
+
+   /* Reset UI state */
    retro_ui_finalized = false;
+
    /* No need to update variables again on the first start */
    if (runstate > RUNSTATE_FIRST_START)
       update_variables();
@@ -7264,12 +7275,14 @@ bool retro_disk_set_eject_state(bool ejected)
                /* PRGs must autostart on attach, cartridges reset anyway */
                if (strendswith(dc->files[dc->index], "prg"))
                   emu_reset(0);
+               sound_volume_counter_reset();
                break;
             case 1:
                tape_image_attach(unit, dc->files[dc->index]);
                datasette_control(DATASETTE_CONTROL_START);
                break;
             default:
+               sound_drive_mute = false;
                file_system_attach_disk(unit, 0, dc->files[dc->index]);
                autodetect_drivetype(unit);
                break;

@@ -54,6 +54,7 @@ extern int RGBc(int r, int g, int b);
 extern bool retro_statusbar;
 extern float retro_refresh;
 extern int runstate;
+extern dc_storage *dc;
 
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
@@ -348,6 +349,9 @@ void display_current_image(const char *image, bool inserted)
         free(imagename_local);
         imagename_local = NULL;
     }
+
+    if (dc_get_image_type(dc->files[dc->index]) != DC_IMAGE_TYPE_FLOPPY)
+       drive_empty = true;
 
     if (drive_empty)
     {

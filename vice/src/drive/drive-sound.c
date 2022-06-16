@@ -1435,11 +1435,20 @@ static int sample_rate = 22050;
 extern int drive_sound_emulation;
 extern int drive_sound_emulation_volume;
 
+#ifdef __LIBRETRO__
+extern bool sound_drive_mute;
+#endif
+
 static int drive_sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr, int soc, int scc, int *delta_t)
 {
     int i, j, nos = 0;
     static int div = 0;
     int m, s;
+
+#ifdef __LIBRETRO__
+    if (sound_drive_mute)
+        return nr;
+#endif
 
     for (i = 0; i < nr; i++) {
         for (j = 0; j < NUM_DISK_UNITS; j++) {

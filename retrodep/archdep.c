@@ -337,7 +337,7 @@ char *archdep_default_resource_file_name(void)
             return util_concat(boot_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
         }
         else
-            return util_concat(boot_path, FSDEV_DIR_SEP_STR, "vicerc-dummy", NULL);
+            return util_concat(boot_path, FSDEV_DIR_SEP_STR, "", NULL);
     }
 }
 

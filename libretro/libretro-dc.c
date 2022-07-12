@@ -353,7 +353,7 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
    if (!string_is_empty(label))
       snprintf(file_label, sizeof(file_label), "%s", label);
    else
-      fill_short_pathname_representation(file_label, filename, sizeof(file_label));
+      fill_pathname(file_label, path_baseaname(filename), "", sizeof(file_label));
 
    /* Copy and return */
    return dc_add_file_int(dc, filename, file_label, disk_label, program);
@@ -525,7 +525,7 @@ bool dc_replace_file(dc_storage* dc, int index, const char* filename)
       {
          char image_label[RETRO_PATH_MAX];
          image_label[0] = '\0';
-         fill_short_pathname_representation(image_label, full_path_replace, sizeof(image_label));
+	 fill_pathname(image_label, path_basename(full_path_replace), "", sizeof(image_label));
 
          /* Dupecheck */
          for (unsigned i = 0; i < dc->count - 1; i++)
@@ -920,9 +920,9 @@ void dc_parse_list(dc_storage* dc, const char* list_file, bool is_vfl, const cha
             tmp[0] = '\0';
 
             if (!string_is_empty(browsed_file))
-               fill_short_pathname_representation(tmp, browsed_file, sizeof(tmp));
+               fill_pathname(tmp, path_basename(browsed_file), "", sizeof(tmp));
             else
-               fill_short_pathname_representation(tmp, file_path, sizeof(tmp));
+               fill_pathname(tmp, path_basename(file_path), "", sizeof(tmp));
 
             image_name = strdup(tmp);
          }

@@ -1734,7 +1734,7 @@ void update_from_vice()
    else if (autostartString && strendswith(autostartString, "vsf"))
    {
       char vsf_label[RETRO_PATH_MAX];
-      fill_short_pathname_representation(vsf_label, autostartString, sizeof(vsf_label));
+      fill_pathname(vsf_label, path_basename(autostartString), "", sizeof(vsf_label));
       dc->eject_state = false;
       display_current_image(vsf_label, true);
    }

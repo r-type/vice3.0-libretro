@@ -353,7 +353,7 @@ bool dc_add_file(dc_storage* dc, const char* filename, const char* label, const 
    if (!string_is_empty(label))
       snprintf(file_label, sizeof(file_label), "%s", label);
    else
-      fill_pathname(file_label, path_baseaname(filename), "", sizeof(file_label));
+      fill_pathname(file_label, path_basename(filename), "", sizeof(file_label));
 
    /* Copy and return */
    return dc_add_file_int(dc, filename, file_label, disk_label, program);

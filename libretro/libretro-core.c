@@ -2510,37 +2510,7 @@ static void retro_set_core_options()
          "autostart"
       },
 #endif
-#if !defined(__XPET__) && !defined(__X64DTV__)
-      /* Sublabel and options filled dynamically in retro_set_environment() */
-      {
-         "vice_cartridge",
-         "Media > Cartridge",
-         "Cartridge",
-         "",
-         NULL,
-         "media",
-         {
-            { NULL, NULL },
-         },
-         NULL
-      },
-#endif
 #if !defined(__X64DTV__)
-      {
-         "vice_autostart",
-         "Media > Autostart",
-         "Autostart",
-         "'ON' always runs content, 'OFF' runs only PRG/CRT, 'Warp' turns warp mode on during autostart loading.",
-         NULL,
-         "media",
-         {
-            { "disabled", NULL },
-            { "enabled", NULL },
-            { "warp", "Warp" },
-            { NULL, NULL },
-         },
-         "enabled"
-      },
       {
          "vice_autoloadwarp",
          "Media > Automatic Load Warp",
@@ -2570,6 +2540,21 @@ static void retro_set_core_options()
          {
             { "disabled", NULL },
             { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "enabled"
+      },
+      {
+         "vice_autostart",
+         "Media > Autostart",
+         "Autostart",
+         "'ON' always runs content, 'OFF' runs only PRG/CRT, 'Warp' turns warp mode on during autostart loading.",
+         NULL,
+         "media",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { "warp", "Warp" },
             { NULL, NULL },
          },
          "enabled"
@@ -2654,6 +2639,21 @@ static void retro_set_core_options()
          "disabled"
       },
 #endif /* !defined(__X64DTV__) */
+#if !defined(__XPET__) && !defined(__X64DTV__)
+      /* Sublabel and options filled dynamically in retro_set_environment() */
+      {
+         "vice_cartridge",
+         "Media > Cartridge",
+         "Cartridge",
+         "",
+         NULL,
+         "media",
+         {
+            { NULL, NULL },
+         },
+         NULL
+      },
+#endif
       {
          "vice_video_options_display",
          "Show Video Options",

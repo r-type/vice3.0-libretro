@@ -337,6 +337,8 @@ char *archdep_default_resource_file_name(void)
             return util_concat(boot_path, FSDEV_DIR_SEP_STR, "vicerc", NULL);
         }
         else
+            /* Offer unreadable directory instead of non-existing dummy or NULL,
+             * because `resources_reset_and_load()` expects something */
             return util_concat(boot_path, FSDEV_DIR_SEP_STR, "", NULL);
     }
 }

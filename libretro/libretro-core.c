@@ -8425,6 +8425,8 @@ static void retro_unserialize_post(void)
    /* Disable warp */
    if (vsync_get_warp_mode())
       resources_set_int("WarpMode", 0);
+   /* Reset LED status */
+   vice_led_state[RETRO_LED_POWER] = vice_led_state[RETRO_LED_DRIVE] = vice_led_state[RETRO_LED_TAPE] = 0;
    /* Make rewinding sound less jarring */
    sound_volume_counter_reset();
    /* Dismiss possible restart request */

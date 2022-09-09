@@ -327,8 +327,6 @@ struct vice_raster_s
    unsigned blanked;
 };
 
-#define VICE_RASTER_COUNT 8
-
 extern struct vice_raster_s vice_raster;
 
 /* Dynamic cartridge core option info */

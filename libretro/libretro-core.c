@@ -4463,8 +4463,8 @@ static void retro_set_core_options()
       else if (!strcmp(option_defs_us[i].key, "vice_cartridge"))
       {
          j = 0;
-         option_defs_us[i].values[0].value = "none";
-         option_defs_us[i].values[0].label = "disabled";
+         option_defs_us[i].values[j].value = "none";
+         option_defs_us[i].values[j].label = "disabled";
          ++j;
 
          DIR *cart_dir;
@@ -4488,7 +4488,7 @@ static void retro_set_core_options()
                if (dc_get_image_type(cart_dirp->d_name) == DC_IMAGE_TYPE_MEM)
                {
                   char cart_value[RETRO_PATH_MAX] = {0};
-                  char cart_label[50] = {0};
+                  char cart_label[128] = {0};
                   snprintf(cart_value, sizeof(cart_value), "%s", cart_dirp->d_name);
                   snprintf(cart_label, sizeof(cart_label), "%s", path_remove_extension(cart_dirp->d_name));
 
@@ -4510,7 +4510,7 @@ static void retro_set_core_options()
          option_defs_us[i].values[j].label = NULL;
 
          /* Info sublabel */
-         char info[100] = {0};
+         char info[128] = {0};
          snprintf(info, sizeof(info), "Cartridge images go in 'system/vice/%s'.\nChanging while running resets the system!", machine_name);
          option_defs_us[i].info = strdup(info);
       }

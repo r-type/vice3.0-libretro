@@ -1835,9 +1835,15 @@ void reload_restart(void)
    sound_volume_counter_reset();
 
    /* Mute floppy startup sound when not using floppies */
-   if ((dc_get_image_type(full_path) != DC_IMAGE_TYPE_FLOPPY)
-    && (!string_is_empty(dc->files[dc->index]) && dc_get_image_type(dc->files[dc->index]) != DC_IMAGE_TYPE_FLOPPY))
-      sound_drive_mute = true;
+   {
+      char *content_path = full_path;
+      if (!string_is_empty(dc->files[dc->index]))
+         content_path = dc->files[dc->index];
+
+      if (dc_get_image_type(content_path) == DC_IMAGE_TYPE_TAPE ||
+          dc_get_image_type(content_path) == DC_IMAGE_TYPE_MEM)
+         sound_drive_mute = true;
+   }
 
    /* Reset file path tag model force */
    request_model_prev = -1;

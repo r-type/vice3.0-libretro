@@ -1663,16 +1663,6 @@ void update_from_vice()
                file_system_attach_disk(dc->unit, 0, attachedImage);
             }
          }
-#if defined(__XPLUS4__)
-         /* Band-aid for disk drive issues:
-          * - D64s fail to read
-          * - D81s fail to stop drive sound emulation */
-         if (dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_FLOPPY)
-         {
-            log_resources_set_int("Drive8Type", 0);
-            autodetect_drivetype(dc->unit);
-         }
-#endif
       }
       else if (dc->unit == 0)
       {
@@ -1869,6 +1859,23 @@ void reload_restart(void)
       }
 #endif
    }
+
+#if defined(__XPLUS4__)
+   /* Band-aid for disk drive issues:
+    * - D64s fail to read
+    * - D81s fail to stop drive sound emulation */
+   {
+      char *content_path = full_path;
+      if (!string_is_empty(dc->files[dc->index]))
+         content_path = dc->files[dc->index];
+
+      if (dc_get_image_type(content_path) == DC_IMAGE_TYPE_FLOPPY)
+      {
+         log_cb(RETRO_LOG_DEBUG, "XPLUS4 drive reset hack\n");
+         log_resources_set_int("Drive8Type", 0);
+      }
+   }
+#endif
 
    /* Reset file path tag model force */
    request_model_prev = -1;

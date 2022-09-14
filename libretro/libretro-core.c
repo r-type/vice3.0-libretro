@@ -2561,6 +2561,7 @@ static void retro_set_core_options()
          },
          "disabled"
       },
+#if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
       {
          "vice_warp_boost",
          "Media > Warp Boost",
@@ -2575,6 +2576,7 @@ static void retro_set_core_options()
          },
          "enabled"
       },
+#endif
       {
          "vice_autostart",
          "Media > Autostart",

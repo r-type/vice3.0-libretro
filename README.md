@@ -45,10 +45,10 @@ Long press for sticky keys. Stickying the third key will replace the second.
 
 Older C64 games tend to use joystick port 1 and newer ones tend to use port 2 for player 1. There are several ways to switch ports in this core:
 
-- Use the core option: `Quick Menu > Options > RetroPad Port`
+- Use the core option: `Quick Menu > Core Options > RetroPad Port`
 - Bring up the virtual keyboard with `Select` button, and press the key labeled `JOYP`
 - Press the default keyboard shortcut `Right Control`
-- Assign `Switch Joyport` to any RetroPad button under `Quick Menu > Options`
+- Assign `Switch Joyport` to any RetroPad button under `Quick Menu > Core Options`
 - Rename the game, eg. `Bruce_Lee_j1.tap` or `Bruce_Lee_(j1).tap` for port 1, and similarly `Bruce_Lee_j2.tap` or `Bruce_Lee_(j2).tap` for port 2
 - Add `-j1` or `-j2` parameters in custom command line `.cmd`
 

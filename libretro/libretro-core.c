@@ -1679,7 +1679,8 @@ void update_from_vice()
 #elif defined(__XPLUS4__)
                cartridge_attach_image(CARTRIDGE_PLUS4_DETECT, attachedImage);
                /* No autostarting carts, otherwise gfx gets corrupted (?!) */
-               noautostart = true;
+               if (strendswith(dc->files[0], ".crt") || strendswith(dc->files[0], ".bin"))
+                  noautostart = true;
 #else
                cartridge_attach_image(dc->unit, attachedImage);
 #endif

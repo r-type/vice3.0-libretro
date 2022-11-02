@@ -2060,25 +2060,20 @@ static void retro_set_paths(void)
               sizeof(retro_content_directory));
    }
 
-   /* Paths are first run in retro_set_environment(), but saves will not yet be correct then,
-    * therefore re-run in retro_init() and replace when necessary */
-   if (string_is_empty(retro_save_directory) || !strcmp(retro_save_directory, retro_system_directory))
+   const char *save_dir = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) && save_dir)
    {
-      const char *save_dir = NULL;
-      if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) && save_dir)
-      {
-         /* If save directory is defined use it, otherwise use system directory */
-         strlcpy(retro_save_directory,
-                 string_is_empty(save_dir) ? retro_system_directory : save_dir,
-                 sizeof(retro_save_directory));
-      }
-      else
-      {
-         /* Make retro_save_directory the same in case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY is not implemented by the frontend */
-         strlcpy(retro_save_directory,
-                 retro_system_directory,
-                 sizeof(retro_save_directory));
-      }
+      /* If save directory is defined use it, otherwise use system directory */
+      strlcpy(retro_save_directory,
+              string_is_empty(save_dir) ? retro_system_directory : save_dir,
+              sizeof(retro_save_directory));
+   }
+   else
+   {
+      /* Make retro_save_directory the same in case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY is not implemented by the frontend */
+      strlcpy(retro_save_directory,
+              retro_system_directory,
+              sizeof(retro_save_directory));
    }
 
    if (string_is_empty(retro_system_directory))
@@ -4436,6 +4431,8 @@ static void retro_set_core_options()
       { NULL, NULL, NULL, NULL, NULL, NULL, {{0}}, NULL },
    };
 
+   free_vice_carts();
+
    /* Fill in the values for all the mappers */
    int i = 0;
    int j = 0;
@@ -5167,9 +5164,6 @@ bool retro_update_display(void)
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
-   retro_set_paths();
-   free_vice_carts();
-   retro_set_core_options();
    retro_set_inputs();
 
    bool support_no_game = true;
@@ -7515,7 +7509,9 @@ void retro_init(void)
    if (!environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &perf_cb))
       perf_cb.get_time_usec = NULL;
 
+   /* Must set these here for the dynamic cartridge option */
    retro_set_paths();
+   retro_set_core_options();
 
    /* Clean ZIP temp */
    if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))

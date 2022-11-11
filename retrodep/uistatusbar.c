@@ -63,9 +63,6 @@ extern int vic20mem_forced;
 /* ----------------------------------------------------------------- */
 /* static functions/variables */
 
-#define STATUSBAR_RESOLUTION_POS    28
-#define STATUSBAR_MODEL_POS         45
-
 #define STATUSBAR_JOY_POS           0
 #define STATUSBAR_TAPE_POS          55
 #define STATUSBAR_DRIVE_POS         59
@@ -580,17 +577,21 @@ static void display_joyport(void)
     if (opt_statusbar & STATUSBAR_BASIC)
         return;
 
+    tmpstr[0] = '\0';
+
+    /* Resolution */
     snprintf(statusbar_resolution, sizeof(statusbar_resolution), "%dx%d", retrow_crop, retroh_crop);
 
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
     /* Model */
     unsigned model = vice_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
 
-    tmpstr[0] = '\0';
     switch (model)
     {
+        default:
         case C64MODEL_C64_PAL:
         case C64MODEL_C64_PAL_N:
         case C64MODEL_C64_OLD_PAL:
@@ -613,24 +614,33 @@ static void display_joyport(void)
         case C64MODEL_ULTIMAX:
             strcpy(tmpstr, "  MAX"); break;
     }
+#endif
 
     /* Memory */
     unsigned memory = 0;
+    const char *memory_unit = {0};
 #if defined(__XSCPU64__)
     memory = vice_opt.SIMMSize * 1024;
 #else
     memory = vice_opt.REUsize;
 #endif
 
-    snprintf(statusbar_memory, sizeof(statusbar_memory), "%5dkB", memory);
-    snprintf(statusbar_model - ((tape_enabled && retrow_crop == CROP_WIDTH_MAX) ? 2 : 0), sizeof(statusbar_model), "%-5s", tmpstr);
+    if (memory > 512)
+    {
+        memory /= 1024;
+        memory_unit = "MB";
+    }
+    else
+        memory_unit = "kB";
+
+    snprintf(statusbar_memory, sizeof(statusbar_memory), "%3d%s", memory, memory_unit);
+    snprintf(statusbar_model, sizeof(statusbar_model), "%-5s", tmpstr);
 #elif defined(__XVIC__)
     /* Model */
     unsigned model = vice_opt.Model;
     if (request_model_set > -1 && request_model_set != model)
         model = request_model_set;
 
-    tmpstr[0] = '\0';
     switch (model)
     {
         case VIC20MODEL_VIC20_PAL:
@@ -642,13 +652,14 @@ static void display_joyport(void)
 
     /* Memory */
     unsigned memory = 0;
+    const char *memory_unit = "kB";
     memory = (vic20mem_forced > -1) ? vic20mem_forced : vice_opt.VIC20Memory;
     if (!memory && vice_opt.Model == VIC20MODEL_VIC21)
         memory = 3;
 
-    int vic20mems[6]  = {0, 3, 8, 16, 24, 35};
+    int vic20mems[6] = {0, 3, 8, 16, 24, 35};
 
-    snprintf(statusbar_memory, sizeof(statusbar_memory), "%5dkB", vic20mems[memory]);
+    snprintf(statusbar_memory, sizeof(statusbar_memory), "%3d%s", vic20mems[memory], memory_unit);
     snprintf(statusbar_model, sizeof(statusbar_model), "%-5s", tmpstr);
 #endif
 
@@ -772,7 +783,7 @@ void uistatusbar_draw(void)
     {
         draw_text(bkg_x + (max_width / 2) - (20), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_resolution);
         draw_text(bkg_x + (max_width / 2) + (30), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_memory);
-        draw_text(bkg_x + (max_width / 2) + (80), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_model);
+        draw_text(bkg_x + (max_width / 2) + (70), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_model);
     }
 
     /* Tape indicator + drive & power LEDs */

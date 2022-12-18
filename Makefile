@@ -7,13 +7,13 @@ OBJECTS     :=
 
 ifeq ($(platform),)
 platform = unix
-ifeq ($(shell uname -a),)
+ifeq ($(shell uname -s),)
    platform = win
-else ifneq ($(findstring MINGW,$(shell uname -a)),)
+else ifneq ($(findstring MINGW,$(shell uname -s)),)
    platform = win
-else ifneq ($(findstring Darwin,$(shell uname -a)),)
+else ifneq ($(findstring Darwin,$(shell uname -s)),)
    platform = osx
-else ifneq ($(findstring win,$(shell uname -a)),)
+else ifneq ($(findstring win,$(shell uname -s)),)
    platform = win
 endif
 endif
@@ -26,10 +26,10 @@ TARGET_NAME := vice_$(EMUTYPE)
 
 # system platform
 system_platform = unix
-ifeq ($(shell uname -a),)
+ifeq ($(shell uname -s),)
    EXE_EXT = .exe
    system_platform = win
-else ifneq ($(findstring Darwin,$(shell uname -a)),)
+else ifneq ($(findstring Darwin,$(shell uname -s)),)
    system_platform = osx
    arch = intel
    ifeq ($(shell uname -p),powerpc)
@@ -38,7 +38,7 @@ else ifneq ($(findstring Darwin,$(shell uname -a)),)
    ifeq ($(shell uname -p),arm)
 	arch = arm
    endif
-else ifneq ($(findstring MINGW,$(shell uname -a)),)
+else ifneq ($(findstring MINGW,$(shell uname -s)),)
    system_platform = win
 endif
 

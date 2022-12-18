@@ -7744,14 +7744,14 @@ void update_geometry(int mode)
    {
       case 0:
          /* Crop mode init */
-         crop_id_prev  = 0;
-         retrow_crop        = retrow;
-         retroh_crop        = retroh;
-         retroXS_crop_offset= 0;
-         retroYS_crop_offset= 0;
-         retroXS_offset     = 0;
-         retroYS_offset     = 0;
-         retro_bmp_offset   = 0;
+         crop_id_prev        = 0;
+         retrow_crop         = retrow;
+         retroh_crop         = retroh;
+         retroXS_crop_offset = 0;
+         retroYS_crop_offset = 0;
+         retroXS_offset      = 0;
+         retroYS_offset      = 0;
+         retro_bmp_offset    = 0;
 
          system_av_info.geometry.max_width    = defaultw;
          system_av_info.geometry.max_height   = defaulth;
@@ -7759,8 +7759,8 @@ void update_geometry(int mode)
          system_av_info.geometry.base_height  = retroh;
          system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
 
-         /* Update av_info only when PAL/NTSC change occurs and at first start */
-         if (retro_region != retro_get_region() || runstate == RUNSTATE_FIRST_START)
+         /* Update av_info only when PAL/NTSC change occurs */
+         if (retro_region != retro_get_region())
          {
             retro_get_system_av_info(&system_av_info);
             environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
@@ -7770,182 +7770,182 @@ void update_geometry(int mode)
 
       case 1:
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
-         if (crop_id != crop_id_prev)
+         if (crop_id == crop_id_prev)
+            return;
+
+         int crop_width         = 0;
+         int crop_height        = 0;
+         int crop_height_o      = 0;
+         int crop_border_width  = 0;
+         int crop_border_height = 0;
+
+         unsigned prev_crop_width  = retrow_crop;
+         unsigned prev_crop_height = retroh_crop;
+
+         float crop_dar      = 0;
+         float crop_par      = retro_get_aspect_ratio(0, 0, true);
+
+         int crop_width_max  = CROP_WIDTH_MAX;
+         int crop_height_max = CROP_HEIGHT_MAX;
+
+#if defined(__X128__)
+         if (is_vdc())
          {
-            int crop_width    = 0;
-            int crop_height   = 0;
-            int crop_height_o = 0;
-            int crop_border_width  = 0;
-            int crop_border_height = 0;
-
-            unsigned prev_crop_width  = retrow_crop;
-            unsigned prev_crop_height = retroh_crop;
-
-            float crop_dar = 0;
-            float crop_par = retro_get_aspect_ratio(0, 0, true);
-
-            int crop_width_max  = CROP_WIDTH_MAX;
-            int crop_height_max = CROP_HEIGHT_MAX;
-
-#if defined(__X128__)
-            if (is_vdc())
-            {
-               crop_width_max  = CROP_VDC_WIDTH_MAX;
-               crop_height_max = CROP_VDC_HEIGHT_MAX;
-            }
+            crop_width_max  = CROP_VDC_WIDTH_MAX;
+            crop_height_max = CROP_VDC_HEIGHT_MAX;
+         }
 #endif
-            crop_id_prev = crop_id;
+         crop_id_prev = crop_id;
 
-            switch (crop_id)
-            {
-               default:
-                  switch (crop_id)
-                  {
-                     case CROP_SMALL:
-                        crop_border_width  = 44;
-                        crop_border_height = 36;
-                        break;
-                     case CROP_MEDIUM:
-                        crop_border_width  = 22;
-                        crop_border_height = 18;
-                        break;
-                     case CROP_MAXIMUM:
-                        break;
-                     case CROP_AUTO:
-                     case CROP_AUTO_DISABLE:
+         switch (crop_id)
+         {
+            default:
+               switch (crop_id)
+               {
+                  case CROP_SMALL:
+                     crop_border_width  = 44;
+                     crop_border_height = 36;
+                     break;
+                  case CROP_MEDIUM:
+                     crop_border_width  = 22;
+                     crop_border_height = 18;
+                     break;
+                  case CROP_MAXIMUM:
+                     break;
+                  case CROP_AUTO:
+                  case CROP_AUTO_DISABLE:
 #if defined(__X128__)
-                        if (!is_vdc())
-                           crop_border_height = vice_raster.last_line - vice_raster.first_line - crop_height_max;
-#else
+                     if (!is_vdc())
                         crop_border_height = vice_raster.last_line - vice_raster.first_line - crop_height_max;
+#else
+                     crop_border_height = vice_raster.last_line - vice_raster.first_line - crop_height_max;
 #endif
-                        if (crop_border_height < 0)
-                           crop_border_height = 0;
-                        break;
-                  }
+                     if (crop_border_height < 0)
+                        crop_border_height = 0;
+                     break;
+               }
 
-                  crop_width    = retrow - crop_width_max - crop_border_width;
-                  crop_height   = retroh - crop_height_max - crop_border_height;
-                  crop_height_o = crop_height;
+               crop_width    = retrow - crop_width_max - crop_border_width;
+               crop_height   = retroh - crop_height_max - crop_border_height;
+               crop_height_o = crop_height;
 
-                  switch (crop_mode_id)
-                  {
-                     case CROP_MODE_BOTH:
-                        break;
-                     case CROP_MODE_VERTICAL: /* Vertical disables horizontal crop */
-                        crop_width = 0;
-                        break;
-                     case CROP_MODE_HORIZONTAL: /* Horizontal disables vertical crop */
-                        crop_height = 0;
-                        break;
-                     case CROP_MODE_16_9:
-                        crop_dar = (float)16/9;
-                        break;
-                     case CROP_MODE_16_10:
-                        crop_dar = (float)16/10;
-                        break;
-                     case CROP_MODE_4_3:
-                        crop_dar = (float)4/3;
-                        break;
-                     case CROP_MODE_5_4:
-                        crop_dar = (float)5/4;
-                        break;
-                  }
-
-                  if (crop_dar > 0)
-                  {
-                     if (crop_mode_id > 4)
-                        crop_height = retroh - crop_height_max - ((float)crop_border_height * (float)crop_dar / (float)crop_par);
-                     crop_width = retrow - ((float)(retroh - crop_height) * (float)crop_dar / (float)crop_par);
-                     if (retrow - crop_width <= crop_width_max)
-                        crop_height = retroh - ((float)crop_width_max / (float)crop_dar * (float)crop_par);
-                  }
-
-                  if (retrow - crop_width < crop_width_max)
-                     crop_width = retrow - crop_width_max;
-                  if (retroh - crop_height < crop_height_max)
-                     crop_height = retroh - crop_height_max;
-
-                  if (crop_width < 0)
+               switch (crop_mode_id)
+               {
+                  case CROP_MODE_BOTH:
+                     break;
+                  case CROP_MODE_VERTICAL: /* Vertical disables horizontal crop */
                      crop_width = 0;
-                  if (crop_height < 0)
+                     break;
+                  case CROP_MODE_HORIZONTAL: /* Horizontal disables vertical crop */
                      crop_height = 0;
+                     break;
+                  case CROP_MODE_16_9:
+                     crop_dar = (float)16/9;
+                     break;
+                  case CROP_MODE_16_10:
+                     crop_dar = (float)16/10;
+                     break;
+                  case CROP_MODE_4_3:
+                     crop_dar = (float)4/3;
+                     break;
+                  case CROP_MODE_5_4:
+                     crop_dar = (float)5/4;
+                     break;
+               }
 
-                  retrow_crop = retrow - crop_width;
-                  retroh_crop = retroh - crop_height;
+               if (crop_dar > 0)
+               {
+                  if (crop_mode_id > 4)
+                     crop_height = retroh - crop_height_max - ((float)crop_border_height * (float)crop_dar / (float)crop_par);
+                  crop_width = retrow - ((float)(retroh - crop_height) * (float)crop_dar / (float)crop_par);
+                  if (retrow - crop_width <= crop_width_max)
+                     crop_height = retroh - ((float)crop_width_max / (float)crop_dar * (float)crop_par);
+               }
+
+               if (retrow - crop_width < crop_width_max)
+                  crop_width = retrow - crop_width_max;
+               if (retroh - crop_height < crop_height_max)
+                  crop_height = retroh - crop_height_max;
+
+               if (crop_width < 0)
+                  crop_width = 0;
+               if (crop_height < 0)
+                  crop_height = 0;
+
+               retrow_crop = retrow - crop_width;
+               retroh_crop = retroh - crop_height;
 
 #if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__)
-                  retroXS_crop_offset  = (crop_width > 1) ? (crop_width / 2) : 0;
-                  retroYS_crop_offset  = (crop_height > 1) ? (crop_height / 2) : 0;
-                  retroYS_crop_offset -= (retro_region == RETRO_REGION_PAL) ? 1 : 0;
+               retroXS_crop_offset  = (crop_width > 1) ? (crop_width / 2) : 0;
+               retroYS_crop_offset  = (crop_height > 1) ? (crop_height / 2) : 0;
+               retroYS_crop_offset -= (retro_region == RETRO_REGION_PAL) ? 1 : 0;
 #if defined(__X128__)
-                  if (is_vdc())
-                     retroYS_crop_offset -= 4;
+               if (is_vdc())
+                  retroYS_crop_offset -= 4;
 #endif
 #elif defined(__XVIC__)
-                  retroXS_crop_offset  = (crop_width > 1) ? (crop_width / 2) : 0;
-                  retroXS_crop_offset -= (retro_region == RETRO_REGION_PAL) ? 0 : -8;
-                  retroYS_crop_offset  = (crop_height > 1) ? (crop_height / 2) : 0;
-                  retroYS_crop_offset -= (retro_region == RETRO_REGION_PAL) ? 2 : 3;
+               retroXS_crop_offset  = (crop_width > 1) ? (crop_width / 2) : 0;
+               retroXS_crop_offset -= (retro_region == RETRO_REGION_PAL) ? 0 : -8;
+               retroYS_crop_offset  = (crop_height > 1) ? (crop_height / 2) : 0;
+               retroYS_crop_offset -= (retro_region == RETRO_REGION_PAL) ? 2 : 3;
 #elif defined(__XPLUS4__)
-                  retroXS_crop_offset = (crop_width > 1) ? (crop_width / 2) : 0;
-                  retroYS_crop_offset = (crop_height > 1) ? (crop_height / 2) : 0;
-                  retroYS_crop_offset -= (retro_region == RETRO_REGION_PAL) ? 4 : 3;
+               retroXS_crop_offset  = (crop_width > 1) ? (crop_width / 2) : 0;
+               retroYS_crop_offset  = (crop_height > 1) ? (crop_height / 2) : 0;
+               retroYS_crop_offset -= (retro_region == RETRO_REGION_PAL) ? 4 : 3;
 #endif
-                  switch (crop_id)
-                  {
-                     case CROP_AUTO:
-                        /* Reset autocentering depending on mode */
-                        if (crop_height > 0)
-                           retroYS_crop_offset = vice_raster.first_line + (crop_height - crop_height_o) / 2;
-                        break;
-                  }
+               switch (crop_id)
+               {
+                  case CROP_AUTO:
+                     /* Reset autocentering depending on mode */
+                     if (crop_height > 0)
+                        retroYS_crop_offset = vice_raster.first_line + (crop_height - crop_height_o) / 2;
+                     break;
+               }
 
-                  /* No negative offsets */
-                  retroXS_crop_offset = (retroXS_crop_offset > 0) ? retroXS_crop_offset : 0;
-                  retroYS_crop_offset = (retroYS_crop_offset > 0) ? retroYS_crop_offset : 0;
+               /* No negative offsets */
+               retroXS_crop_offset = (retroXS_crop_offset > 0) ? retroXS_crop_offset : 0;
+               retroYS_crop_offset = (retroYS_crop_offset > 0) ? retroYS_crop_offset : 0;
 #if 0
-                  printf("crop: dar=%f par=%f - x=%3d y=%3d, osx=%2d osy=%2d, f=%3d l=%3d = %3dx%3d = %f * %f = %f\n",
-                        crop_dar, crop_par,
-                        crop_width, crop_height,
-                        retroXS_crop_offset, retroYS_crop_offset,
-                        vice_raster.first_line, vice_raster.last_line,
-                        retrow_crop, retroh_crop,
-                        ((float)retrow_crop / (float)retroh_crop),
-                        crop_par,
-                        ((float)retrow_crop / (float)retroh_crop * crop_par));
+               printf("crop: dar=%f par=%f - x=%3d y=%3d, osx=%2d osy=%2d, f=%3d l=%3d = %3dx%3d = %f * %f = %f\n",
+                     crop_dar, crop_par,
+                     crop_width, crop_height,
+                     retroXS_crop_offset, retroYS_crop_offset,
+                     vice_raster.first_line, vice_raster.last_line,
+                     retrow_crop, retroh_crop,
+                     ((float)retrow_crop / (float)retroh_crop),
+                     crop_par,
+                     ((float)retrow_crop / (float)retroh_crop * crop_par));
 #endif
-                  break;
+               break;
 
-               case CROP_MANUAL:
-                  crop_width  = manual_crop_left + manual_crop_right;
-                  crop_height = manual_crop_top + manual_crop_bottom;
+            case CROP_MANUAL:
+               crop_width          = manual_crop_left + manual_crop_right;
+               crop_height         = manual_crop_top + manual_crop_bottom;
 
-                  retrow_crop         = retrow - crop_width;
-                  retroh_crop         = retroh - crop_height;
-                  retroXS_crop_offset = manual_crop_left;
-                  retroYS_crop_offset = manual_crop_top;
-                  break;
+               retrow_crop         = retrow - crop_width;
+               retroh_crop         = retroh - crop_height;
+               retroXS_crop_offset = manual_crop_left;
+               retroYS_crop_offset = manual_crop_top;
+               break;
 
-               case CROP_NONE:
-                  retrow_crop         = retrow;
-                  retroh_crop         = retroh;
-                  retroXS_crop_offset = 0;
-                  retroYS_crop_offset = 0;
-                  break;
-            }
-
-            retroXS_offset   = retroXS_crop_offset;
-            retroYS_offset   = retroYS_crop_offset;
-            retro_bmp_offset = (retroXS_offset * (pix_bytes >> 1)) + (retroYS_offset * (retrow << (pix_bytes >> 2)));
-
-            system_av_info.geometry.base_width   = retrow_crop;
-            system_av_info.geometry.base_height  = retroh_crop;
-            system_av_info.geometry.max_width    = defaultw;
-            system_av_info.geometry.max_height   = defaulth;
-
-            system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow_crop, retroh_crop, false);
+            case CROP_NONE:
+               retrow_crop         = retrow;
+               retroh_crop         = retroh;
+               retroXS_crop_offset = 0;
+               retroYS_crop_offset = 0;
+               break;
          }
+
+         retroXS_offset   = retroXS_crop_offset;
+         retroYS_offset   = retroYS_crop_offset;
+         retro_bmp_offset = (retroXS_offset * (pix_bytes >> 1)) + (retroYS_offset * (retrow << (pix_bytes >> 2)));
+
+         system_av_info.geometry.base_width   = retrow_crop;
+         system_av_info.geometry.base_height  = retroh_crop;
+         system_av_info.geometry.max_width    = defaultw;
+         system_av_info.geometry.max_height   = defaulth;
+
+         system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow_crop, retroh_crop, false);
 #endif
          break;
    }
@@ -7956,6 +7956,9 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    /* Remember region for av_info update */
    retro_region = retro_get_region();
+
+   /* Reset crop for proper aspect ratio update after av_info change */
+   crop_id_prev = -1;
 
    info->geometry.max_width    = defaultw;
    info->geometry.max_height   = defaulth;
@@ -8127,11 +8130,8 @@ void retro_run(void)
       {
          prev_sound_sample_rate = vice_opt.SoundSampleRate;
 
-         /* Ensure audio rendering is reinitialized on next use. */
+         /* Ensure audio rendering is reinitialized on next use */
          sound_close();
-
-         /* Reset crop for proper aspect ratio after av_info change */
-         crop_id_prev = -1;
 
          struct retro_system_av_info system_av_info;
          retro_get_system_av_info(&system_av_info);
@@ -8150,9 +8150,6 @@ void retro_run(void)
 
    if (runstate == RUNSTATE_FIRST_START)
    {
-      /* Geometry has to get updated here in retro_run after retro_load_game */
-      update_geometry(0);
-
       /* This is only done once after loading the core from scratch and starting it */
       runstate = RUNSTATE_RUNNING;
    } 
@@ -8216,7 +8213,7 @@ void retro_run(void)
       frame_time = retro_ticks();
 
 #if !defined(__X64SC__) && !defined(__XSCPU64__)
-      /* Slow cores will cripple warp speed severily if smoothness is the target */
+      /* Slow cores will cripple warp speed severely if smoothness is the target */
       if (frame_max > 1 && frame_time != 0 && frame_time - frame_start + (frame_time - frame_start) > (retro_refresh_ms / 2))
          break;
 #endif

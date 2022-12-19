@@ -16,13 +16,13 @@
 #include "sid.h"
 #include "sid-resources.h"
 #include "util.h"
+#include "keyboard.h"
 #if !defined(__XCBM5x0__)
 #include "userport_joystick.h"
 #endif
 
 #if defined(__XPET__)
 #include "petmodel.h"
-#include "keyboard.h"
 #elif defined(__XCBM2__) || defined(__XCBM5x0__)
 #include "cbm2model.h"
 #elif defined(__XPLUS4__)
@@ -379,7 +379,6 @@ int ui_init_finalize(void)
    /* Model */
 #if defined(__XPET__)
    petmodel_set(vice_opt.Model);
-   keyboard_init();
 #elif defined(__XCBM2__) || defined(__XCBM5x0__)
    cbm2model_set(vice_opt.Model);
 #elif defined(__XVIC__)
@@ -393,6 +392,7 @@ int ui_init_finalize(void)
 #else
    c64model_set(vice_opt.Model);
 #endif
+   keyboard_init();
 
 #if defined(__X64__) || defined(__X64SC__)
    /* JiffyDOS SX-64 requires setting kernal after model change */

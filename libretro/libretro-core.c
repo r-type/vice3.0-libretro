@@ -98,16 +98,14 @@ int mem_ram_size = 0;
 #endif
 
 /* Core geometry */
-unsigned int retroXS = 0;
-unsigned int retroYS = 0;
-unsigned int retroXS_offset = 0;
-unsigned int retroYS_offset = 0;
 unsigned int defaultw = WINDOW_WIDTH;
 unsigned int defaulth = WINDOW_HEIGHT;
 unsigned int retrow = WINDOW_WIDTH;
 unsigned int retroh = WINDOW_HEIGHT;
-unsigned int lastw = 0;
-unsigned int lasth = 0;
+unsigned int retroXS = 0;
+unsigned int retroYS = 0;
+unsigned int retroXS_offset = 0;
+unsigned int retroYS_offset = 0;
 
 unsigned short int pix_bytes = 2;
 static bool pix_bytes_initialized = false;
@@ -7734,11 +7732,8 @@ void update_geometry(int mode)
 {
    struct retro_system_av_info system_av_info;
 
-#ifdef RETRO_DEBUG
-   log_cb(RETRO_LOG_INFO, "Update Geometry: Old(%d,%d) New(%d,%d)\n", lastw, lasth, retrow, retroh);
-#endif
-   lastw = retrow;
-   lasth = retroh;
+   defaultw = retrow;
+   defaulth = retroh;
 
    switch (mode)
    {
@@ -7753,8 +7748,6 @@ void update_geometry(int mode)
          retroYS_offset      = 0;
          retro_bmp_offset    = 0;
 
-         system_av_info.geometry.max_width    = defaultw;
-         system_av_info.geometry.max_height   = defaulth;
          system_av_info.geometry.base_width   = retrow;
          system_av_info.geometry.base_height  = retroh;
          system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
@@ -7766,6 +7759,8 @@ void update_geometry(int mode)
             environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &system_av_info);
             return;
          }
+         else if (runstate == RUNSTATE_FIRST_START)
+            return;
          break;
 
       case 1:
@@ -7773,29 +7768,30 @@ void update_geometry(int mode)
          if (crop_id == crop_id_prev)
             return;
 
-         int crop_width         = 0;
-         int crop_height        = 0;
-         int crop_height_o      = 0;
-         int crop_border_width  = 0;
-         int crop_border_height = 0;
+         crop_id_prev              = crop_id;
+
+         int crop_width            = 0;
+         int crop_height           = 0;
+         int crop_height_o         = 0;
+         int crop_border_width     = 0;
+         int crop_border_height    = 0;
 
          unsigned prev_crop_width  = retrow_crop;
          unsigned prev_crop_height = retroh_crop;
 
-         float crop_dar      = 0;
-         float crop_par      = retro_get_aspect_ratio(0, 0, true);
+         float crop_dar            = 0;
+         float crop_par            = retro_get_aspect_ratio(0, 0, true);
 
-         int crop_width_max  = CROP_WIDTH_MAX;
-         int crop_height_max = CROP_HEIGHT_MAX;
+         int crop_width_max        = CROP_WIDTH_MAX;
+         int crop_height_max       = CROP_HEIGHT_MAX;
 
 #if defined(__X128__)
          if (is_vdc())
          {
-            crop_width_max  = CROP_VDC_WIDTH_MAX;
-            crop_height_max = CROP_VDC_HEIGHT_MAX;
+            crop_width_max         = CROP_VDC_WIDTH_MAX;
+            crop_height_max        = CROP_VDC_HEIGHT_MAX;
          }
 #endif
-         crop_id_prev = crop_id;
 
          switch (crop_id)
          {
@@ -7942,13 +7938,11 @@ void update_geometry(int mode)
 
          system_av_info.geometry.base_width   = retrow_crop;
          system_av_info.geometry.base_height  = retroh_crop;
-         system_av_info.geometry.max_width    = defaultw;
-         system_av_info.geometry.max_height   = defaulth;
-
          system_av_info.geometry.aspect_ratio = retro_get_aspect_ratio(retrow_crop, retroh_crop, false);
 #endif
          break;
    }
+
    environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &system_av_info);
 }
 
@@ -7958,12 +7952,13 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    retro_region = retro_get_region();
 
    /* Reset crop for proper aspect ratio update after av_info change */
-   crop_id_prev = -1;
+   if (crop_id)
+      crop_id_prev = -1;
 
-   info->geometry.max_width    = defaultw;
-   info->geometry.max_height   = defaulth;
    info->geometry.base_width   = retrow;
    info->geometry.base_height  = retroh;
+   info->geometry.max_width    = WINDOW_WIDTH;
+   info->geometry.max_height   = WINDOW_HEIGHT;
    info->geometry.aspect_ratio = prev_aspect_ratio = retro_get_aspect_ratio(retrow, retroh, false);
    info->timing.sample_rate    = prev_sound_sample_rate = vice_opt.SoundSampleRate;
 
@@ -8150,6 +8145,9 @@ void retro_run(void)
 
    if (runstate == RUNSTATE_FIRST_START)
    {
+      /* Initial geometry set */
+      update_geometry(0);
+
       /* This is only done once after loading the core from scratch and starting it */
       runstate = RUNSTATE_RUNNING;
    } 
@@ -8257,9 +8255,9 @@ void retro_run(void)
    upload_output_audio_buffer();
 
    /* Update geometry if model or crop mode changes */
-   if ((lastw == retrow && lasth == retroh) && crop_id != crop_id_prev)
+   if ((defaultw == retrow && defaulth == retroh) && crop_id != crop_id_prev)
       update_geometry(1);
-   else if (lastw != retrow || lasth != retroh)
+   else if (defaultw != retrow || defaulth != retroh)
       update_geometry(0);
 
    /* retro_reset() postponed here for proper JiffyDOS+vicerc core option refresh operation

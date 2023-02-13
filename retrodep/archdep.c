@@ -678,7 +678,7 @@ int fork_coproc(int *fd_wr, int *fd_rd, char *cmd)
     return -1;
 }
 
-#ifndef realpath
+#if !defined(realpath) && !defined(VITA)
 char *realpath(const char *restrict path, char *restrict resolved_path) { return NULL; }
 #endif
 

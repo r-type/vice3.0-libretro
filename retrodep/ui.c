@@ -328,10 +328,6 @@ int ui_init_finalize(void)
    log_resources_set_int("FSDeviceLongNames", 1);
    log_resources_set_int("Mouse", 1);
    log_resources_set_int("Printer4", 1);
-#if !defined(__XCBM2__) && !defined(__XCBM5x0__) && !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
-   /* Plus/4 breaks D64 disks (?) */
-   log_resources_set_int("IECDevice4", 1);
-#endif
 
    /* Machine specific defaults */
 #if defined(__X64DTV__)
@@ -444,10 +440,11 @@ int ui_init_finalize(void)
 
    /* Media */
    log_resources_set_int("AutostartWarp", vice_opt.AutostartWarp);
+   log_resources_set_int("VirtualDevice4", vice_opt.VirtualDevices);
    log_resources_set_int("Drive8TrueEmulation", vice_opt.DriveTrueEmulation);
    log_resources_set_int("Drive9TrueEmulation", vice_opt.DriveTrueEmulation);
-   log_resources_set_int("VirtualDevice8", vice_opt.VirtualDevices);
-   log_resources_set_int("VirtualDevice9", vice_opt.VirtualDevices);
+   log_resources_set_int("VirtualDevice8", !vice_opt.DriveTrueEmulation);
+   log_resources_set_int("VirtualDevice9", !vice_opt.DriveTrueEmulation);
    log_resources_set_int("AttachDevice8d0Readonly", vice_opt.AttachDevice8Readonly);
    log_resources_set_int("AttachDevice8d1Readonly", vice_opt.AttachDevice8Readonly);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)

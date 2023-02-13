@@ -417,17 +417,16 @@ static int retro_disk_get_image_unit()
    return unit;
 }
 
-void toggle_tde(int on)
+static void toggle_tde(int on)
 {
    vice_opt.DriveTrueEmulation = on;
-   vice_opt.VirtualDevices     = !on;
 
    if (retro_ui_finalized)
    {
-      log_resources_set_int("Drive8TrueEmulation", vice_opt.DriveTrueEmulation);
-      log_resources_set_int("Drive9TrueEmulation", vice_opt.DriveTrueEmulation);
-      log_resources_set_int("VirtualDevice8", vice_opt.VirtualDevices);
-      log_resources_set_int("VirtualDevice9", vice_opt.VirtualDevices);
+      log_resources_set_int("Drive8TrueEmulation", on);
+      log_resources_set_int("Drive9TrueEmulation", on);
+      log_resources_set_int("VirtualDevice8", !on);
+      log_resources_set_int("VirtualDevice9", !on);
    }
 }
 
@@ -2635,14 +2634,11 @@ static void retro_set_core_options()
          },
          "enabled"
       },
-#if 0
-      /* Not needed with 3.7 since virtual devices are not global anymore
-       * so that printer can be enabled without affecting drives */
       {
          "vice_virtual_device_traps",
          "Media > Virtual Device Traps",
          "Virtual Device Traps",
-         "Required for printer device, but causes loading issues on rare cases. Enabled forcefully by disabling 'True Drive Emulation'.",
+         "Required for printer device, but causes loading issues on rare cases.",
          NULL,
          "media",
          {
@@ -2652,7 +2648,6 @@ static void retro_set_core_options()
          },
          "disabled"
       },
-#endif
       {
          "vice_floppy_write_protection",
          "Media > Floppy Write Protection",
@@ -5425,13 +5420,19 @@ static void update_variables(void)
          request_update_work_disk = true;
    }
 
-#if 0
    var.key = "vice_virtual_device_traps";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       if (retro_ui_finalized)
       {
+#if 1
+         /* Printer only */
+         if (!strcmp(var.value, "disabled") && vice_opt.VirtualDevices)
+            log_resources_set_int("VirtualDevice4", 0);
+         else if (!strcmp(var.value, "enabled") && !vice_opt.VirtualDevices)
+            log_resources_set_int("VirtualDevice4", 1);
+#else
          if (!strcmp(var.value, "disabled") && vice_opt.VirtualDevices)
          {
             log_resources_set_int("VirtualDevice8", 0);
@@ -5442,12 +5443,12 @@ static void update_variables(void)
             log_resources_set_int("VirtualDevice8", 1);
             log_resources_set_int("VirtualDevice9", 1);
          }
+#endif
       }
 
       if (!strcmp(var.value, "disabled")) vice_opt.VirtualDevices = 0;
       else                                vice_opt.VirtualDevices = 1;
    }
-#endif
 
 #if !defined(__XPET__) && !defined(__XPLUS4__) && !defined(__XVIC__)
    var.key = "vice_warp_boost";
@@ -5483,33 +5484,13 @@ static void update_variables(void)
       }
 
       if (!strcmp(var.value, "disabled"))
-      {
          vice_opt.DriveTrueEmulation = 0;
-         vice_opt.VirtualDevices     = 1;
-      }
       else
-      {
          vice_opt.DriveTrueEmulation = 1;
-         vice_opt.VirtualDevices     = 0;
-      }
 
       /* Silently restore sounds when TDE and DSE is enabled */
       if (retro_ui_finalized && vice_opt.DriveSoundEmulation && vice_opt.DriveTrueEmulation)
          resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
-
-#if 0
-      /* Forcefully enable Virtual Device Traps if TDE is disabled,
-       * otherwise floppy access does not work at all */
-      if (!vice_opt.DriveTrueEmulation && !vice_opt.VirtualDevices)
-      {
-         vice_opt.VirtualDevices = 1;
-         if (retro_ui_finalized)
-         {
-            log_resources_set_int("VirtualDevice8", vice_opt.VirtualDevices);
-            log_resources_set_int("VirtualDevice9", vice_opt.VirtualDevices);
-         }
-      }
-#endif
    }
 
    /* Tapecart needs TDE */

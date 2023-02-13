@@ -89,7 +89,6 @@
 #include "arch/shared/archdep_remove.c"
 #include "arch/shared/archdep_set_openmp_wait_policy.c"
 #include "arch/shared/archdep_tick.c"
-#include "arch/shared/coproc.c"
 
 #include "libretro-core.h"
 extern unsigned int opt_read_vicerc;
@@ -673,4 +672,9 @@ void archdep_vice_exit(int excode)
 char *archdep_default_sysfile_pathlist(const char *emu_id)
 {
     return lib_strdup(boot_path);
+}
+
+int fork_coproc(HANDLE *fd_wr, HANDLE *fd_rd, char *cmd)
+{
+    return -1;
 }

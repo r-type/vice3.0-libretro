@@ -38,7 +38,9 @@
 #define SNAPSHOT_ATA_IMAGE_FILENAME_MISMATCH     29
 #define SNAPSHOT_VICII_MODEL_MISMATCH            30
 
+#ifndef snapshot_module_t
 typedef struct snapshot_module_s snapshot_module_t;
+#endif
 typedef struct snapshot_s snapshot_t;
 
 extern void snapshot_display_error(void);

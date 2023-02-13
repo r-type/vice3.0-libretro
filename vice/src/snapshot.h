@@ -24,6 +24,7 @@
  *  02111-1307  USA.
  *
  */
+
 #ifdef __LIBRETRO__
 #include "snapshot_stream.h"
 #else

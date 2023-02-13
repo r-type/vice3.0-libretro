@@ -90,6 +90,12 @@
  * longest possible path including the terminating NUL character.
  */
 
+#ifdef __LIBRETRO__
+#ifndef PATH_MAX
+#define PATH_MAX RETRO_PATH_MAX
+#endif
+#endif
+
 #ifdef WINDOWS_COMPILE
 # include <stdlib.h>
 # define ARCHDEP_PATH_MAX   _MAX_PATH

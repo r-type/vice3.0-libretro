@@ -181,7 +181,9 @@ struct raster_s {
 
     int intialized;
 };
+#ifndef raster_t
 typedef struct raster_s raster_t;
+#endif
 
 struct screenshot_s;
 

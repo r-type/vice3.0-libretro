@@ -674,7 +674,7 @@ char *archdep_default_sysfile_pathlist(const char *emu_id)
     return lib_strdup(boot_path);
 }
 
-int fork_coproc(HANDLE *fd_wr, HANDLE *fd_rd, char *cmd)
+int fork_coproc(int *fd_wr, int *fd_rd, char *cmd)
 {
     return -1;
 }

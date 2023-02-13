@@ -85,7 +85,6 @@
 #include "arch/shared/archdep_kbd_get_host_mapping.h"
 #include "arch/shared/archdep_program_path.c"
 #include "arch/shared/archdep_quote_unzip.c"
-#include "arch/shared/archdep_real_path.c"
 #include "arch/shared/archdep_remove.c"
 #include "arch/shared/archdep_set_openmp_wait_policy.c"
 #include "arch/shared/archdep_tick.c"
@@ -677,4 +676,26 @@ char *archdep_default_sysfile_pathlist(const char *emu_id)
 int fork_coproc(int *fd_wr, int *fd_rd, char *cmd)
 {
     return -1;
+}
+
+#ifndef realpath
+char *realpath(const char *restrict path, char *restrict resolved_path) { return NULL; }
+#endif
+
+char *archdep_real_path(const char *pathname, char *resolved_pathname)
+{
+    return realpath(pathname, resolved_pathname);
+}
+
+int archdep_real_path_equal(const char *path1, const char *path2)
+{
+    char path1_norm[PATH_MAX], path2_norm[PATH_MAX];
+
+    if (!archdep_real_path(path1, path1_norm)) {
+        return 0;
+    }
+    if (!archdep_real_path(path2, path2_norm)) {
+        return 0;
+    }
+    return !strcmp(path1_norm, path2_norm);
 }

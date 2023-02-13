@@ -92,7 +92,7 @@
 
 #ifdef __LIBRETRO__
 #ifndef PATH_MAX
-#define PATH_MAX RETRO_PATH_MAX
+#define PATH_MAX 512
 #endif
 #endif
 

@@ -181,7 +181,7 @@ struct raster_s {
 
     int intialized;
 };
-#ifndef raster_t
+#ifndef VICE_RASTER_SNAPSHOT_H
 typedef struct raster_s raster_t;
 #endif
 

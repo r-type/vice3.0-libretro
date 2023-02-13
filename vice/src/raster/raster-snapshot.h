@@ -27,8 +27,17 @@
 #ifndef VICE_RASTER_SNAPSHOT_H
 #define VICE_RASTER_SNAPSHOT_H
 
+#ifdef __LIBRETRO__
+#ifndef VICE_RASTER_H
+typedef struct raster_s raster_t;
+#endif
+#ifndef SNAPSHOT_STREAM_H
+typedef struct snapshot_module_s snapshot_module_t;
+#endif
+#else
 typedef struct raster_s raster_t;
 typedef struct snapshot_module_s snapshot_module_t;
+#endif
 
 extern int raster_snapshot_write(snapshot_module_t *m, raster_t *raster);
 extern int raster_snapshot_read(snapshot_module_t *m, raster_t *raster);

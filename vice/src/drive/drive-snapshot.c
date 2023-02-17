@@ -999,7 +999,10 @@ static int drive_snapshot_read_gcrimage_module(snapshot_t *s, unsigned int dnr)
 
     drive->GCR_image_loaded = 1;
     drive->complicated_image_loaded = 1;
+#if 0
+    /* Allow writing to disk after loading snapshot by not nulling the image */
     drive->image = NULL;
+#endif
 #else
     if (0
         || SMR_DW(m, &num_half_tracks) < 0

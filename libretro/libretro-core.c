@@ -5209,8 +5209,17 @@ bool retro_update_display(void)
 
 void retro_set_environment(retro_environment_t cb)
 {
+   /* Skip everything if environment is already set, because
+    * for some reason it is called multiple times after init.. */
+   if (environ_cb)
+      return;
+
    environ_cb = cb;
    retro_set_inputs();
+
+   /* Must set these here for the dynamic cartridge option */
+   retro_set_paths();
+   retro_set_core_options();
 
    bool support_no_game = true;
    environ_cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &support_no_game);
@@ -5227,8 +5236,6 @@ void retro_set_environment(retro_environment_t cb)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VFS_INTERFACE, &vfs_iface_info))
       filestream_vfs_init(&vfs_iface_info);
 #endif
-
-   retro_set_core_options();
 }
 
 int log_resources_set_int(const char *name, int value)
@@ -7612,10 +7619,6 @@ void retro_init(void)
 
    if (!environ_cb(RETRO_ENVIRONMENT_GET_PERF_INTERFACE, &perf_cb))
       perf_cb.get_time_usec = NULL;
-
-   /* Must set these here for the dynamic cartridge option */
-   retro_set_paths();
-   retro_set_core_options();
 
    /* Clean ZIP temp */
    if (!string_is_empty(retro_temp_directory) && path_is_directory(retro_temp_directory))

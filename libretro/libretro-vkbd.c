@@ -52,7 +52,7 @@ static long last_press_time = 0;
 static bool let_go_of_button = true;
 static long last_press_time_button = 0;
 static int vkey_pressed = -1;
-static int vkey_sticky = -1;
+static int vkey_sticky  = -1;
 static int vkey_sticky1 = -1;
 static int vkey_sticky2 = -1;
 
@@ -641,11 +641,11 @@ void print_vkbd(void)
 #endif
 #endif
 
-   int XSIDE = (retrow - XPADDING) / VKBDX;
-   int YSIDE = (retroh - YPADDING) / VKBDY;
+   int XSIDE     = (retrow - XPADDING) / VKBDX;
+   int YSIDE     = (retroh - YPADDING) / VKBDY;
 
-   int XBASEKEY = (XPADDING > 0) ? (XPADDING / 2) : 0;
-   int YBASEKEY = (YPADDING > 0) ? (YPADDING / 2) : 0;
+   int XBASEKEY  = (XPADDING > 0) ? (XPADDING / 2) : 0;
+   int YBASEKEY  = (YPADDING > 0) ? (YPADDING / 2) : 0;
 
    int XBASETEXT = XBASEKEY + (XSIDE / 2);
    int YBASETEXT = YBASEKEY + (YSIDE / 2);
@@ -762,7 +762,8 @@ void print_vkbd(void)
             snprintf(string, sizeof(string), "%03d", tape_counter);
          else
             snprintf(string, sizeof(string), "%s",
-               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal : vkeys[(y * VKBDX) + x + page].shift);
+               (!shifted) ? vkeys[(y * VKBDX) + x + page].normal
+                          : vkeys[(y * VKBDX) + x + page].shift);
 
          /* Key centering */
          BKG_PADDING_X = BKG_PADDING_X_DEFAULT;
@@ -816,8 +817,9 @@ void print_vkbd(void)
    }
 
    /* Opacity */
-   BKG_ALPHA = (retro_vkbd_transparent) ?
-         ((BKG_ALPHA == GRAPH_ALPHA_100) ? GRAPH_ALPHA_100 : GRAPH_ALPHA_75) : GRAPH_ALPHA_100;
+   BKG_ALPHA = (retro_vkbd_transparent)
+         ? ((BKG_ALPHA == GRAPH_ALPHA_100) ? GRAPH_ALPHA_100 : GRAPH_ALPHA_75)
+         : GRAPH_ALPHA_100;
 
    /* Selected key */
    int current_key_pos = (vkey_pos_y * VKBDX) + vkey_pos_x + page;
@@ -909,19 +911,20 @@ void print_vkbd(void)
 
    /* Gap backgrounds */
    if (VKBDX_GAP_POS)
-         draw_fbox(XOFFSET+XBASEKEY+(VKBDX_GAP_POS * XSIDE)+FONT_WIDTH, vkbd_y_min-FONT_HEIGHT,
-                VKBDX_GAP_PAD-FONT_WIDTH, vkbd_y_max-vkbd_y_min+(FONT_HEIGHT*2),
+      draw_fbox(XOFFSET+XBASEKEY+(VKBDX_GAP_POS * XSIDE)+FONT_WIDTH, vkbd_y_min-FONT_HEIGHT,
+                vkbd_x_gap_pad-FONT_WIDTH, vkbd_y_max-vkbd_y_min+(FONT_HEIGHT * 2),
                 0, BRD_ALPHA);
 
    if (VKBDY_GAP_POS)
    {
       draw_fbox(vkbd_x_min-FONT_WIDTH, YOFFSET+YBASEKEY+(VKBDY_GAP_POS * YSIDE)+FONT_HEIGHT,
-                vkbd_x_max-vkbd_x_min+FONT_WIDTH-XSIDE-VKBDX_GAP_PAD, VKBDY_GAP_PAD-FONT_HEIGHT,
+                vkbd_x_max-vkbd_x_min+FONT_WIDTH-XSIDE-VKBDX_GAP_PAD, vkbd_y_gap_pad-FONT_HEIGHT,
                 0, BRD_ALPHA);
-
-      draw_fbox(XOFFSET+XBASEKEY+(VKBDX_GAP_POS * XSIDE)+VKBDX_GAP_PAD, YOFFSET+YBASEKEY+(VKBDY_GAP_POS * YSIDE)+FONT_HEIGHT,
-                XSIDE+FONT_WIDTH, VKBDY_GAP_PAD-FONT_HEIGHT,
+#if 0
+      draw_fbox(XOFFSET+XBASEKEY+(VKBDX_GAP_POS * XSIDE)+vkbd_x_gap_pad, YOFFSET+YBASEKEY+(VKBDY_GAP_POS * YSIDE)+FONT_HEIGHT,
+                XSIDE+FONT_WIDTH, vkbd_y_gap_pad-FONT_HEIGHT,
                 0, BRD_ALPHA);
+#endif
    }
 
    /* Corner dimming */
@@ -966,7 +969,7 @@ static void input_vkbd_sticky(void)
       if (vkey_sticky1 > -1 && vkey_sticky1 != last_vkey_pressed)
       {
          if (vkey_sticky2 > -1 && vkey_sticky2 != last_vkey_pressed)
-            kbd_handle_keyup(vkey_sticky2);
+            retro_key_up(vkey_sticky2);
          vkey_sticky2 = last_vkey_pressed;
       }
       else
@@ -977,7 +980,7 @@ static void input_vkbd_sticky(void)
    if (last_vkey_pressed != -1 && !vkflag[RETRO_DEVICE_ID_JOYPAD_B])
    {
       if (vkey_pressed == -1 && last_vkey_pressed >= 0 && last_vkey_pressed != vkey_sticky1 && last_vkey_pressed != vkey_sticky2)
-         kbd_handle_keyup(last_vkey_pressed);
+         retro_key_up(last_vkey_pressed);
 
       last_vkey_pressed = -1;
    }
@@ -986,13 +989,11 @@ static void input_vkbd_sticky(void)
    {
       vkey_sticky1_release = 0;
       vkey_sticky1 = -1;
-      kbd_handle_keyup(vkey_sticky1);
    }
    if (vkey_sticky2_release)
    {
       vkey_sticky2_release = 0;
       vkey_sticky2 = -1;
-      kbd_handle_keyup(vkey_sticky2);
    }
 }
 
@@ -1269,8 +1270,8 @@ void toggle_vkbd(void)
 
 void input_vkbd(void)
 {
-   long now = 0;
-   unsigned int i = 0;
+   long now  = 0;
+   uint8_t i = 0;
 
    input_vkbd_sticky();
 
@@ -1334,14 +1335,14 @@ void input_vkbd(void)
                                          && !input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN))
    {
       vkflag[i] = 1;
-      kbd_handle_keydown(RETROK_RETURN);
+      retro_key_down(RETROK_RETURN);
    }
    else
    if (vkflag[i] && (!(joypad_bits[0] & (1 << i)) &&
                      !(joypad_bits[1] & (1 << i))))
    {
       vkflag[i] = 0;
-      kbd_handle_keyup(RETROK_RETURN);
+      retro_key_up(RETROK_RETURN);
    }
 
    /* Toggle ShiftLock / Quick mapper, RetroPad Y */
@@ -1386,14 +1387,14 @@ void input_vkbd(void)
                                              (joypad_bits[1] & (1 << i))))
    {
       vkflag[i] = 1;
-      kbd_handle_keydown(RETROK_SPACE);
+      retro_key_down(RETROK_SPACE);
    }
    else
    if (vkflag[i] && (!(joypad_bits[0] & (1 << i)) &&
                      !(joypad_bits[1] & (1 << i))))
    {
       vkflag[i] = 0;
-      kbd_handle_keyup(RETROK_SPACE);
+      retro_key_up(RETROK_SPACE);
    }
 
    /* Toggle transparency, RetroPad A */
@@ -1474,10 +1475,13 @@ void input_vkbd(void)
                   vkey_sticky1_release = 1;
                if (vkey_pressed == vkey_sticky2)
                   vkey_sticky2_release = 1;
-               kbd_handle_keydown(vkey_pressed);
+
+               if (vkey_pressed != vkey_sticky1 && vkey_pressed != vkey_sticky2)
+                  retro_key_down(vkey_pressed);
                break;
          }
       }
+
       last_vkey_pressed = vkey_pressed;
       last_vkey_pressed_time = now;
    }

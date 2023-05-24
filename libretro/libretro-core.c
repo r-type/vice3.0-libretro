@@ -3294,6 +3294,20 @@ static void retro_set_core_options()
          "bottom"
       },
       {
+         "vice_statusbar_startup",
+         "OSD > Statusbar Startup",
+         "Statusbar Startup",
+         "Show statusbar on startup.",
+         NULL,
+         "osd",
+         {
+            { "disabled", NULL },
+            { "enabled", NULL },
+            { NULL, NULL },
+         },
+         "disabled"
+      },
+      {
          "vice_statusbar_messages",
          "OSD > Statusbar Messages",
          "Statusbar Messages",
@@ -5085,6 +5099,8 @@ void retro_set_options_display(void)
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_statusbar";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+   option_display.key = "vice_statusbar_startup";
+   environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_statusbar_messages";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
    option_display.key = "vice_joyport_pointer_color";
@@ -6839,6 +6855,19 @@ static void update_variables(void)
 
       if (strstr(var.value, "basic"))   opt_statusbar |= STATUSBAR_BASIC;
       if (strstr(var.value, "minimal")) opt_statusbar |= STATUSBAR_MINIMAL;
+   }
+
+   var.key = "vice_statusbar_startup";
+   var.value = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!retro_ui_finalized)
+      {
+         if (!strcmp(var.value, "enabled"))
+            retro_statusbar = true;
+         else
+            retro_statusbar = false;
+      }
    }
 
    var.key = "vice_statusbar_messages";

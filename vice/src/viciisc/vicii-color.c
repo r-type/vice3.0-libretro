@@ -37,6 +37,12 @@
 #include "vicii-resources.h"
 #include "video.h"
 
+#ifdef __LIBRETRO__
+/* undefine for the new "idealized" Pepto colors, aka "colodore" */
+#define COLODORE_COLORS
+/* undefine for extra colors that use markos measured lumas */
+#define MARKO_LUMAS
+#else
 /* undefine for the old "idealized" Pepto colors */
 /* #define PEPTO_COLORS */
 
@@ -48,6 +54,7 @@
 
 /* undefine for the colors measured by Tobias */
 #define TOBIAS_COLORS
+#endif /* __LIBRETRO__ */
 
 /* undefine to use seperate palettes for odd/even lines */
 #define SEPERATE_ODD_EVEN_COLORS

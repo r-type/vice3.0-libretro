@@ -414,11 +414,9 @@ endif
 COMMONFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
 include Makefile.common
 
-$(info CFLAGS: $(CFLAGS) $(COMMONFLAGS))
-$(info -------)
-
 OBJECTS     += $(patsubst %.cpp,%.o,$(SOURCES_CXX:.cc=.o)) $(SOURCES_C:.c=.o)
 OBJECT_DEPS  = $(OBJECTS:.o=.d)
+PLATFLAGS   := $(CFLAGS)
 CXXFLAGS    += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 CFLAGS      += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 LDFLAGS     += -lm $(fpic)
@@ -436,6 +434,12 @@ ifeq ($(platform), theos_ios)
 	${LIBRARY_NAME}_FILES = $(SOURCES_CXX) $(SOURCES_C)
 	include $(THEOS_MAKE_PATH)/library.mk
 else
+
+default:
+	$(info CFLAGS: $(PLATFLAGS) $(COMMONFLAGS))
+	$(info -------)
+	$(MAKE) $(TARGET)
+
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
 ifeq ($(platform), emscripten)
@@ -469,5 +473,5 @@ objectclean:
 targetclean:
 	rm -f $(TARGET)
 
-.PHONY: clean
+.PHONY: all clean objectclean targetclean
 endif

@@ -421,6 +421,10 @@ CXXFLAGS    += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 CFLAGS      += $(fpic) $(INCFLAGS) $(COMMONFLAGS)
 LDFLAGS     += -lm $(fpic)
 
+OBJDIR      := build
+OBJECTS     := $(addprefix $(OBJDIR)/,$(OBJECTS))
+OBJECT_DEPS := $(addprefix $(OBJDIR)/,$(OBJECT_DEPS))
+
 # Ensure only a language version supported by all compilers is used
 # Do not enforce C99 as some gcc-versions appear to not handle system-headers
 # properly in that case.
@@ -453,22 +457,29 @@ else
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
 endif
 
-%.o: %.c
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	@$(if $@, $(shell echo echo CC $<),)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-%.o: %.cpp
+$(OBJDIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@$(if $@, $(shell echo echo CXX $<),)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o: %.cc
+$(OBJDIR)/%.o: %.cc
+	@mkdir -p $(dir $@)
+	@$(if $@, $(shell echo echo CXX $<),)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 -include $(OBJECT_DEPS)
 
 clean:
-	rm -f $(OBJECTS) $(OBJECT_DEPS) $(TARGET)
+	rm -rf $(OBJDIR)
+	rm -f $(TARGET)
 
 objectclean:
-	rm -f $(OBJECTS) $(OBJECT_DEPS)
+	rm -rf $(OBJDIR)
 
 targetclean:
 	rm -f $(TARGET)

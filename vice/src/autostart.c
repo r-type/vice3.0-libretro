@@ -89,9 +89,8 @@
 #include "libretro-glue.h"
 #include "libretro-mapper.h"
 extern int tape_counter;
+extern unsigned int retro_warpmode;
 extern unsigned int opt_autostart;
-extern unsigned int opt_work_disk_type;
-extern unsigned int opt_work_disk_unit;
 #endif
 
 #ifdef DEBUG_AUTOSTART
@@ -751,7 +750,12 @@ static void restore_drive_emulation_state(int unit, int drive)
     }
     if (orig_warp_mode != -1) {
         /* set warp to original state */
+#ifdef __LIBRETRO__
+        /* Not if holding warp manually */
+        if (vsync_get_warp_mode() != orig_warp_mode && !retro_warpmode) {
+#else
         if (vsync_get_warp_mode() != orig_warp_mode) {
+#endif
             set_warp_mode(orig_warp_mode);
         }
     }

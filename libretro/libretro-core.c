@@ -1846,6 +1846,10 @@ void reload_restart(void)
    /* Reset Datasette */
    datasette_control(TAPEPORT_PORT_1, DATASETTE_CONTROL_RESET);
 
+   /* Disable warp */
+   if (vsync_get_warp_mode())
+      vsync_set_warp_mode(0);
+
    /* Cleanup after previous content and reset resources */
    initcmdline_cleanup();
 

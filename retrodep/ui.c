@@ -325,6 +325,7 @@ int ui_init_finalize(void)
    log_resources_set_int("SoundFragmentSize", SOUND_FRAGMENT_SMALL);
    log_resources_set_int("AutostartPrgMode", 1);
    log_resources_set_int("AutostartDelayRandom", 0);
+   log_resources_set_int("AutostartHandleTrueDriveEmulation", 0);
    log_resources_set_int("FSDeviceLongNames", 1);
    log_resources_set_int("Mouse", 1);
    log_resources_set_int("Printer4", 1);
@@ -441,10 +442,10 @@ int ui_init_finalize(void)
    /* Media */
    log_resources_set_int("AutostartWarp", vice_opt.AutostartWarp);
    log_resources_set_int("VirtualDevice4", vice_opt.VirtualDevices);
-   log_resources_set_int("Drive8TrueEmulation", vice_opt.DriveTrueEmulation);
-   log_resources_set_int("Drive9TrueEmulation", vice_opt.DriveTrueEmulation);
    log_resources_set_int("VirtualDevice8", !vice_opt.DriveTrueEmulation);
    log_resources_set_int("VirtualDevice9", !vice_opt.DriveTrueEmulation);
+   log_resources_set_int("Drive8TrueEmulation", vice_opt.DriveTrueEmulation);
+   log_resources_set_int("Drive9TrueEmulation", vice_opt.DriveTrueEmulation);
    log_resources_set_int("AttachDevice8d0Readonly", vice_opt.AttachDevice8Readonly);
    log_resources_set_int("AttachDevice8d1Readonly", vice_opt.AttachDevice8Readonly);
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__)

@@ -1535,7 +1535,10 @@ void update_from_vice()
       free(autostartString);
       autostartString = x_strdup(cmdline_get_autostart_string());
       if (!autostartString && !string_is_empty(full_path))
+      {
+         free(autostartString);
          autostartString = x_strdup(full_path);
+      }
    }
 
    if (autostartString)
@@ -1725,7 +1728,10 @@ void update_from_vice()
             strcmp(autostartString, attachedImage) &&
             string_is_empty(autostartProgram) &&
             dc_get_image_type(attachedImage) != DC_IMAGE_TYPE_MEM)
+      {
+         free(autostartString);
          autostartString = NULL;
+      }
    }
 
    /* If there an image attached, but autostart is empty, autostart from the image */
@@ -1843,6 +1849,9 @@ void reload_restart(void)
    /* Clear request */
    request_reload_restart = false;
 
+   /* Reset autostart */
+   autostart_reset();
+
    /* Reset Datasette */
    datasette_control(TAPEPORT_PORT_1, DATASETTE_CONTROL_RESET);
 
@@ -1858,7 +1867,7 @@ void reload_restart(void)
 
    /* Mute floppy startup sound when not using floppies */
    {
-      char *content_path = full_path;
+      const char *content_path = full_path;
       if (!string_is_empty(dc->files[dc->index]))
          content_path = dc->files[dc->index];
 
@@ -1897,7 +1906,7 @@ void reload_restart(void)
     * - D64s fail to read
     * - D81s fail to stop drive sound emulation */
    {
-      char *content_path = full_path;
+      const char *content_path = full_path;
       if (!string_is_empty(dc->files[dc->index]))
          content_path = dc->files[dc->index];
 
@@ -1918,6 +1927,41 @@ void reload_restart(void)
    /* No need to update variables again on the first start */
    if (runstate > RUNSTATE_FIRST_START)
       update_variables();
+
+   /* Tapecart needs TDE */
+   if (
+         (!string_is_empty(full_path) && strendswith(full_path, "tcrt")) ||
+         (!string_is_empty(dc->files[0]) && strendswith(dc->files[0], "tcrt"))
+      )
+   {
+      if (!vice_opt.DriveTrueEmulation)
+      {
+         log_cb(RETRO_LOG_INFO, "Tapecart does not work without TDE, enabling..\n");
+         toggle_tde(1);
+      }
+
+      /* 3.7: Content is garbage without restart even without TDE change (?!) */
+      request_restart = true;
+   }
+
+   /* D2M/D4M does not accept TDE */
+   if (vice_opt.DriveTrueEmulation && (
+         (!string_is_empty(full_path) && (strendswith(full_path, "d2m") || strendswith(full_path, "d4m"))) ||
+         (!string_is_empty(dc->files[0]) && (strendswith(dc->files[0], "d2m") || strendswith(dc->files[0], "d4m")))
+      ))
+   {
+      log_cb(RETRO_LOG_INFO, "D2M/D4M does not work with TDE, disabling..\n");
+      toggle_tde(0);
+
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
+      /* No JiffyDOS without TDE */
+      opt_jiffydos = 0;
+#endif
+#if defined(__XSCPU64__)
+      /* SuperCPU kernal must be "internal" */
+      opt_supercpu_kernal = 0;
+#endif
+   }
 
    /* Some resources are not set until we call this */
    log_resource_set = true;
@@ -5521,26 +5565,6 @@ static void update_variables(void)
          resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
    }
 
-   /* Tapecart needs TDE */
-   if (!vice_opt.DriveTrueEmulation && (
-         (!string_is_empty(full_path) && strendswith(full_path, "tcrt")) ||
-         (!string_is_empty(dc->files[0]) && strendswith(dc->files[0], "tcrt"))
-      ))
-   {
-      log_cb(RETRO_LOG_INFO, "Tapecart does not work without TDE, enabling..\n");
-      toggle_tde(1);
-   }
-
-   /* D2M/D4M does not accept TDE */
-   if (vice_opt.DriveTrueEmulation && (
-         (!string_is_empty(full_path) && (strendswith(full_path, "d2m") || strendswith(full_path, "d4m"))) ||
-         (!string_is_empty(dc->files[0]) && (strendswith(dc->files[0], "d2m") || strendswith(dc->files[0], "d4m")))
-      ))
-   {
-      log_cb(RETRO_LOG_INFO, "D2M/D4M does not work with TDE, disabling..\n");
-      toggle_tde(0);
-   }
-
    var.key = "vice_drive_sound_emulation";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -7374,9 +7398,10 @@ void emu_reset(int type)
          /* Build direct launch PRG */
          if (dc->load[dc->index])
          {
-            autostartString  = strdup(dc->files[dc->index]);
+            free(autostartString);
+            autostartString  = x_strdup(dc->files[dc->index]);
             path_remove_program(autostartString);
-            autostartProgram = strdup(dc->load[dc->index]);
+            autostartProgram = x_strdup(dc->load[dc->index]);
             charset_petconvstring((uint8_t *)autostartProgram, 0);
          }
          else
@@ -7384,7 +7409,10 @@ void emu_reset(int type)
 
          /* Allow autostarting with a different disk */
          if (dc->count > 1)
+         {
+            free(autostartString);
             autostartString = x_strdup(dc->files[dc->index]);
+         }
          if (autostartString != NULL && autostartString[0] != '\0' && !noautostart)
             autostart_autodetect(autostartString, autostartProgram, 0, AUTOSTART_MODE_RUN);
          break;

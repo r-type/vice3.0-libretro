@@ -1861,6 +1861,9 @@ void reload_restart(void)
    if (vsync_get_warp_mode())
       vsync_set_warp_mode(0);
 
+   /* Reset autoloadwarp audio ignore */
+   audio_is_ignored = false;
+
    /* Cleanup after previous content and reset resources */
    initcmdline_cleanup();
 
@@ -7417,6 +7420,9 @@ void emu_reset(int type)
    if (vsync_get_warp_mode())
       vsync_set_warp_mode(0);
 
+   /* Reset autoloadwarp audio ignore */
+   audio_is_ignored = false;
+
    /* Changing opt_read_vicerc requires reloading */
    if (request_reload_restart)
       reload_restart();
@@ -8505,9 +8511,6 @@ bool retro_load_game(const struct retro_game_info *info)
    cur_port = 1;
    cur_port_locked = true;
 #endif
-
-   /* Reset autoloadwarp audio ignore */
-   audio_is_ignored = false;
 
    if (runstate == RUNSTATE_FIRST_START)
    {

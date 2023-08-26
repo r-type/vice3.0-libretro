@@ -4,6 +4,7 @@ SOURCES_C   :=
 SOURCES_CC  :=
 SOURCES_CXX :=
 OBJECTS     :=
+SILENT      := 0
 
 ifeq ($(platform),)
 platform = unix
@@ -459,17 +460,23 @@ endif
 
 $(OBJDIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	@$(if $@, $(shell echo echo CC $<),)
+	@if [[ $(SILENT) -ne 1 ]]; then\
+		$(if $@, $(shell echo echo CC $<),);\
+	fi
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	@$(if $@, $(shell echo echo CXX $<),)
+	@if [[ $(SILENT) -ne 1 ]]; then\
+		$(if $@, $(shell echo echo CXX $<),);\
+	fi
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(OBJDIR)/%.o: %.cc
 	@mkdir -p $(dir $@)
-	@$(if $@, $(shell echo echo CXX $<),)
+	@if [[ $(SILENT) -ne 1 ]]; then\
+		$(if $@, $(shell echo echo CXX $<),);\
+	fi
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 -include $(OBJECT_DEPS)

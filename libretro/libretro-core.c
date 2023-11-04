@@ -3339,15 +3339,15 @@ static void retro_set_core_options()
          "vice_gfx_colors",
          "Video > Color Depth",
          "Color Depth",
-         "24-bit is slower and not available on all platforms. Full restart required.",
+         "Full restart required.",
          NULL,
          "video",
          {
-            { "16bit", "Thousands (16-bit)" },
-            { "24bit", "Millions (24-bit)" },
+            { "16bit", "16-bit (RGB565)" },
+            { "24bit", "24-bit (XRGB8888)" },
             { NULL, NULL },
          },
-         "16bit"
+         "24bit"
       },
       {
          "vice_vkbd_theme",

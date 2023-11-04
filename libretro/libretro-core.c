@@ -2732,7 +2732,7 @@ static void retro_set_core_options()
             { "enabled", NULL },
             { NULL, NULL },
          },
-         "enabled"
+         "disabled"
       },
 #endif
       {

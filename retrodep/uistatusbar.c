@@ -343,6 +343,8 @@ static void display_tape(void)
 
     if (tape_enabled)
         vice_led_state[RETRO_LED_TAPE] = (tape_control == 1 && tape_motor) ? 1 : 0;
+    else
+        tape_control = 0;
 
     if (tape_enabled && (opt_autoloadwarp & AUTOLOADWARP_TAPE || vsync_get_warp_mode()) && !retro_warpmode)
     {

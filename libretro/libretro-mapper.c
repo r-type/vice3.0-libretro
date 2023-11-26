@@ -64,6 +64,7 @@ bool retro_statusbar = 0;
 extern unsigned char statusbar_text[RETRO_PATH_MAX];
 extern float retro_refresh;
 
+uint8_t retro_mouse_discard = 0;
 unsigned retro_key_state[RETROK_LAST] = {0};
 unsigned retro_key_state_internal[RETROK_LAST] = {0};
 unsigned retro_key_event_state[RETROK_LAST] = {0};
@@ -1404,6 +1405,12 @@ void retro_poll_event()
                retro_mouse_r[retro_j] = input_state_cb(retro_j, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_RIGHT);
                retro_mouse_m[retro_j] = input_state_cb(retro_j, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_MIDDLE);
             }
+         }
+
+         if (retro_mouse_discard)
+         {
+            retro_mouse_discard--;
+            retro_mouse_l[0] = 0;
          }
 
          /* Joypad movement */

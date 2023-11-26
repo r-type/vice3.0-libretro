@@ -81,6 +81,7 @@ extern int mapper_keys[RETRO_MAPPER_LAST];
 extern void retro_poll_event();
 extern void retro_keyboard_event(bool, unsigned, uint32_t, uint16_t);
 extern unsigned retro_key_state_internal[RETROK_LAST];
+extern uint8_t retro_mouse_discard;
 
 extern unsigned int opt_retropad_options;
 extern bool opt_keyrah_keypad;

@@ -83,6 +83,7 @@
 #include <stdbool.h>
 #include "vsync.h"
 #include "libretro-core.h"
+extern dc_storage *dc;
 extern unsigned int opt_autoloadwarp;
 extern unsigned int vice_led_state[RETRO_LED_NUM];
 extern bool retro_disk_get_eject_state(void);
@@ -985,18 +986,19 @@ void drive_update_ui_status(void)
                 int drive_led_status = vice_led_state[RETRO_LED_DRIVE];
                 int warp_mode        = vsync_get_warp_mode();
                 bool audio           = !(opt_autoloadwarp & AUTOLOADWARP_MUTE) ? audio_playing() : false;
+                bool drive_image     = dc_get_image_type(dc->files[dc->index]) == DC_IMAGE_TYPE_FLOPPY;
                 /* Determine drive active status based on BRA when available, otherwise rely on LED status only */
                 bool drive_active    =
                            ( drive0->image && drive0->byte_ready_active == (BRA_BYTE_READY | BRA_MOTOR_ON))
                         || (!drive0->image && drive_led_status);
 
-                if (drive_half_track != drive_half_track_prev && !warp_mode && !audio)
+                if (drive_half_track != drive_half_track_prev && drive_image && !warp_mode && !audio)
                 {
                     warpmode_counter_ledon  = 0;
                     warpmode_counter_ledoff = 0;
                     warp = 1;
                 }
-                else if (drive_half_track == drive_half_track_prev && (drive_led_status && drive_active) && !warp_mode && !audio)
+                else if (drive_half_track == drive_half_track_prev && drive_image && (drive_led_status && drive_active) && !warp_mode && !audio)
                 {
                     warpmode_counter_ledon  = 0;
                     warpmode_counter_ledoff = 0;
@@ -1005,11 +1007,10 @@ void drive_update_ui_status(void)
                 else if (drive_half_track == drive_half_track_prev && (!drive_led_status || !drive_active) && warp_mode && !audio)
                 {
                     warpmode_counter_ledon  = 0;
-                    if (!(drive0->byte_ready_active & BRA_MOTOR_ON))
-                        warpmode_counter_ledoff++;
+                    warpmode_counter_ledoff++;
 
                     if (       (!drive_led_status && warpmode_counter_ledoff > 23)
-                            || (!drive_active && warpmode_counter_ledoff > 11))
+                            || (!drive_active && warpmode_counter_ledoff > 43))
                         warp = 0;
                 }
                 else if (drive_half_track == drive_half_track_prev && drive_led_status && warp_mode && !audio)

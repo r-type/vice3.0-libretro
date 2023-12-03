@@ -573,6 +573,13 @@ static void rotation_1541_gcr_cycle(drive_t *dptr)
     /* cpu cycles since last call */
     cpu_cycles = *(dptr->clk) - rptr->rotation_last_clk;
     rptr->rotation_last_clk = *(dptr->clk);
+
+#ifdef __LIBRETRO__
+    /* Hang fix hack on forced reset when toggling JiffyDOS.. */
+    if ((int)cpu_cycles < 0)
+        return;
+#endif
+
     /* modulo, at least one revolution, but not more than two */
     while (cpu_cycles > one_rotation * 2) {
         cpu_cycles -= one_rotation;

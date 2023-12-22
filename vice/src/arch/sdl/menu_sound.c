@@ -42,7 +42,6 @@
 UI_MENU_DEFINE_TOGGLE(Sound)
 UI_MENU_DEFINE_RADIO(SoundSampleRate)
 UI_MENU_DEFINE_RADIO(SoundFragmentSize)
-UI_MENU_DEFINE_RADIO(SoundSpeedAdjustment)
 UI_MENU_DEFINE_RADIO(SoundDeviceName)
 UI_MENU_DEFINE_RADIO(SoundOutput)
 
@@ -77,7 +76,7 @@ static UI_MENU_CALLBACK(custom_buffer_size_callback)
         sprintf(buf, "%i", previous);
         value = sdl_ui_text_input_dialog("Enter buffer size in msec", buf);
         if (value) {
-            new_value = strtol(value, NULL, 0);
+            new_value = (int)strtol(value, NULL, 0);
             if (new_value != previous) {
                 resources_set_int("SoundBufferSize", new_value);
             }
@@ -102,7 +101,7 @@ static UI_MENU_CALLBACK(custom_frequency_callback)
         sprintf(buf, "%i", previous);
         value = sdl_ui_text_input_dialog("Enter frequency in Hz", buf);
         if (value) {
-            new_value = strtol(value, NULL, 0);
+            new_value = (int)strtol(value, NULL, 0);
             if (new_value != previous) {
                 resources_set_int("SoundSampleRate", new_value);
             }
@@ -148,41 +147,21 @@ static UI_MENU_CALLBACK(start_recording_callback)
 }
 
 static ui_menu_entry_t sound_output_driver_menu[] = {
-#ifdef HAVE_DEVICES_AHI_H
-    { "AHI",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundDeviceName_callback,
-      (ui_callback_data_t)"ahi" },
-#endif
-#ifdef USE_AIX_AUDIO
-    { "AIX",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundDeviceName_callback,
-      (ui_callback_data_t)"aix" },
-#endif
-#if defined(__MSDOS__) && !defined(USE_MIDAS_SOUND)
-    { "Allegro",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundDeviceName_callback,
-      (ui_callback_data_t)"allegro" },
-#endif
 #ifdef USE_ALSA
     { "ALSA",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"alsa" },
 #endif
-#ifdef USE_ARTS
-    { "aRts",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundDeviceName_callback,
-      (ui_callback_data_t)"arts" },
-#endif
-#ifdef __BEOS__
-    { "BeOS",
+#ifdef BEOS_COMPILE
+    { "BeOS GameSound",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"beos" },
+    { "BeOS SoundPlayer",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_SoundDeviceName_callback,
+      (ui_callback_data_t)"bsp" },
 #endif
 #ifdef USE_COREAUDIO
     { "Core Audio",
@@ -190,33 +169,15 @@ static ui_menu_entry_t sound_output_driver_menu[] = {
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"coreaudio" },
 #endif
-#ifdef __OS2__
-    { "OS/2",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundDeviceName_callback,
-      (ui_callback_data_t)"dart" },
-#endif
     { "Dummy",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"dummy" },
-#if defined(WIN32) && defined(USE_DXSOUND)
+#if defined(WINDOWS_COMPILE) && defined(USE_DXSOUND)
     { "DirectX",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"dx" },
-#endif
-#ifdef HAVE_SYS_AUDIO_H
-    { "HPUX",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundDeviceName_callback,
-      (ui_callback_data_t)"hpux" },
-#endif
-#if defined(__MSDOS__) && defined(USE_MIDAS_SOUND)
-    { "Midas",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundDeviceName_callback,
-      (ui_callback_data_t)"midas" },
 #endif
 #ifdef USE_PULSE
     { "PulseAudio",
@@ -236,25 +197,26 @@ static ui_menu_entry_t sound_output_driver_menu[] = {
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"sgi" },
 #endif
-#if defined(HAVE_SYS_AUDIOIO_H) && !defined(__NetBSD__) && !defined(__OpenBSD__)
+#if defined(HAVE_SYS_AUDIOIO_H) && !defined(OPENBSD_COMPILE)
+# if !defined(NETBSD_COMPILE)
     { "Sun audio",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"sun" },
-#endif
-#if defined(HAVE_SYS_AUDIOIO_H) && defined(__NetBSD__) && !defined(__OpenBSD__)
+# else
     { "NetBSD",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"netbsd" },
+# endif
 #endif
-#if defined(USE_OSS) && !defined(__FreeBSD__) && !defined(__bsdi__)
+#if defined(USE_OSS) && !defined(FREEBSD_COMPILE)
     { "OSS",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SoundDeviceName_callback,
       (ui_callback_data_t)"uss" },
 #endif
-#ifdef WIN32
+#ifdef WINDOWS_COMPILE
     { "WMM",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SoundDeviceName_callback,
@@ -303,7 +265,7 @@ static ui_menu_entry_t fragment_size_menu[] = {
     SDL_MENU_LIST_END
 };
 
-static const ui_menu_entry_t sound_record_menu[] = {
+const ui_menu_entry_t sound_record_menu[] = {
     { "Start recording AIFF audio file",
       MENU_ENTRY_DIALOG,
       start_recording_callback,
@@ -400,24 +362,6 @@ const ui_menu_entry_t sound_output_menu[] = {
       MENU_ENTRY_DIALOG,
       custom_frequency_callback,
       NULL },
-    SDL_MENU_ITEM_SEPARATOR,
-    SDL_MENU_ITEM_TITLE("Synchronization method"),
-    { "Flexible",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundSpeedAdjustment_callback,
-      (ui_callback_data_t)SOUND_ADJUST_FLEXIBLE },
-    { "Adjusting",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundSpeedAdjustment_callback,
-      (ui_callback_data_t)SOUND_ADJUST_ADJUSTING },
-    { "Exact",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_SoundSpeedAdjustment_callback,
-      (ui_callback_data_t)SOUND_ADJUST_EXACT },
-    SDL_MENU_ITEM_SEPARATOR,
-    { "Sound recording",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)sound_record_menu },
+
     SDL_MENU_LIST_END
 };

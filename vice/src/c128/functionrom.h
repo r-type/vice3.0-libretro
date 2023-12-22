@@ -30,15 +30,11 @@
 
 #include "types.h"
 
-extern BYTE int_function_rom[];
-extern BYTE ext_function_rom[];
+extern uint8_t int_function_rom[];
 
-extern BYTE internal_function_rom_read(WORD addr);
-extern void internal_function_rom_store(WORD addr, BYTE value);
-extern void internal_function_top_shared_store(WORD addr, BYTE value);
-extern BYTE external_function_rom_read(WORD addr);
-extern void external_function_rom_store(WORD addr, BYTE value);
-extern void external_function_top_shared_store(WORD addr, BYTE value);
+extern uint8_t internal_function_rom_read(uint16_t addr);
+extern void internal_function_rom_store(uint16_t addr, uint8_t value);
+extern void internal_function_top_shared_store(uint16_t addr, uint8_t value);
 
 extern int functionrom_resources_init(void);
 extern void functionrom_resources_shutdown(void);
@@ -48,10 +44,5 @@ extern int functionrom_cmdline_options_init(void);
 #define INT_FUNCTION_ROM    1
 #define INT_FUNCTION_RAM    2
 #define INT_FUNCTION_RTC    3
-
-#define EXT_FUNCTION_NONE   0
-#define EXT_FUNCTION_ROM    1
-#define EXT_FUNCTION_RAM    2
-#define EXT_FUNCTION_RTC    3
 
 #endif

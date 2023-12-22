@@ -26,6 +26,8 @@
 
 #include "vice.h"
 
+#include <stdio.h>
+
 #include "diskimage.h"
 #include "log.h"
 #include "machine-bus.h"
@@ -58,13 +60,13 @@ int realimage_close(disk_image_t *image)
 
 /*-----------------------------------------------------------------------*/
 
-int realimage_read_sector(const disk_image_t *image, BYTE *buf,
+int realimage_read_sector(const disk_image_t *image, uint8_t *buf,
                           const disk_addr_t *dadr)
 {
     return machine_bus_lib_read_sector(8, dadr->track, dadr->sector, buf);
 }
 
-int realimage_write_sector(disk_image_t *image, const BYTE *buf,
+int realimage_write_sector(disk_image_t *image, const uint8_t *buf,
                            const disk_addr_t *dadr)
 {
     return 0;

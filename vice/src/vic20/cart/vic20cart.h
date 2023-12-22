@@ -36,6 +36,13 @@ extern int try_cartridge_attach(int c);
 #define TRY_RESOURCE_CARTNAME (1 << 1)
 #define TRY_RESOURCE_CARTRESET (1 << 2)
 
+/* Cartridge ROM limit = 1MB */
+#define VIC20CART_ROM_LIMIT (1024 * 1024)
+/* Cartridge RAM limit = 64kB */
+#define VIC20CART_RAM_LIMIT (64 * 1024)
+/* maximum size of a full "all inclusive" cartridge image */
+#define VIC20CART_IMAGE_LIMIT (VIC20CART_ROM_LIMIT)
+
 extern int cartridge_is_from_snapshot;
 
 struct snapshot_s;
@@ -44,7 +51,7 @@ extern int vic20cart_snapshot_write_module(struct snapshot_s *s);
 extern int vic20cart_snapshot_read_module(struct snapshot_s *s);
 
 /* used internally, don't call from UI or other non cart related code */
-extern void cartridge_attach(int type, BYTE *rawcart);
+extern void cartridge_attach(int type, uint8_t *rawcart);
 extern void cartridge_detach(int type);
 
 #endif

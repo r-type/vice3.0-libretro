@@ -37,7 +37,6 @@
 #include "lib.h"
 #include "log.h"
 #include "resources.h"
-#include "translate.h"
 #include "types.h"
 #include "util.h"
 
@@ -55,11 +54,11 @@ static driver_select_t driver_select[NUM_DRIVER_SELECT];
 /* Pointer to registered printer driver.  */
 static driver_select_list_t *driver_select_list = NULL;
 
-static char *userprinter_names[] = { "ascii", "nl10", "raw", NULL };
+static const char * const userprinter_names[] = { "ascii", "nl10", "raw", NULL };
 
-static char *printer_names[] = { "ascii", "mps803", "nl10", "raw", NULL };
+static const char * const printer_names[] = { "ascii", "mps803", "nl10", "raw", NULL };
 
-static char *plotter_names[] = { "1520", "raw", NULL };
+static const char * const plotter_names[] = { "1520", "raw", NULL };
 
 static int userprinter_name_is_valid(const char *name)
 {
@@ -141,7 +140,11 @@ static const resource_string_t resources_string[] = {
       (char **)&driver_select[0].drv_name, set_printer_driver, (void *)0 },
     { "Printer5Driver", "ascii", RES_EVENT_NO, NULL,
       (char **)&driver_select[1].drv_name, set_printer_driver, (void *)1 },
+#ifdef __LIBRETRO__
+    { "Printer6Driver", "raw", RES_EVENT_NO, NULL,
+#else
     { "Printer6Driver", "1520", RES_EVENT_NO, NULL,
+#endif
       (char **)&driver_select[2].drv_name, set_printer_driver, (void *)2 },
     RESOURCE_STRING_LIST_END
 };
@@ -164,31 +167,23 @@ int driver_select_userport_init_resources(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-pr4drv", SET_RESOURCE, 1,
+    { "-pr4drv", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer4Driver", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_PRT_DRIVER_4_NAME,
-      NULL, NULL },
-    { "-pr5drv", SET_RESOURCE, 1,
+      "<Name>", "Specify name of printer driver for device #4. (ascii/mps803/nl10/raw)" },
+    { "-pr5drv", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer5Driver", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_PRT_DRIVER_5_NAME,
-      NULL, NULL },
-    { "-pr6drv", SET_RESOURCE, 1,
+      "<Name>", "Specify name of printer driver for device #5. (ascii/mps803/nl10/raw)" },
+    { "-pr6drv", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer6Driver", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_PRT_DRIVER_6_NAME,
-      NULL, NULL },
+      "<Name>", "Specify name of printer driver for device #6. (1520/raw)" },
     CMDLINE_LIST_END
 };
 
 static const cmdline_option_t cmdline_options_userport[] =
 {
-    { "-pruserdrv", SET_RESOURCE, 1,
+    { "-pruserdrv", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterUserportDriver", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_PRT_DRIVER_USR_NAME,
-      NULL, NULL },
+      "<Name>", "Specify name of printer driver for the userport printer. (ascii/nl10/raw)" },
     CMDLINE_LIST_END
 };
 
@@ -209,7 +204,7 @@ void driver_select_init(void)
 
 /* ------------------------------------------------------------------------- */
 
-void driver_select_register(driver_select_t *driver_select)
+void driver_select_register(driver_select_t *drv_select)
 {
     driver_select_list_t *list, *prev;
 
@@ -219,7 +214,7 @@ void driver_select_register(driver_select_t *driver_select)
     }
 
     list = lib_malloc(sizeof(driver_select_list_t));
-    memcpy(&(list->driver_select), driver_select, sizeof(driver_select_t));
+    memcpy(&(list->driver_select), drv_select, sizeof(driver_select_t));
     list->next = NULL;
 
     if (driver_select_list != NULL) {
@@ -260,12 +255,12 @@ void driver_select_close(unsigned int prnr, unsigned int secondary)
     driver_select[prnr].drv_close(prnr, secondary);
 }
 
-int driver_select_putc(unsigned int prnr, unsigned int secondary, BYTE b)
+int driver_select_putc(unsigned int prnr, unsigned int secondary, uint8_t b)
 {
     return driver_select[prnr].drv_putc(prnr, secondary, b);
 }
 
-int driver_select_getc(unsigned int prnr, unsigned int secondary, BYTE *b)
+int driver_select_getc(unsigned int prnr, unsigned int secondary, uint8_t *b)
 {
     return driver_select[prnr].drv_getc(prnr, secondary, b);
 }
@@ -273,7 +268,8 @@ int driver_select_getc(unsigned int prnr, unsigned int secondary, BYTE *b)
 int driver_select_flush(unsigned int prnr, unsigned int secondary)
 {
 #ifdef DEBUG_PRINTER
-    log_message(driver_select_log, "Flush device #%i secondary %i.", prnr + 4, secondary);
+    log_message(driver_select_log, "Flush device #%u secondary %u.",
+            prnr + 4, secondary);
 #endif
     return driver_select[prnr].drv_flush(prnr, secondary);
 }
@@ -282,7 +278,7 @@ int driver_select_flush(unsigned int prnr, unsigned int secondary)
 int driver_select_formfeed(unsigned int prnr)
 {
 #ifdef DEBUG_PRINTER
-    log_message(driver_select_log, "Formfeed device #%i", prnr + 4);
+    log_message(driver_select_log, "Formfeed device #%u", prnr + 4);
 #endif
     return driver_select[prnr].drv_formfeed(prnr);
 }

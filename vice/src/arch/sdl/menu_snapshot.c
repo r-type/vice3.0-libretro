@@ -52,10 +52,8 @@ static UI_MENU_CALLBACK(toggle_save_disk_images_callback)
 {
     if (activated) {
         save_disks = !save_disks;
-    } else {
-        if (save_disks) {
-            return sdl_menu_text_tick;
-        }
+    } else if (save_disks) {
+        return sdl_menu_text_tick;
     }
     return NULL;
 }
@@ -64,10 +62,8 @@ static UI_MENU_CALLBACK(toggle_save_rom_images_callback)
 {
     if (activated) {
         save_roms = !save_roms;
-    } else {
-        if (save_roms) {
-            return sdl_menu_text_tick;
-        }
+    } else if (save_roms) {
+        return sdl_menu_text_tick;
     }
     return NULL;
 }
@@ -90,6 +86,7 @@ static UI_MENU_CALLBACK(save_snapshot_callback)
 }
 
 #if 0
+/* FIXME */
 static UI_MENU_CALLBACK(save_snapshot_slot_callback)
 {
     char *name;
@@ -185,6 +182,7 @@ static UI_MENU_CALLBACK(load_snapshot_callback)
 }
 
 #if 0
+/* FIXME */
 static UI_MENU_CALLBACK(load_snapshot_slot_callback)
 {
     char *name;
@@ -235,11 +233,11 @@ static UI_MENU_CALLBACK(select_history_files_callback)
 
 static const ui_menu_entry_t save_snapshot_menu[] = {
     { "Save currently attached disk images",
-      MENU_ENTRY_OTHER,
+      MENU_ENTRY_OTHER_TOGGLE,
       toggle_save_disk_images_callback,
       NULL },
     { "Save currently attached ROM images",
-      MENU_ENTRY_OTHER,
+      MENU_ENTRY_OTHER_TOGGLE,
       toggle_save_rom_images_callback,
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
@@ -309,19 +307,3 @@ const ui_menu_entry_t snapshot_menu[] = {
       NULL },
     SDL_MENU_LIST_END
 };
-
-#ifdef ANDROID_COMPILE
-void loader_load_snapshot(char *name)
-{
-    if (machine_read_snapshot(name, 0) < 0) {
-        snapshot_display_error();
-    }
-}
-
-void loader_save_snapshot(char *name)
-{
-    if (machine_write_snapshot(name, save_roms, save_disks, 0) < 0) {
-        snapshot_display_error();
-    }
-}
-#endif

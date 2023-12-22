@@ -37,14 +37,29 @@
 #include "vic.h"
 #include "victypes.h"
 #include "video.h"
+#include "vsync.h"
 
 vic_resources_t vic_resources = { 0 };
 static video_chip_cap_t video_chip_cap;
 
-static int set_border_mode(int val, void *param)
+static int next_border_mode;
+
+static void on_vsync_set_border_mode(void *unused)
 {
     int sync;
 
+    if (resources_get_int("MachineVideoStandard", &sync) < 0) {
+        sync = MACHINE_SYNC_PAL;
+    }
+
+    if (vic_resources.border_mode != next_border_mode) {
+        vic_resources.border_mode = next_border_mode;
+        machine_change_timing(sync, vic_resources.border_mode);
+    }
+}
+
+static int set_border_mode(int val, void *param)
+{
     switch (val) {
         case VIC_NORMAL_BORDERS:
         case VIC_FULL_BORDERS:
@@ -55,14 +70,9 @@ static int set_border_mode(int val, void *param)
             return -1;
     }
 
-    if (resources_get_int("MachineVideoStandard", &sync) < 0) {
-        sync = MACHINE_SYNC_PAL;
-    }
+    next_border_mode = val;
+    vsync_on_vsync_do(on_vsync_set_border_mode, NULL);
 
-    if (vic_resources.border_mode != val) {
-        vic_resources.border_mode = val;
-        machine_change_timing(sync, vic_resources.border_mode);
-    }
     return 0;
 }
 
@@ -81,16 +91,15 @@ int vic_resources_init(void)
     video_chip_cap.dsize_limit_width = 0;
     video_chip_cap.dsize_limit_height = 0;
     video_chip_cap.dscan_allowed = ARCHDEP_VIC_DSCAN;
-    video_chip_cap.hwscale_allowed = ARCHDEP_VIC_HWSCALE;
-    video_chip_cap.scale2x_allowed = ARCHDEP_VIC_DSIZE;
+    video_chip_cap.interlace_allowed = 1;
     video_chip_cap.external_palette_name = "mike-pal";
     video_chip_cap.double_buffering_allowed = ARCHDEP_VIC_DBUF;
     video_chip_cap.single_mode.sizex = 1;
     video_chip_cap.single_mode.sizey = 1;
-    video_chip_cap.single_mode.rmode = VIDEO_RENDER_PAL_1X1;
+    video_chip_cap.single_mode.rmode = VIDEO_RENDER_PAL_NTSC_1X1;
     video_chip_cap.double_mode.sizex = 2;
     video_chip_cap.double_mode.sizey = 2;
-    video_chip_cap.double_mode.rmode = VIDEO_RENDER_PAL_2X2;
+    video_chip_cap.double_mode.rmode = VIDEO_RENDER_PAL_NTSC_2X2;
 
     fullscreen_capability(&(video_chip_cap.fullscreen));
 

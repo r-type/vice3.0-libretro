@@ -53,6 +53,9 @@ enum t_memspace {
 };
 typedef enum t_memspace MEMSPACE;
 
+#define FIRST_SPACE e_comp_space
+#define LAST_SPACE e_disk11_space
+
 enum CPU_TYPE_s {
     CPU_6502,
     CPU_WDC65C02,
@@ -70,17 +73,27 @@ struct interrupt_cpu_status_s;
 struct monitor_cpu_type_s {
     CPU_TYPE_t cpu_type;
     unsigned int (*asm_addr_mode_get_size)(unsigned int mode, unsigned int p0,
-                                           unsigned int p1, unsigned int p2);
+                                           unsigned int p1, unsigned int p2, unsigned int p3);
     const struct asm_opcode_info_s *(*asm_opcode_info_get)(unsigned int p0, unsigned int p1,
-                                                           unsigned int p2);
+                                                           unsigned int p2, unsigned int p3);
     int (*mon_assemble_instr)(const char *opcode_name, asm_mode_addr_info_t operand);
     unsigned int (*mon_register_get_val)(int mem, int reg_id);
-    void (*mon_register_set_val)(int mem, int reg_id, WORD val);
+    void (*mon_register_set_val)(int mem, int reg_id, uint16_t val);
     void (*mon_register_print)(int mem);
     const char* (*mon_register_print_ex)(int mem);
     struct mon_reg_list_s *(*mon_register_list_get)(int mem);
 };
 typedef struct monitor_cpu_type_s monitor_cpu_type_t;
+
+
+struct supported_cpu_type_list_s {
+    monitor_cpu_type_t *monitor_cpu_type_p;
+    struct supported_cpu_type_list_s *next;
+};
+typedef struct supported_cpu_type_list_s supported_cpu_type_list_t;
+
+/* A linked list of supported monitor_cpu_types for each memspace */
+extern supported_cpu_type_list_t *monitor_cpu_type_supported[NUM_MEMSPACES];
 
 /* This is the standard interface through which the monitor accesses a
    certain CPU.  */
@@ -110,16 +123,29 @@ struct monitor_interface_s {
     CLOCK *clk;
 
     int current_bank;
+    int current_bank_index;
+
+    /* Returns the string bank identifiers in a NULL terminated list. */
     const char **(*mem_bank_list)(void);
+
+    /* Returns the numeric bank identifiers in a -1 terminated list.
+     * These correspond to the string identifiers so there could be
+     * repeats.
+     */
+    const int *(*mem_bank_list_nos)(void);
+
     int (*mem_bank_from_name)(const char *name);
-    BYTE (*mem_bank_read)(int bank, WORD addr, void *context);
-    BYTE (*mem_bank_peek)(int bank, WORD addr, void *context);
-    void (*mem_bank_write)(int bank, WORD addr, BYTE byte, void *context);
+    int (*mem_bank_index_from_bank)(int bank);
+    int (*mem_bank_flags_from_bank)(int bank);
+
+    uint8_t (*mem_bank_read)(int bank, uint16_t addr, void *context);
+    uint8_t (*mem_bank_peek)(int bank, uint16_t addr, void *context);
+    void (*mem_bank_write)(int bank, uint16_t addr, uint8_t byte, void *context);
+    void (*mem_bank_poke)(int bank, uint16_t addr, uint8_t byte, void *context);
 
     struct mem_ioreg_list_s *(*mem_ioreg_list_get)(void *context);
 
     /* Pointer to a function to disable/enable watchpoint checking.  */
-    /*monitor_toggle_func_t *toggle_watchpoints_func;*/
     void (*toggle_watchpoints_func)(int value, void *context);
 
     /* Update bank base (used for drives).  */
@@ -144,20 +170,25 @@ extern void monitor_init(monitor_interface_t * maincpu_interface,
 extern void monitor_shutdown(void);
 extern int monitor_cmdline_options_init(void);
 extern int monitor_resources_init(void);
+extern void monitor_resources_shutdown(void);
 void monitor_startup(MEMSPACE mem);
 extern void monitor_startup_trap(void);
+extern bool monitor_is_inside_monitor(void);
+
+extern void monitor_reset_hook(void);
+extern void monitor_vsync_hook(void);
 
 extern void monitor_abort(void);
 
 extern int monitor_force_import(MEMSPACE mem);
-extern void monitor_check_icount(WORD a);
+extern void monitor_check_icount(uint16_t a);
 extern void monitor_check_icount_interrupt(void);
 extern void monitor_check_watchpoints(unsigned int lastpc, unsigned int pc);
 
 extern void monitor_cpu_type_set(const char *cpu_type);
 
-extern void monitor_watch_push_load_addr(WORD addr, MEMSPACE mem);
-extern void monitor_watch_push_store_addr(WORD addr, MEMSPACE mem);
+extern void monitor_watch_push_load_addr(uint16_t addr, MEMSPACE mem);
+extern void monitor_watch_push_store_addr(uint16_t addr, MEMSPACE mem);
 
 extern monitor_interface_t *monitor_interface_new(void);
 extern void monitor_interface_destroy(monitor_interface_t *monitor_interface);
@@ -165,17 +196,14 @@ extern void monitor_interface_destroy(monitor_interface_t *monitor_interface);
 extern int monitor_diskspace_dnr(int mem);
 extern int monitor_diskspace_mem(int dnr);
 
-#ifdef __GNUC__
-extern int mon_out(const char *format, ...)
-    __attribute__((format(printf, 1, 2)));
-#else
-extern int mon_out(const char *format, ...);
-#endif
+extern int mon_out(const char *format, ...) VICE_ATTR_PRINTF;
 
 /** Breakpoint interface.  */
 
+#define MONITOR_MAX_CHECKPOINTS 9
+
 /* Prototypes */
-extern int monitor_check_breakpoints(MEMSPACE mem, WORD addr);
+extern int monitor_check_breakpoints(MEMSPACE mem, uint16_t addr);
 
 /** Disassemble interace */
 /* Prototypes */
@@ -187,7 +215,7 @@ extern const char *mon_disassemble_to_string(MEMSPACE, unsigned int addr, unsign
 /** Register interface.  */
 extern struct mon_reg_list_s *mon_register_list_get(int mem);
 extern void mon_ioreg_add_list(struct mem_ioreg_list_s **list, const char *name,
-                               int start, int end, void *dump, void *context);
+                               int start, int end, void *dump, void *context, int mirror_mode);
 
 /* Assembler initialization.  */
 extern void asm6502_init(struct monitor_cpu_type_s *monitor_cpu_type);
@@ -209,9 +237,9 @@ typedef struct monitor_cartridge_commands_s monitor_cartridge_commands_t;
 extern monitor_cartridge_commands_t mon_cart_cmd;
 
 /* CPU history/memmap prototypes */
-extern void monitor_cpuhistory_store(unsigned int addr, unsigned int op, unsigned int p1, unsigned int p2,
-                                     BYTE reg_a, BYTE reg_x, BYTE reg_y,
-                                     BYTE reg_sp, unsigned int reg_st);
+extern void monitor_cpuhistory_store(CLOCK cycle, unsigned int addr, unsigned int op, unsigned int p1, unsigned int p2,
+                                     uint8_t reg_a, uint8_t reg_x, uint8_t reg_y,
+                                     uint8_t reg_sp, unsigned int reg_st, uint8_t origin);
 extern void monitor_cpuhistory_fix_p2(unsigned int p2);
 extern void monitor_memmap_store(unsigned int addr, unsigned int type);
 
@@ -227,17 +255,10 @@ extern void monitor_memmap_store(unsigned int addr, unsigned int type);
 #define MEMMAP_RAM_X    (1 << 0)
 
 /* HACK to enable fetch/load separation */
-extern BYTE memmap_state;
+extern uint8_t memmap_state;
 #define MEMMAP_STATE_OPCODE     0x01
 #define MEMMAP_STATE_INSTR      0x02
 #define MEMMAP_STATE_IGNORE     0x04
 #define MEMMAP_STATE_IN_MONITOR 0x08
-
-/* strtoul replacement for sunos4 */
-#if defined(sun) || defined(__sun)
-#  if !defined(__SVR4) && !defined(__svr4__)
-#    define strtoul(a, b, c) (unsigned long)strtol(a, b, c)
-#  endif
-#endif
 
 #endif

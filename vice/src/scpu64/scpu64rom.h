@@ -30,6 +30,10 @@
 extern int scpu64rom_load_scpu64(const char *rom_name);
 extern int scpu64rom_load_chargen(const char *rom_name);
 
-extern BYTE scpu64rom_scpu64_rom[];
+extern uint8_t scpu64rom_scpu64_rom[];
+
+/* filenames used for the chargen ROMs */
+#define C64_CHARGEN_NAME        "chargen-901225-01.bin"
+#define C64_CHARGEN_JAP_NAME    "chargen-906143-02.bin"
 
 #endif

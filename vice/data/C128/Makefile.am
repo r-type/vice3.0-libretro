@@ -1,23 +1,24 @@
-c128dir = $(VICEDIR)/C128
+c128dir = $(VICE_DATADIR)/C128
 
 roms = \
-	basic64 \
-	basichi \
-	basiclo \
-	chargde \
-	chargen \
-	chargfr \
-	chargse \
-	chargch \
-	kernal \
-	kernal64 \
-	kernalde \
+	basic64-901226-01.bin \
+	kernal64-901227-03.bin \
+	basichi-318019-04.bin \
+	basiclo-318018-04.bin \
+	chargen-315079-01.bin \
+	chargen-390059-01.bin \
+	chargen-325167-01.bin \
+	chargen-325181-01.bin \
+	chargen-325173-01D.bin \
+	chargen-325078-02.bin \
+	kernal-318020-05.bin \
+	kernal-315078-03.bin \
 	kernalfi \
 	kernalfr \
 	kernalit \
 	kernalno \
-	kernalse \
-	kernalch
+	kernal-318034-01.bin \
+	kernal-325172-01.bin
 
 romsets = \
 	default.vrs
@@ -40,38 +41,51 @@ palettes = \
 	colodore.vpl \
 	ptoing.vpl \
 	deekay.vpl \
+	cjam.vpl \
+	palette.vpl \
+	pixcen.vpl \
 	rgb.vpl
 
-x11_keymaps = \
-	x11_sym.vkm \
-	x11_pos.vkm
+gtk3_keymaps = \
+	gtk3_sym.vkm \
+	gtk3_sym_fr.vkm \
+	gtk3_sym_de.vkm \
+	gtk3_sym_se.vkm \
+	gtk3_pos.vkm \
+	gtk3_pos_de.vkm \
+	gtk3_pos_se.vkm
+
+gtk3_hotkeys = \
+	gtk3-hotkeys.vhk \
+	gtk3-hotkeys-mac.vhk
 
 sdl_keymaps = \
-	sdl_pos.vkm
+	sdl_sym.vkm \
+	sdl_sym_de.vkm \
+	sdl_sym_fr.vkm \
+	sdl_pos.vkm \
+	sdl_pos_de.vkm \
+	sdl_v128.vkm
 
-extra_keymaps = \
-	amiga_sym.vkm \
-	amiga_pos.vkm \
-	beos_sym.vkm \
-	beos_pos.vkm \
-	dos_sym.vkm \
-	dos_pos.vkm \
-	os2.vkm \
-	osx_pos.vkm \
-	osx_sym.vkm \
-	win_sym.vkm \
-	win_pos.vkm
+sdl_hotkeys = \
+	sdl-hotkeys.vhk
 
-win32_files = \
-	win_hotkeys.vhk \
-	win_shortcuts.vsc
+if USE_SDLUI
+c128_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps) $(sdl_hotkeys)
+EXTRA_DIST = $(c128_DATA) $(gtk3_keymaps) $(gtk3_hotkeys)
+endif
 
-if SDL_COMPILE
-c128_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps)
+if USE_SDL2UI
+c128_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps) $(sdl_hotkeys)
+EXTRA_DIST = $(c128_DATA) $(gtk3_keymaps) $(gtk3_hotkeys)
+endif
 
-EXTRA_DIST = $(c128_DATA) $(extra_keymaps) $(x11_keymaps) $(win32_files)
-else
-c128_DATA = $(roms) $(romsets) $(palettes) $(x11_keymaps)
+if USE_GTK3UI
+c128_DATA = $(roms) $(romsets) $(palettes) $(gtk3_keymaps) $(gtk3_hotkeys)
+EXTRA_DIST = $(c128_DATA) $(sdl_keymaps) $(sdl_hotkeys)
+endif
 
-EXTRA_DIST = $(c128_DATA) $(extra_keymaps) $(sdl_keymaps) $(win32_files)
+if USE_HEADLESSUI
+c128_DATA = $(roms) $(romsets) $(palettes)
+EXTRA_DIST = $(c128_DATA) $(sdl_keymaps) $(sdl_hotkeys) $(gtk3_keymaps) $(gtk3_hotkeys)
 endif

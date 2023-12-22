@@ -32,7 +32,8 @@
 
 #include "6510core.h"
 #include "alarm.h"
-#include "clkguard.h"
+#include "archdep.h"
+#include "autostart.h"
 #include "debug.h"
 #include "interrupt.h"
 #include "log.h"
@@ -75,12 +76,12 @@
 
 #ifndef STORE
 #define STORE(addr, value) \
-    (*_mem_write_tab_ptr[(addr) >> 8])((WORD)(addr), (BYTE)(value))
+    (*_mem_write_tab_ptr[(addr) >> 8])((uint16_t)(addr), (uint8_t)(value))
 #endif
 
 #ifndef LOAD
 #define LOAD(addr) \
-    (*_mem_read_tab_ptr[(addr) >> 8])((WORD)(addr))
+    (*_mem_read_tab_ptr[(addr) >> 8])((uint16_t)(addr))
 #endif
 
 /* Those may be overridden by the machine stuff.  Probably we want them in
@@ -114,7 +115,6 @@ struct interrupt_cpu_status_s *maincpu_int_status = NULL;
 #ifndef CYCLE_EXACT_ALARM
 alarm_context_t *maincpu_alarm_context = NULL;
 #endif
-clk_guard_t *maincpu_clk_guard = NULL;
 monitor_interface_t *maincpu_monitor_interface = NULL;
 
 /* This flag is an obsolete optimization. It's always 0 for the 65816 CPU,
@@ -156,11 +156,19 @@ monitor_interface_t *maincpu_monitor_interface_get(void)
     maincpu_monitor_interface->clk = &maincpu_clk;
 
     maincpu_monitor_interface->current_bank = 0;
+    maincpu_monitor_interface->current_bank_index = 0;
+
     maincpu_monitor_interface->mem_bank_list = mem_bank_list;
+    maincpu_monitor_interface->mem_bank_list_nos = mem_bank_list_nos;
+
     maincpu_monitor_interface->mem_bank_from_name = mem_bank_from_name;
+    maincpu_monitor_interface->mem_bank_index_from_bank = mem_bank_index_from_bank;
+    maincpu_monitor_interface->mem_bank_flags_from_bank = mem_bank_flags_from_bank;
+
     maincpu_monitor_interface->mem_bank_read = mem_bank_read;
     maincpu_monitor_interface->mem_bank_peek = mem_bank_peek;
     maincpu_monitor_interface->mem_bank_write = mem_bank_write;
+    maincpu_monitor_interface->mem_bank_poke = mem_bank_poke;
 
     maincpu_monitor_interface->mem_ioreg_list_get = mem_ioreg_list_get;
 
@@ -225,24 +233,27 @@ void maincpu_reset(void)
 unsigned int reg_pc;
 #endif
 
-static BYTE **o_bank_base;
-static int *o_bank_start;
-static int *o_bank_limit;
-static BYTE *o_bank_bank;
+static bool bank_base_ready = false;
+static uint8_t *bank_base = NULL;
+static int bank_start = 0;
+static int bank_limit = 0;
+static uint8_t bank_bank = 0;
 
-void maincpu_resync_limits(void) {
-    if (o_bank_base) {
-        mem_mmu_translate(reg_pc | (*o_bank_bank << 16), o_bank_base, o_bank_start, o_bank_limit);
+void maincpu_resync_limits(void)
+{
+    if (bank_base_ready) {
+        mem_mmu_translate(reg_pc | (bank_bank << 16), &bank_base, &bank_start, &bank_limit);
     }
 }
 
+#ifdef __LIBRETRO__
 void maincpu_mainloop(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at
        least, on gcc 2.7.2.x).  */
- union regs {
-     WORD reg_s;
-     BYTE reg_q[2];
+ static union regs {
+     uint16_t reg_s;
+     uint8_t reg_q[2];
  } regs65802;
 
 #define reg_c regs65802.reg_s
@@ -254,29 +265,151 @@ void maincpu_mainloop(void)
 #define reg_b regs65802.reg_q[0]
 #endif
 
-    WORD reg_x = 0;
-    WORD reg_y = 0;
-    BYTE reg_pbr = 0;
-    BYTE reg_dbr = 0;
-    WORD reg_dpr = 0;
-    BYTE reg_p = 0;
-    WORD reg_sp = 0x100;
-    BYTE flag_n = 0;
-    BYTE flag_z = 0;
-    BYTE reg_emul = 1;
+    static uint16_t reg_x = 0;
+    static uint16_t reg_y = 0;
+    static uint8_t reg_pbr = 0;
+    static uint8_t reg_dbr = 0;
+    static uint16_t reg_dpr = 0;
+    static uint8_t reg_p = 0;
+    static uint16_t reg_sp = 0x100;
+    static uint8_t flag_n = 0;
+    static uint8_t flag_z = 0;
+    static uint8_t reg_emul = 1;
+    static int interrupt65816 = IK_RESET;
+#ifndef NEED_REG_PC
+    static unsigned int reg_pc;
+#endif
+
+static unsigned retro_mainloop = 0;
+if (!retro_mainloop)
+{
+    retro_mainloop = 1;
+
+    /*
+     * Enable maincpu_resync_limits functionality .. in the old code
+     * this is where the local stack var had its address copied to
+     * the global.
+     */
+    bank_base_ready = true;
+
+    reg_c = 0;
+
+    machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
+}
+    /*while (1)*/ {
+
+#define CLK maincpu_clk
+#define LAST_OPCODE_INFO last_opcode_info
+#define LAST_OPCODE_ADDR last_opcode_addr
+#define TRACEFLG debug.maincpu_traceflg
+
+#define CPU_INT_STATUS maincpu_int_status
+
+#define ALARM_CONTEXT maincpu_alarm_context
+
+#define CHECK_PENDING_ALARM() \
+   (clk >= next_alarm_clk(maincpu_int_status))
+
+#define CHECK_PENDING_INTERRUPT() \
+   check_pending_interrupt(maincpu_int_status)
+
+#define TRAP(addr) \
+   maincpu_int_status->trap_func(addr);
+
+#define ROM_TRAP_HANDLER() \
+   traps_handler()
+
+#define JAM()                                                         \
+    do {                                                              \
+        unsigned int tmp;                                             \
+                                                                      \
+        EXPORT_REGISTERS();                                           \
+        tmp = machine_jam("   " CPU_STR ": JAM at $%02x%04X   ", reg_pbr, reg_pc); \
+        switch (tmp) {                                                \
+            case JAM_RESET:                                           \
+                DO_INTERRUPT(IK_RESET);                               \
+                break;                                                \
+            case JAM_HARD_RESET:                                      \
+                mem_powerup();                                        \
+                DO_INTERRUPT(IK_RESET);                               \
+                break;                                                \
+            case JAM_MONITOR:                                         \
+                monitor_startup(e_comp_space);                        \
+                IMPORT_REGISTERS();                                   \
+                break;                                                \
+            default:                                                  \
+                STP();                                                \
+        }                                                             \
+    } while (0)
+
+#define STP_65816() JAM()
+#define WAI_65816() WAI()
+#define COP_65816(value) COP()
+
+#define CALLER e_comp_space
+
+#define ROM_TRAP_ALLOWED() mem_rom_trap_allowed((uint16_t)reg_pc)
+
+#define GLOBAL_REGS maincpu_regs
+
+#include "65816core.c"
+
+        maincpu_int_status->num_dma_per_opcode = 0;
+
+        if (maincpu_clk_limit && (maincpu_clk > maincpu_clk_limit)) {
+            log_error(LOG_DEFAULT, "cycle limit reached.");
+            archdep_vice_exit(EXIT_FAILURE);
+        }
+
+        autostart_advance();
+#if 0
+        if (CLK > 246171754)
+            debug.maincpu_traceflg = 1;
+#endif
+    }
+}
+
+#else /* __LIBRETRO__ */
+
+void maincpu_mainloop(void)
+{
+    /* Notice that using a struct for these would make it a lot slower (at
+       least, on gcc 2.7.2.x).  */
+ union regs {
+     uint16_t reg_s;
+     uint8_t reg_q[2];
+ } regs65802;
+
+#define reg_c regs65802.reg_s
+#ifndef WORDS_BIGENDIAN
+#define reg_a regs65802.reg_q[0]
+#define reg_b regs65802.reg_q[1]
+#else
+#define reg_a regs65802.reg_q[1]
+#define reg_b regs65802.reg_q[0]
+#endif
+
+    uint16_t reg_x = 0;
+    uint16_t reg_y = 0;
+    uint8_t reg_pbr = 0;
+    uint8_t reg_dbr = 0;
+    uint16_t reg_dpr = 0;
+    uint8_t reg_p = 0;
+    uint16_t reg_sp = 0x100;
+    uint8_t flag_n = 0;
+    uint8_t flag_z = 0;
+    uint8_t reg_emul = 1;
     int interrupt65816 = IK_RESET;
 #ifndef NEED_REG_PC
     unsigned int reg_pc;
 #endif
-    BYTE *bank_base;
-    int bank_start = 0;
-    int bank_limit = 0;
-    BYTE bank_bank = 0;
 
-    o_bank_base = &bank_base;
-    o_bank_start = &bank_start;
-    o_bank_limit = &bank_limit;
-    o_bank_bank = &bank_bank;
+    /*
+     * Enable maincpu_resync_limits functionality .. in the old code
+     * this is where the local stack var had its address copied to
+     * the global.
+     */
+    bank_base_ready = true;
 
     reg_c = 0;
 
@@ -334,7 +467,7 @@ void maincpu_mainloop(void)
 
 #define CALLER e_comp_space
 
-#define ROM_TRAP_ALLOWED() mem_rom_trap_allowed((WORD)reg_pc)
+#define ROM_TRAP_ALLOWED() mem_rom_trap_allowed((uint16_t)reg_pc)
 
 #define GLOBAL_REGS maincpu_regs
 
@@ -344,14 +477,17 @@ void maincpu_mainloop(void)
 
         if (maincpu_clk_limit && (maincpu_clk > maincpu_clk_limit)) {
             log_error(LOG_DEFAULT, "cycle limit reached.");
-            exit(EXIT_FAILURE);
+            archdep_vice_exit(EXIT_FAILURE);
         }
+
+        autostart_advance();
 #if 0
         if (CLK > 246171754)
             debug.maincpu_traceflg = 1;
 #endif
     }
 }
+#endif /* __LIBRETRO__ */
 
 /* ------------------------------------------------------------------------- */
 
@@ -411,31 +547,31 @@ unsigned int maincpu_get_sp(void) {
 
 static char snap_module_name[] = "MAIN6565802CPU";
 #define SNAP_MAJOR 1
-#define SNAP_MINOR 1
+#define SNAP_MINOR 2
 
 int maincpu_snapshot_write_module(snapshot_t *s)
 {
     snapshot_module_t *m;
 
-    m = snapshot_module_create(s, snap_module_name, ((BYTE)SNAP_MAJOR),
-                               ((BYTE)SNAP_MINOR));
+    m = snapshot_module_create(s, snap_module_name, ((uint8_t)SNAP_MAJOR),
+                               ((uint8_t)SNAP_MINOR));
     if (m == NULL)
         return -1;
 
     if (0
-        || SMW_DW(m, maincpu_clk) < 0
-        || SMW_B(m, (BYTE)WDC65816_REGS_GET_A(&maincpu_regs)) < 0
-        || SMW_B(m, (BYTE)WDC65816_REGS_GET_B(&maincpu_regs)) < 0
-        || SMW_W(m, (WORD)WDC65816_REGS_GET_X(&maincpu_regs)) < 0
-        || SMW_W(m, (WORD)WDC65816_REGS_GET_Y(&maincpu_regs)) < 0
-        || SMW_W(m, (WORD)WDC65816_REGS_GET_SP(&maincpu_regs)) < 0
-        || SMW_W(m, (WORD)WDC65816_REGS_GET_DPR(&maincpu_regs)) < 0
-        || SMW_B(m, (BYTE)WDC65816_REGS_GET_PBR(&maincpu_regs)) < 0
-        || SMW_B(m, (BYTE)WDC65816_REGS_GET_DBR(&maincpu_regs)) < 0
-        || SMW_B(m, (BYTE)WDC65816_REGS_GET_EMUL(&maincpu_regs)) < 0
-        || SMW_W(m, (WORD)WDC65816_REGS_GET_PC(&maincpu_regs)) < 0
-        || SMW_B(m, (BYTE)WDC65816_REGS_GET_STATUS(&maincpu_regs)) < 0
-        || SMW_DW(m, (DWORD)last_opcode_info) < 0)
+        || SMW_CLOCK(m, maincpu_clk) < 0
+        || SMW_B(m, (uint8_t)WDC65816_REGS_GET_A(&maincpu_regs)) < 0
+        || SMW_B(m, (uint8_t)WDC65816_REGS_GET_B(&maincpu_regs)) < 0
+        || SMW_W(m, (uint16_t)WDC65816_REGS_GET_X(&maincpu_regs)) < 0
+        || SMW_W(m, (uint16_t)WDC65816_REGS_GET_Y(&maincpu_regs)) < 0
+        || SMW_W(m, (uint16_t)WDC65816_REGS_GET_SP(&maincpu_regs)) < 0
+        || SMW_W(m, (uint16_t)WDC65816_REGS_GET_DPR(&maincpu_regs)) < 0
+        || SMW_B(m, (uint8_t)WDC65816_REGS_GET_PBR(&maincpu_regs)) < 0
+        || SMW_B(m, (uint8_t)WDC65816_REGS_GET_DBR(&maincpu_regs)) < 0
+        || SMW_B(m, (uint8_t)WDC65816_REGS_GET_EMUL(&maincpu_regs)) < 0
+        || SMW_W(m, (uint16_t)WDC65816_REGS_GET_PC(&maincpu_regs)) < 0
+        || SMW_B(m, (uint8_t)WDC65816_REGS_GET_STATUS(&maincpu_regs)) < 0
+        || SMW_DW(m, (uint8_t)last_opcode_info) < 0)
         goto fail;
 
     if (interrupt_write_snapshot(maincpu_int_status, m) < 0) {
@@ -457,9 +593,9 @@ fail:
 
 int maincpu_snapshot_read_module(snapshot_t *s)
 {
-    BYTE a, b, pbr, dbr, emul, status;
-    WORD x, y, sp, pc, dpr;
-    BYTE major, minor;
+    uint8_t a, b, pbr, dbr, emul, status;
+    uint16_t x, y, sp, pc, dpr;
+    uint8_t major, minor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &major, &minor);
@@ -469,7 +605,7 @@ int maincpu_snapshot_read_module(snapshot_t *s)
 
     /* XXX: Assumes `CLOCK' is the same size as a `DWORD'.  */
     if (0
-        || SMR_DW(m, &maincpu_clk) < 0
+        || SMR_CLOCK(m, &maincpu_clk) < 0
         || SMR_B(m, &a) < 0
         || SMR_B(m, &b) < 0
         || SMR_W(m, &x) < 0

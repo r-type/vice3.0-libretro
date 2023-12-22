@@ -48,6 +48,7 @@
 
 #include "menu_ram.h"
 #include "menu_rom.h"
+#include "menu_userport.h"
 
 #if defined(HAVE_RS232DEV) || defined(HAVE_RS232NET)
 #include "menu_rs232.h"
@@ -55,7 +56,7 @@
 
 #include "menu_sid.h"
 
-#ifdef HAVE_PCAP
+#ifdef HAVE_RAWNET
 #include "menu_ethernet.h"
 #include "menu_ethernetcart.h"
 #endif
@@ -83,72 +84,26 @@ const ui_menu_entry_t scpu64_burstmod_menu[] = {
 UI_MENU_DEFINE_RADIO(SIMMSize)
 
 const ui_menu_entry_t scpu64_simmsize_menu[] = {
-    { "0 MB",
+    { "0 MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SIMMSize_callback,
       (ui_callback_data_t)0 },
-    { "1 MB",
+    { "1 MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SIMMSize_callback,
       (ui_callback_data_t)1 },
-    { "4 MB",
+    { "4 MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SIMMSize_callback,
       (ui_callback_data_t)4 },
-    { "8 MB",
+    { "8 MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SIMMSize_callback,
       (ui_callback_data_t)8 },
-    { "16 MB",
+    { "16 MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_SIMMSize_callback,
       (ui_callback_data_t)16 },
-    SDL_MENU_LIST_END
-};
-
-UI_MENU_DEFINE_TOGGLE(UserportDAC)
-UI_MENU_DEFINE_TOGGLE(UserportDIGIMAX)
-UI_MENU_DEFINE_TOGGLE(UserportRTCDS1307)
-UI_MENU_DEFINE_TOGGLE(UserportRTCDS1307Save)
-UI_MENU_DEFINE_TOGGLE(UserportRTC58321a)
-UI_MENU_DEFINE_TOGGLE(UserportRTC58321aSave)
-UI_MENU_DEFINE_TOGGLE(Userport4bitSampler)
-UI_MENU_DEFINE_TOGGLE(Userport8BSS)
-
-static const ui_menu_entry_t userport_menu[] = {
-    SDL_MENU_ITEM_TITLE("Userport devices"),
-    { "8 bit DAC enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportDAC_callback,
-      NULL },
-    { "DigiMAX enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportDIGIMAX_callback,
-      NULL },
-    { "RTC (58321a) enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTC58321a_callback,
-      NULL },
-    { "Save RTC (58321a) data when changed",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTC58321aSave_callback,
-      NULL },
-    { "4 bit sampler enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_Userport4bitSampler_callback,
-      NULL },
-    { "8 bit stereo sampler enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_Userport8BSS_callback,
-      NULL },
-    { "RTC (DS1307) enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTCDS1307_callback,
-      NULL },
-    { "Save RTC (DS1307) data when changed",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTCDS1307Save_callback,
-      NULL },
     SDL_MENU_LIST_END
 };
 
@@ -216,7 +171,7 @@ const ui_menu_entry_t scpu64_hardware_menu[] = {
       submenu_callback,
       (ui_callback_data_t)midi_c64_menu },
 #endif
-#ifdef HAVE_PCAP
+#ifdef HAVE_RAWNET
     { "Ethernet settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -230,7 +185,7 @@ const ui_menu_entry_t scpu64_hardware_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)scpu64_burstmod_menu },
-    { "Userport devices",
+    { "Userport settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)userport_menu },

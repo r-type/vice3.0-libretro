@@ -28,7 +28,9 @@
 #ifndef VICE_MAINCPU_H
 #define VICE_MAINCPU_H
 
+#include "mainlock.h"
 #include "types.h"
+#include "vsyncapi.h"
 
 /* Information about the last opcode executed by the main CPU.  */
 extern unsigned int last_opcode_info;
@@ -42,6 +44,7 @@ extern unsigned int last_opcode_addr;
     ((opinfo) & OPINFO_NUMBER_MSK)
 
 /* The VIC-II emulation needs this ugly hack.  */
+/* FIXME: this should really be uint16_t, but it breaks things (eg trap17.prg) */
 extern unsigned int reg_pc;
 
 #ifdef C64DTV
@@ -71,12 +74,11 @@ extern int dtvclockneg;
 
 struct alarm_context_s;
 struct snapshot_s;
-struct clk_guard_s;
 struct monitor_interface_s;
 
 extern const CLOCK maincpu_opcode_write_cycles[];
 extern struct alarm_context_s *maincpu_alarm_context;
-extern struct clk_guard_s *maincpu_clk_guard;
+extern CLOCK maincpu_clk;
 extern struct monitor_interface_s *maincpu_monitor_interface;
 
 /* Return the number of write accesses in the last opcode emulated. */

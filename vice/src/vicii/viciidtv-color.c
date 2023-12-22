@@ -29,6 +29,8 @@
 
 #include "vice.h"
 
+#include <stdlib.h>
+
 #include "viciitypes.h"
 #include "vicii-color.h"
 #include "vicii-resources.h"
@@ -124,8 +126,9 @@ static video_cbm_palette_t dtv_palette =
 {
     VICIIDTV_NUM_COLORS,
     dtv_colors_with_lum,
-    VICII_SATURATION,
-    VICII_PHASE
+    NULL, NULL,
+    VICII_PHASE,
+    CBM_PALETTE_YUV
 };
 
 #define DTV_STARTING_PHASE  180.0f
@@ -149,6 +152,7 @@ int vicii_color_update_palette(struct video_canvas_s *canvas)
         for (lum = 0; lum < 16; lum++) {
             dtv_colors_with_lum[cl].luminance = lm[lum];
             dtv_colors_with_lum[cl].angle = an;
+            dtv_colors_with_lum[cl].saturation = VICII_SATURATION;  /* FIXME: remove */
             dtv_colors_with_lum[cl].direction = (col == 0) ? 0 : 1;
             dtv_colors_with_lum[cl].name = dtv_color_names[col];
             cl++;

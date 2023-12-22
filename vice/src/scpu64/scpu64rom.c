@@ -34,14 +34,16 @@
 #include "scpu64rom.h"
 #include "log.h"
 #include "mem.h"
-#include "patchrom.h"
+#include "machine.h"
 #include "resources.h"
 #include "sysfile.h"
 #include "types.h"
 
 static log_t scpu64rom_log = LOG_ERR;
 
-BYTE scpu64rom_scpu64_rom[SCPU64_SCPU64_ROM_MAXSIZE];
+#ifndef __LIBRETRO__
+uint8_t scpu64rom_scpu64_rom[SCPU64_SCPU64_ROM_MAXSIZE];
+#endif
 
 /* Flag: nonzero if the ROMs have been loaded.  */
 static int rom_loaded = 0;
@@ -54,7 +56,7 @@ int scpu64rom_load_chargen(const char *rom_name)
 
     /* Load chargen ROM.  */
 
-    if (sysfile_load(rom_name, mem_chargen_rom, SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE) < 0) {
+    if (sysfile_load(rom_name, machine_name, mem_chargen_rom, SCPU64_CHARGEN_ROM_SIZE, SCPU64_CHARGEN_ROM_SIZE) < 0) {
         log_error(scpu64rom_log, "Couldn't load character ROM `%s'.", rom_name);
         return -1;
     }
@@ -71,14 +73,16 @@ int scpu64rom_load_scpu64(const char *rom_name)
     }
 
     /* Load SCPU64 ROM.  */
-    size = sysfile_load(rom_name, scpu64rom_scpu64_rom, SCPU64_SCPU64_ROM_MINSIZE, SCPU64_SCPU64_ROM_MAXSIZE);
+    size = sysfile_load(rom_name, machine_name, scpu64rom_scpu64_rom, SCPU64_SCPU64_ROM_MINSIZE, SCPU64_SCPU64_ROM_MAXSIZE);
     if (size < 0 || (size & (size - 1))) {
         log_error(scpu64rom_log, "Couldn't load SCPU64 ROM `%s'.", rom_name);
         return -1;
     }
     for (i = 0 ;i < SCPU64_SCPU64_ROM_MAXSIZE - size; i += size) {
         memcpy(scpu64rom_scpu64_rom + i, scpu64rom_scpu64_rom + SCPU64_SCPU64_ROM_MAXSIZE - size, size);
-    } 
+    }
+    /* FIXME: copy kernal into the trap ram, else the checkbytes can not be found */
+    memcpy(mem_trap_ram, scpu64rom_scpu64_rom + 0x4100, 0x2000);
     return 0;
 }
 

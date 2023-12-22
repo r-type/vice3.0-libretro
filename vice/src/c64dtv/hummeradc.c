@@ -27,12 +27,10 @@
 #include "vice.h"
 
 #include "c64dtv-resources.h"
-#include "cmdline.h"
 #include "hummeradc.h"
 #include "joystick.h"
 #include "log.h"
 #include "resources.h"
-#include "translate.h"
 
 static log_t hummeradc_log = LOG_ERR;
 
@@ -47,12 +45,12 @@ static log_t hummeradc_log = LOG_ERR;
 #define ADC_DIO_BIT 0x01
 
 /* Hummer ADC variables */
-BYTE hummeradc_value;
-BYTE hummeradc_channel;
-BYTE hummeradc_control;
-BYTE hummeradc_chanattr;
-BYTE hummeradc_chanwakeup;
-BYTE hummeradc_prev;
+uint8_t hummeradc_value;
+uint8_t hummeradc_channel;
+uint8_t hummeradc_control;
+uint8_t hummeradc_chanattr;
+uint8_t hummeradc_chanwakeup;
+uint8_t hummeradc_prev;
 
 /* Hummer ADC state */
 enum {
@@ -100,18 +98,19 @@ enum {
 }
 hummeradc_command = ADC_NONE;
 
-inline static int hummeradc_falling_edge(BYTE value)
+inline static int hummeradc_falling_edge(uint8_t value)
 {
     return ((hummeradc_prev & ADC_CLOCK_BIT) && ((value & ADC_CLOCK_BIT) == 0));
 }
 
-inline static int hummeradc_rising_edge(BYTE value)
+inline static int hummeradc_rising_edge(uint8_t value)
 {
     return (((hummeradc_prev & ADC_CLOCK_BIT) == 0) && (value & ADC_CLOCK_BIT));
 }
 
-void hummeradc_store(BYTE value)
+void hummeradc_store(uint8_t value)
 {
+    uint16_t joyport_3_joystick_value;
 #ifdef HUMMERADC_DEBUG_ENABLED
     HUMMERADC_DEBUG("write: value %02x, state %i", value, hummeradc_state);
 #endif
@@ -185,7 +184,8 @@ void hummeradc_store(BYTE value)
                         hummeradc_state = ADC_IDLE;
                         break;
                     default:
-                        log_message(hummeradc_log, "BUG: Unknown command %i.", hummeradc_command);
+                        log_message(hummeradc_log, "BUG: Unknown command %u.",
+                                hummeradc_command);
                         break;
                 }
             }
@@ -230,7 +230,8 @@ void hummeradc_store(BYTE value)
                 /* TODO:
                     - ADC works only on channel 0
                     - "inertia" (hold down left/right for value++/--), handled elsewhere */
-                switch (joystick_value[3] & 0x0c) {
+                joyport_3_joystick_value = get_joystick_value(JOYPORT_3);
+                switch (joyport_3_joystick_value & 0x0c) {
                     case 4:
                         hummeradc_value = 0x00;
                         break;
@@ -257,9 +258,9 @@ void hummeradc_store(BYTE value)
     return;
 }
 
-BYTE hummeradc_read(void)
+uint8_t hummeradc_read(void)
 {
-    BYTE retval;
+    uint8_t retval;
     retval = (hummeradc_prev & 6);
 
     switch (hummeradc_state) {

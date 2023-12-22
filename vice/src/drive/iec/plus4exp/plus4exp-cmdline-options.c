@@ -32,35 +32,31 @@
 #include "drive.h"
 #include "lib.h"
 #include "plus4exp-cmdline-options.h"
-#include "translate.h"
 
-static cmdline_option_t cmd_drive[] = {
-    { NULL, SET_RESOURCE, 1,
+static cmdline_option_t cmd_drive[] =
+{
+    { NULL, SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_TYPE, IDCLS_PAR_CABLE_PLUS4EXP_TYPE,
-      NULL, NULL },
+      "<Type>", "Set parallel cable type (0: none, 1: standard)" },
     CMDLINE_LIST_END
 };
 
 int plus4exp_cmdline_options_init(void)
 {
-    unsigned int dnr, i;
+    int dnr;
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
         cmd_drive[0].name = lib_msprintf("-parallel%i", dnr + 8);
-        cmd_drive[0].resource_name
-            = lib_msprintf("Drive%iParallelCable", dnr + 8);
+        cmd_drive[0].resource_name = lib_msprintf("Drive%iParallelCable", dnr + 8);
 
         if (cmdline_register_options(cmd_drive) < 0) {
+            lib_free(cmd_drive[0].name);
+            lib_free(cmd_drive[0].resource_name);
             return -1;
         }
 
-        for (i = 0; i < 1; i++) {
-            lib_free(cmd_drive[i].name);
-            lib_free(cmd_drive[i].resource_name);
-        }
+        lib_free(cmd_drive[0].name);
+        lib_free(cmd_drive[0].resource_name);
     }
-
     return 0;
 }

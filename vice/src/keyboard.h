@@ -5,6 +5,7 @@
  *  Andreas Boose <viceteam@t-online.de>
  *  Ettore Perazzoli <ettore@comm2000.it>
  *  Tibor Biczo <crown@mail.matav.hu>
+ *  groepaz <groepaz@gmx.net>
  *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
@@ -31,10 +32,6 @@
 
 #include "types.h"
 
-#ifndef COMMON_KBD
-#include "kbd.h"
-#endif
-
 /* Maximum of keyboard array (CBM-II values
  * (8 for C64/VIC20, 10 for PET, 11 for C128; we need max).  */
 #define KBD_ROWS    16
@@ -43,88 +40,112 @@
 /* (All have 8, except CBM-II that has 6) */
 #define KBD_COLS    8
 
+/* negative rows/columns for extra keys */
+#define KBD_ROW_JOY_KEYMAP_A    -1
+#define KBD_ROW_JOY_KEYMAP_B    -2
+
+#define KBD_ROW_RESTORE_1       -3
+#define KBD_ROW_RESTORE_2       -3
+#define KBD_COL_RESTORE_1        0
+#define KBD_COL_RESTORE_2        1
+
+#define KBD_ROW_4080COLUMN      -4
+#define KBD_ROW_CAPSLOCK        -4
+#define KBD_COL_4080COLUMN       0
+#define KBD_COL_CAPSLOCK         1
+
+#define KBD_ROW_JOY_KEYPAD      -5
+
 /* joystick port attached keypad */
-#define KBD_JOY_KEYPAD_ROWS 5
-#define KDB_JOY_KEYPAD_COLS 4
+#define KBD_JOY_KEYPAD_ROWS      4
+#define KBD_JOY_KEYPAD_COLS      5
 
-/* index to select the current keymap ("KeymapIndex") */
-#define KBD_INDEX_SYM     0
-#define KBD_INDEX_POS     1
-#define KBD_INDEX_USERSYM 2
-#define KBD_INDEX_USERPOS 3
-#define KBD_INDEX_LAST    3
-#define KBD_INDEX_NUM     4
+#define KBD_JOY_KEYPAD_NUMKEYS   (KBD_JOY_KEYPAD_ROWS * KBD_JOY_KEYPAD_COLS)
 
-/* the mapping of the host ("KeyboardMapping")
-   (keep in sync with table in keyboard.c) */
-#define KBD_MAPPING_US    0     /* "" (us mapping) */
-#define KBD_MAPPING_UK    1     /* "uk" */
-#define KBD_MAPPING_DE    2     /* "de" */
-#define KBD_MAPPING_DA    3     /* "da" */
-#define KBD_MAPPING_NO    4     /* "no" */
-#define KBD_MAPPING_FI    5     /* "fi" */
-#define KBD_MAPPING_IT    6     /* "it" */
-#define KBD_MAPPING_LAST  6
-#define KBD_MAPPING_NUM   7
-extern int keyboard_get_num_mappings(void);
-
-/* mapping info for GUIs */
-typedef struct {
-    char *name;
-    int mapping;
-    char *mapping_name;
-} mapping_info_t;
-
-extern mapping_info_t *keyboard_get_info_list(void);
+#define KBD_MOD_LSHIFT      (1 << 0)
+#define KBD_MOD_RSHIFT      (1 << 1)
+#define KBD_MOD_LCTRL       (1 << 2)
+#define KBD_MOD_RCTRL       (1 << 3)
+#define KBD_MOD_LALT        (1 << 4)
+#define KBD_MOD_RALT        (1 << 5)
+#define KBD_MOD_SHIFTLOCK   (1 << 6)
 
 struct snapshot_s;
 
+/* custom keys for individual emulators (mostly c128)
+    the function is called with "pressed" indicating what state we want to set
+    the key to (pressed or released). the function returns the value the key was
+    actually set to.
+*/
+typedef int (*key_custom_func_t)(int pressed);
+
+typedef struct {
+    char *name;
+    key_custom_func_t func;     /* pointer to key handling function */
+    int id;                     /* ID (see below) */
+    int pressed;                /* is the key currently pressed? */
+    int state;                  /* current state of the (toggle) switch */
+    int *keysym;                /* pointer to variable keeping the host key symbol */
+    int *keyflags;              /* pointer to variable keeping the host key flags */
+} key_custom_info_t;
+
+#define KBD_CUSTOM_NONE     0
+#define KBD_CUSTOM_RESTORE1 1
+#define KBD_CUSTOM_RESTORE2 2
+#define KBD_CUSTOM_CAPS     3
+#define KBD_CUSTOM_4080     4
+#define KBD_CUSTOM_NUM      5
+
 extern void keyboard_init(void);
 extern void keyboard_shutdown(void);
-extern void keyboard_set_keyarr(int row, int col, int value);
-extern void keyboard_set_keyarr_any(int row, int col, int value);
-extern void keyboard_clear_keymatrix(void);
-extern void keyboard_event_playback(CLOCK offset, void *data);
-extern void keyboard_restore_event_playback(CLOCK offset, void *data);
+
+extern int keyboard_resources_init(void);
+extern int keyboard_cmdline_options_init(void);
+
 extern int keyboard_snapshot_write_module(struct snapshot_s *s);
 extern int keyboard_snapshot_read_module(struct snapshot_s *s);
+
+extern void keyboard_set_keyarr(int row, int col, int value);
+extern void keyboard_set_keyarr_any(int row, int col, int value);
+
+extern void keyboard_clear_keymatrix(void);
+
+extern void keyboard_event_playback(CLOCK offset, void *data);
+extern void keyboard_restore_event_playback(CLOCK offset, void *data);
 extern void keyboard_event_delayed_playback(void *data);
 extern void keyboard_register_delay(unsigned int delay);
 extern void keyboard_register_clear(void);
-extern void keyboard_set_map_any(signed long sym, int row, int col, int shift);
-extern void keyboard_set_unmap_any(signed long sym);
 
-extern int keyboard_set_keymap_index(int vak, void *param);
-extern int keyboard_set_keymap_file(const char *val, void *param);
-extern int keyboard_keymap_dump(const char *filename);
-
-extern void keyboard_key_pressed(signed long key);
-extern void keyboard_key_released(signed long key);
+/* called by the ui */
+extern void keyboard_key_pressed(signed long key, int mod);
+extern void keyboard_key_released(signed long key, int mod);
 extern void keyboard_key_clear(void);
 
-typedef void (*key_ctrl_column4080_func_t)(void);
-extern void keyboard_register_column4080_key(key_ctrl_column4080_func_t func);
+/* shift/lock handling, the emulation may also call this */
+extern void keyboard_set_shiftlock(int state);
+extern int keyboard_get_shiftlock(void);
 
-typedef void (*key_ctrl_caps_func_t)(void);
-extern void keyboard_register_caps_key(key_ctrl_caps_func_t func);
+/* extra custom keys (see above) */
+extern void keyboard_register_custom_key(int id, key_custom_func_t func, char *name,
+                                         int *keysym, int *keyflags);
+extern int keyboard_custom_key_get(int id);
+extern int keyboard_custom_key_set(int id, int pressed);
+extern int keyboard_custom_key_toggle(int id);
 
+/* extra handler for keypad on the joystick port */
 typedef void (*key_joy_keypad_func_t)(int row, int col, int pressed);
 extern void keyboard_register_joy_keypad(key_joy_keypad_func_t func);
 
+/* machine specific utility function that is called after the keyboard was latched */
 typedef void (*keyboard_machine_func_t)(int *);
 extern void keyboard_register_machine(keyboard_machine_func_t func);
 
-extern void keyboard_register_machine(keyboard_machine_func_t func);
+/* switch to alternative set (x128) */
 extern void keyboard_alternative_set(int alternative);
 
-/* These ugly externs will go away sooner or later.  */
+/* FIXME: These ugly externs should go away sooner or later.
+   currently these two arrays are the interface to the emulation (eg CIA core) */
 extern int keyarr[KBD_ROWS];
 extern int rev_keyarr[KBD_COLS];
-extern int keyboard_shiftlock;
-
-#ifdef COMMON_KBD
-extern int keyboard_resources_init(void);
-extern int keyboard_cmdline_options_init(void);
-#endif
 
 #endif

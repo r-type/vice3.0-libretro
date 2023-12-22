@@ -24,6 +24,8 @@
  *
  */
 
+/* #define DEBUGCART */
+
 #include "vice.h"
 
 #include <stdio.h>
@@ -34,6 +36,7 @@
 #include "cartio.h"
 #include "cartridge.h"
 #include "cmdline.h"
+#include "crt.h"
 #include "export.h"
 #include "lib.h"
 #include "machine.h"
@@ -43,15 +46,21 @@
 #include "log.h"
 #include "mem.h"
 #include "monitor.h"
+#include "ram.h"
 #include "resources.h"
 #include "snapshot.h"
-#include "translate.h"
 #include "types.h"
 #include "util.h"
 #include "vic20cart.h"
 #include "vic20cartmem.h"
 #include "vic20mem.h"
 #include "zfile.h"
+
+#ifdef DEBUGCART
+#define DBG(x) printf x
+#else
+#define DBG(x)
+#endif
 
 /* ------------------------------------------------------------------------- */
 
@@ -96,7 +105,7 @@
  *
  */
 #define CART_RAM_SIZE 0x80000
-static BYTE *cart_ram = NULL;
+static uint8_t *cart_ram = NULL;
 
 /*
  * Cartridge ROM
@@ -114,9 +123,9 @@ static BYTE *cart_ram = NULL;
 
 /* Cartridge States */
 static flash040_context_t flash_state;
-static BYTE register_a;
-static BYTE register_b;
-static BYTE lock_bit;
+static uint8_t register_a;
+static uint8_t register_b;
+static uint8_t lock_bit;
 
 static int finalexpansion_writeback;
 static char *cartfile = NULL;   /* perhaps the one in vic20cart.c could
@@ -159,24 +168,25 @@ static log_t fe_log = LOG_ERR;
 /* ------------------------------------------------------------------------- */
 
 /* Some prototypes are needed */
-static BYTE finalexpansion_io3_read(WORD addr);
-static BYTE finalexpansion_io3_peek(WORD addr);
-static void finalexpansion_io3_store(WORD addr, BYTE value);
+static uint8_t finalexpansion_io3_read(uint16_t addr);
+static uint8_t finalexpansion_io3_peek(uint16_t addr);
+static void finalexpansion_io3_store(uint16_t addr, uint8_t value);
 static int finalexpansion_mon_dump(void);
 
 static io_source_t finalexpansion_device = {
-    CARTRIDGE_VIC20_NAME_FINAL_EXPANSION,
-    IO_DETACH_CART,
-    NULL,
-    0x9c00, 0x9fff, 0x3ff,
-    0,
-    finalexpansion_io3_store,
-    finalexpansion_io3_read,
-    finalexpansion_io3_peek,
-    finalexpansion_mon_dump,
-    CARTRIDGE_VIC20_FINAL_EXPANSION,
-    0,
-    0
+    CARTRIDGE_VIC20_NAME_FINAL_EXPANSION, /* name of the device */
+    IO_DETACH_CART,                       /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,                /* does not use a resource for detach */
+    0x9c00, 0x9fff, 0x03,                 /* range for the device, regs:$9c00-$9c03, mirrors:$9c04-$9fff */
+    0,                                    /* read validity is determined by the device upon a read */
+    finalexpansion_io3_store,             /* store function */
+    NULL,                                 /* NO poke function */
+    finalexpansion_io3_read,              /* read function */
+    finalexpansion_io3_peek,              /* peek function */
+    finalexpansion_mon_dump,              /* device state information dump function */
+    CARTRIDGE_VIC20_FINAL_EXPANSION,      /* cartridge ID */
+    IO_PRIO_NORMAL,                       /* normal priority, device read needs to be checked for collisions */
+    0                                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *finalexpansion_list_item = NULL;
@@ -198,7 +208,7 @@ static int is_locked(void)
     return 0;
 }
 
-static unsigned int calc_addr(WORD addr, int bank, WORD base)
+static unsigned int calc_addr(uint16_t addr, int bank, uint16_t base)
 {
     unsigned int faddr;
 
@@ -210,12 +220,12 @@ static unsigned int calc_addr(WORD addr, int bank, WORD base)
     return faddr;
 }
 
-static BYTE internal_blk0_read(WORD addr, WORD base)
+static uint8_t internal_blk0_read(uint16_t addr, uint16_t base)
 {
-    BYTE mode;
+    uint8_t mode;
     int bank;
     unsigned int faddr;
-    BYTE value;
+    uint8_t value;
 
     mode = register_a & REGA_MODE_MASK;
 
@@ -241,9 +251,9 @@ static BYTE internal_blk0_read(WORD addr, WORD base)
     return value;
 }
 
-static void internal_blk0_store(WORD addr, BYTE value, WORD base, int ro)
+static void internal_blk0_store(uint16_t addr, uint8_t value, uint16_t base, int ro)
 {
-    BYTE mode;
+    uint8_t mode;
     int bank;
     unsigned int faddr;
 
@@ -273,12 +283,12 @@ static void internal_blk0_store(WORD addr, BYTE value, WORD base, int ro)
     }
 }
 
-static BYTE internal_read(WORD addr, int blk, WORD base, int sel)
+static uint8_t internal_read(uint16_t addr, int blk, uint16_t base, int sel)
 {
-    BYTE mode;
+    uint8_t mode;
     int bank;
     unsigned int faddr;
-    BYTE value;
+    uint8_t value;
 
     mode = register_a & REGA_MODE_MASK;
 
@@ -290,6 +300,12 @@ static BYTE internal_read(WORD addr, int blk, WORD base, int sel)
             bank = register_a & REGA_BANK_MASK;
             break;
         case MODE_ROM_RAM:
+            if (sel) {
+                bank = 0;
+            } else {
+                bank = 1;
+            }
+            break;
         case MODE_RAM1:
             bank = 1;
             break;
@@ -340,9 +356,9 @@ static BYTE internal_read(WORD addr, int blk, WORD base, int sel)
     return value;
 }
 
-static void internal_store(WORD addr, BYTE value, int blk, WORD base, int sel)
+static void internal_store(uint16_t addr, uint8_t value, int blk, uint16_t base, int sel)
 {
-    BYTE mode;
+    uint8_t mode;
     int bank;
     unsigned int faddr;
 
@@ -387,10 +403,6 @@ static void internal_store(WORD addr, BYTE value, int blk, WORD base, int sel)
             flash040core_store(&flash_state, faddr, value);
             break;
         case MODE_ROM_RAM:
-            if (sel) {
-                cart_ram[faddr] = value;
-            }
-            break;
         case MODE_START:
         case MODE_RAM1:
         case MODE_RAM2:
@@ -406,9 +418,9 @@ static void internal_store(WORD addr, BYTE value, int blk, WORD base, int sel)
 /* ------------------------------------------------------------------------- */
 
 /* read 0x0400 - 0x0fff */
-BYTE finalexpansion_ram123_read(WORD addr)
+uint8_t finalexpansion_ram123_read(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
     if (!(register_b & REGB_BLK0_OFF)) {
         value = internal_blk0_read(addr, BLK0_BASE);
     } else {
@@ -418,7 +430,7 @@ BYTE finalexpansion_ram123_read(WORD addr)
 }
 
 /* store 0x0400 - 0x0fff */
-void finalexpansion_ram123_store(WORD addr, BYTE value)
+void finalexpansion_ram123_store(uint16_t addr, uint8_t value)
 {
     if (!(register_b & REGB_BLK0_OFF)) {
         internal_blk0_store(addr, value, BLK0_BASE, (register_a & REGA_BLK0_RO));
@@ -426,9 +438,9 @@ void finalexpansion_ram123_store(WORD addr, BYTE value)
 }
 
 /* read 0x2000-0x3fff */
-BYTE finalexpansion_blk1_read(WORD addr)
+uint8_t finalexpansion_blk1_read(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
     if (!(register_b & REGB_BLK1_OFF)) {
         value = internal_read(addr, 1, BLK1_BASE, register_a & REGA_BLK1_SEL);
     } else {
@@ -438,7 +450,7 @@ BYTE finalexpansion_blk1_read(WORD addr)
 }
 
 /* store 0x2000-0x3fff */
-void finalexpansion_blk1_store(WORD addr, BYTE value)
+void finalexpansion_blk1_store(uint16_t addr, uint8_t value)
 {
     if (!(register_b & REGB_BLK1_OFF)) {
         internal_store(addr, value, 1, BLK1_BASE, register_a & REGA_BLK1_SEL);
@@ -446,9 +458,10 @@ void finalexpansion_blk1_store(WORD addr, BYTE value)
 }
 
 /* read 0x4000-0x5fff */
-BYTE finalexpansion_blk2_read(WORD addr)
+uint8_t finalexpansion_blk2_read(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
+
     if (!(register_b & REGB_BLK2_OFF)) {
         value = internal_read(addr, 2, BLK2_BASE, register_a & REGA_BLK2_SEL);
     } else {
@@ -458,7 +471,7 @@ BYTE finalexpansion_blk2_read(WORD addr)
 }
 
 /* store 0x4000-0x5fff */
-void finalexpansion_blk2_store(WORD addr, BYTE value)
+void finalexpansion_blk2_store(uint16_t addr, uint8_t value)
 {
     if (!(register_b & REGB_BLK2_OFF)) {
         internal_store(addr, value, 2, BLK2_BASE, register_a & REGA_BLK2_SEL);
@@ -466,9 +479,10 @@ void finalexpansion_blk2_store(WORD addr, BYTE value)
 }
 
 /* read 0x6000-0x7fff */
-BYTE finalexpansion_blk3_read(WORD addr)
+uint8_t finalexpansion_blk3_read(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
+
     if (!(register_b & REGB_BLK3_OFF)) {
         value = internal_read(addr, 3, BLK3_BASE, register_a & REGA_BLK3_SEL);
     } else {
@@ -478,7 +492,7 @@ BYTE finalexpansion_blk3_read(WORD addr)
 }
 
 /* store 0x6000-0x7fff */
-void finalexpansion_blk3_store(WORD addr, BYTE value)
+void finalexpansion_blk3_store(uint16_t addr, uint8_t value)
 {
     if (!(register_b & REGB_BLK3_OFF)) {
         internal_store(addr, value, 3, BLK3_BASE, register_a & REGA_BLK3_SEL);
@@ -486,9 +500,9 @@ void finalexpansion_blk3_store(WORD addr, BYTE value)
 }
 
 /* read 0xa000-0xbfff */
-BYTE finalexpansion_blk5_read(WORD addr)
+uint8_t finalexpansion_blk5_read(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
 
     lock_bit = 1;
 
@@ -501,7 +515,7 @@ BYTE finalexpansion_blk5_read(WORD addr)
 }
 
 /* store 0xa000-0xbfff */
-void finalexpansion_blk5_store(WORD addr, BYTE value)
+void finalexpansion_blk5_store(uint16_t addr, uint8_t value)
 {
     lock_bit = 0;
 
@@ -511,9 +525,9 @@ void finalexpansion_blk5_store(WORD addr, BYTE value)
 }
 
 /* read 0x9c00-0x9fff */
-static BYTE finalexpansion_io3_read(WORD addr)
+static uint8_t finalexpansion_io3_read(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
 
     finalexpansion_device.io_source_valid = 0;
 
@@ -539,9 +553,9 @@ static BYTE finalexpansion_io3_read(WORD addr)
     return value;
 }
 
-static BYTE finalexpansion_io3_peek(WORD addr)
+static uint8_t finalexpansion_io3_peek(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
 
     addr &= 0x03;
     FE_DEBUG(("Peek reg%02x", addr));
@@ -561,7 +575,7 @@ static BYTE finalexpansion_io3_peek(WORD addr)
 }
 
 /* store 0x9c00-0x9fff */
-static void finalexpansion_io3_store(WORD addr, BYTE value)
+static void finalexpansion_io3_store(uint16_t addr, uint8_t value)
 {
     addr &= 0x03;
     FE_DEBUG(("Wrote reg%02x = %02x. (locked=%d)", addr, value, is_locked()));
@@ -578,6 +592,27 @@ static void finalexpansion_io3_store(WORD addr, BYTE value)
 }
 
 /* ------------------------------------------------------------------------- */
+
+/* FIXME: this still needs to be tweaked to match the hardware */
+static RAMINITPARAM ramparam = {
+    .start_value = 255,
+    .value_invert = 2,
+    .value_offset = 1,
+
+    .pattern_invert = 0x100,
+    .pattern_invert_value = 255,
+
+    .random_start = 0,
+    .random_repeat = 0,
+    .random_chance = 0,
+};
+
+void finalexpansion_powerup(void)
+{
+    if (cart_ram) {
+        ram_init_with_pattern(cart_ram, CART_RAM_SIZE, &ramparam);
+    }
+}
 
 void finalexpansion_init(void)
 {
@@ -598,13 +633,14 @@ void finalexpansion_reset(void)
     lock_bit = 1;
 }
 
-void finalexpansion_config_setup(BYTE *rawcart)
+void finalexpansion_config_setup(uint8_t *rawcart)
 {
 }
 
-static int zfile_load(const char *filename, BYTE *dest)
+static int zfile_load(const char *filename, uint8_t *dest)
 {
     FILE *fd;
+    off_t tmpsize;
     size_t fsize;
 
     fd = zfile_fopen(filename, MODE_READ);
@@ -613,7 +649,13 @@ static int zfile_load(const char *filename, BYTE *dest)
                     filename);
         return -1;
     }
-    fsize = util_file_length(fd);
+    tmpsize = archdep_file_size(fd);
+    if (tmpsize < 0) {
+        log_message(fe_log, "Failed to determine size of image '%s'!", filename);
+        zfile_fclose(fd);
+        return -1;
+    }
+    fsize = (size_t)tmpsize;
 
     if (fsize < 0x8000) {
         size_t tsize;
@@ -621,12 +663,12 @@ static int zfile_load(const char *filename, BYTE *dest)
         tsize = (fsize + 0x0fff) & 0xfffff000;
         offs = 0x8000 - tsize;
         dest += offs;
-        log_message(fe_log, "Size less than 32kB.  Aligning as close as possible to the 32kB boundary in 4kB blocks. (0x%06X-0x%06X)", (unsigned int)offs, (unsigned int)(offs + tsize));
+        log_message(fe_log, "Size less than 32KiB.  Aligning as close as possible to the 32KiB boundary in 4KiB blocks. (0x%06X-0x%06X)", (unsigned int)offs, (unsigned int)(offs + tsize));
     } else if (fsize < (size_t)CART_ROM_SIZE) {
-        log_message(fe_log, "Size less than 512kB, padding.");
+        log_message(fe_log, "Size less than 512KiB, padding.");
     } else if (fsize > (size_t)CART_ROM_SIZE) {
         fsize = CART_ROM_SIZE;
-        log_message(fe_log, "Size larger than 512kB, truncating.");
+        log_message(fe_log, "Size larger than 512KiB, truncating.");
     }
     if (fread(dest, fsize, 1, fd) < 1) {
         log_message(fe_log, "Failed to read image `%s'!", filename);
@@ -639,9 +681,62 @@ static int zfile_load(const char *filename, BYTE *dest)
     return 0;
 }
 
+int finalexpansion_crt_attach(FILE *fd, uint8_t *rawcart)
+{
+    crt_chip_header_t chip;
+    int idx = 0;
+    uint8_t *cart_flash;
+
+    if (!cart_ram) {
+        cart_ram = lib_malloc(CART_RAM_SIZE);
+    }
+
+    cart_flash = lib_malloc(CART_ROM_SIZE);
+    if (cart_flash == NULL) {
+        goto exiterror;
+    }
+
+    /* flash040core_init() does not clear the flash */
+    memset(cart_flash, 0xff, CART_ROM_SIZE);
+
+    flash040core_init(&flash_state, maincpu_alarm_context, FLASH040_TYPE_B, cart_flash);
+
+    for (idx = 0; idx < 64; idx++) {
+        if (crt_read_chip_header(&chip, fd)) {
+            goto exiterror;
+        }
+
+        DBG(("chip %d at %02x len %02x\n", idx, chip.start, chip.size));
+        if (chip.size != 0x2000) {
+            goto exiterror;
+        }
+
+        if (crt_read_chip(&flash_state.flash_data[0x2000 * idx], 0, &chip, fd)) {
+            goto exiterror;
+        }
+    }
+
+    if (export_add(&export_res) < 0) {
+        return -1;
+    }
+
+    mem_cart_blocks = VIC_CART_RAM123 |
+                      VIC_CART_BLK1 | VIC_CART_BLK2 | VIC_CART_BLK3 | VIC_CART_BLK5 |
+                      VIC_CART_IO3;
+    mem_initialize_memory();
+
+    finalexpansion_list_item = io_source_register(&finalexpansion_device);
+
+    return 0;
+
+exiterror:
+    finalexpansion_detach();
+    return -1;
+}
+
 int finalexpansion_bin_attach(const char *filename)
 {
-    BYTE *cart_flash;
+    uint8_t *cart_flash;
 
     if (!cart_ram) {
         cart_ram = lib_malloc(CART_RAM_SIZE);
@@ -683,7 +778,7 @@ void finalexpansion_detach(void)
        and cartridge wasn't from a snapshot */
     if (finalexpansion_writeback && !cartridge_is_from_snapshot) {
         if (flash_state.flash_dirty) {
-            int n;
+            long n;
             FILE *fd;
 
             n = 0;
@@ -745,16 +840,12 @@ void finalexpansion_resources_shutdown(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-fewriteback", SET_RESOURCE, 0,
+    { "-fewriteback", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "FinalExpansionWriteBack", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_FINALEXPANSION_WRITEBACK,
-      NULL, NULL },
-    { "+fewriteback", SET_RESOURCE, 0,
+      NULL, "Enable Final Expansion write back to ROM file" },
+    { "+fewriteback", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "FinalExpansionWriteBack", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_FINALEXPANSION_WRITEBACK,
-      NULL, NULL },
+      NULL, "Disable Final Expansion write back to ROM file" },
     CMDLINE_LIST_END
 };
 
@@ -800,9 +891,9 @@ int finalexpansion_snapshot_write_module(snapshot_t *s)
 
 int finalexpansion_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
-    BYTE *cart_flash = NULL;
+    uint8_t *cart_flash = NULL;
 
     m = snapshot_module_open(s, SNAP_MODULE_NAME, &vmajor, &vminor);
     if (m == NULL) {
@@ -868,10 +959,10 @@ static const char *finalexpansion_acc_mode[] = {
 static void finalexpansion_mon_dump_blk(int blk)
 {
     int mode;
-    BYTE reg_mask;
+    uint8_t reg_mask;
     int sel;
     int bank_r, bank_w;
-    WORD base;
+    uint16_t base;
     enum { ACC_OFF, ACC_RAM, ACC_FLASH } acc_mode_r, acc_mode_w;
 
     switch (blk) {
@@ -933,10 +1024,10 @@ static void finalexpansion_mon_dump_blk(int blk)
             acc_mode_w = ACC_RAM;
             break;
         case MODE_ROM_RAM:
-            bank_r = 1;
+            bank_r = sel ? 0 : 1;
             bank_w = sel ? 2 : 1;
             acc_mode_r = sel ? ACC_FLASH : ACC_RAM;
-            acc_mode_w = sel ? ACC_RAM : ACC_OFF;
+            acc_mode_w = ACC_RAM;
             break;
         case MODE_RAM1:
             bank_r = 1;
@@ -955,13 +1046,15 @@ static void finalexpansion_mon_dump_blk(int blk)
     mon_out("\n  read %s ", finalexpansion_acc_mode[acc_mode_r]);
 
     if (acc_mode_r != ACC_OFF) {
-        mon_out("bank $%02x (offset $%06x)", bank_r, calc_addr(0, bank_r, base));
+        mon_out("bank $%02x (offset $%06x)",
+                (unsigned int)bank_r, calc_addr(0, bank_r, base));
     }
 
     mon_out("\n write %s ", finalexpansion_acc_mode[acc_mode_w]);
 
     if (acc_mode_w != ACC_OFF) {
-        mon_out("bank $%02x (offset $%06x)", bank_w, calc_addr(0, bank_w, base));
+        mon_out("bank $%02x (offset $%06x)",
+                (unsigned int)bank_w, calc_addr(0, bank_w, base));
     }
 
     mon_out("\n");
@@ -979,7 +1072,7 @@ static const char *finalexpansion_mode_name[] = {
 
 static int finalexpansion_mon_dump(void)
 {
-    BYTE mode;
+    uint8_t mode;
     int blk, active, ro;
 
     mode = register_a & REGA_MODE_MASK;

@@ -1,10 +1,10 @@
-AM_CFLAGS=@INLINE_UNIT_GROWTH@
-
 AM_CPPFLAGS = \
+	@VICE_CPPFLAGS@ \
 	@ARCH_INCLUDES@ \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/drive \
+	-I$(top_srcdir)/src/printerdrv \
 	-I$(top_srcdir)/src/sid \
 	-I$(top_srcdir)/src/tape \
 	-I$(top_srcdir)/src/vicii \
@@ -15,12 +15,21 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/lib/p64 \
 	-I$(top_srcdir)/src/joyport \
 	-I$(top_srcdir)/src/c64 \
-	-I$(top_srcdir)/src/tapeport
+	-I$(top_srcdir)/src/rs232drv \
+	-I$(top_srcdir)/src/tapeport \
+	-I$(top_srcdir)/src/core/rtc
+
+AM_CFLAGS = @VICE_CFLAGS@ @INLINE_UNIT_GROWTH@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
 
 noinst_LIBRARIES = libc64dtv.a libc64dtvstubs.a
 
 libc64dtvstubs_a_SOURCES = \
-	c64dtvcart.c
+	c64dtv-stubs.c
 
 libc64dtv_a_SOURCES = \
 	c64dtvmemsnapshot.h \
@@ -46,7 +55,6 @@ libc64dtv_a_SOURCES = \
 	c64dtv.h \
 	c64dtvcia1.c \
 	c64dtvcia2.c \
-	c64dtvembedded.c \
 	c64dtviec.c \
 	c64dtvmeminit.c \
 	c64dtvmeminit.h \

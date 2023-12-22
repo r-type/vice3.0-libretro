@@ -100,7 +100,7 @@ const unsigned int c64meminit_io_config[32] = {
 };
 
 /* ROML is enabled at memory configs 11, 15, 27, 31 and Ultimax.  */
-static const unsigned int c64meminit_roml_config[32] = {
+const unsigned int c64meminit_roml_config[32] = {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 1, 0, 0, 0, 1,
     1, 1, 1, 1, 1, 1, 1, 1,
@@ -109,7 +109,7 @@ static const unsigned int c64meminit_roml_config[32] = {
 
 /* ROMH is enabled at memory configs 10, 11, 14, 15, 26, 27, 30, 31
    and Ultimax.  */
-static const unsigned int c64meminit_romh_config[32] = {
+const unsigned int c64meminit_romh_config[32] = {
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     1, 1, 1, 1, 1, 1, 1, 1,
@@ -118,15 +118,11 @@ static const unsigned int c64meminit_romh_config[32] = {
 
 /* ROMH is mapped to $A000-$BFFF at memory configs 10, 11, 14, 15, 26,
    27, 30, 31.  If Ultimax is enabled it is mapped to $E000-$FFFF.  */
-static const unsigned int c64meminit_romh_mapping[32] = {
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00,
-    0xe0, 0xe0, 0xe0, 0xe0,
-    0xe0, 0xe0, 0xe0, 0xe0,
-    0x00, 0x00, 0xa0, 0xa0,
-    0x00, 0x00, 0xa0, 0xa0
+const unsigned int c64meminit_romh_mapping[32] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0xe0, 0xe0, 0xe0, 0xe0, 0xe0, 0xe0, 0xe0, 0xe0,
+    0x00, 0x00, 0xa0, 0xa0, 0x00, 0x00, 0xa0, 0xa0
 };
 
 void c64meminit(unsigned int base)
@@ -309,6 +305,13 @@ void c64meminit(unsigned int base)
 
     /* Setup Ultimax configuration.  */
     for (j = 16; j < 24; j++) {
+        if (board == 1) {
+            for (i = 0x08; i <= 0x0f; i++) {
+                mem_read_tab_set(base + j, i, ultimax_0800_0fff_read);
+                mem_set_write_hook(base + j, i, ultimax_0800_0fff_store);
+                mem_read_base_set(base + j, i, NULL);
+            }
+        }
         for (i = 0x10; i <= 0x7f; i++) {
             mem_read_tab_set(base + j, i, ultimax_1000_7fff_read);
             mem_set_write_hook(base + j, i, ultimax_1000_7fff_store);

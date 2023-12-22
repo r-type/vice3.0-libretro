@@ -1,5 +1,5 @@
 /*
- * lib.h - Library functions.
+ * lib.h - Library function wrappers, mostly for memory alloc/free tracking.
  *
  * Written by
  *  Andreas Boose <viceteam@t-online.de>
@@ -41,77 +41,50 @@
 #define LIB_DEBUG_PINPOINT
 #endif
 
-extern void lib_init_rand(void);
+extern void lib_init(void);
+
 extern unsigned int lib_unsigned_rand(unsigned int min, unsigned int max);
 extern float lib_float_rand(float min, float max);
+extern double lib_double_rand_unit(void);
 
-extern char *lib_msprintf(const char *fmt, ...);
+extern void lib_rand_seed(uint64_t seed);
+extern void lib_rand_printseed(void);
+
+extern char *lib_msprintf(const char *fmt, ...) VICE_ATTR_PRINTF;
 extern char *lib_mvsprintf(const char *fmt, va_list args);
-
-extern void lib_debug_check(void);
-
-#if defined(__CYGWIN32__) || defined(__CYGWIN__) || defined(WIN32_COMPILE)
-
-#ifdef WIN32_UNICODE_SUPPORT
-#include <wchar.h>
-
-extern size_t lib_tcstostr(char *str, const wchar_t *tcs, size_t len);
-extern size_t lib_strtotcs(wchar_t *tcs, const char *str, size_t len);
-
-extern int lib_swprintf(wchar_t *wcs, size_t len, const wchar_t *fmt, ...);
-#define lib_sntprintf lib_swprintf
-#else
-extern size_t lib_tcstostr(char *str, const char *tcs, size_t len);
-extern size_t lib_strtotcs(char *tcs, const char *str, size_t len);
-
-extern int lib_snprintf(char *str, size_t len, const char *fmt, ...);
-#define lib_sntprintf lib_snprintf
-#endif
-
-#endif /* CYGWIN or WIN32_COMPILE */
 
 #ifdef LIB_DEBUG_PINPOINT
 extern void *lib_malloc_pinpoint(size_t size, const char *name, unsigned int line);
 extern void *lib_calloc_pinpoint(size_t nmemb, size_t size, const char *name, unsigned int line);
 extern void *lib_realloc_pinpoint(void *p, size_t size, const char *name, unsigned int line);
-extern void lib_free_pinpoint(const void *p, const char *name, unsigned int line);
+extern void lib_free_pinpoint(void *p, const char *name, unsigned int line);
 
-extern char *lib_stralloc_pinpoint(const char *str, const char *name, unsigned int line);
+extern char *lib_strdup_pinpoint(const char *str, const char *name, unsigned int line);
+
+#ifndef COMPILING_LIB_DOT_C
 
 #define lib_malloc(x) lib_malloc_pinpoint(x, __FILE__, __LINE__)
 #define lib_free(x) lib_free_pinpoint(x, __FILE__, __LINE__)
 #define lib_calloc(x, y) lib_calloc_pinpoint(x, y, __FILE__, __LINE__)
 #define lib_realloc(x, y) lib_realloc_pinpoint(x, y, __FILE__, __LINE__)
-#define lib_stralloc(x) lib_stralloc_pinpoint(x, __FILE__, __LINE__)
+#define lib_strdup(x) lib_strdup_pinpoint(x, __FILE__, __LINE__)
 
-#if defined(AMIGA_SUPPORT) || defined(__VBCC__)
-extern void *lib_AllocVec_pinpoint(unsigned long size, unsigned long attributes, char *name, unsigned int line);
-extern void lib_FreeVec_pinpoint(void *ptr, char *name, unsigned int line);
-extern void *lib_AllocMem_pinpoint(unsigned long size, unsigned long attributes, char *name, unsigned int line);
-extern void lib_FreeMem_pinpoint(void *ptr, unsigned long size, char *name, unsigned int line);
-
-#define lib_AllocVec(x, y) lib_AllocVec_pinpoint(x, y, __FILE__, __LINE__)
-#define lib_FreeVec(x) lib_FreeVec_pinpoint(x, __FILE__, __LINE__)
-#define lib_AllocMem(x, y) lib_AllocMem_pinpoint(x, y, __FILE__, __LINE__)
-#define lib_FreeMem(x, y) lib_FreeMem_pinpoint(x, y, __FILE__, __LINE__)
-#endif
+#endif /* !COMPILING_LIB_DOT_C */
 
 #else
+/* !defined LIB_DEBUG_PINPOINT */
 
 extern void *lib_malloc(size_t size);
 extern void *lib_calloc(size_t nmemb, size_t size);
 extern void *lib_realloc(void *p, size_t size);
-extern void lib_free(const void *ptr);
+extern void lib_free(void *ptr);
 
-extern char *lib_stralloc(const char *str);
+extern char *lib_strdup(const char *str);
 
-#if defined(AMIGA_SUPPORT) || defined(__VBCC__)
-extern void *lib_AllocVec(unsigned long size, unsigned long attributes);
-extern void lib_FreeVec(void *ptr);
-extern void *lib_AllocMem(unsigned long size, unsigned long attributes);
-extern void lib_FreeMem(void *ptr, unsigned long size);
-#endif
+#endif /* LIB_DEBUG_PINPOINT */
 
-#endif
+extern char *lib_strdup_trimmed(char *str);
+
+extern void lib_debug_set_output(int state);
 
 #endif

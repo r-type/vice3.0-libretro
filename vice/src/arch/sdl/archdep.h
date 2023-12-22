@@ -28,46 +28,22 @@
 #define VICE_ARCHDEP_H
 
 #include "vice.h"
-
 #include "vice_sdl.h"
 
 #include "sound.h"
-
-/* Extra functions for SDL UI */
-extern char *archdep_default_hotkey_file_name(void);
-extern char *archdep_default_joymap_file_name(void);
-
-/* returns a NULL terminated list of strings. Both the list and the strings
- * must be freed by the caller using lib_free(void*) */
-extern char **archdep_list_drives(void);
-
-/* returns a string that corresponds to the current drive. The string must
- * be freed by the caller using lib_free(void*) */
-extern char *archdep_get_current_drive(void);
-
-/* sets the current drive to the given string */
-extern void archdep_set_current_drive(const char *drive);
-
-/* Virtual keyboard handling */
-extern int archdep_require_vkbd(void);
 
 #ifndef BEOS_COMPILE
 /* Video chip scaling.  */
 #define ARCHDEP_VICII_DSIZE   1
 #define ARCHDEP_VICII_DSCAN   1
-#define ARCHDEP_VICII_HWSCALE 1
 #define ARCHDEP_VDC_DSIZE     1
 #define ARCHDEP_VDC_DSCAN     1
-#define ARCHDEP_VDC_HWSCALE   1
 #define ARCHDEP_VIC_DSIZE     1
 #define ARCHDEP_VIC_DSCAN     1
-#define ARCHDEP_VIC_HWSCALE   1
 #define ARCHDEP_CRTC_DSIZE    1
 #define ARCHDEP_CRTC_DSCAN    1
-#define ARCHDEP_CRTC_HWSCALE  1
 #define ARCHDEP_TED_DSIZE     1
 #define ARCHDEP_TED_DSCAN     1
-#define ARCHDEP_TED_HWSCALE   1
 #endif
 
 /* Video chip double buffering.  */
@@ -86,13 +62,18 @@ extern int archdep_require_vkbd(void);
 /* define if the platform supports the monitor in a seperate window */
 /* #define ARCHDEP_SEPERATE_MONITOR_WINDOW */
 
-#ifdef USE_SDLUI2
-extern char *archdep_sdl2_default_renderers[];
-#endif
+/** \brief  Default state of mouse grab
+ */
+#define ARCHDEP_MOUSE_ENABLE_DEFAULT    0
 
-#ifdef AMIGA_SUPPORT
-#include "archdep_amiga.h"
-#endif
+/** \brief  Factory value of the CHIPShowStatusbar resource
+ */
+#define ARCHDEP_SHOW_STATUSBAR_FACTORY  0
+
+/* FIXME: Ugly hack for preventing SDL crash using -help */
+extern int sdl_help_shutdown;
+
+/******************************************************************************/
 
 #ifdef BEOS_COMPILE
 #include "archdep_beos.h"
@@ -100,18 +81,14 @@ extern char *archdep_sdl2_default_renderers[];
 
 #if defined(UNIX_COMPILE) && !defined(CEGCC_COMPILE)
 #include "archdep_unix.h"
+/* Allow native monitor code (on host console) */
+#define ALLOW_NATIVE_MONITOR
 #endif
 
-#if defined(WIN32_COMPILE) && !defined(__XBOX__)
+#ifdef WINDOWS_COMPILE
 #include "archdep_win32.h"
-#endif
-
-#ifdef __XBOX__
-#include "archdep_xbox.h"
-#endif
-
-#ifdef CEGCC_COMPILE
-#include "archdep_cegcc.h"
+/* This platform supports choosing drives. */
+#define SDL_CHOOSE_DRIVES
 #endif
 
 #endif

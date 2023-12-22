@@ -42,6 +42,7 @@
 #include "maincpu.h"
 #include "monitor.h"
 #ifdef HAVE_NETWORK
+#include "monitor_binary.h"
 #include "monitor_network.h"
 #endif
 #include "palette.h"
@@ -55,7 +56,12 @@
 #include "vdrive.h"
 #include "video.h"
 #include "vsync.h"
+
+#include "init.h"
+
+#ifdef __LIBRETRO__
 #include "sound.h"
+#endif
 
 /* #define DBGINIT */
 
@@ -106,12 +112,10 @@ int init_resources(void)
         init_resource_fail("sound");
         return -1;
     }
-#ifdef COMMON_KBD
     if (keyboard_resources_init() < 0) {
         init_resource_fail("keyboard");
         return -1;
     }
-#endif
     if (machine_video_resources_init() < 0) {
         init_resource_fail("machine video");
         return -1;
@@ -131,6 +135,10 @@ int init_resources(void)
 #ifdef HAVE_NETWORK
     if (monitor_network_resources_init() < 0) {
         init_resource_fail("MONITOR_NETWORK");
+        return -1;
+    }
+    if (monitor_binary_resources_init() < 0) {
+        init_resource_fail("MONITOR_BINARY");
         return -1;
     }
 #endif
@@ -187,12 +195,10 @@ int init_cmdline_options(void)
         init_cmdline_options_fail("sound");
         return -1;
     }
-#ifdef COMMON_KBD
     if (keyboard_cmdline_options_init() < 0) {
         init_cmdline_options_fail("keyboard");
         return -1;
     }
-#endif
     if (video_cmdline_options_init() < 0) {
         init_cmdline_options_fail("video");
         return -1;
@@ -213,17 +219,17 @@ int init_cmdline_options(void)
         init_cmdline_options_fail("MONITOR_NETWORK");
         return -1;
     }
+    if (monitor_binary_cmdline_options_init() < 0) {
+        init_cmdline_options_fail("MONITOR_BINARY");
+        return -1;
+    }
 #endif
     return 0;
 }
 
 int init_main(void)
 {
-#ifdef __IBMC__
-       signals_init(0);
-#else
-       signals_init(debug.do_core_dumps);
-#endif
+    signals_init(debug.do_core_dumps);
 
     romset_init();
 

@@ -38,8 +38,14 @@
 #include "lib.h"
 #include "log.h"
 #include "resources.h"
-#include "translate.h"
 #include "util.h"
+
+#ifdef __LIBRETRO__
+#include <libretro.h>
+#include "string/stdstring.h"
+extern retro_log_printf_t log_cb;
+static char log_buf[1024]; /*create this here in case of tiny stack*/
+#endif
 
 #ifdef DBGLOGGING
 #define DBG(x) printf x
@@ -60,17 +66,17 @@ static int locked = 0;
 
 static char *log_file_name = NULL;
 
+#ifndef __LIBRETRO__
 static void log_file_open(void)
 {
     if (log_file_name == NULL || *log_file_name == 0) {
         log_file = archdep_open_default_log_file();
     } else {
-#ifndef __OS2__
         if (strcmp(log_file_name, "-") == 0) {
             log_file = stdout;
-        } else
-#endif
-        log_file = fopen(log_file_name, MODE_WRITE_TEXT);
+        } else {
+            log_file = fopen(log_file_name, MODE_WRITE_TEXT);
+        }
     }
     /* flush all data direct to the output stream. */
     if (log_file) {
@@ -102,6 +108,14 @@ static int log_verbose_opt(const char *param, void *extra_param)
     return 0;
 }
 
+static int log_silent_opt(const char *param, void *extra_param)
+{
+    int silent = vice_ptr_to_int(extra_param);
+    log_enabled = ! silent;
+    return 0;
+}
+
+
 int log_set_verbose(int n)
 {
     if (n) {
@@ -110,6 +124,15 @@ int log_set_verbose(int n)
     return log_verbose_opt(NULL, (void*)0);
 }
 
+
+int log_set_silent(int n)
+{
+    log_enabled = !n;
+    return 0;
+}
+
+
+
 int log_verbose_init(int argc, char **argv)
 {
     int i;
@@ -117,8 +140,12 @@ int log_verbose_init(int argc, char **argv)
     if (argc > 1) {
         for (i = 1; i < argc; i++) {
             DBG(("log_verbose_init: %d %s\n", i, argv[i]));
-            if (!strcmp("-verbose", argv[i])) {
+            if (strcmp("-verbose", argv[i]) == 0) {
                 log_set_verbose(1);
+                break;
+            } else if (strcmp("-silent", argv[1]) == 0) {
+                log_enabled = 0;
+                break;
             }
         }
     }
@@ -150,17 +177,17 @@ void log_resources_shutdown(void)
     lib_free(log_file_name);
 }
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-logfile", CALL_FUNCTION, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-logfile", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       log_logfile_opt, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_LOG_FILE_NAME,
-      NULL, NULL },
-    { "-verbose", CALL_FUNCTION, 0,
+      "<Name>", "Specify log file name" },
+    { "-verbose", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
       log_verbose_opt, (void*)1, NULL, NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_VERBOSE_LOG_OUTPUT,
-      NULL, NULL },
+      NULL, "Enable verbose log output." },
+    { "-silent", CALL_FUNCTION, CMDLINE_ATTRIB_NONE,
+      log_silent_opt, (void*)1, NULL, NULL,
+      NULL, "Disable verbose log output." },
     CMDLINE_LIST_END
 };
 
@@ -201,6 +228,7 @@ int log_init(void)
 
     return (log_file == NULL) ? -1 : 0;
 }
+#endif /* __LIBRETRO__ */
 
 log_t log_open(const char *id)
 {
@@ -218,7 +246,7 @@ log_t log_open(const char *id)
         logs = lib_realloc(logs, sizeof(*logs) * num_logs);
     }
 
-    logs[new_log] = lib_stralloc(id);
+    logs[new_log] = lib_strdup(id);
 
     /* printf("log_open(%s) = %d\n", id, (int)new_log); */
     return new_log;
@@ -249,6 +277,7 @@ void log_close_all(void)
     logs = NULL;
 }
 
+#ifndef __LIBRETRO__
 static int log_archdep(const char *logtxt, const char *fmt, va_list ap)
 {
     /*
@@ -288,7 +317,7 @@ static int log_archdep(const char *logtxt, const char *fmt, va_list ap)
 static int log_helper(log_t log, unsigned int level, const char *format,
                       va_list ap)
 {
-    static const char *level_strings[3] = {
+    static const char * const level_strings[3] = {
         "",
         "Warning - ",
         "Error - "
@@ -311,7 +340,7 @@ static int log_helper(log_t log, unsigned int level, const char *format,
         }
     }
 
-    if ((logi != LOG_DEFAULT) && (logi != LOG_ERR) && (*logs[logi] != '\0')) {
+    if ((log_file != NULL) && (logi != LOG_DEFAULT) && (logi != LOG_ERR) && (*logs[logi] != '\0')) {
         logtxt = lib_msprintf("%s: %s", logs[logi], level_strings[level]);
     } else {
         logtxt = lib_msprintf("%s", level_strings[level]);
@@ -396,6 +425,120 @@ int log_verbose(const char *format, ...)
 
     return rc;
 }
+
+#else /* __LIBRETRO__ */
+
+static int log_helper(unsigned int level, log_t log, const char *format, va_list ap)
+{
+    signed int logi = (signed int)log;
+    int rc;
+
+    if (!log_enabled) {
+        return 0;
+    }
+
+    rc = vsprintf(log_buf, format, ap);
+
+    if (rc >= 0)
+    {
+        string_replace_all_chars(log_buf, '`', '\'');
+        if ((num_logs > 0) && (logi != LOG_DEFAULT) && (logi != LOG_ERR) && (logs[logi][0] != '\0')) {
+            log_cb(level, "%s: %s\n", logs[logi], log_buf);
+        } else {
+            log_cb(level, "%s\n", log_buf);
+        }
+        ++rc;
+    }
+
+    return rc;
+}
+
+int log_message(log_t log, const char *format, ...)
+{
+    va_list ap;
+    int rc;
+
+    va_start(ap, format);
+    rc = log_helper(RETRO_LOG_INFO, log, format, ap);
+    va_end(ap);
+
+    return rc;
+}
+
+int log_warning(log_t log, const char *format, ...)
+{
+    va_list ap;
+    int rc;
+
+    va_start(ap, format);
+    rc = log_helper(RETRO_LOG_WARN, log, format, ap);
+    va_end(ap);
+
+    return rc;
+}
+
+int log_error(log_t log, const char *format, ...)
+{
+    va_list ap;
+    int rc;
+
+    va_start(ap, format);
+    rc = log_helper(RETRO_LOG_ERROR, log, format, ap);
+    va_end(ap);
+
+    return rc;
+}
+
+int log_debug(const char *format, ...)
+{
+    va_list ap;
+    int rc;
+
+    va_start(ap, format);
+#if 0
+    vprintf(format, ap);
+    printf("\n");
+#else
+    rc = log_helper(RETRO_LOG_DEBUG, 0, format, ap);
+#endif
+    va_end(ap);
+
+    return rc;
+}
+
+int log_verbose(const char *format, ...)
+{
+    va_list ap;
+    int rc = 0;
+
+    va_start(ap, format);
+    if (verbose) {
+        log_helper(RETRO_LOG_INFO, 0, format, ap);
+    }
+    va_end(ap);
+
+    return rc;
+}
+
+int log_init(void)
+{
+    return (log_cb == NULL) ? -1 : 0;
+}
+
+int log_set_silent(int n)
+{
+    log_enabled = !n;
+    return 0;
+}
+
+/* stubs */
+int log_resources_init(void) {return 0;}
+void log_resources_shutdown(void) {}
+int log_cmdline_options_init(void) {return 0;}
+int log_init_with_fd(FILE *f) {return 0;}
+int log_set_verbose(int n) {verbose=n?1:0;return 0;}
+int log_verbose_init(int argc, char **argv) {return 0;}
+#endif /* __LIBRETRO__ */
 
 void log_enable(int on)
 {

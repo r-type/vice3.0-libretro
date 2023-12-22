@@ -1,9 +1,12 @@
 AM_CPPFLAGS = \
+	@VICE_CPPFLAGS@ \
 	@ARCH_INCLUDES@ \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/crtc \
+	-I$(top_srcdir)/src/datasette \
 	-I$(top_srcdir)/src/drive \
+	-I$(top_srcdir)/src/printerdrv \
 	-I$(top_srcdir)/src/sid \
 	-I$(top_srcdir)/src/raster \
 	-I$(top_srcdir)/src/userport \
@@ -12,9 +15,21 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/lib/p64 \
 	-I$(top_srcdir)/src/joyport \
 	-I$(top_srcdir)/src/samplerdrv \
-	-I$(top_srcdir)/src/tapeport
+	-I$(top_srcdir)/src/rs232drv \
+	-I$(top_srcdir)/src/tapeport \
+	-I$(top_srcdir)/src/core/rtc
 
-noinst_LIBRARIES = libpet.a
+AM_CFLAGS = @VICE_CFLAGS@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
+
+noinst_LIBRARIES = libpet.a libpetstubs.a
+
+libpetstubs_a_SOURCES = \
+	pet-stubs.c
 
 libpet_a_SOURCES = \
 	6809.c \
@@ -40,7 +55,6 @@ libpet_a_SOURCES = \
 	petdrive.c \
 	petdww.c \
 	petdww.h \
-	petembedded.c \
 	pethre.c \
 	pethre.h \
 	petiec.c \

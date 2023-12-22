@@ -74,13 +74,13 @@ static UI_MENU_CALLBACK(iocollision_show_type_callback)
     resources_get_int("IOCollisionHandling", &type);
     switch (type) {
         case IO_COLLISION_METHOD_DETACH_ALL:
-            return "-> detach all";
+            return MENU_SUBMENU_STRING " detach all";
             break;
         case IO_COLLISION_METHOD_DETACH_LAST:
-            return "-> detach last";
+            return MENU_SUBMENU_STRING " detach last";
             break;
         case IO_COLLISION_METHOD_AND_WIRES:
-            return "-> AND values";
+            return MENU_SUBMENU_STRING " AND values";
             break;
     }
     return "n/a";
@@ -112,7 +112,7 @@ const ui_menu_entry_t petcart_menu[] = {
       detach_cart_callback,
       (ui_callback_data_t)"RomModuleBName" },
     SDL_MENU_ITEM_SEPARATOR,
-    { "I/O collision handling ($8800-$8FFF / $E900-$EEFF)",
+    { "I/O collision handling ($8800-$8FFF/$E900-$EEFF)",
       MENU_ENTRY_SUBMENU,
       iocollision_show_type_callback,
       (ui_callback_data_t)iocollision_menu },

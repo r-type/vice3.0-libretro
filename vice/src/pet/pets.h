@@ -29,29 +29,7 @@
 
 #include "types.h"
 
-#define PET_KERNAL1NAME  "kernal1"
-#define PET_KERNAL2NAME  "kernal2"
-#define PET_KERNAL4NAME  "kernal4"
-
-#define PET_BASIC1NAME  "basic1"
-#define PET_BASIC2NAME  "basic2"
-#define PET_BASIC4NAME  "basic4"
-
-#define PET_EDITOR1G40NAME  "edit1g"
-#define PET_EDITOR2G40NAME  "edit2g"
-#define PET_EDITOR2B40NAME  "edit2b"
-#define PET_EDITOR4G40NAME  "edit4g40"
-#define PET_EDITOR4B80NAME  "edit4b80"
-#define PET_EDITOR4B40NAME  "edit4b40"
-
-#define SUPERPET_6809_A_NAME "waterloo-a000.901898-01.bin"
-#define SUPERPET_6809_B_NAME "waterloo-b000.901898-02.bin"
-#define SUPERPET_6809_C_NAME "waterloo-c000.901898-03.bin"
-#define SUPERPET_6809_D_NAME "waterloo-d000.901898-04.bin"
-#define SUPERPET_6809_E_NAME "waterloo-e000.901897-01.bin"
-#define SUPERPET_6809_F_NAME "waterloo-f000.901898-05.bin"
-
-#define PET_COLS 80
+#define PET_COLS                80
 #define PET_MAP_LINEAR          0
 #define PET_MAP_8096            1
 #define PET_MAP_8296            2
@@ -94,6 +72,9 @@
 #define NO_EOI     0
 #define EOI_BLANKS 1
 
+#define NO_MIRRORS_2001 0
+#define SCREEN_MIRRORS_2001 1
+
 #define NORMAL_IO   0
 #define SUPERPET_IO 1
 
@@ -108,8 +89,8 @@ typedef struct petinfo_s {
     int ramselA;                /* 0 = open/ROM, 1 = RAM: 8296 JU1*/
     int kbd_type;               /* see pet-resources.h */
     int pet2k;                  /* 1 = do PET 2001 kernal patches */
-    int pet2kchar;              /* 1 = do PET 2001 chargen patches */
     int eoiblank;               /* 1 = EOI blanks screen */
+    int screenmirrors2001;      /* 1 = 4x1K screen mirrors all over $8*** */
     int superpet;               /* 1 = enable SuperPET I/O */
 
     /* ROM image resources */
@@ -135,8 +116,8 @@ typedef struct petres_s {
     int ramselA;                /* 0 = open/ROM, 1 = RAM: 8296 JU1*/
     int kbd_type;               /* 1 = graphics, 0 = business (UK) */
     int pet2k;                  /* 1 = do PET 2001 kernal patches */
-    int pet2kchar;              /* 1 = do PET 2001 chargen patches */
     int eoiblank;               /* 1 = EOI blanks screen */
+    int screenmirrors2001;      /* 1 = 4x1K screen mirrors all over $8*** */
     int superpet;               /* 1 = enable SuperPET I/O */
 
     /* ROM image resources */
@@ -159,9 +140,9 @@ typedef struct petres_s {
     int vmask;                  /* valid CRTC address bits */
     int rompatch;               /* 1 = need $ef** for ROM patch */
     int rom_video;              /* derived from ROM */
-    WORD basic_start;           /* derived from ROM */
-    WORD kernal_checksum;       /* derived from ROM */
-    WORD editor_checksum;       /* derived from ROM */
+    uint16_t basic_start;           /* derived from ROM */
+    uint16_t kernal_checksum;       /* derived from ROM */
+    uint16_t editor_checksum;       /* derived from ROM */
 } petres_t;
 
 extern petres_t petres;
@@ -170,6 +151,6 @@ extern int pet_set_model(const char *model_name, void *extra); /* used by cmdlin
 
 extern int pet_init_ok; /* used in pet.c */
 
-extern int petmem_set_conf_info(petinfo_t *pi); /* used in petmemsnapshot.c */
+extern int petmem_set_conf_info(const petinfo_t *pi); /* used in petmemsnapshot.c */
 
 #endif

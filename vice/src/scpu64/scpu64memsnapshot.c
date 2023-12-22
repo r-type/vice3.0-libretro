@@ -58,12 +58,12 @@
 extern int mem_reg_soft_1mhz;
 extern int mem_reg_sys_1mhz;
 extern int mem_reg_hwenable;
-extern int mem_reg_dosext;  
-extern int mem_reg_ramlink; 
-extern int mem_reg_optim; 
+extern int mem_reg_dosext;
+extern int mem_reg_ramlink;
+extern int mem_reg_optim;
 extern int mem_reg_bootmap;
-extern int mem_reg_simm;  
-extern int mem_pport;   
+extern int mem_reg_simm;
+extern int mem_pport;
 extern unsigned int mem_simm_ram_mask;
 /* ------------------------ */
 
@@ -71,10 +71,37 @@ static log_t c64_snapshot_log = LOG_ERR;
 
 static const char snap_rom_module_name[] = "C64ROM";
 
+#define NUM_TRAP_DEVICES 9  /* FIXME: is there a better constant ? */
+static int trapfl[NUM_TRAP_DEVICES];
+static int trapdevices[NUM_TRAP_DEVICES + 1] = { 1, 4, 5, 6, 7, 8, 9, 10, 11, -1 };
+
+static void get_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_get_int_sprintf("VirtualDevice%d", &trapfl[i], trapdevices[i]);
+    }
+}
+
+static void clear_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("VirtualDevice%d", 0, trapdevices[i]);
+    }
+}
+
+static void restore_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("VirtualDevice%d", trapfl[i], trapdevices[i]);
+    }
+}
+
 static int scpu64_snapshot_write_rom_module(snapshot_t *s)
 {
     snapshot_module_t *m;
-    int trapfl;
 
     /* Main memory module.  */
 
@@ -84,21 +111,19 @@ static int scpu64_snapshot_write_rom_module(snapshot_t *s)
     }
 
     /* disable traps before saving the ROM */
-    resources_get_int("VirtualDevices", &trapfl);
-    resources_set_int("VirtualDevices", 0);
+    get_trapflags();
+    clear_trapflags();
 
     if (SMW_BA(m, mem_chargen_rom, SCPU64_CHARGEN_ROM_SIZE) < 0
         || SMW_BA(m, scpu64rom_scpu64_rom, SCPU64_SCPU64_ROM_MAXSIZE) < 0) {
         goto fail;
     }
 
-    ui_update_menus();
-
     if (snapshot_module_close(m) < 0) {
         goto fail;
     }
 
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     return 0;
 
@@ -107,16 +132,15 @@ fail:
         snapshot_module_close(m);
     }
 
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     return -1;
 }
 
 static int scpu64_snapshot_read_rom_module(snapshot_t *s)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     snapshot_module_t *m;
-    int trapfl;
 
     /* Main memory module.  */
 
@@ -127,15 +151,15 @@ static int scpu64_snapshot_read_rom_module(snapshot_t *s)
         return 0;
     }
 
-    if (major_version > SNAP_ROM_MAJOR || minor_version > SNAP_ROM_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_ROM_MAJOR, SNAP_ROM_MINOR)) {
         log_error(c64_snapshot_log, "Snapshot module version (%d.%d) newer than %d.%d.", major_version, minor_version, SNAP_ROM_MAJOR, SNAP_ROM_MINOR);
         snapshot_module_close(m);
         return -1;
     }
 
     /* disable traps before loading the ROM */
-    resources_get_int("VirtualDevices", &trapfl);
-    resources_set_int("VirtualDevices", 0);
+    get_trapflags();
+    clear_trapflags();
 
     if (SMR_BA(m, mem_chargen_rom, SCPU64_CHARGEN_ROM_SIZE) < 0
         || SMR_BA(m, scpu64rom_scpu64_rom, SCPU64_SCPU64_ROM_MAXSIZE) < 0) {
@@ -147,7 +171,7 @@ static int scpu64_snapshot_read_rom_module(snapshot_t *s)
     }
 
     /* enable traps again when necessary */
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     return 0;
 
@@ -155,7 +179,7 @@ fail:
     if (m != NULL) {
         snapshot_module_close(m);
     }
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
     return -1;
 }
 
@@ -174,17 +198,17 @@ int scpu64_snapshot_write_module(snapshot_t *s, int save_roms)
         return -1;
     }
 
-    if (SMW_B(m, (BYTE)mem_pport) < 0
-        || SMW_B(m, (BYTE)mem_reg_soft_1mhz) < 0
-        || SMW_B(m, (BYTE)mem_reg_sys_1mhz) < 0
-        || SMW_B(m, (BYTE)mem_reg_hwenable) < 0
-        || SMW_B(m, (BYTE)mem_reg_dosext) < 0
-        || SMW_B(m, (BYTE)mem_reg_ramlink) < 0
-        || SMW_B(m, (BYTE)mem_reg_optim) < 0
-        || SMW_B(m, (BYTE)mem_reg_bootmap) < 0
-        || SMW_B(m, (BYTE)mem_reg_simm) < 0
-        || SMW_B(m, (BYTE)export.exrom) < 0
-        || SMW_B(m, (BYTE)export.game) < 0
+    if (SMW_B(m, (uint8_t)mem_pport) < 0
+        || SMW_B(m, (uint8_t)mem_reg_soft_1mhz) < 0
+        || SMW_B(m, (uint8_t)mem_reg_sys_1mhz) < 0
+        || SMW_B(m, (uint8_t)mem_reg_hwenable) < 0
+        || SMW_B(m, (uint8_t)mem_reg_dosext) < 0
+        || SMW_B(m, (uint8_t)mem_reg_ramlink) < 0
+        || SMW_B(m, (uint8_t)mem_reg_optim) < 0
+        || SMW_B(m, (uint8_t)mem_reg_bootmap) < 0
+        || SMW_B(m, (uint8_t)mem_reg_simm) < 0
+        || SMW_B(m, (uint8_t)export.exrom) < 0
+        || SMW_B(m, (uint8_t)export.game) < 0
         || scpu64_snapshot_write_cpu_state(m)
         || SMW_DW(m, mem_simm_ram_mask) < 0
         || SMW_BA(m, mem_ram, SCPU64_RAM_SIZE) < 0
@@ -217,10 +241,9 @@ fail:
 
 int scpu64_snapshot_read_module(snapshot_t *s)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     snapshot_module_t *m;
     unsigned int simm_mask;
-    int trapfl;
 
     /* Main memory module.  */
 
@@ -229,7 +252,7 @@ int scpu64_snapshot_read_module(snapshot_t *s)
         return -1;
     }
 
-    if (major_version > SNAP_MAJOR || minor_version > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
         log_error(c64_snapshot_log, "Snapshot module version (%d.%d) newer than %d.%d.", major_version, minor_version, SNAP_MAJOR, SNAP_MINOR);
         goto fail;
     }
@@ -253,13 +276,13 @@ int scpu64_snapshot_read_module(snapshot_t *s)
     }
 
     /* disable traps before loading the ROM */
-    resources_get_int("VirtualDevices", &trapfl);
-    resources_set_int("VirtualDevices", 0);
+    get_trapflags();
+    clear_trapflags();
 
     memcpy(mem_trap_ram, mem_sram + 0x1e000, SCPU64_KERNAL_ROM_SIZE);
 
     /* enable traps again when necessary */
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     switch (simm_mask) {
     case 0x0:
@@ -301,8 +324,6 @@ int scpu64_snapshot_read_module(snapshot_t *s)
     if (cartridge_snapshot_read_modules(s) < 0) {
         goto fail;
     }
-
-    ui_update_menus();
 
     return 0;
 

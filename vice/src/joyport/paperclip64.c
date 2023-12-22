@@ -30,22 +30,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cmdline.h"
 #include "joyport.h"
 #include "paperclip64.h"
 #include "resources.h"
 #include "snapshot.h"
-#include "translate.h"
 
 /* Control port <--> paperclip64 connections:
 
    cport | paperclip64 | I/O
    -------------------------
-     1   |    KEY 0    |  I
-     2   |    KEY 1    |  I
-     3   |  COMMAND 0  |  O
-     4   |  COMMAND 1  |  O
-     6   |  COMMAND 2  |  O
+     1   |    PROM O0  |  I
+     2   |    PROM O1  |  I
+     3   | COUNTER CLK |  O
+     4   | COUNTER CLR |  O
+     6   |   PROM CE   |  O
+
+   Works on:
+   - native joystick port(s) (x64/x64sc/xscpu64/x64dtv/x128)
  */
 
 /* Paperclip64D Dongle description:
@@ -68,7 +69,7 @@
    The key sequence is : 02 00 00 01 03 02 01 03 02 01 02 01 02 01 02 00
                          01 02 00 01 03 03 02 00 00 00 00 00 00 00 01 03
                          03 02 00 01 02 00 01 02 01 02 01 02 01 03 02 01
-                         03 02 00 00 01 03 03 03 03 03 03 03 
+                         03 02 00 00 01 03 03 03 03 03 03 03 03 03 03 03
 
    After setting the first bits of the sequence the following needs to happen before setting the next bit:
 
@@ -81,85 +82,93 @@
    but it does not work (good enough) for the actual software.
 */
 
-#define PC64_IDLE      0
-#define PC64_ACTIVATED 1
-#define PC64_ACTIVE    2
+static int paperclip64_enabled[JOYPORT_MAX_PORTS] = {0};
 
-static int paperclip64_enabled = 0;
+static int counter[JOYPORT_MAX_PORTS] = {0};
 
-static int counter = -1;
+static uint8_t command[JOYPORT_MAX_PORTS] = {0xff};
+static uint8_t output_enable[JOYPORT_MAX_PORTS] = {0};
 
-static BYTE command = 0xff;
-
-static int state = PC64_IDLE;
-
-static BYTE keys[60] = {
-    2, 0, 0, 1, 3, 2, 1, 3, 2, 1,
-    2, 1, 2, 1, 2, 0, 1, 2, 0, 1,
-    3, 3, 2, 0, 0, 0, 0, 0, 0, 0,
-    1, 3, 3, 2, 0, 1, 2, 0, 1, 2,
-    1, 2, 1, 2, 1, 3, 2, 1, 3, 2,
-    0, 0, 1, 3, 3, 3, 3, 3, 3, 3
+static const uint8_t keys[64] = {
+    3, 2, 0, 0, 1, 3, 2, 1,
+    3, 2, 1, 2, 1, 2, 1, 2,
+    0, 1, 2, 0, 1, 3, 3, 2,
+    0, 0, 0, 0, 0, 0, 0, 1,
+    3, 3, 2, 0, 1, 2, 0, 1,
+    2, 1, 2, 1, 2, 1, 3, 2,
+    1, 3, 2, 0, 0, 1, 3, 3,
+    3, 3, 3, 3, 3, 3, 3, 3
 };
 
 /* ------------------------------------------------------------------------- */
 
-static int joyport_paperclip64_enable(int port, int value)
+static int joyport_paperclip64_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    if (val == paperclip64_enabled) {
+    if (new_state == paperclip64_enabled[port]) {
         return 0;
     }
 
-    if (val) {
-        command = 0xff;
-        counter = -1;
-        state = PC64_IDLE;
+    if (new_state) {
+        /* enabled, set command to 0 */
+        command[port] = 0;
     }
 
-    paperclip64_enabled = val;
+    /* set current state */
+    paperclip64_enabled[port] = new_state;
 
     return 0;
 }
 
-static BYTE paperclip64_read(int port)
+static uint8_t paperclip64_read(int port)
 {
-    BYTE retval = 0xff;
+    uint8_t retval = 0xff;
 
-    if (counter != -1) {
-        retval &= (keys[counter] | 0xfc);
-        joyport_display_joyport(JOYPORT_ID_BBRTC, (BYTE)(~retval & 3));
+    if (output_enable[port]) {
+        /* if the output is enabled, return current key bits */
+        retval &= (keys[counter[port]] | 0xfc);
     }
     return retval;
 }
 
-static void paperclip64_store(BYTE val)
+static void paperclip64_store(int port, uint8_t val)
 {
-    BYTE new_command = val & 0x1c;
+    uint8_t new_command = val & 0x1c;
+    uint8_t reset;
+    uint8_t clk;
+    uint8_t old_clk;
 
-    if (new_command == command) {
+    if (new_command == command[port]) {
         return;
     }
 
-    if (new_command == 8 && command == 0x1c) {
-        if (state == PC64_ACTIVATED) {
-            state = PC64_ACTIVE;
-        } else {
-            if (counter != -1) {
-                ++counter;
-                if (counter == 60) {
-                    counter = -1;
-                }
+    output_enable[port] = !(val & JOYPORT_FIRE);   /* output enable line is on joyport 'fire' pin */
+
+    reset = !(val & 8);
+
+    if (reset) {
+        /* reset line asserted, set counter to 0 */
+        counter[port] = 0;
+    } else {
+        clk = val & JOYPORT_LEFT;   /* clock line is on joyport 'left' pin */
+        old_clk = command[port] & JOYPORT_LEFT;
+
+        if (old_clk && !clk) {
+            /* clock line asserted, increment key position */
+            counter[port]++;
+            if (counter[port] == 0x3c) {
+                counter[port] = 0;
             }
         }
-    }
+   }
+   command[port] = new_command;
+}
 
-    if (new_command == 8 && command == 0) {
-        counter = 0;
-        state = PC64_ACTIVATED;
-    }
-    command = new_command;
+static void paperclip64_powerup(int port)
+{
+    /* reset counter */
+    counter[port] = 0;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -169,18 +178,23 @@ static int paperclip64_write_snapshot(struct snapshot_s *s, int port);
 static int paperclip64_read_snapshot(struct snapshot_s *s, int port);
 
 static joyport_t joyport_paperclip64_device = {
-    "Paperclip64 dongle",
-    IDGS_PAPERCLIP64_DONGLE,
-    JOYPORT_RES_ID_PAPERCLIP64,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_OPTIONAL,
-    joyport_paperclip64_enable,
-    paperclip64_read,
-    paperclip64_store,
-    NULL,               /* no pot-x read */
-    NULL,               /* no pot-y read */
-    paperclip64_write_snapshot,
-    paperclip64_read_snapshot
+    "Dongle (Paperclip64)",          /* name of the device */
+    JOYPORT_RES_ID_NONE,             /* device can be used in multiple ports at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,         /* device is NOT a lightpen */
+    JOYPORT_POT_OPTIONAL,            /* device does NOT use the potentiometer lines */
+    JOYSTICK_ADAPTER_ID_NONE,        /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_C64_DONGLE,       /* device is a C64 Dongle */
+    0x1C,                            /* bits 4, 3 and 2 are output bits */
+    joyport_paperclip64_set_enabled, /* device enable/disable function */
+    paperclip64_read,                /* digital line read function */
+    paperclip64_store,               /* digital line store function */
+    NULL,                            /* NO pot-x read function */
+    NULL,                            /* NO pot-y read function */
+    paperclip64_powerup,             /* powerup function */
+    paperclip64_write_snapshot,      /* device write snapshot function */
+    paperclip64_read_snapshot,       /* device read snapshot function */
+    NULL,                            /* NO device hook function */
+    0                                /* NO device hook function mask */
 };
 
 /* ------------------------------------------------------------------------- */
@@ -201,9 +215,9 @@ int joyport_paperclip64_resources_init(void)
    BYTE  | state   | state
  */
 
-static char snap_module_name[] = "PAPERCLIP64";
+static const char snap_module_name[] = "PAPERCLIP64";
 #define SNAP_MAJOR   0
-#define SNAP_MINOR   0
+#define SNAP_MINOR   1
 
 static int paperclip64_write_snapshot(struct snapshot_s *s, int port)
 {
@@ -216,9 +230,8 @@ static int paperclip64_write_snapshot(struct snapshot_s *s, int port)
     }
 
     if (0
-        || SMW_DW(m, (DWORD)counter) < 0
-        || SMW_B(m, command) < 0
-        || SMW_B(m, (BYTE)state) < 0) {
+        || SMW_DW(m, (uint32_t)counter[port]) < 0
+        || SMW_B(m, command[port]) < 0) {
         snapshot_module_close(m);
         return -1;
     }
@@ -227,7 +240,7 @@ static int paperclip64_write_snapshot(struct snapshot_s *s, int port)
 
 static int paperclip64_read_snapshot(struct snapshot_s *s, int port)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &major_version, &minor_version);
@@ -237,15 +250,14 @@ static int paperclip64_read_snapshot(struct snapshot_s *s, int port)
     }
 
     /* Do not accept versions higher than current */
-    if (major_version > SNAP_MAJOR || minor_version > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
     }
 
     if (0
-        || SMR_DW_INT(m, &counter) < 0
-        || SMR_B(m, &command) < 0
-        || SMR_B_INT(m, &state) < 0) {
+        || SMR_DW_INT(m, &counter[port]) < 0
+        || SMR_B(m, &command[port]) < 0) {
         goto fail;
     }
 

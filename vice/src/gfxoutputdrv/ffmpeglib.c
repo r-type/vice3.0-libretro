@@ -32,11 +32,8 @@
 #include "archdep.h"
 #include "gfxoutputdrv/ffmpeglib.h"
 #include "log.h"
-#include "translate.h"
 #include "uiapi.h"
 #include "dynlib.h"
-
-#ifndef STATIC_FFMPEG
 
 /* define major version if its not already defined */
 #ifndef LIBAVCODEC_VERSION_MAJOR
@@ -134,7 +131,7 @@ static int check_version(const char *lib_name, void *handle, const char *symbol,
     unsigned ver_lib;
     const char *result_msgs[] = { "full match","major.minor matches","major matches","unsupported" };
     enum { FULL_MATCH=0, MAJOR_MINOR_MATCH=1, MAJOR_MATCH=2, NO_MATCH=3 } result;
-    
+
     version_func = (ffmpeg_version_t)vice_dynlib_symbol(handle, symbol);
     if (version_func == NULL) {
         log_debug("ffmpeg %s: version function '%s' not found! error: %s", lib_name, symbol, vice_dynlib_error());
@@ -504,14 +501,5 @@ void ffmpeglib_close(ffmpeglib_t *lib)
     free_avresample(lib);
 #endif
 }
-#else
-int ffmpeglib_open(ffmpeglib_t *lib)
-{
-    return 0;
-}
 
-void ffmpeglib_close(ffmpeglib_t *lib)
-{
-}
-#endif
 #endif /* #ifdef HAVE_FFMPEG */

@@ -26,15 +26,20 @@
 
 #include "vice.h"
 #include "types.h"
+#include <stddef.h>
 
 #include "c64dtv-resources.h"
 #include "c64dtvmodel.h"
 #include "menu_common.h"
+#ifdef HAVE_MOUSE
+#include "menu_mouse.h"
+#endif
 #include "menu_joyport.h"
 #include "menu_joystick.h"
 #include "menu_ram.h"
 #include "menu_rom.h"
 #include "menu_sid.h"
+#include "menu_userport.h"
 #include "uimenu.h"
 
 /* DTV MODEL SELECTION */
@@ -81,20 +86,10 @@ static const ui_menu_entry_t dtv_model_submenu[] = {
       MENU_ENTRY_RESOURCE_RADIO,
       custom_DTVModel_callback,
       (ui_callback_data_t)DTVMODEL_HUMMER_NTSC },
-    SDL_MENU_ITEM_SEPARATOR,
-    { "Colorfix",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_VICIINewLuminances_callback,
-      NULL },
     SDL_MENU_LIST_END
 };
 
 UI_MENU_DEFINE_TOGGLE(HummerADC)
-
-#ifdef HAVE_MOUSE
-UI_MENU_DEFINE_TOGGLE(ps2mouse)
-UI_MENU_DEFINE_TOGGLE(Mouse)
-#endif
 
 UI_MENU_DEFINE_FILE_STRING(c64dtvromfilename)
 UI_MENU_DEFINE_TOGGLE(c64dtvromrw)
@@ -104,7 +99,7 @@ UI_MENU_DEFINE_RADIO(DtvRevision)
 const ui_menu_entry_t c64dtv_hardware_menu[] = {
     { "Select DTV model",
       MENU_ENTRY_SUBMENU,
-      submenu_callback,
+      submenu_radio_callback,
       (ui_callback_data_t)dtv_model_submenu },
     { "Joyport settings",
       MENU_ENTRY_SUBMENU,
@@ -114,6 +109,16 @@ const ui_menu_entry_t c64dtv_hardware_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)joystick_c64dtv_menu },
+    { "Userport settings",
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)userport_menu },
+#ifdef HAVE_MOUSE
+    { "Mouse emulation",
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)mouse_c64dtv_menu },
+#endif
     { "SID settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -147,18 +152,11 @@ const ui_menu_entry_t c64dtv_hardware_menu[] = {
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_HummerADC_callback,
       NULL },
-#ifdef HAVE_MOUSE
     SDL_MENU_ITEM_SEPARATOR,
-    SDL_MENU_ITEM_TITLE("PS/2 mouse on userport"),
-    { "Enable PS/2 mouse",
+    { "Enable Colorfix",
       MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_ps2mouse_callback,
+      toggle_VICIINewLuminances_callback,
       NULL },
-    { "Grab mouse events",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_Mouse_callback,
-      NULL },
-#endif
     SDL_MENU_ITEM_SEPARATOR,
     { "RAM pattern settings",
       MENU_ENTRY_SUBMENU,

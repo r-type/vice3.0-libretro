@@ -33,6 +33,8 @@
 #include "debug.h"
 #include "cbm2.h"
 #include "cbm2mem.h"
+#include "cbm2rom.h"
+#include "cbm2ui.h"
 #include "lib.h"
 #include "machine.h"
 #include "menu_cbm2cart.h"
@@ -40,10 +42,13 @@
 #include "menu_common.h"
 #include "menu_debug.h"
 #include "menu_drive.h"
+#include "menu_edit.h"
 #include "menu_ffmpeg.h"
 #include "menu_help.h"
 #include "menu_jam.h"
 #include "menu_joyport.h"
+#include "menu_joystick.h"
+#include "menu_media.h"
 #include "menu_monitor.h"
 #include "menu_network.h"
 #include "menu_printer.h"
@@ -56,14 +61,18 @@
 #include "menu_sound.h"
 #include "menu_speed.h"
 #include "menu_tape.h"
+#include "menu_userport.h"
 #include "menu_video.h"
 #include "resources.h"
 #include "ui.h"
+#include "uifonts.h"
 #include "uimenu.h"
 #include "videoarch.h"
 #include "vkbd.h"
 
-static const ui_menu_entry_t xcbm6x0_7x0_main_menu[] = {
+static UI_MENU_CALLBACK(pause_callback_wrapper);
+
+static ui_menu_entry_t xcbm6x0_7x0_main_menu[] = {
     { "Autostart image",
       MENU_ENTRY_DIALOG,
       autostart_callback,
@@ -96,14 +105,15 @@ static const ui_menu_entry_t xcbm6x0_7x0_main_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)sound_output_menu },
+    /* no sampler support */
     { "Snapshot",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)snapshot_menu },
-    { "Screenshot",
+    { "Save media file",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
-      (ui_callback_data_t)screenshot_crtc_menu },
+      (ui_callback_data_t)media_menu },
     { "Speed settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -123,19 +133,25 @@ static const ui_menu_entry_t xcbm6x0_7x0_main_menu[] = {
       (ui_callback_data_t)network_menu },
 #endif
     { "Pause",
+      MENU_ENTRY_OTHER_TOGGLE,
+      pause_callback_wrapper,
+      NULL },
+    /* Caution: index is hardcoded below */
+    { "Advance Frame",
       MENU_ENTRY_OTHER,
-      pause_callback,
+      advance_frame_callback,
       NULL },
     { "Monitor",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)monitor_menu },
+    /* Caution: index is hardcoded below */
     { "Virtual keyboard",
       MENU_ENTRY_OTHER,
       vkbd_callback,
       NULL },
     { "Statusbar",
-      MENU_ENTRY_OTHER,
+      MENU_ENTRY_OTHER_TOGGLE,
       statusbar_callback,
       NULL },
 #ifdef DEBUG
@@ -152,6 +168,12 @@ static const ui_menu_entry_t xcbm6x0_7x0_main_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)settings_manager_menu },
+#ifdef USE_SDL2UI
+    { "Edit",
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)edit_menu },
+#endif
     { "Quit emulator",
       MENU_ENTRY_OTHER,
       quit_callback,
@@ -159,108 +181,25 @@ static const ui_menu_entry_t xcbm6x0_7x0_main_menu[] = {
     SDL_MENU_LIST_END
 };
 
-static const ui_menu_entry_t xcbm5x0_main_menu[] = {
-    { "Autostart image",
-      MENU_ENTRY_DIALOG,
-      autostart_callback,
-      NULL },
-    { "Drive",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)drive_menu },
-    { "Tape",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)tape_menu },
-    { "Printer",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)printer_ieee_menu },
-    { "Machine settings",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)cbm5x0_hardware_menu },
-    { "Video settings",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)cbm5x0_video_menu },
-    { "Sound settings",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)sound_output_menu },
-    { "Sampler settings",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)sampler_menu },
-    { "Snapshot",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)snapshot_menu },
-    { "Screenshot",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)screenshot_vic_vicii_vdc_menu },
-    { "Speed settings",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)speed_menu },
-    { "Reset",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)reset_menu },
-    { "Action on CPU JAM",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)jam_menu },
 #ifdef HAVE_NETWORK
-    { "Network",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)network_menu },
+# define MENU_ADVANCE_FRAME_IDX      15
+# define MENU_VIRTUAL_KEYBOARD_IDX   17
+#else
+# define MENU_ADVANCE_FRAME_IDX      14
+# define MENU_VIRTUAL_KEYBOARD_IDX   16
 #endif
-    { "Pause",
-      MENU_ENTRY_OTHER,
-      pause_callback,
-      NULL },
-    { "Monitor",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)monitor_menu },
-    { "Virtual keyboard",
-      MENU_ENTRY_OTHER,
-      vkbd_callback,
-      NULL },
-    { "Statusbar",
-      MENU_ENTRY_OTHER,
-      statusbar_callback,
-      NULL },
-#ifdef DEBUG
-    { "Debug",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)debug_menu },
-#endif
-    { "Help",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)help_menu },
-    { "Settings management",
-      MENU_ENTRY_SUBMENU,
-      submenu_callback,
-      (ui_callback_data_t)settings_manager_menu },
-    { "Quit emulator",
-      MENU_ENTRY_OTHER,
-      quit_callback,
-      NULL },
-    SDL_MENU_LIST_END
-};
-
-static BYTE *cbm2_font_14 = NULL;
-static BYTE *cbm2_font_8 = NULL;
-
-void cbm2ui_set_menu_params(int index, menu_draw_t *menu_draw)
+static UI_MENU_CALLBACK(pause_callback_wrapper)
 {
-    int model, i, j;
+    xcbm6x0_7x0_main_menu[MENU_ADVANCE_FRAME_IDX].status =
+        sdl_pause_state || !sdl_menu_state ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    xcbm6x0_7x0_main_menu[MENU_VIRTUAL_KEYBOARD_IDX].status =
+        sdl_pause_state ? MENU_STATUS_INACTIVE : MENU_STATUS_ACTIVE;
+    return pause_callback(activated, param);
+}
+
+static void cbm2ui_set_menu_params(int index, menu_draw_t *menu_draw)
+{
+    int model;
 
     resources_get_int("ModelLine", &model);
 
@@ -269,36 +208,51 @@ void cbm2ui_set_menu_params(int index, menu_draw_t *menu_draw)
 
     if (model == 0) {
         menu_draw->extra_y = 8;
-        for (i = 0; i < 256; i++) {
-            for (j = 0; j < 14; j++) {
-                cbm2_font_14[(i * 14) + j] = mem_chargen_rom[(i * 16) + j + 1];
-            }
-        }
-        sdl_ui_set_menu_font(cbm2_font_14, 8, 14);
     } else {
         menu_draw->extra_y = 32;
-        for (i = 0; i < 256; i++) {
-            for (j = 0; j < 8; j++) {
-                cbm2_font_8[(i * 8) + j] = mem_chargen_rom[(i * 16) + j];
-            }
-        }
-        sdl_ui_set_menu_font(cbm2_font_8, 8, 8);
     }
+
+    /* CRTC */
+    menu_draw->color_front = menu_draw->color_default_front = 1;
+    menu_draw->color_back = menu_draw->color_default_back = 0;
+    menu_draw->color_cursor_back = 0;
+    menu_draw->color_cursor_revers = 1;
+    menu_draw->color_active_green = 1;
+    menu_draw->color_inactive_red = 1;
+    menu_draw->color_active_grey = 1;
+    menu_draw->color_inactive_grey = 1;
+
     return;
 }
 
+/** \brief  Pre-initialize the UI before the canvas window gets created
+ *
+ * \return  0 on success, -1 on failure
+ */
+int cbm2ui_init_early(void)
+{
+    return 0;
+}
+
+/** \brief  Initialize the UI
+ *
+ * \return  0 on success, -1 on failure
+ */
 int cbm2ui_init(void)
 {
-    cbm2_font_8 = lib_malloc(8 * 256);
-    cbm2_font_14 = lib_malloc(14 * 256);
 
-    uijoyport_menu_create(0, 0, 1, 1, 0);
+    /* no "real" joystickports, and a user port */
+    uijoyport_menu_create(0, 0, 1, 1, 1);
+    uijoystick_menu_create(0, 0, 1, 1, 1);
+    uiuserport_menu_create(1);
     uikeyboard_menu_create();
     uipalette_menu_create("Crtc", NULL);
     uisid_menu_create();
+    uidrive_menu_create();
 
     sdl_ui_set_menu_params = cbm2ui_set_menu_params;
     sdl_ui_set_main_menu(xcbm6x0_7x0_main_menu);
+    sdl_ui_font_init(CBM2_CHARGEN600_NAME, 0x800, 0, 1);
 
     sdl_vkbd_set_vkbd(&vkbd_cbm2);
 
@@ -322,49 +276,8 @@ void cbm2ui_shutdown(void)
     uipalette_menu_shutdown();
     uisid_menu_shutdown();
     uijoyport_menu_shutdown();
+    uitapeport_menu_shutdown();
+    uijoystick_menu_shutdown();
 
-    lib_free(cbm2_font_14);
-    lib_free(cbm2_font_8);
-}
-
-int cbm5x0ui_init(void)
-{
-    cbm2_font_8 = lib_malloc(8 * 256);
-
-    sdl_ui_set_menu_params = NULL;
-
-    uijoyport_menu_create(1, 1, 0, 0, 0);
-    uisampler_menu_create();
-    uidrive_menu_create();
-    uikeyboard_menu_create();
-    uipalette_menu_create("VICII", NULL);
-    uisid_menu_create();
-
-    sdl_ui_set_menu_font(mem_chargen_rom + 0x800, 8, 8);
-    sdl_ui_set_main_menu(xcbm5x0_main_menu);
-    sdl_video_canvas_switch(1);
-
-    sdl_vkbd_set_vkbd(&vkbd_cbm2);
-
-#ifdef HAVE_FFMPEG
-    sdl_menu_ffmpeg_init();
-#endif
-
-    return 0;
-}
-
-void cbm5x0ui_shutdown(void)
-{
-    uikeyboard_menu_shutdown();
-    uisid_menu_shutdown();
-    uipalette_menu_shutdown();
-    uijoyport_menu_shutdown();
-#ifdef SDL_DEBUG
-    fprintf(stderr, "%s\n", __func__);
-#endif
-
-#ifdef HAVE_FFMPEG
-    sdl_menu_ffmpeg_shutdown();
-#endif
-    lib_free(cbm2_font_8);
+    sdl_ui_font_shutdown();
 }

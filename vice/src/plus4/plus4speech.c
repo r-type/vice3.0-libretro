@@ -45,7 +45,6 @@
 #include "resources.h"
 #include "sound.h"
 #include "t6721.h"
-#include "translate.h"
 #include "types.h"
 #include "util.h"
 
@@ -124,7 +123,7 @@
 static t6721_state *t6721; /* context for the t6721 chip */
 
 /* MOS 8706 context */
-static BYTE regs[4];
+static uint8_t regs[4];
 
 #define IRQNUM_DTRD     0
 #define IRQNUM_EOS      1
@@ -141,7 +140,7 @@ int irq_latch = 0; /* FIXME: guessed */
 
 static int last = 0;
 
-void latch_trigger(void)
+static void latch_trigger(void)
 {
     int this = (irq_latch & irq_enable) ? 1 : 0;
 
@@ -165,7 +164,7 @@ void latch_trigger(void)
     - clears latched irqs
     - sets enable mask
 */
-void latch_set_mask(int mask)
+static void latch_set_mask(int mask)
 {
     DBG(("SPEECH: latch clear/set mask %x\n", mask));
     irq_enable = mask & 3;
@@ -173,14 +172,14 @@ void latch_set_mask(int mask)
     latch_trigger();
 }
 
-void latch_set_irq(int num, int bit)
+static void latch_set_irq(int num, int bit)
 {
     irq_latch &= ~(1 << num);
     irq_latch |= ((bit & 1) << num);
     latch_trigger();
 }
 
-int latch_load_and_clear(void)
+static int latch_load_and_clear(void)
 {
     int val = irq_latch;
 
@@ -201,7 +200,7 @@ int datainfifo = 0;
 int fifo_reset = 0;
 unsigned int fifo_buffer = 0;
 
-void update_dtrd(int d)
+static void update_dtrd(int d)
 {
 #if 0
     if (d) {
@@ -226,7 +225,7 @@ void update_dtrd(int d)
 }
 
 /* hooked to callback of t6721 chip */
-static BYTE read_bit_from_fifo(t6721_state *t6721, unsigned int *bit)
+static uint8_t read_bit_from_fifo(t6721_state *state, unsigned int *bit)
 {
     *bit = 0;
 
@@ -255,7 +254,7 @@ static BYTE read_bit_from_fifo(t6721_state *t6721, unsigned int *bit)
 }
 
 /* writes one bit to the FIFO */
-static BYTE write_bit_to_fifo(BYTE bit)
+static uint8_t write_bit_to_fifo(uint8_t bit)
 {
     if (fifo_reset) {
         /* DBG(("SPEECH: wr first bit: %d\n", bit)); */
@@ -296,35 +295,35 @@ static BYTE write_bit_to_fifo(BYTE bit)
 /*
    writes one nibble to the FIFO
 */
-static void write_data_nibble(BYTE nibble)
+static void write_data_nibble(uint8_t nibble)
 {
     int i;
-    BYTE mask;
+    uint8_t mask;
 /*    DBG(("%x ", nibble)); */
 /*    DBG(("SPEECH: wr byte %04x\n", nibble)); */
     for (i = 0, mask = 1; i < 4; ++i, mask <<= 1) {
-        if (write_bit_to_fifo((BYTE)(nibble & mask)) == 0) {
+        if (write_bit_to_fifo((uint8_t)(nibble & mask)) == 0) {
             return;
         }
     }
 }
 
 /* hooked to callback of t6721 chip */
-static void set_dtrd(t6721_state *t6721)
+static void set_dtrd(t6721_state *state)
 {
     static int old;
-    if (old != t6721->dtrd) {
-        DTRD = t6721->dtrd;
-        old = t6721->dtrd;
+    if (old != state->dtrd) {
+        DTRD = state->dtrd;
+        old = state->dtrd;
         /* DBG(("SPEECH: irq assert dtrd:%x masked:%x\n", DTRD, DTRD & irq_enable)); */
         latch_set_irq(IRQNUM_DTRD, DTRD);
     }
 }
 
 /* hooked to callback of t6721 chip */
-static void set_apd(t6721_state *t6721)
+static void set_apd(t6721_state *state)
 {
-    if (t6721->apd) {
+    if (state->apd) {
         fifo_reset = 1; /* set FIFO reset condition */
 
         /* reset FIFO */
@@ -337,14 +336,15 @@ static void set_apd(t6721_state *t6721)
 }
 
 /* hooked to callback of t6721 chip */
-static void set_eos(t6721_state *t6721)
+static void set_eos(t6721_state *state)
 {
-    static int last;
-    if (last != t6721->eos) {
-        DBG(("SPEECH: set EOS: %d\n", t6721->eos));
-        latch_set_irq(IRQNUM_EOS, t6721->eos);
+    static int lst;
+
+    if (lst != state->eos) {
+        DBG(("SPEECH: set EOS: %d\n", state->eos));
+        latch_set_irq(IRQNUM_EOS, state->eos);
     }
-    last = t6721->eos;
+    lst = state->eos;
 }
 
 /*
@@ -395,9 +395,9 @@ $FD22 : speech data register
     store: speech data
 */
 
-static BYTE speech_read(WORD addr)
+static uint8_t speech_read(uint16_t addr)
 {
-    BYTE value = 0;
+    uint8_t value = 0;
     /* DBG(("SPEECH: rd %04x\n", addr)); */
     switch (addr & 3) {
         case 0:
@@ -422,14 +422,14 @@ static BYTE speech_read(WORD addr)
     return value;
 }
 
-static void speech_store(WORD addr, BYTE value)
+static void speech_store(uint16_t addr, uint8_t value)
 {
     /* DBG(("SPEECH: wr %04x %02x\n", addr, value)); */
     switch (addr & 3) {
         case 0: /* Command register */
                 /* DBG(("SPEECH: wr cmd %02x\n", value & 0x0f)); */
             t6721->wr = (value >> 7) & 1;     /* wr line */
-            t6721_store(t6721, (BYTE)(value & 0x0f));
+            t6721_store(t6721, (uint8_t)(value & 0x0f));
             t6721_update_ticks(t6721, 1);
             regs[0] = value;
             break;
@@ -444,14 +444,14 @@ static void speech_store(WORD addr, BYTE value)
             regs[1] = value;
             break;
         case 2: /* sample data register */
-            write_data_nibble((BYTE)((value >> 0) & 0x0f));
-            write_data_nibble((BYTE)((value >> 4) & 0x0f));
+            write_data_nibble((uint8_t)((value >> 0) & 0x0f));
+            write_data_nibble((uint8_t)((value >> 4) & 0x0f));
             regs[2] = value;
             break;
     }
 }
 
-static BYTE speech_peek(WORD addr)
+static uint8_t speech_peek(uint16_t addr)
 {
     return regs[addr & 3];
 }
@@ -467,7 +467,7 @@ static int speech_dump(void)
     return 0;
 }
 
-void speech_setup_context(machine_context_t *machine_context)
+void speech_setup_context(machine_context_t *machine_ctx)
 {
     DBG(("SPEECH: speech_setup_context\n"));
     /* init t6721 chip */
@@ -483,11 +483,7 @@ void speech_setup_context(machine_context_t *machine_context)
 
 /* Some prototypes are needed */
 static int speech_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec);
-static void speech_sound_machine_close(sound_t *psid);
-static int speech_sound_machine_calculate_samples(sound_t **psid, SWORD *pbuf, int nr, int sound_output_channels, int sound_chip_channels, int *delta_t);
-static BYTE speech_sound_machine_read(sound_t *psid, WORD addr);
-static void speech_sound_machine_store(sound_t *psid, WORD addr, BYTE byte);
-static void speech_sound_machine_reset(sound_t *psid, CLOCK cpu_clk);
+static int speech_sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr, int sound_output_channels, int sound_chip_channels, CLOCK *delta_t);
 
 static int speech_sound_machine_cycle_based(void)
 {
@@ -499,20 +495,21 @@ static int speech_sound_machine_channels(void)
     return 1;
 }
 
+/* V364 speech sound chip */
 static sound_chip_t speech_sound_chip = {
-    NULL, /* no open */
-    speech_sound_machine_init,
-    speech_sound_machine_close,
-    speech_sound_machine_calculate_samples,
-    speech_sound_machine_store,
-    speech_sound_machine_read,
-    speech_sound_machine_reset,
-    speech_sound_machine_cycle_based,
-    speech_sound_machine_channels,
-    0 /* chip enabled */
+    NULL,                                   /* NO sound chip open function */
+    speech_sound_machine_init,              /* sound chip init function */
+    NULL,                                   /* NO sound chip close function */
+    speech_sound_machine_calculate_samples, /* sound chip calculate samples function */
+    NULL,                                   /* NO sound chip store function */
+    NULL,                                   /* NO sound chip read function */
+    NULL,                                   /* NO sound chip reset function */
+    speech_sound_machine_cycle_based,       /* sound chip 'is_cycle_based()' function, chip is NOT cycle based */
+    speech_sound_machine_channels,          /* sound chip 'get_amount_of_channels()' function, sound chip has 1 channel */
+    0                                       /* sound chip enabled flag, toggled upon device (de-)activation */
 };
 
-static WORD speech_sound_chip_offset = 0;
+static uint16_t speech_sound_chip_offset = 0;
 
 void speech_sound_chip_init(void)
 {
@@ -526,21 +523,22 @@ int speech_cart_enabled(void)
 
 /* ------------------------------------------------------------------------- */
 
-char *speech_filename = NULL;
+const char *speech_filename = NULL;
 
 static io_source_t speech_device = {
-    "V364SPEECH",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xfd20, 0xfd22, 3,
-    1, /* read is always valid */
-    speech_store,
-    speech_read,
-    speech_peek,
-    speech_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "V364SPEECH",         /* name of the device */
+    IO_DETACH_RESOURCE,   /* use resource to detach the device when involved in a read-collision */
+    "SpeechEnabled",      /* resource to set to '0' */
+    0xfd20, 0xfd22, 0x03, /* range for the device, regs:$fd20-$fd22 */
+    1,                    /* read is always valid */
+    speech_store,         /* store function */
+    NULL,                 /* NO poke function */
+    speech_read,          /* read function */
+    speech_peek,          /* peek function */
+    speech_dump,          /* chip state information dump function */
+    IO_CART_ID_NONE,      /* not a cartridge */
+    IO_PRIO_NORMAL,       /* normal priority, device read needs to be checked for collisions */
+    0                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *speech_list_item = NULL;
@@ -555,18 +553,14 @@ static int set_speech_enabled(int value, void *param)
     }
 
     if (val) {
+        resources_get_string("c2loname", &speech_filename);
         if (speech_filename) {
             if (*speech_filename) {
-                if (plus4cart_load_c2lo(speech_filename) < 0) {
-                    return -1;
-                }
                 speech_sound_chip.chip_enabled = 1;
                 speech_list_item = io_source_register(&speech_device);
             }
         }
     } else {
-        speech_sound_chip.chip_enabled = 0;
-        memset(extromlo3, 0, PLUS4_CART16K_SIZE);
         speech_sound_chip.chip_enabled = 0;
         io_source_unregister(speech_list_item);
         speech_list_item = NULL;
@@ -576,36 +570,6 @@ static int set_speech_enabled(int value, void *param)
     return 0;
 }
 
-static int set_speech_filename(const char *name, void *param)
-{
-    int enabled;
-
-    if (name != NULL && *name != '\0') {
-        if (util_check_filename_access(name) < 0) {
-            return -1;
-        }
-    }
-
-    resources_get_int("SpeechEnabled", &enabled);
-    util_string_set(&speech_filename, name);
-
-    if (set_speech_enabled(enabled, NULL) < 0) {
-        lib_free (speech_filename);
-        speech_filename = NULL;
-        DBG(("speech_set_name: %d '%s'\n", speech_enabled, speech_filename));
-        return -1;
-    }
-    DBG(("speech_set_name: %d '%s'\n", speech_enabled, speech_filename));
-
-    return 0;
-}
-
-static const resource_string_t resources_string[] = {
-    { "SpeechImage", "", RES_EVENT_NO, NULL,
-      &speech_filename, set_speech_filename, NULL },
-    RESOURCE_STRING_LIST_END
-};
-
 static const resource_int_t resources_int[] = {
     { "SpeechEnabled", 0, RES_EVENT_STRICT, (resource_value_t)0,
       &speech_sound_chip.chip_enabled, set_speech_enabled, NULL },
@@ -614,15 +578,11 @@ static const resource_int_t resources_int[] = {
 
 int speech_resources_init(void)
 {
-    if (resources_register_string(resources_string) < 0) {
-        return -1;
-    }
     return resources_register_int(resources_int);
 }
 
 void speech_resources_shutdown(void)
 {
-    lib_free(speech_filename);
     speech_filename = NULL;
 }
 
@@ -634,30 +594,14 @@ void speech_shutdown(void)
     }
 }
 
-static int set_speech_rom(const char *name, void *param)
-{
-    resources_set_string("SpeechImage", name);
-    resources_set_int("SpeechEnabled", 1);
-    return 0;
-}
-
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-speech", SET_RESOURCE, 0,
+    { "-speech", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "SpeechEnabled", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_PLUS4SPEECH,
-      NULL, NULL },
-    { "+speech", SET_RESOURCE, 0,
+      NULL, "Enable the v364 speech add-on" },
+    { "+speech", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "SpeechEnabled", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_PLUS4SPEECH,
-      NULL, NULL },
-    { "-speechrom", CALL_FUNCTION, 1,
-      set_speech_rom, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_ATTACH_SPEECH_ROM_IMAGE,
-      NULL, NULL },
+      NULL, "Disable the v364 speech add-on" },
     CMDLINE_LIST_END
 };
 
@@ -671,26 +615,13 @@ int speech_cmdline_options_init(void)
 
 /* FIXME: shutdown missing */
 
-/* FIXME: what are those two doing exactly ?! */
-static BYTE speech_sound_machine_read(sound_t *psid, WORD addr)
-{
-    DBG(("SPEECH: speech_sound_machine_read\n"));
-
-    return 0; /* ? */
-}
-
-static void speech_sound_machine_store(sound_t *psid, WORD addr, BYTE byte)
-{
-    DBG(("SPEECH: speech_sound_machine_store\n"));
-}
-
 /*
     called periodically for every sound fragment that is played
 */
-static int speech_sound_machine_calculate_samples(sound_t **psid, SWORD *pbuf, int nr, int soc, int scc, int *delta_t)
+static int speech_sound_machine_calculate_samples(sound_t **psid, int16_t *pbuf, int nr, int soc, int scc, CLOCK *delta_t)
 {
     int i;
-    SWORD *buffer;
+    int16_t *buffer;
 
     buffer = lib_malloc(nr * 2);
 
@@ -709,11 +640,6 @@ static int speech_sound_machine_calculate_samples(sound_t **psid, SWORD *pbuf, i
     return nr;
 }
 
-static void speech_sound_machine_reset(sound_t *psid, CLOCK cpu_clk)
-{
-    DBG(("SPEECH: speech_sound_machine_reset\n"));
-}
-
 static int speech_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec)
 {
     DBG(("SPEECH: speech_sound_machine_init: speed %d cycles/sec: %d\n", speed, cycles_per_sec));
@@ -724,9 +650,4 @@ static int speech_sound_machine_init(sound_t *psid, int speed, int cycles_per_se
     }
 
     return 1;
-}
-
-static void speech_sound_machine_close(sound_t *psid)
-{
-    DBG(("SPEECH: speech_sound_machine_close\n"));
 }

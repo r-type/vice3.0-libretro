@@ -32,17 +32,19 @@
 #include <string.h>
 
 #include "archdep.h"
-#include "ioutil.h"
 #include "lib.h"
 #include "ui.h"
 #include "uimenu.h"
-#include "uifilereq.h"
 #include "util.h"
 #include "menu_common.h"
 
+#include "uifilereq.h"
+
+
 static menu_draw_t *menu_draw;
 static char *last_selected_file = NULL;
-static int last_selected_pos = 0;
+/* static int last_selected_pos = 0; */ /* ? */
+int last_selected_image_pos = 0;    /* FIXME: global variable. ugly. */
 
 #define SDL_FILEREQ_META_FILE 0
 #define SDL_FILEREQ_META_PATH 1
@@ -65,7 +67,7 @@ static int last_selected_pos = 0;
 /* ------------------------------------------------------------------ */
 /* static functions */
 
-static int sdl_ui_file_selector_recall_location(ioutil_dir_t *directory)
+static int sdl_ui_file_selector_recall_location(archdep_dir_t *directory)
 {
     unsigned int i, j, k, count;
     int direction;
@@ -76,38 +78,42 @@ static int sdl_ui_file_selector_recall_location(ioutil_dir_t *directory)
 
     /* the file list is sorted by ioutil, do binary search */
     i = 0;
-    k = directory->file_amount;
+    k = archdep_readdir_num_files(directory);
 
     /* ...but keep a failsafe in case the above assumption breaks */
     count = 50;
 
     while ((i < k) && (--count)) {
         j = i + ((k - i) >> 1);
-        direction = strcmp(last_selected_file, directory->files[j].name);
+        direction = strcmp(last_selected_file,
+                           archdep_readdir_get_file(directory, j));
 
         if (direction > 0) {
             i = j + 1;
         } else if (direction < 0) {
             k = j;
         } else {
-            return j + directory->dir_amount + SDL_FILEREQ_META_NUM;
+            return j + archdep_readdir_num_dirs(directory) + SDL_FILEREQ_META_NUM;
         }
     }
 
     return 0;
 }
 
-static char* sdl_ui_get_file_selector_entry(ioutil_dir_t *directory, int offset, int *isdir, ui_menu_filereq_mode_t mode)
+static const char* sdl_ui_get_file_selector_entry(archdep_dir_t *directory, int offset, int *isdir, ui_menu_filereq_mode_t mode)
 {
+    int num_dirs;
+
     *isdir = 0;
 
-    if (offset >= (directory->dir_amount + directory->file_amount + SDL_FILEREQ_META_NUM)) {
+    if (offset >= archdep_readdir_num_entries(directory) + SDL_FILEREQ_META_NUM) {
         return NULL;
     }
 
     if (offset == SDL_FILEREQ_META_FILE) {
         switch (mode) {
             case FILEREQ_MODE_CHOOSE_FILE:
+            case FILEREQ_MODE_CHOOSE_FILE_IN_IMAGE:
             case FILEREQ_MODE_SAVE_FILE:
                 return "<enter filename>";
 
@@ -126,15 +132,16 @@ static char* sdl_ui_get_file_selector_entry(ioutil_dir_t *directory, int offset,
     }
 #endif
 
-    if (offset >= (directory->dir_amount + SDL_FILEREQ_META_NUM)) {
-        return directory->files[offset - (directory->dir_amount + SDL_FILEREQ_META_NUM)].name;
+    num_dirs = archdep_readdir_num_dirs(directory);
+    if (offset >= num_dirs + SDL_FILEREQ_META_NUM) {
+        return archdep_readdir_get_file(directory, offset - (num_dirs + SDL_FILEREQ_META_NUM));
     } else {
         *isdir = 1;
-        return directory->dirs[offset - SDL_FILEREQ_META_NUM].name;
+        return archdep_readdir_get_dir(directory, offset - SDL_FILEREQ_META_NUM);
     }
 }
 
-#if (FSDEV_DIR_SEP_CHR == '\\')
+#if (ARCHDEP_DIR_SEP_CHR == '\\')
 static void sdl_ui_print_translate_seperator(const char *text, int x, int y)
 {
     unsigned int len;
@@ -142,7 +149,7 @@ static void sdl_ui_print_translate_seperator(const char *text, int x, int y)
     char *new_text = NULL;
 
     len = strlen(text);
-    new_text = lib_stralloc(text);
+    new_text = lib_strdup(text);
 
     for (i = 0; i < len; i++) {
         if (new_text[i] == '\\') {
@@ -167,28 +174,28 @@ static void sdl_ui_display_path(const char *current_dir)
     int amount = 0;
     int i;
 
-    len = strlen(current_dir);
+    len = (int)strlen(current_dir);
 
     if (len > menu_draw->max_text_x) {
-        text = lib_stralloc(current_dir);
+        text = lib_strdup(current_dir);
 
-        temp = strchr(current_dir + 1, FSDEV_DIR_SEP_CHR);
+        temp = strchr(current_dir + 1, ARCHDEP_DIR_SEP_CHR);
         before = (int)(temp - current_dir + 1);
 
         while (temp != NULL) {
             amount++;
-            temp = strchr(temp + 1, FSDEV_DIR_SEP_CHR);
+            temp = strchr(temp + 1, ARCHDEP_DIR_SEP_CHR);
         }
 
-        while (text[len - after] != FSDEV_DIR_SEP_CHR) {
+        while (text[len - after] != ARCHDEP_DIR_SEP_CHR) {
             after++;
         }
 
         if (amount > 1 && (before + after + 3) < menu_draw->max_text_x) {
-            temp = strchr(current_dir + 1, FSDEV_DIR_SEP_CHR);
+            temp = strchr(current_dir + 1, ARCHDEP_DIR_SEP_CHR);
             while (((temp - current_dir + 1) < (menu_draw->max_text_x - after - 3)) && temp != NULL) {
                 before = (int)(temp - current_dir + 1);
-                temp = strchr(temp + 1, FSDEV_DIR_SEP_CHR);
+                temp = strchr(temp + 1, ARCHDEP_DIR_SEP_CHR);
             }
         } else {
             before = (menu_draw->max_text_x - 3) / 2;
@@ -210,11 +217,16 @@ static void sdl_ui_display_path(const char *current_dir)
     lib_free(text);
 }
 
-static void sdl_ui_file_selector_redraw(ioutil_dir_t *directory, const char *title, const char *current_dir, int offset, int num_items, int more, ui_menu_filereq_mode_t mode)
+static void sdl_ui_file_selector_redraw(archdep_dir_t *directory, const char *title, const char *current_dir, int offset, int num_items, int more, ui_menu_filereq_mode_t mode, int cur_offset)
 {
     int i, j, isdir = 0;
     char* title_string;
-    char* name;
+    const char* name;
+    uint8_t oldbg = 0x0d;   /* This is the worst color, doesn't fit next to
+                               3, 7 or F, only fits somewhat next to 5, but that
+                               ramp is too high, or 1, but then the ramp down
+                               kinda sucks
+                             */
 
     title_string = lib_msprintf("%s %s", title, (offset) ? ((more) ? "(<- ->)" : "(<-)") : ((more) ? "(->)" : ""));
 
@@ -224,12 +236,47 @@ static void sdl_ui_file_selector_redraw(ioutil_dir_t *directory, const char *tit
     sdl_ui_display_path(current_dir);
 
     for (i = 0; i < num_items; ++i) {
+        if (i == cur_offset) {
+            oldbg = sdl_ui_set_cursor_colors();
+        }
+
         j = MENU_FIRST_X;
         name = sdl_ui_get_file_selector_entry(directory, offset + i, &isdir, mode);
         if (isdir) {
-            j += 1 + sdl_ui_print("(D)", MENU_FIRST_X, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+            j += sdl_ui_print("(D) ", MENU_FIRST_X, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
         }
-        sdl_ui_print(name, j, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+        j += sdl_ui_print(name, j, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+
+        if (i == cur_offset) {
+            sdl_ui_print_eol(j, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+            sdl_ui_reset_cursor_colors(oldbg);
+        }
+    }
+}
+
+static void sdl_ui_file_selector_redraw_cursor(archdep_dir_t *directory, int offset, int num_items, ui_menu_filereq_mode_t mode, int cur_offset, int old_offset)
+{
+    int i, j, isdir = 0;
+    const char *name;
+    uint8_t oldbg = 0;
+
+    for (i = 0; i < num_items; ++i) {
+        if ((i == cur_offset) || (i == old_offset)){
+            if (i == cur_offset) {
+                oldbg = sdl_ui_set_cursor_colors();
+            }
+            j = MENU_FIRST_X;
+            name = sdl_ui_get_file_selector_entry(directory, offset + i, &isdir, mode);
+            if (isdir) {
+                j += sdl_ui_print("(D) ", MENU_FIRST_X, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+            }
+            j += sdl_ui_print(name, j, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+
+            sdl_ui_print_eol(j, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+            if (i == cur_offset) {
+                sdl_ui_reset_cursor_colors(oldbg);
+            }
+        }
     }
 }
 
@@ -327,6 +374,8 @@ static char * display_drive_menu(void)
 /* ------------------------------------------------------------------ */
 /* External UI interface */
 
+#define SDL_FILESELECTOR_DIRMODE    ARCHDEP_OPENDIR_NO_HIDDEN_FILES
+
 char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mode)
 {
     int total, dirs, files, menu_max;
@@ -335,42 +384,65 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
     int redraw = 1;
     char *retval = NULL;
     int cur = 0, cur_old = -1;
-    ioutil_dir_t *directory;
-    char *current_dir;
-    char *backup_dir;
+    archdep_dir_t *directory;
+    char current_dir[ARCHDEP_PATH_MAX];
+    char backup_dir[ARCHDEP_PATH_MAX];
     char *inputstring;
-    unsigned int maxpathlen;
+
+    last_selected_image_pos = 0;
 
     menu_draw = sdl_ui_get_menu_param();
-    maxpathlen = ioutil_maxpathlen();
-    current_dir = lib_malloc(maxpathlen);
 
-    ioutil_getcwd(current_dir, maxpathlen);
-    backup_dir = lib_stralloc(current_dir);
+    archdep_getcwd(current_dir, ARCHDEP_PATH_MAX);
+    memcpy(backup_dir, current_dir, sizeof(backup_dir));
 
-    directory = ioutil_opendir(current_dir);
+    directory = archdep_opendir(current_dir, SDL_FILESELECTOR_DIRMODE);
     if (directory == NULL) {
         return NULL;
     }
 
-    dirs = directory->dir_amount;
-    files = directory->file_amount;
+    dirs = archdep_readdir_num_dirs(directory);
+    files = archdep_readdir_num_files(directory);
     total = dirs + files + SDL_FILEREQ_META_NUM;
     menu_max = menu_draw->max_text_y - (MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
 
-    if (mode == FILEREQ_MODE_CHOOSE_FILE) {
+    if ((mode == FILEREQ_MODE_CHOOSE_FILE) || (mode == FILEREQ_MODE_CHOOSE_FILE_IN_IMAGE)) {
         offset = sdl_ui_file_selector_recall_location(directory);
     }
 
     while (active) {
         if (redraw) {
-            sdl_ui_file_selector_redraw(directory, title, current_dir, offset, (total - offset > menu_max) ? menu_max : total - offset, (total - offset > menu_max) ? 1 : 0, mode);
+            sdl_ui_file_selector_redraw(directory, title, current_dir, offset,
+                (total - offset > menu_max) ? menu_max : total - offset,
+                (total - offset > menu_max) ? 1 : 0, mode, cur);
             redraw = 0;
+        } else {
+            sdl_ui_file_selector_redraw_cursor(directory, offset,
+                    (total - offset > menu_max) ? menu_max : total - offset,
+                    mode, cur, cur_old);
         }
-        sdl_ui_display_cursor((cur + SDL_FILEREQ_META_NUM), (cur_old == -1) ? -1 : (cur_old + SDL_FILEREQ_META_NUM));
         sdl_ui_refresh();
 
         switch (sdl_ui_menu_poll_input()) {
+            case MENU_ACTION_HOME:
+                cur_old = cur;
+                cur = 0;
+                offset = 0;
+                redraw = 1;
+                break;
+
+            case MENU_ACTION_END:
+                cur_old = cur;
+                if (total < (menu_max - 1)) {
+                    cur = total - 1;
+                    offset = 0;
+                } else {
+                    cur = menu_max - 1;
+                    offset = total - menu_max;
+                }
+                redraw = 1;
+                break;
+
             case MENU_ACTION_UP:
                 if (cur > 0) {
                     cur_old = cur;
@@ -383,6 +455,7 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
                 }
                 break;
 
+            case MENU_ACTION_PAGEUP:
             case MENU_ACTION_LEFT:
                 offset -= menu_max;
                 if (offset < 0) {
@@ -407,6 +480,7 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
                 }
                 break;
 
+            case MENU_ACTION_PAGEDOWN:
             case MENU_ACTION_RIGHT:
                 offset += menu_max;
                 if (offset >= total) {
@@ -423,20 +497,20 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
             case MENU_ACTION_SELECT:
                 switch (offset + cur) {
                     case SDL_FILEREQ_META_FILE:
-                        if ((mode == FILEREQ_MODE_CHOOSE_FILE) || (mode == FILEREQ_MODE_SAVE_FILE)) {
+                        if ((mode == FILEREQ_MODE_CHOOSE_FILE) || (mode == FILEREQ_MODE_CHOOSE_FILE_IN_IMAGE) || (mode == FILEREQ_MODE_SAVE_FILE)) {
                             inputstring = sdl_ui_text_input_dialog("Enter filename", NULL);
                             if (inputstring == NULL) {
                                 redraw = 1;
                             } else {
-                                if (archdep_path_is_relative(inputstring) && (strchr(inputstring, FSDEV_DIR_SEP_CHR) != NULL)) {
+                                if (!archdep_path_is_relative(inputstring) && (strchr(inputstring, ARCHDEP_DIR_SEP_CHR) != NULL)) {
                                     retval = inputstring;
                                 } else {
-                                    retval = util_concat(current_dir, FSDEV_DIR_SEP_STR, inputstring, NULL);
+                                    retval = util_concat(current_dir, ARCHDEP_DIR_SEP_STR, inputstring, NULL);
                                     lib_free(inputstring);
                                 }
                             }
                         } else {
-                            retval = lib_stralloc(current_dir);
+                            retval = lib_strdup(current_dir);
                         }
                         active = 0;
                         break;
@@ -444,16 +518,16 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
                     case SDL_FILEREQ_META_PATH:
                         inputstring = sdl_ui_text_input_dialog("Enter path", NULL);
                         if (inputstring != NULL) {
-                            ioutil_chdir(inputstring);
+                            archdep_chdir(inputstring);
                             lib_free(inputstring);
-                            ioutil_closedir(directory);
-                            ioutil_getcwd(current_dir, maxpathlen);
-                            directory = ioutil_opendir(current_dir);
+                            archdep_closedir(directory);
+                            archdep_getcwd(current_dir, ARCHDEP_PATH_MAX);
+                            directory = archdep_opendir(current_dir, SDL_FILESELECTOR_DIRMODE);
                             offset = 0;
                             cur_old = -1;
                             cur = 0;
-                            dirs = directory->dir_amount;
-                            files = directory->file_amount;
+                            dirs = archdep_readdir_num_dirs(directory);
+                            files = archdep_readdir_num_files(directory);
                             total = dirs + files + SDL_FILEREQ_META_NUM;
                         }
                         redraw = 1;
@@ -465,14 +539,14 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
                         if (inputstring != NULL) {
                             archdep_set_current_drive(inputstring);
                             lib_free(inputstring);
-                            ioutil_closedir(directory);
-                            ioutil_getcwd(current_dir, maxpathlen);
-                            directory = ioutil_opendir(current_dir);
+                            archdep_closedir(directory);
+                            archdep_getcwd(current_dir, ARCHDEP_PATH_MAX);
+                            directory = archdep_opendir(current_dir, SDL_FILESELECTOR_DIRMODE);
                             offset = 0;
                             cur_old = -1;
                             cur = 0;
-                            dirs = directory->dir_amount;
-                            files = directory->file_amount;
+                            dirs = archdep_readdir_num_dirs(directory);
+                            files = archdep_readdir_num_files(directory);
                             total = dirs + files + SDL_FILEREQ_META_NUM;
                         }
                         redraw = 1;
@@ -480,25 +554,39 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
 #endif
                     default:
                         if (offset + cur < (dirs + SDL_FILEREQ_META_NUM)) {
-                            ioutil_chdir(directory->dirs[offset + cur - SDL_FILEREQ_META_NUM].name);
-                            ioutil_closedir(directory);
-                            ioutil_getcwd(current_dir, maxpathlen);
-                            directory = ioutil_opendir(current_dir);
+                            /* enter subdirectory */
+                            archdep_chdir(archdep_readdir_get_dir(directory, offset + cur - SDL_FILEREQ_META_NUM));
+                            archdep_closedir(directory);
+                            archdep_getcwd(current_dir, ARCHDEP_PATH_MAX);
+                            directory = archdep_opendir(current_dir, SDL_FILESELECTOR_DIRMODE);
                             offset = 0;
                             cur_old = -1;
                             cur = 0;
-                            dirs = directory->dir_amount;
-                            files = directory->file_amount;
+                            dirs = archdep_readdir_num_dirs(directory);
+                            files = archdep_readdir_num_files(directory);
                             total = dirs + files + SDL_FILEREQ_META_NUM;
                             redraw = 1;
                         } else {
-                            char *selected_file = directory->files[offset + cur - dirs - SDL_FILEREQ_META_NUM].name;
-                            if (mode == FILEREQ_MODE_CHOOSE_FILE) {
+                            const char *selected_file = archdep_readdir_get_file(directory, offset + cur - dirs - SDL_FILEREQ_META_NUM);
+                            if ((mode == FILEREQ_MODE_CHOOSE_FILE) || (mode == FILEREQ_MODE_CHOOSE_FILE_IN_IMAGE) || (mode == FILEREQ_MODE_CHOOSE_FILE_IN_IMAGE)) {
                                 lib_free(last_selected_file);
-                                last_selected_file = lib_stralloc(selected_file);
+                                last_selected_file = lib_strdup(selected_file);
                             }
-                            retval = util_concat(current_dir, FSDEV_DIR_SEP_STR, selected_file, NULL);
-                            active = 0;
+                            retval = util_concat(current_dir, ARCHDEP_DIR_SEP_STR, selected_file, NULL);
+
+                            if (mode == FILEREQ_MODE_CHOOSE_FILE_IN_IMAGE) {
+                                /* browse image */
+                                int retval2;
+                                retval2 = sdl_ui_image_file_selection_dialog(retval, mode);
+                                if (retval2 != -1) {
+                                    active = 0;
+                                }
+                                last_selected_image_pos = retval2;
+                                redraw = 1;
+                            } else {
+                                active = 0;
+                                last_selected_image_pos = 0;
+                            }
                         }
                         break;
                 }
@@ -508,7 +596,7 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
             case MENU_ACTION_EXIT:
                 retval = NULL;
                 active = 0;
-                ioutil_chdir(backup_dir);
+                archdep_chdir(backup_dir);
                 break;
 
             default:
@@ -516,9 +604,7 @@ char* sdl_ui_file_selection_dialog(const char* title, ui_menu_filereq_mode_t mod
                 break;
         }
     }
-    ioutil_closedir(directory);
-    lib_free(current_dir);
-    lib_free(backup_dir);
+    archdep_closedir(directory);
 
     return retval;
 }
@@ -530,6 +616,8 @@ void sdl_ui_file_selection_dialog_shutdown(void)
 }
 
 
+/* FIXME: dead code? */
+#if 0
 static char* sdl_ui_get_slot_selector_entry(ui_menu_slots *slots, int offset, ui_menu_slot_mode_t mode)
 {
     if (offset >= slots->number_of_elements) {
@@ -541,7 +629,6 @@ static char* sdl_ui_get_slot_selector_entry(ui_menu_slots *slots, int offset, ui
         return "< empty slot >";
     }
 }
-
 
 static void sdl_ui_slot_selector_redraw(ui_menu_slots *slots, const char *title, const char *current_dir, int offset, int num_items, int more, ui_menu_slot_mode_t mode)
 {
@@ -560,6 +647,21 @@ static void sdl_ui_slot_selector_redraw(ui_menu_slots *slots, const char *title,
         j = MENU_FIRST_X;
         name = sdl_ui_get_slot_selector_entry(slots, offset + i, mode);
         sdl_ui_print(name, j, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+    }
+}
+
+static void sdl_ui_slot_selector_redraw_cursor(ui_menu_slots *slots, int offset, int num_items, ui_menu_slot_mode_t mode, int cur_offset, int old_offset)
+{
+    int i, j;
+    char* name;
+
+    for (i = 0; i < num_items; ++i) {
+        if ((i == cur_offset) || (i == old_offset)) {
+            j = MENU_FIRST_X;
+            name = sdl_ui_get_slot_selector_entry(slots, offset + i, mode);
+            j += sdl_ui_print(name, j, i + MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
+            sdl_ui_print_eol(MENU_FIRST_X + j, MENU_FIRST_Y + i);
+        }
     }
 }
 
@@ -582,12 +684,12 @@ char* sdl_ui_slot_selection_dialog(const char* title, ui_menu_slot_mode_t mode)
     int i;
 
     menu_draw = sdl_ui_get_menu_param();
-    maxpathlen = ioutil_maxpathlen();
+    maxpathlen = archdep_maxpathlen();
 
     /* workaround to get the "home" directory of the emulator*/
     current_dir = archdep_default_resource_file_name();
     if (current_dir) {
-        temp_name = strrchr(current_dir, FSDEV_DIR_SEP_CHR);
+        temp_name = strrchr(current_dir, ARCHDEP_DIR_SEP_CHR);
         if (temp_name) {
             *temp_name = 0;
         } else {
@@ -598,7 +700,7 @@ char* sdl_ui_slot_selection_dialog(const char* title, ui_menu_slot_mode_t mode)
     /* workaound end */
     if (!current_dir) {
         current_dir = lib_malloc(maxpathlen);
-        ioutil_getcwd(current_dir, maxpathlen);
+        archdep_getcwd(current_dir, maxpathlen);
     }
 
     total = menu_draw->max_text_y - (MENU_FIRST_Y + SDL_FILEREQ_META_NUM);
@@ -607,17 +709,17 @@ char* sdl_ui_slot_selection_dialog(const char* title, ui_menu_slot_mode_t mode)
     slots->entries = lib_malloc(sizeof(ui_menu_slot_entry) * total);
 
     progname = archdep_program_name();
-    temp_name = strchr(progname, FSDEV_EXT_SEP_CHR);
+    temp_name = strchr(progname, '.');
     if (temp_name) {
         *temp_name = 0;
     }
     for (i = 0; i < total; ++i) {
-        unsigned int len;
+        size_t len;
         unsigned int isdir;
 
         slots->entries[i].slot_name = lib_msprintf("snapshot_%s_%02d.vsf", progname, i + 1);
         slots->entries[i].slot_string = lib_msprintf(" SLOT %2d", i + 1);
-        temp_name = util_concat(current_dir, FSDEV_DIR_SEP_STR, slots->entries[i].slot_name, NULL);
+        temp_name = util_concat(current_dir, ARCHDEP_DIR_SEP_STR, slots->entries[i].slot_name, NULL);
         if (archdep_stat(temp_name, &len, &isdir) == 0) {
             slots->entries[i].used = (isdir == 0);
         } else {
@@ -625,7 +727,7 @@ char* sdl_ui_slot_selection_dialog(const char* title, ui_menu_slot_mode_t mode)
         }
         lib_free(temp_name);
     }
-    lib_free(progname);
+/*    lib_free(progname); */
     slots->number_of_elements = total;
     if (mode == SLOTREQ_MODE_CHOOSE_SLOT) {
         cur = last_selected_pos;
@@ -635,8 +737,9 @@ char* sdl_ui_slot_selection_dialog(const char* title, ui_menu_slot_mode_t mode)
         if (redraw) {
             sdl_ui_slot_selector_redraw(slots, title, current_dir, offset, total, 0, mode);
             redraw = 0;
+        } else {
+            sdl_ui_slot_selector_redraw_cursor(slots, offset, total, mode, cur, cur_old);
         }
-        sdl_ui_display_cursor((cur + SDL_FILEREQ_META_NUM), (cur_old == -1) ? -1 : (cur_old + SDL_FILEREQ_META_NUM));
         sdl_ui_refresh();
 
         switch (sdl_ui_menu_poll_input()) {
@@ -655,7 +758,7 @@ char* sdl_ui_slot_selection_dialog(const char* title, ui_menu_slot_mode_t mode)
             case MENU_ACTION_SELECT:
                 if ((slots->entries[cur].used) || (mode == SLOTREQ_MODE_SAVE_SLOT)) {
                     last_selected_pos = cur;
-                    retval = util_concat(current_dir, FSDEV_DIR_SEP_STR, slots->entries[cur].slot_name, NULL);
+                    retval = util_concat(current_dir, ARCHDEP_DIR_SEP_STR, slots->entries[cur].slot_name, NULL);
                 } else {
                     retval = NULL;
                 }
@@ -680,3 +783,4 @@ char* sdl_ui_slot_selection_dialog(const char* title, ui_menu_slot_mode_t mode)
     lib_free(current_dir);
     return retval;
 }
+#endif

@@ -53,7 +53,7 @@
 #include "types.h"
 #include "userport.h"
 
-void cia1_store(WORD addr, BYTE data)
+void cia1_store(uint16_t addr, uint8_t data)
 {
 #ifdef DEBUG_CIA1
     if (!((addr >= 0x08) && (addr <= 0x0b))) {
@@ -63,11 +63,11 @@ void cia1_store(WORD addr, BYTE data)
     ciacore_store(machine_context.cia1, addr, data);
 }
 
-BYTE cia1_read(WORD addr)
+uint8_t cia1_read(uint16_t addr)
 {
 #ifdef DEBUG_CIA1
     static int olddata, oldaddr;
-    BYTE data;
+    uint8_t data;
     data = ciacore_read(machine_context.cia1, addr);
 /*    if (!((addr >= 0x08) && (addr <= 0x0b))) { */
     if ((oldaddr != addr) || (olddata != data)) {
@@ -80,7 +80,7 @@ BYTE cia1_read(WORD addr)
 #endif
 }
 
-BYTE cia1_peek(WORD addr)
+uint8_t cia1_peek(uint16_t addr)
 {
     return ciacore_peek(machine_context.cia1, addr);
 }
@@ -122,7 +122,7 @@ void cia1_set_ieee_dir(cia_context_t *cia_context, int isout)
 
 static void do_reset_cia(cia_context_t *cia_context)
 {
-    store_userport_pbx(0xff);
+    store_userport_pbx(0xff, USERPORT_NO_PULSE);
     store_userport_pa2(1);
 }
 
@@ -130,64 +130,65 @@ static void pulse_ciapc(cia_context_t *cia_context, CLOCK rclk)
 {
 }
 
-static void store_ciapa(cia_context_t *cia_context, CLOCK rclk, BYTE byte)
+static void store_ciapa(cia_context_t *cia_context, CLOCK rclk, uint8_t byte)
 {
-    store_userport_pa2((BYTE)((byte & 4) >> 2));
-    store_userport_pa3((BYTE)((byte & 8) >> 3));
+    store_userport_pa2((uint8_t)((byte & 4) >> 2));
+    store_userport_pa3((uint8_t)((byte & 8) >> 3));
 
     /* FIXME: PA0 and PA1 are used as selector for the
        Paddle 1/2 selection for the A/D converter. */
-    parallel_cpu_set_bus((BYTE)(cia1_ieee_is_output ? byte : 0xff));
+    parallel_cpu_set_bus((uint8_t)(cia1_ieee_is_output ? byte : 0xff));
 }
 
-static void undump_ciapa(cia_context_t *cia_context, CLOCK rclk, BYTE byte)
+static void undump_ciapa(cia_context_t *cia_context, CLOCK rclk, uint8_t byte)
 {
-    store_userport_pa2((BYTE)((byte & 4) >> 2));
-    store_userport_pa3((BYTE)((byte & 8) >> 3));
-    parallel_cpu_set_bus((BYTE)(cia1_ieee_is_output ? byte : 0xff));
+    store_userport_pa2((uint8_t)((byte & 4) >> 2));
+    store_userport_pa3((uint8_t)((byte & 8) >> 3));
+    parallel_cpu_set_bus((uint8_t)(cia1_ieee_is_output ? byte : 0xff));
 }
 
-static void undump_ciapb(cia_context_t *cia_context, CLOCK rclk, BYTE b)
+static void undump_ciapb(cia_context_t *cia_context, CLOCK rclk, uint8_t b)
 {
 }
 
-static void store_ciapb(cia_context_t *cia_context, CLOCK rclk, BYTE byte)
+static void store_ciapb(cia_context_t *cia_context, CLOCK rclk, uint8_t byte)
 {
-    store_userport_pbx(byte);
+    store_userport_pbx(byte, USERPORT_NO_PULSE);
 
     store_userport_pa2(0);
     store_userport_pa2(1);
 }
 
 /* read_* functions must return 0xff if nothing to read!!! */
-static BYTE read_ciapa(cia_context_t *cia_context)
+static uint8_t read_ciapa(cia_context_t *cia_context)
 {
-    BYTE byte;
+    uint8_t byte;
 
     drive_cpu_execute_all(maincpu_clk);
 
     /* this reads the 8 bit IEEE488 data bus, but joystick 1 and 2 buttons
        can pull down inputs pa6 and pa7 resp. */
     byte = parallel_bus;
-    if (parallel_debug) {
+#ifdef DEBUG
+    if (debug.ieee) {
         log_message(LOG_DEFAULT,
                     "read: parallel_bus=%02x, pra=%02x, ddra=%02x -> %02x\n",
                     parallel_bus, cia_context->c_cia[CIA_PRA],
                     cia_context->c_cia[CIA_DDRA], byte);
     }
+#endif
     byte = ((byte & ~(cia_context->c_cia[CIA_DDRA]))
             | (cia_context->c_cia[CIA_PRA] & cia_context->c_cia[CIA_DDRA]));
     return byte;
 }
 
 /* read_* functions must return 0xff if nothing to read!!! */
-static BYTE read_ciapb(cia_context_t *cia_context)
+static uint8_t read_ciapb(cia_context_t *cia_context)
 {
-    BYTE byte = 0xff;
+    uint8_t byte = 0xff;
 
-    byte = read_userport_pbx((BYTE)~cia_context->c_cia[CIA_DDRB], byte);
+    byte = read_userport_pbx(byte);
 
-    /* The functions below will gradually be removed as the functionality is added to the new userport system. */
     byte &= ((0xff & ~(cia_context->c_cia[CIA_DDRB]))
              | (cia_context->c_cia[CIA_PRB] & cia_context->c_cia[CIA_DDRB]));
     return byte;
@@ -201,14 +202,14 @@ static void read_sdr(cia_context_t *cia_context)
 {
 }
 
-static void store_sdr(cia_context_t *cia_context, BYTE byte)
+static void store_sdr(cia_context_t *cia_context, uint8_t byte)
 {
 }
 
 void cia1_init(cia_context_t *cia_context)
 {
     ciacore_init(machine_context.cia1, maincpu_alarm_context,
-                 maincpu_int_status, maincpu_clk_guard);
+                 maincpu_int_status);
 }
 
 void cia1_set_timing(cia_context_t *cia_context, int tickspersec, int powerfreq)
@@ -221,12 +222,12 @@ void cia1_set_timing(cia_context_t *cia_context, int tickspersec, int powerfreq)
     cia_context->power_ticks = 0;
 }
 
-void cia1_setup_context(machine_context_t *machine_context)
+void cia1_setup_context(machine_context_t *machine_ctx)
 {
     cia_context_t *cia;
 
-    machine_context->cia1 = lib_calloc(1, sizeof(cia_context_t));
-    cia = machine_context->cia1;
+    machine_ctx->cia1 = lib_calloc(1, sizeof(cia_context_t));
+    cia = machine_ctx->cia1;
 
     cia->prv = NULL;
     cia->context = NULL;

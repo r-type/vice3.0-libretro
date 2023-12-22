@@ -2,13 +2,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
-/* #define DEBUG */
+/* #define DEBUG 1  */
 
 #ifdef DEBUG
 #define DBG(_x) printf _x
 #else
 #define DBG(_x)
+#endif
+
+#if defined(DEBUG) && (DEBUG > 1)
+#define DBG2(_x) printf _x
+#else
+#define DBG2(_x)
 #endif
 
 typedef struct _ITEM
@@ -67,6 +74,7 @@ ITEM *list_addstr(ITEM *list, char *str)
     return itm;
 }
 
+/* skip all blanks, including newlines */
 int skipblank(FILE *f)
 {
     int c;
@@ -75,7 +83,22 @@ int skipblank(FILE *f)
         if (c == EOF) {
             return 0;
         }
-        if ((c != ' ') && (c != '\n') && (c != '\r') && (c != '\t')) {
+        if ((c != ' ') && (c != '\t') && (c != '\n') && (c != '\r')) {
+            break;
+        }
+    }
+    return c;
+}
+/* skip all blanks, EXcluding newlines */
+int skipspace(FILE *f)
+{
+    int c;
+    while(!feof(f)) {
+        c = fgetc(f);
+        if (c == EOF) {
+            return 0;
+        }
+        if ((c != ' ') && (c != '\t')) {
             break;
         }
     }
@@ -160,7 +183,7 @@ static char tmp[0x200];
 static char tmp1[0x20][0x200];
 static char tmp2[0x200];
 static char tmpc[0x200];
-static char tmpmsg[0x200];
+static char tmpmsg[0x200+1];
 
 void readtexi(FILE *tf)
 {
@@ -200,6 +223,7 @@ void readtexi(FILE *tf)
                 newline = 1;
 #endif
             } else if (/* !strcmp(tmp, "cindex") || */ !strcmp(tmp, "findex")) {
+            /* after @findex we expect one ore two options, seperated by a comma */
 #if 1
                 fscanf(tf, " ");
                 c = getstr(tf, tmp1[itmcnt]);
@@ -208,11 +232,17 @@ void readtexi(FILE *tf)
                     DBG(("option '%s' ",tmp1[itmcnt]));
                     itmcnt++;
                     if (c == ',') {
-                        tmp1[itmcnt][0] = skipblank(tf);
-                        c = getstr(tf, &tmp1[itmcnt][1]);
-                        list_addstr(&optlisttex, tmp1[itmcnt]);
-                        DBG(("/ '%s' ",tmp1[itmcnt]));
-                        itmcnt++;
+                        int next;
+                        next = skipspace(tf);
+                        if (!isspace(next)) {
+                            tmp1[itmcnt][0] = next;
+                            c = getstr(tf, &tmp1[itmcnt][1]);
+                            list_addstr(&optlisttex, tmp1[itmcnt]);
+                            DBG(("/ '%s' ",tmp1[itmcnt]));
+                            itmcnt++;
+                        } else {
+                            fprintf(stderr, "warning: expected option after comma (after: %s)\n", tmp1[itmcnt]);
+                        }
                     }
                     DBG(("\n"));
                 } else {
@@ -233,7 +263,7 @@ void readtexi(FILE *tf)
             } else if (!strcmp(tmp, "item")) {
                 fscanf(tf, " ");
                 c = getstr(tf, tmp2);
-                DBG(("item '%s'\n",tmp2));
+                DBG2(("item '%s'\n",tmp2));
                 if ((tmp2[0] == '-') || (tmp2[0] == '+')) {
                     aliasitm = list_addstr(&optlisttexitm, tmp2);
                 } else {
@@ -279,7 +309,7 @@ void readtexi(FILE *tf)
                         itm2->alias = itm1;
                     }
                     /* printf("ok %35s %p %p\n",tmp2,itm,aliasitm); */
-                } 
+                }
                 aliasitm = itm;
                 newline = 1;
             } else if (!strcmp(tmp, "end") || !strcmp(tmp, "bye")) {
@@ -298,7 +328,7 @@ void readtexi(FILE *tf)
                 }
                 status = 0;
                 newline = 1;
-            } 
+            }
 #endif
             else {
                 sprintf(tmpmsg, "@%s",tmp);
@@ -360,6 +390,7 @@ void readvicerc(FILE *tf, char *emu, int tag)
     char tmp[0x100];
     int c;
     ITEM *itm;
+    DBG(("reading rc for '%s'\n",emu));
     fseek(tf,0,SEEK_SET);
     while(!feof(tf)) {
         skipuntil(tf, '[');
@@ -368,8 +399,9 @@ void readvicerc(FILE *tf, char *emu, int tag)
             break;
         }
         tmp[strlen(tmp)-1]=0;
-        DBG(("tag %d '%s'\n",c,tmp));
+        DBG2(("tag %d '%s'\n",c,tmp));
         if (!strcmp(emu, tmp)) {
+            DBG(("found tag %d '%s'\n",c,tmp));
             break;
         }
     }
@@ -393,20 +425,37 @@ void readviceopt(FILE *tf, char *emu, int tag)
 {
     char tmp[0x100];
     int c;
+    size_t oldpos;
     ITEM *itm;
-    DBG(("reading opts for '%s'\n",emu));
+    DBG(("reading opts for '%s' from vice options\n",emu));
     fseek(tf,0,SEEK_SET);
     while(!feof(tf)) {
         skipuntil(tf, '[');
-        c = fscanf(tf,"%s",tmp);
+        c = fscanf(tf,"%20s",tmp);
         if (c < 1) {
             break;
         }
         tmp[strlen(tmp)-1]=0;
-        DBG(("tag %d '%s'\n",c,tmp));
+        DBG2(("tag %d '%s'\n",c,tmp));
         if (!strcasecmp(emu, tmp)) {
+            DBG(("found tag %d '%s'\n",c,tmp));
             break;
         }
+    }
+    while(!feof(tf)) {
+        c = skipblank(tf);
+        if ((c=='-')||(c=='+')) {
+            oldpos = ftell(tf);
+            c = getstr(tf, &tmp[0]);
+            DBG(("first option '%s'\n",tmp));
+            if(!strcmp(tmp, "help")
+               || !strcmp(tmp, "logfile")
+               || !strcmp(tmp, "f")) {
+                fseek(tf,oldpos-1,SEEK_SET);
+                break;
+            }
+        }
+        skipuntil(tf, '\n');
     }
 
     while(!feof(tf)) {
@@ -414,7 +463,7 @@ void readviceopt(FILE *tf, char *emu, int tag)
         if (c == '[') {
             break;
         }
-        DBG(("option '%c'\n",c));
+        DBG2(("option '%c'\n",c));
 
         if ((c=='-')||(c=='+')) {
             tmp[0] = c;
@@ -432,11 +481,17 @@ void readviceopt(FILE *tf, char *emu, int tag)
 
 }
 
-int printlist(ITEM *list, char *hdr, int flags)
+int printlist(ITEM *list, char *hdr, int hideplus, int flags)
 {
-    int i = 0,ii,n = 0;
+    int i = 0,ii,n = 0,skipnext;
     while (list) {
+        skipnext = 0;
         if (list->string) {
+            if ((hideplus == 1) && (list->next != NULL) && (list->next->string != NULL)) {
+                if (!strcmp(&list->string[1], &list->next->string[1])) {
+                    skipnext = 1;
+                }
+            }
             if (flags) {
                 if (list->flags == flags) {
                     if ( 1
@@ -445,6 +500,8 @@ int printlist(ITEM *list, char *hdr, int flags)
                         if (i == 0) {
                             printf("\n[%s]\n\n", hdr);i++;
                         }
+                        if (skipnext) printf("+/");
+                        else printf("  ");
                         printf("%s\n", list->string);
                     }
                 }
@@ -468,6 +525,8 @@ int printlist(ITEM *list, char *hdr, int flags)
                     if (i == 0) {
                         printf("\n%s\n\n", hdr);i++;
                     }
+                    if (skipnext) printf("+/");
+                    else printf("  ");
                     printf("%-40s", list->string);
                     for (i=0;i<NUMEMUS;i++) {
                         if (list->flags & (1<<i)) {
@@ -482,6 +541,9 @@ int printlist(ITEM *list, char *hdr, int flags)
                 }
             }
             n++;
+        }
+        if (skipnext) {
+            list = list->next;
         }
         list = list->next;
     }
@@ -572,24 +634,24 @@ void checkresources(void)
     printf("The following resources appear in vicerc but not in the documentation, so\n"
            "they might be missing in the documentation:\n\n");
     i = 0;
-    i += printlist(&reslistnew, "global", 0);
-    i += printlist(&reslistnew, "C64SC", IS_C64SC);
-    i += printlist(&reslistnew, "C64", IS_C64);
-    i += printlist(&reslistnew, "VSID", IS_VSID);
-    i += printlist(&reslistnew, "C128", IS_C128);
-    i += printlist(&reslistnew, "C64DTV", IS_DTV);
-    i += printlist(&reslistnew, "VIC20", IS_VIC20);
-    i += printlist(&reslistnew, "PET", IS_PET);
-    i += printlist(&reslistnew, "CBM-II-5x0", IS_B500);
-    i += printlist(&reslistnew, "CBM-II", IS_CBM2);
-    i += printlist(&reslistnew, "PLUS4", IS_PLUS4);
-    i += printlist(&reslistnew, "SCPU64", IS_SCPU64);
+    i += printlist(&reslistnew, "global", 0, 0);
+    i += printlist(&reslistnew, "C64SC", 0, IS_C64SC);
+    i += printlist(&reslistnew, "C64", 0, IS_C64);
+    i += printlist(&reslistnew, "VSID", 0, IS_VSID);
+    i += printlist(&reslistnew, "C128", 0, IS_C128);
+    i += printlist(&reslistnew, "C64DTV", 0, IS_DTV);
+    i += printlist(&reslistnew, "VIC20", 0, IS_VIC20);
+    i += printlist(&reslistnew, "PET", 0, IS_PET);
+    i += printlist(&reslistnew, "CBM-II-5x0", 0, IS_B500);
+    i += printlist(&reslistnew, "CBM-II", 0, IS_CBM2);
+    i += printlist(&reslistnew, "PLUS4", 0, IS_PLUS4);
+    i += printlist(&reslistnew, "SCPU64", 0, IS_SCPU64);
 
     if (i == 0) {
         printf("none - well done.\n");
     }
     printf("\n");
-    
+
     printf("The following resources appear to have no description: ");
 
     list1 = &reslisttex;
@@ -635,10 +697,162 @@ void checkresources(void)
             } else {
                 printf("%-40s", list1->string);
                 if(0
-                    || !strcmp(list1->string, "MITSHM")
-                    || !strcmp(list1->string, "UseXSync")
+                    || !strcmp(list1->string, "FFMPEGFormat")
+                    || !strcmp(list1->string, "FFMPEGAudioBitrate")
+                    || !strcmp(list1->string, "FFMPEGVideoBitrate")
+                    || !strcmp(list1->string, "FFMPEGAudioCodec")
+                    || !strcmp(list1->string, "FFMPEGVideoCodec")
+                    || !strcmp(list1->string, "FFMPEGVideoHalveFramerate")
                   ) {
-                    printf("(might be disabled)");
+                    printf("(FFMPEG only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "MIDIEnable")
+                    || !strcmp(list1->string, "MIDIMode")
+                    || !strcmp(list1->string, "MIDIInDev")
+                    || !strcmp(list1->string, "MIDIOutDev")
+                    || !strcmp(list1->string, "MIDIDriver")
+                  ) {
+                    printf("(MIDI only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "MIDIInName")
+                    || !strcmp(list1->string, "MIDIOutName")
+                  ) {
+                    printf("(OSX MIDI only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "MIDIName")
+                  ) {
+                    printf("(OSX/Unix MIDI only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "KeepMonitorOpen")
+                    || !strcmp(list1->string, "KeepAspectRatio")
+                    || !strcmp(list1->string, "TrueAspectRatio")
+                    || !strcmp(list1->string, "VSync")
+                    || !strcmp(list1->string, "Window0Width")
+                    || !strcmp(list1->string, "Window0Height")
+                    || !strcmp(list1->string, "Window0Xpos")
+                    || !strcmp(list1->string, "Window0Ypos")
+                    || !strcmp(list1->string, "Window1Width")
+                    || !strcmp(list1->string, "Window1Height")
+                    || !strcmp(list1->string, "Window1Xpos")
+                    || !strcmp(list1->string, "Window1Ypos")
+                    || !strcmp(list1->string, "StartMinimized")
+                    || !strcmp(list1->string, "DisplayDepth")
+                    || !strcmp(list1->string, "GTKBackend")
+                    || !strcmp(list1->string, "GTKFilter")
+                    || !strcmp(list1->string, "FullscreenEnable")
+                    || !strcmp(list1->string, "MonitorFG")
+                    || !strcmp(list1->string, "MonitorBG")
+                    || !strcmp(list1->string, "AutostartOnDoubleClick")
+                    || !strcmp(list1->string, "MonitorFont")
+                    || !strcmp(list1->string, "MonitorXPos")
+                    || !strcmp(list1->string, "MonitorYPos")
+                    || !strcmp(list1->string, "MonitorWidth")
+                    || !strcmp(list1->string, "MonitorHeight")
+                    || !strcmp(list1->string, "PauseOnSettings")
+                    || !strcmp(list1->string, "FullscreenDecorations")
+                  ) {
+                    printf("(GTK3 only, not SDL)");
+                } else if(0
+                    || !strcmp(list1->string, "AspectRatio")
+                    || !strcmp(list1->string, "SDLKbdStatusbar")
+                    || !strcmp(list1->string, "SDL2Renderer")
+                    || !strcmp(list1->string, "SDLWindowWidth")
+                    || !strcmp(list1->string, "SDLWindowHeight")
+                    || !strcmp(list1->string, "SDLGLFilter")
+                    || !strcmp(list1->string, "SDLStatusbar")
+                    || !strcmp(list1->string, "SDLBitdepth")
+                    || !strcmp(list1->string, "SDLCustomWidth")
+                    || !strcmp(list1->string, "SDLCustomHeight")
+                    || !strcmp(list1->string, "SDLGLAspectMode")
+                    || !strcmp(list1->string, "SDLGLFlipX")
+                    || !strcmp(list1->string, "SDLGLFlipY")
+
+                    || !strcmp(list1->string, "JoyMapFile")
+                    || !strcmp(list1->string, "JoyThreshold")
+                    || !strcmp(list1->string, "JoyFuzz")
+                    || !strcmp(list1->string, "JoyMenuControl")
+
+                    || !strcmp(list1->string, "HotkeyFile")
+                    || !strcmp(list1->string, "MenuKey")
+                    || !strcmp(list1->string, "MenuKeyUp")
+                    || !strcmp(list1->string, "MenuKeyDown")
+                    || !strcmp(list1->string, "MenuKeyLeft")
+                    || !strcmp(list1->string, "MenuKeyRight")
+                    || !strcmp(list1->string, "MenuKeyPageUp")
+                    || !strcmp(list1->string, "MenuKeyPageDown")
+                    || !strcmp(list1->string, "MenuKeyHome")
+                    || !strcmp(list1->string, "MenuKeyEnd")
+                    || !strcmp(list1->string, "MenuKeySelect")
+                    || !strcmp(list1->string, "MenuKeyCancel")
+                    || !strcmp(list1->string, "MenuKeyExit")
+                    || !strcmp(list1->string, "MenuKeyMap")
+
+                    || !strcmp(list1->string, "CrtcFullscreenMode")
+                    || !strcmp(list1->string, "CrtcFullscreenDevice")
+                    || !strcmp(list1->string, "CrtcFullscreen")
+                    || !strcmp(list1->string, "CrtcFullscreenStatusbar")
+                    || !strcmp(list1->string, "TEDFullscreenMode")
+                    || !strcmp(list1->string, "TEDFullscreenDevice")
+                    || !strcmp(list1->string, "TEDFullscreen")
+                    || !strcmp(list1->string, "TEDFullscreenStatusbar")
+                    || !strcmp(list1->string, "VDCFullscreenMode")
+                    || !strcmp(list1->string, "VDCFullscreenDevice")
+                    || !strcmp(list1->string, "VDCFullscreen")
+                    || !strcmp(list1->string, "VDCFullscreenStatusbar")
+                    || !strcmp(list1->string, "VICFullscreenMode")
+                    || !strcmp(list1->string, "VICFullscreenDevice")
+                    || !strcmp(list1->string, "VICFullscreen")
+                    || !strcmp(list1->string, "VICFullscreenStatusbar")
+                    || !strcmp(list1->string, "VICIIFullscreenMode")
+                    || !strcmp(list1->string, "VICIIFullscreenDevice")
+                    || !strcmp(list1->string, "VICIIFullscreen")
+                    || !strcmp(list1->string, "VICIIFullscreenStatusbar")
+
+                  ) {
+                    printf("(SDL only, not GTK3)");
+                } else if(0
+                    || !strcmp(list1->string, "SDLLimitMode")
+                  ) {
+                    printf("(SDL1 only, not GTK3)");
+                } else if(0
+                    || !strcmp(list1->string, "SDL2Backend")
+                    || !strcmp(list1->string, "DualWindow")
+                  ) {
+                    printf("(SDL2 only, not GTK3)");
+                } else if(0
+                    || !strcmp(list1->string, "TraceMode")
+                    || !strcmp(list1->string, "AutoPlaybackFrames")
+                    || !strcmp(list1->string, "MainCPU_TRACE")
+                    || !strcmp(list1->string, "Drive0CPU_TRACE")
+                    || !strcmp(list1->string, "Drive1CPU_TRACE")
+                    || !strcmp(list1->string, "Drive2CPU_TRACE")
+                    || !strcmp(list1->string, "Drive3CPU_TRACE")
+                    || !strcmp(list1->string, "IEC_TRACE")
+                    || !strcmp(list1->string, "DoCoreDump")
+                    || !strcmp(list1->string, "DtvBlitterLog")
+                    || !strcmp(list1->string, "DtvDMALog")
+                    || !strcmp(list1->string, "DtvFlashLog")
+                  ) {
+                    printf("(DEBUG only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "OverClock")
+                    || !strcmp(list1->string, "UseFullscreen")
+                    || !strcmp(list1->string, "FOURCC")
+                    || !strcmp(list1->string, "MITSHM")
+                    || !strcmp(list1->string, "openGL_sync")
+                    || !strcmp(list1->string, "openGL_no_sync")
+                    || !strcmp(list1->string, "XSync")
+                    || !strcmp(list1->string, "UseXSync")
+                    || !strcmp(list1->string, "PrivateColormap")
+                    || !strcmp(list1->string, "FullscreenEnable")
+
+                    || !strcmp(list1->string, "CrtcSDLFullscreenMode")
+                    || !strcmp(list1->string, "TEDSDLFullscreenMode")
+                    || !strcmp(list1->string, "VDCSDLFullscreenMode")
+                    || !strcmp(list1->string, "VICSDLFullscreenMode")
+                    || !strcmp(list1->string, "VICIISDLFullscreenMode")
+                  ) {
+                    printf("(outdated?)");
                 } else {
                     i++;
                 }
@@ -722,7 +936,7 @@ void printoptions(void)
 void checkoptions(void)
 {
     ITEM *list1, *itm, *itm2;
-    int i;
+    int i, skipnext;
 
     printf("\n** checking command line options...\n\n");
 
@@ -732,11 +946,12 @@ void checkoptions(void)
     list1 = &optlisttexitm;
     i = 0;
     while (list1) {
-        DBG(("check: %s\n", list1->string));
         if (list1->string) {
+            DBG(("check: '%s'\n", list1->string));
             itm = list_findstr(&optlisttex, list1->string);
             if (!itm) {
                 if ( 1
+                    && (strcmp(list1->string,"-") != 0)
                     && (strcmp(list1->string,"--") != 0)
                     && (strcmp(list1->string,"----") != 0)
                     && (strcmp(list1->string,"-<version>") != 0)
@@ -752,6 +967,9 @@ void checkoptions(void)
         printf("none - well done.\n");
     }
     printf("\n");
+
+    printf("The following options appear in vice but not in the documentation, so\n"
+           "they might be missing in the documentation (%d):\n\n", i);
 
     list1 = &optlistvice;
     i = 0;
@@ -776,28 +994,26 @@ void checkoptions(void)
         }
         list1 = list1->next;
     }
-    printf("The following options appear in vice but not in the documentation, so\n"
-           "they might be missing in the documentation (%d):\n\n", i);
 
     if (i == 0) {
         printf("none - well done.\n");
     } else {
-        printlist(&optlistnew, "global", 0);
-        printlist(&optlistnew, "C64SC", IS_C64SC);
-        printlist(&optlistnew, "C64", IS_C64);
-        printlist(&optlistnew, "VSID", IS_VSID);
-        printlist(&optlistnew, "C128", IS_C128);
-        printlist(&optlistnew, "C64DTV", IS_DTV);
-        printlist(&optlistnew, "VIC20", IS_VIC20);
-        printlist(&optlistnew, "PET", IS_PET);
-        printlist(&optlistnew, "CBM-II-5x0", IS_B500);
-        printlist(&optlistnew, "CBM-II", IS_CBM2);
-        printlist(&optlistnew, "PLUS4", IS_PLUS4);
-        printlist(&optlistnew, "SCPU64", IS_SCPU64);
+        printlist(&optlistnew, "global", 1, 0);
+        printlist(&optlistnew, "C64SC", 1, IS_C64SC);
+        printlist(&optlistnew, "C64", 1, IS_C64);
+        printlist(&optlistnew, "VSID", 1, IS_VSID);
+        printlist(&optlistnew, "C128", 1, IS_C128);
+        printlist(&optlistnew, "C64DTV", 1, IS_DTV);
+        printlist(&optlistnew, "VIC20", 1, IS_VIC20);
+        printlist(&optlistnew, "PET", 1, IS_PET);
+        printlist(&optlistnew, "CBM-II-5x0", 1, IS_B500);
+        printlist(&optlistnew, "CBM-II", 1, IS_CBM2);
+        printlist(&optlistnew, "PLUS4", 1, IS_PLUS4);
+        printlist(&optlistnew, "SCPU64", 1, IS_SCPU64);
 
-        printlist(&optlistnew, "petcat", IS_PETCAT);
-        printlist(&optlistnew, "cartconv", IS_CARTCONV);
-        printlist(&optlistnew, "c1541", IS_C1541);
+        printlist(&optlistnew, "petcat", 1, IS_PETCAT);
+        printlist(&optlistnew, "cartconv", 1, IS_CARTCONV);
+        printlist(&optlistnew, "c1541", 1, IS_C1541);
     }
 
     printf("\nThe following options appear to have no description: ");
@@ -833,30 +1049,222 @@ void checkoptions(void)
 
     printf("The following options appear in the documentation but not in vice, so\n"
            "they might be outdated or spelled incorrectly:\n\n");
-
+#if 0
+    list1 = &optlistvice;
+    while (list1) {
+        if (list1->string) {
+            printf("%s\n", list1->string);
+        }
+        list1 = list1->next;
+    }
+#endif
     list1 = &optlisttex;
-    i = 0;
+    i = 0; skipnext = 0;
     while (list1) {
         DBG(("check: %s\n", list1->string));
         if (list1->string) {
             itm = list_findstr(&optlistvice, list1->string);
+            if (list1->next && !strcmp(&list1->string[1], &list1->next->string[1])) {
+/*                printf("'%s' - '%s'\n", &list1->string[1], &list1->next->string[1]); */
+                skipnext = 1;
+            }
             if (itm) {
                 DBG(("found: %s\n", list1->string));
             } else {
+                if (skipnext) printf("+/");
+                else printf("  ");
                 printf("%-40s", list1->string);
                 if(0
-                    || !strcmp(list1->string, "-xsync")
-                    || !strcmp(list1->string, "+xsync")
+                    || !strcmp(list1->string, "-ffmpegaudiobitrate")
+                    || !strcmp(list1->string, "-ffmpegvideobitrate")
+                  ) {
+                    printf("(FFMPEG only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "-miditype")
+                    || !strcmp(list1->string, "-midi")
+                    || !strcmp(list1->string, "+midi")
+                    || !strcmp(list1->string, "-midiin")
+                    || !strcmp(list1->string, "-midiout")
+                    || !strcmp(list1->string, "-mididrv")
+                  ) {
+                    printf("(MIDI only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "-midiinname")
+                    || !strcmp(list1->string, "-midioutname")
+                  ) {
+                    printf("(OSX MIDI only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "-midiname")
+                  ) {
+                    printf("(OSX/Unix MIDI only, might be disabled)");
+                } else if(0
+                    || !strcmp(list1->string, "-keepaspect")
+                    || !strcmp(list1->string, "+keepaspect")
+                    || !strcmp(list1->string, "-trueaspect")
+                    || !strcmp(list1->string, "+trueaspect")
+                    || !strcmp(list1->string, "-vsync")
+                    || !strcmp(list1->string, "+vsync")
+                    || !strcmp(list1->string, "-keepmonopen")
+                    || !strcmp(list1->string, "+keepmonopen")
+                    || !strcmp(list1->string, "-monitorfont")
+                    || !strcmp(list1->string, "-monitorfg")
+                    || !strcmp(list1->string, "-monitorbg")
+                    || !strcmp(list1->string, "-monitorxpos")
+                    || !strcmp(list1->string, "-monitorypos")
+                    || !strcmp(list1->string, "-monitorwidth")
+                    || !strcmp(list1->string, "-monitorheight")
+                    || !strcmp(list1->string, "-refreshonbreak")
+                    || !strcmp(list1->string, "+refreshonbreak")
+                    || !strcmp(list1->string, "-minimized")
+                    || !strcmp(list1->string, "+minimized")
+                    || !strcmp(list1->string, "-displaydepth")
+                    || !strcmp(list1->string, "-gtkbackend")
+                    || !strcmp(list1->string, "-gtkfilter")
+                    || !strcmp(list1->string, "-settings-node")
+                    || !strcmp(list1->string, "-autostart-on-doubleclick")
+                    || !strcmp(list1->string, "+autostart-on-doubleclick")
+                    || !strcmp(list1->string, "-pauseonsettings")
+                    || !strcmp(list1->string, "+pauseonsettings")
+                    || !strcmp(list1->string, "-fullscreen-decorations")
+                    || !strcmp(list1->string, "+fullscreen-decorations")
+                  ) {
+                    printf("(GTK3 only, not SDL)");
+                } else if(0
+                    || !strcmp(list1->string, "-aspect")
+                    || !strcmp(list1->string, "-statusbar")
+                    || !strcmp(list1->string, "+statusbar")
+                    || !strcmp(list1->string, "-kbdstatusbar")
+                    || !strcmp(list1->string, "+kbdstatusbar")
+                    || !strcmp(list1->string, "-sdlaspectmode")
+                    || !strcmp(list1->string, "-sdlflipx")
+                    || !strcmp(list1->string, "+sdlflipx")
+                    || !strcmp(list1->string, "-sdlflipy")
+                    || !strcmp(list1->string, "+sdlflipy")
+
+                    || !strcmp(list1->string, "-joymap")
+                    || !strcmp(list1->string, "-joythreshold")
+                    || !strcmp(list1->string, "-joyfuzz")
+                    || !strcmp(list1->string, "-joymenucontrol")
+                    || !strcmp(list1->string, "+joymenucontrol")
+
+                    || !strcmp(list1->string, "-sdlglfilter")
+                    || !strcmp(list1->string, "+sdlglfilter")
+                    || !strcmp(list1->string, "-paddles2inputjoyaxis")
+                    || !strcmp(list1->string, "-hotkeyfile")
+                    || !strcmp(list1->string, "-menukey")
+                    || !strcmp(list1->string, "-menukeyup")
+                    || !strcmp(list1->string, "-menukeydown")
+                    || !strcmp(list1->string, "-menukeyleft")
+                    || !strcmp(list1->string, "-menukeyright")
+                    || !strcmp(list1->string, "-menukeypageup")
+                    || !strcmp(list1->string, "-menukeypagedown")
+                    || !strcmp(list1->string, "-menukeyhome")
+                    || !strcmp(list1->string, "-menukeyend")
+                    || !strcmp(list1->string, "-menukeyselect")
+                    || !strcmp(list1->string, "-menukeycancel")
+                    || !strcmp(list1->string, "-menukeyexit")
+                    || !strcmp(list1->string, "-menukeymap")
+                    || !strcmp(list1->string, "-sdlbitdepth")
+                    || !strcmp(list1->string, "-sdlcustomw")
+                    || !strcmp(list1->string, "-sdlcustomh")
+                    || !strcmp(list1->string, "-sdlinitialw")
+                    || !strcmp(list1->string, "-sdlinitialh")
+                    || !strcmp(list1->string, "-CRTCfulldevice")
+                    || !strcmp(list1->string, "-CRTCfull")
+                    || !strcmp(list1->string, "+CRTCfull")
+                    || !strcmp(list1->string, "-TEDfulldevice")
+                    || !strcmp(list1->string, "-TEDfull")
+                    || !strcmp(list1->string, "+TEDfull")
+                    || !strcmp(list1->string, "-VDCfulldevice")
+                    || !strcmp(list1->string, "-VDCfull")
+                    || !strcmp(list1->string, "+VDCfull")
+                    || !strcmp(list1->string, "-VICfulldevice")
+                    || !strcmp(list1->string, "-VICfull")
+                    || !strcmp(list1->string, "+VICfull")
+                    || !strcmp(list1->string, "-VICIIfulldevice")
+                    || !strcmp(list1->string, "-VICIIfull")
+                    || !strcmp(list1->string, "+VICIIfull")
+                    || !strcmp(list1->string, "-CRTCfullmode")
+                    || !strcmp(list1->string, "-TEDfullmode")
+                    || !strcmp(list1->string, "-VDCfullmode")
+                    || !strcmp(list1->string, "-VICfullmode")
+                    || !strcmp(list1->string, "-VICIIfullmode")
+                  ) {
+                    printf("(SDL only, not GTK3)");
+                } else if(0
+                    || !strcmp(list1->string, "-sdllimitmode")
+                  ) {
+                    printf("(SDL1 only, not GTK3)");
+                } else if(0
+                    || !strcmp(list1->string, "-sdlinitialw1")
+                    || !strcmp(list1->string, "-sdlinitialh1")
+                    || !strcmp(list1->string, "-sdl2backend")
+                    || !strcmp(list1->string, "-sdl2renderer")
+                    || !strcmp(list1->string, "-dualwindow")
+                    || !strcmp(list1->string, "+dualwindow")
+                  ) {
+                    printf("(SDL2 only, not GTK3)");
+                } else if(0
+                    || !strcmp(list1->string, "-debug")
+                    || !strcmp(list1->string, "-trace_mode")
+                    || !strcmp(list1->string, "-autoplaybackframes")
+                    || !strcmp(list1->string, "-trace_maincpu")
+                    || !strcmp(list1->string, "+trace_maincpu")
+                    || !strcmp(list1->string, "-trace_drive0")
+                    || !strcmp(list1->string, "+trace_drive0")
+                    || !strcmp(list1->string, "-trace_drive1")
+                    || !strcmp(list1->string, "+trace_drive1")
+                    || !strcmp(list1->string, "-trace_drive2")
+                    || !strcmp(list1->string, "+trace_drive2")
+                    || !strcmp(list1->string, "-trace_drive3")
+                    || !strcmp(list1->string, "+trace_drive3")
+                    || !strcmp(list1->string, "-trace_iec")
+                    || !strcmp(list1->string, "+trace_iec")
+                    || !strcmp(list1->string, "-dtvblitterlog")
+                    || !strcmp(list1->string, "+dtvblitterlog")
+                    || !strcmp(list1->string, "-dtvdmalog")
+                    || !strcmp(list1->string, "+dtvdmalog")
+                    || !strcmp(list1->string, "-dtvflashlog")
+                    || !strcmp(list1->string, "+dtvflashlog")
+                  ) {
+                    printf("(DEBUG only, might be disabled)");
+                } else if(0
                     || !strcmp(list1->string, "-mitshm")
                     || !strcmp(list1->string, "+mitshm")
+                    || !strcmp(list1->string, "-fourcc")
+                    || !strcmp(list1->string, "+fourcc")
+                    || !strcmp(list1->string, "-xsync")
+                    || !strcmp(list1->string, "+xsync")
+                    || !strcmp(list1->string, "-colormap")
+                    || !strcmp(list1->string, "+colormap")
+
+                    || !strcmp(list1->string, "-CRTCSDLfullmode")
+                    || !strcmp(list1->string, "-TEDSDLfullmode")
+                    || !strcmp(list1->string, "-VDCSDLfullmode")
+                    || !strcmp(list1->string, "-VICSDLfullmode")
+                    || !strcmp(list1->string, "-VICIISDLfullmode")
+                    || !strcmp(list1->string, "-sdl2dualwindow")
+
+                    || !strcmp(list1->string, "-fullscreen")
+                    || !strcmp(list1->string, "+fullscreen")
                   ) {
-                    printf("(might be disabled)");
+                    printf("(outdated?)");
+                } else if(0
+                    || !strcmp(list1->string, "--check")
+                    || !strcmp(list1->string, "--verbose")
+                    || !strcmp(list1->string, "--debug")
+                  ) {
+                    printf("(ignored)");
                 } else {
                     i++;
                 }
                 printf("\n");
             }
         }
+        if (skipnext) {
+            list1 = list1->next;
+        }
+        skipnext = 0;
         list1 = list1->next;
     }
     printf("\n");

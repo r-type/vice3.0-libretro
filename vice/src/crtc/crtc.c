@@ -43,10 +43,10 @@
 #include <stdlib.h>
 
 #include "alarm.h"
-#include "clkguard.h"
 #include "crtc-cmdline-options.h"
 #include "crtc-color.h"
 #include "crtc-draw.h"
+#include "crtc-mem.h"
 #include "crtc-resources.h"
 #include "crtc.h"
 #include "crtctypes.h"
@@ -76,8 +76,9 @@ static void crtc_raster_draw_alarm_handler(CLOCK offset, void *data);
 /*--------------------------------------------------------------------*/
 /* CRTC variables */
 
-/* the first variable is the initialized flag. We don't want that be
-   uninitialized... */
+/* the first variable is the initialized flag. We don't want that be uninitialized... */
+/* FIXME: do not statically initialize anything in this struct, do this somewhere
+          else at runtime */
 crtc_t crtc = {
     0,              /* initialized */
 
@@ -90,7 +91,101 @@ crtc_t crtc = {
     0x3ff,          /* vaddr_mask */
     0x2000,         /* vaddr_charswitch */
     512,            /* vaddr_charoffset */
-    0x1000          /* vaddr_revswitch */
+    0x1000,         /* vaddr_revswitch */
+
+    NULL,           /* screen_base */
+    NULL,           /* chargen_base */
+    0,              /* chargen_mask */
+    0,              /* chargen_offset */
+
+    0,              /* chargen_rel */
+    0,              /* screen_rel */
+
+    0,              /* regno */
+
+    0,              /* rl_start */
+    0,              /* rl_visible */
+    0,              /* rl_sync */
+    0,              /* rl_len */
+    0,              /* sync_diff */
+
+    0,              /* prev_rl_visible */
+    0,              /* prev_rl_sync */
+    0,              /* prev_rl_len */
+    0,              /* prev_screen_rel */
+
+    0,              /* hjitter */
+    0,              /* xoffset */
+    0,              /* screen_xoffset */
+    0,              /* screen_hsync */
+    0,              /* screen_yoffset */
+
+    0,              /* henable */
+
+    0,              /* current line */
+    0,              /* framelines */
+    0,              /* venable */
+    0,              /* vsync */
+
+    0,              /* current_charline */
+
+    0,              /* blank */
+
+    0,              /* frame_start */
+    0,              /* cycles_per_frame */
+
+    0,              /* crsrmode */
+    0,              /* crsrcnt */
+    0,              /* crsrstate */
+    0,              /* cursor_lines */
+
+    NULL,           /* retrace_callback */
+    NULL,           /* hires_draw_callback */
+    0,              /* retrace_type */
+
+    0,              /* log */
+
+    /* raster: an instance of raster_t (see src/raster/raster.h) */
+    { NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL,
+        0, 0, 0,    /* xsmooth, ysmooth, sprite_xsmooth */
+        0,
+        0, 0,       /* xsmooth_shift_right, sprite_xsmooth_shift_left */
+        0,
+        0, 0,       /* border_color, background_color */
+        0,
+        0,
+        0,
+        0,
+        0, 0,       /* open_right_border, open_left_border */
+        0, 0,       /* can_disable_border, border_disable */
+        0,
+        0,
+        0, 0,
+        0, 0,
+        0,
+        0,
+        0,
+        0,
+        NULL,       /* cache */
+        0,
+        0,
+        0,
+        0,
+        NULL,       /* update_area */
+        { 0 },
+        { 0 },
+        NULL,
+        NULL,
+        NULL,
+        0
+    },
+
+    /* regs */
+    { 0 },
+
+    NULL,
+    NULL
+
 };
 
 /* crtc-struct access functions */
@@ -267,7 +362,7 @@ static float crtc_get_pixel_aspect(void)
 /* return type of monitor used for current video mode */
 static int crtc_get_crt_type(void)
 {
-    return 2; /* RGB */
+    return VIDEO_CRT_TYPE_MONO;
 }
 
 /* update screen window */
@@ -304,21 +399,22 @@ void crtc_update_window(void)
 
 /*--------------------------------------------------------------------*/
 
-void crtc_set_screen_addr(BYTE *screen)
+void crtc_set_screen_addr(uint8_t *screen)
 {
     crtc.screen_base = screen;
 }
 
 void crtc_set_chargen_offset(int offset)
 {
-/* printf("crtc_set_chargen_offset(%d)\n",offset); */
+    /* printf("crtc_set_chargen_offset(offset:%d)\n",offset); */
     crtc.chargen_offset = offset << 4; /* times the number of bytes/char */
 
     crtc_update_chargen_rel();
 }
 
-void crtc_set_chargen_addr(BYTE *chargen, int cmask)
+void crtc_set_chargen_addr(uint8_t *chargen, int cmask)
 {
+    /* printf("crtc_set_chargen_addr(mask:0x%02x)\n",cmask); */
     crtc.chargen_base = chargen;
     crtc.chargen_mask = (cmask << 4) - 1;
 
@@ -344,6 +440,8 @@ void crtc_set_screen_options(int num_cols, int rasterlines)
 void crtc_set_hw_options(int hwflag, int vmask, int vchar, int vcoffset,
                          int vrevmask)
 {
+    /* printf("crtc_set_hw_options(hwflag:%02x vmask:%02x vchar:%02x vcoffset:%02x vrevmask:%02x)\n",
+           hwflag, vmask, vchar, vcoffset, vrevmask); */
     crtc.hw_cursor = hwflag & 1;
     crtc.hw_cols = (hwflag & 2) ? 2 : 1;
     crtc.vaddr_mask = vmask;
@@ -372,15 +470,6 @@ void crtc_set_hires_draw_callback(crtc_hires_draw_t callback)
 
 /*--------------------------------------------------------------------*/
 
-static void clk_overflow_callback(CLOCK sub, void *data)
-{
-    crtc.frame_start -= sub;
-
-    crtc.rl_start -= sub;
-}
-
-/*--------------------------------------------------------------------*/
-
 raster_t *crtc_init(void)
 {
     raster_t *raster;
@@ -391,8 +480,6 @@ raster_t *crtc_init(void)
 
     crtc.raster_draw_alarm = alarm_new(maincpu_alarm_context, "CrtcRasterDraw",
                                        crtc_raster_draw_alarm_handler, NULL);
-
-    clk_guard_add_callback(maincpu_clk_guard, clk_overflow_callback, NULL);
 
     raster = &crtc.raster;
 
@@ -452,8 +539,6 @@ raster_t *crtc_init(void)
     crtc.initialized = 1;
 
     crtc_update_window();
-
-    raster_set_title(raster, machine_name);
 
     if (raster_realize(raster) < 0) {
         return NULL;
@@ -528,34 +613,45 @@ static void crtc_raster_draw_alarm_handler(CLOCK offset, void *data)
     /* first the time between two sync pulses */
     new_sync_diff = (crtc.prev_rl_len + 1 - crtc.prev_rl_sync)
                     + crtc.rl_sync;
+    DBG(("rl_len(HTOTAL,R0)=%d, rl_visible(HDISP,R1)=%d, rl_sync(HSYNC,R2)=%d\n",
+            crtc.prev_rl_len, crtc.prev_rl_visible, crtc.prev_rl_sync));
+    DBG(("new_sync_diff=%d\n", new_sync_diff));
 
-    /* compute the horizontal position */
-    /* the original PET displays have quite a variety of sync timings
-       (or I haven't found the scheme yet). Therefore we cannot simply
-       center the part between the syncs. We assume the sync in the
-       first rasterline of the screen to be the default for the next
-       frame. */
+    /* Compute the horizontal position.
+     * the original PET displays have quite a variety of sync timings
+     * (or I haven't found the scheme yet). Therefore we cannot simply
+     * center the part between the syncs. We assume the sync in the
+     * first rasterline of the screen to be the default for the next
+     * frame.
+     *
+     * For now we simply center the displayed characters (HDISP).
+     *
+     * Another strategy is to assume that the default HSYNC position is
+     * 50, and any differences from that shift the line.
+     * This fails for the 50 and 60 Hz 4032 (use 41).
+     * This works for "cbm4032 any hz" (lowers HSYNC to 40 to shift the
+     * line 10*2 chars to the right) but not "cbm4032v2.1 50hz" (uses
+     * 31).
+     *
+     * There was a different, complicated calculation here but it
+     * didn't give a realistic result:
+     * ((screen_width - (crtc.sync_diff * 8 * crtc.hw_cols)) / 2)
+     * + ((crtc.prev_rl_len + 1
+     *     - crtc.prev_rl_sync
+     *     - ((crtc.regs[CRTC_REG_SYNCWIDTH] & 0x0f) / 2)
+     *    ) * 8 * crtc.hw_cols);
+     */
 
-    /* FIXME: crtc.regs[CRTC_REG_SYNCWIDTH] & 15 == 0 -> 16 */
     if (crtc.raster.current_line == 0) {
-        crtc.screen_xoffset = ((screen_width
-                                - (crtc.sync_diff * 8 * crtc.hw_cols)) / 2)
-                              + ((crtc.prev_rl_len + 1 - crtc.prev_rl_sync
-                                  - ((crtc.regs[CRTC_REG_SYNCWIDTH] & 0x0f) / 2))
-                                 * 8 * crtc.hw_cols);
-
-        /* FIXME: The 320 is the pixel width of a window with 40 cols.
-           make that a define - or measure the visible line length?
-           but how to do that reliably? */
-        crtc.xoffset = CRTC_SCREEN_BORDERWIDTH + (CRTC_EXTRA_COLS * 4)
-                       /* ((screen_width - crtc.rl_visible * 8 * crtc.hw_cols)
-                       / 2) */
-                       - crtc.screen_xoffset
-                       + ((screen_width
-                           - (crtc.sync_diff * 8 * crtc.hw_cols)) / 2)
-                       + ((crtc.prev_rl_len + 1 - crtc.prev_rl_sync
-                           - ((crtc.regs[CRTC_REG_SYNCWIDTH] & 0x0f) / 2)) * 8 * crtc.hw_cols);
+        int width_chars = crtc.prev_rl_visible;
+        int width_pixels = width_chars * 8 * crtc.hw_cols;
+        crtc.screen_xoffset = (screen_width - width_pixels) / 2;
+        crtc.screen_hsync = crtc.rl_sync;
     }
+
+    /* Increasing the HSYNC position moves the image left */
+    crtc.xoffset = crtc.screen_xoffset +
+                   (crtc.screen_hsync - crtc.rl_sync) * 8 * crtc.hw_cols;
 
     /* emulate the line */
     if (crtc.raster.current_line >=
@@ -587,10 +683,10 @@ static void crtc_raster_draw_alarm_handler(CLOCK offset, void *data)
 /*
     if (crtc.raster.current_line == 10) {
         printf("centering=%d, sync2start=%d -> xoff=%d, jitter=%d\n",
-                ((screen_width - (sync_diff * crtc.hw_cols * 8)) / 2),
+                ((screen_width - (new_sync_diff * crtc.hw_cols * 8)) / 2),
                 (crtc.prev_rl_len + 1 - crtc.prev_rl_sync
                 - ((crtc.regs[CRTC_REG_SYNCWIDTH] & 0x0f) / 2)),
-                ((screen_width - (sync_diff * crtc.hw_cols * 8)) / 2)
+                ((screen_width - (new_sync_diff * crtc.hw_cols * 8)) / 2)
                 + ((crtc.prev_rl_len + 1 - crtc.prev_rl_sync
                 - ((crtc.regs[CRTC_REG_SYNCWIDTH] & 0x0f) / 2)) * crtc.hw_cols * 8),
                 crtc.hjitter);
@@ -617,12 +713,12 @@ static void crtc_raster_draw_alarm_handler(CLOCK offset, void *data)
 
     if (crtc.framelines == crtc.screen_yoffset) {
 */
+    vsync_do_end_of_line();
+
     if ((crtc.framelines - crtc.current_line) == crtc.screen_yoffset) {
         crtc.raster.current_line = 0;
         raster_canvas_handle_end_of_frame(&crtc.raster);
-        raster_skip_frame(&crtc.raster,
-                          vsync_do_vsync(crtc.raster.canvas,
-                                         crtc.raster.skip_frame));
+        vsync_do_vsync(crtc.raster.canvas);
     }
 
     {
@@ -710,7 +806,7 @@ static void crtc_raster_draw_alarm_handler(CLOCK offset, void *data)
             if (new_vsync && !crtc.vsync) {
                 crtc.retrace_callback(1);
             }
-        } else {
+        } else {        /* PETs without CRTC */
             if (crtc.venable && !new_venable) {
                 crtc.retrace_callback(1);
             } else
@@ -799,12 +895,12 @@ void crtc_enable_hw_screen_blank(int enable)
 }
 
 /* cols60 is 80 cols with 40 cols timing */
-static BYTE cols40[1] = { 40 };
-static BYTE cols60[1] = { 60 };
-static BYTE cols80[1] = { 80 };
+static uint8_t cols40[1] = { 40 };
+static uint8_t cols60[1] = { 60 };
+static uint8_t cols80[1] = { 80 };
 
-static BYTE charh8[1] = { 8 };
-static BYTE charh14[1] = { 14 };
+static uint8_t charh8[1] = { 8 };
+static uint8_t charh14[1] = { 14 };
 
 void crtc_screenshot(screenshot_t *screenshot)
 {
@@ -845,76 +941,122 @@ void crtc_async_refresh(struct canvas_refresh_s *refresh)
 
 int crtc_dump(void)
 {
-    BYTE *regs = crtc.regs;
+    uint8_t *regs = crtc.regs;
     int vsyncw,scanlines;
     int htotal, vtotal;
+    double v;
+    unsigned int r, c, regnum=0;
+
+    /* Dump the internal CRTC registers */
+    mon_out("CRTC Internal Registers:\n");
+    for (r = 0; r < 2; r++) {
+        mon_out("%02x: ", regnum);
+        for (c = 0; c < 16; c++) {
+            if (regnum <= 17) {
+                mon_out("%02x ", regs[regnum]);
+            }
+            regnum++;
+            if ((c & 3) == 3) {
+                mon_out(" ");
+            }
+        }
+        mon_out("\n");
+    }
     htotal = regs[CRTC_REG_HTOTAL] + 1;
     vsyncw = ((regs[CRTC_REG_SYNCWIDTH] >> 4) & 0x0f);
     if (vsyncw == 0) vsyncw = 16;
     vtotal = regs[CRTC_REG_VTOTAL] + 1;
     scanlines = regs[CRTC_REG_SCANLINE] + 1;
-    mon_out("HW cursor: %d blank: %d chars per cycle: %d\n\n", 
+    mon_out("HW cursor: %d blank: %d chars per cycle: %d\n\n",
             crtc.hw_cursor, crtc.hw_blank, crtc.hw_cols);
     mon_out("Horizontal total:         %3d chars.\n", htotal);
     mon_out("Horizontal sync position: %3d chars.\n", regs[CRTC_REG_HSYNC]);
     mon_out("Horizontal sync width:    %3d chars.\n", regs[CRTC_REG_SYNCWIDTH] & 0x0f);
-    mon_out("Vertical total:           %3d chars + %3d lines.\n", 
+    mon_out("Vertical total:           %3d chars +%3d lines.\n",
            vtotal, regs[CRTC_REG_VTOTALADJ]);
     mon_out("Vertical sync position:   %3d chars.\n", regs[CRTC_REG_VSYNC]);
     mon_out("Vertical sync width:      %3d lines.\n", vsyncw);
-    mon_out("\nDisplay characters: %d x %d\n", regs[CRTC_REG_HDISP], regs[CRTC_REG_VDISP]);
-    mon_out("Scanlines per character row: %d\n", scanlines);
-    mon_out("Cursor blink mode: ");
+    mon_out("Display characters:       %3d x %2d\n", regs[CRTC_REG_HDISP], regs[CRTC_REG_VDISP]);
+    mon_out("Scanlines per char row:    %d\n", scanlines);
+    mon_out("Cursor blink mode:         ");
     switch ((regs[CRTC_REG_CURSORSTART] >> 5) & 3) {
         case 0: mon_out("display continuously\n"); break;
         case 1: mon_out("blank continuously\n"); break;
         case 2: mon_out("blink 1/16\n"); break;
         case 3: mon_out("blink 1/32\n"); break;
     }
-    mon_out("Cursor start in line: %d end in line: %d\n", 
+    mon_out("Cursor start in line:     %2d, end in line: %d\n\n",
             regs[CRTC_REG_CURSORSTART] & 0x1f, regs[CRTC_REG_CURSOREND] & 0x1f);
     mon_out("Display mode control: $%02x\n"
-            " interlaced: %s RAM addressing: %s\n"
-            " display enable skew: %s cursor skew: %s\n",
-            regs[CRTC_REG_MODECTRL],
-            (regs[CRTC_REG_MODECTRL] & 1) ? "on (do not use)" : "off",
+            " interlaced: ",
+            regs[CRTC_REG_MODECTRL]);
+    switch (regs[CRTC_REG_MODECTRL] & 3) {
+        case 1: mon_out("interlace sync"); break;
+        case 3: mon_out("interlace sync & video"); break;
+        default: mon_out("off");
+    }
+    mon_out("\n RAM addressing: %s\n"
+            " display enable skew: %s, cursor skew: %s\n",
             (regs[CRTC_REG_MODECTRL] & 4) ? "row/column" : "binary",
             (regs[CRTC_REG_MODECTRL] & 16) ? "delay one character" : "no",
             (regs[CRTC_REG_MODECTRL] & 32) ? "delay one character" : "no");
-    mon_out("\nEffective size of display: %d x %d (%d x %d characters)\n", 
+    mon_out("\nEffective size of display: %d x %d (%d x %d characters)\n",
             regs[CRTC_REG_HDISP] * 8,
             regs[CRTC_REG_VDISP] * scanlines,
             regs[CRTC_REG_HDISP],
             regs[CRTC_REG_VDISP]);
-    mon_out(" including overscan:       %d x %d (%d x %d characters)\n", 
+    mon_out(" including overscan:       %d x %d (%d x %d characters)\n",
             (htotal * 8),
             crtc.framelines,
             htotal,
             vtotal);
-    mon_out(" cycles:                   %d x %d = %d\n", 
+    mon_out(" cycles:                   %d x %d = %d\n",
             htotal,
             crtc.framelines,
             htotal * crtc.framelines);
-    mon_out(" timing:                   %dHz horizontal, %dHz vertical\n", 
+    v = (double)machine_get_cycles_per_second() /
+                (htotal * crtc.framelines);
+    mon_out(" timing:                   %d Hz horizontal, %d.%04d Hz vertical\n",
             (int)(machine_get_cycles_per_second() / htotal),
-            (int)(machine_get_cycles_per_second() / (htotal * crtc.framelines))
+            (int)v, (int)(10000 * (v - (int)v))
            );
     if ((regs[CRTC_REG_MODECTRL] & 4) == 0) {
         /* binary mode */
-        mon_out("\nDisplay start:     $%04x\n", 
-                ((int)regs[CRTC_REG_DISPSTARTH] * 256) + regs[CRTC_REG_DISPSTARTL]);
-        mon_out("Cursor position:   $%04x\n", 
-                ((int)regs[CRTC_REG_CURSORPOSH] * 256) + regs[CRTC_REG_CURSORPOSL]);
-        mon_out("Lightpen position: $%04x\n", 
-                ((int)regs[CRTC_REG_LPENH] * 256) + regs[CRTC_REG_LPENL]);
+        mon_out("\nMode is: binary\n");
+        mon_out("Display start:     $%04x\n",
+                (unsigned int)((regs[CRTC_REG_DISPSTARTH] * 256)
+                    + regs[CRTC_REG_DISPSTARTL]));
+        mon_out("Cursor position:   $%04x\n",
+                (unsigned int)((regs[CRTC_REG_CURSORPOSH] * 256)
+                    + regs[CRTC_REG_CURSORPOSL]));
+        mon_out("Lightpen position: $%04x\n",
+                (unsigned int)((regs[CRTC_REG_LPENH] * 256)
+                    + regs[CRTC_REG_LPENL]));
     } else {
         /* row/column mode */
-        mon_out("\nDisplay start:     %3d x %3d\n", 
+        mon_out("\nMode is: row/column\n");
+        mon_out("Display start:     %3d x %3d\n",
                 regs[CRTC_REG_DISPSTARTL], regs[CRTC_REG_DISPSTARTH]);
-        mon_out("Cursor position:   %3d x %3d\n", 
+        mon_out("Cursor position:   %3d x %3d\n",
                 regs[CRTC_REG_CURSORPOSL], regs[CRTC_REG_CURSORPOSH]);
-        mon_out("Lightpen position: %3d x %3d\n", 
+        mon_out("Lightpen position: %3d x %3d\n",
                 regs[CRTC_REG_LPENL], regs[CRTC_REG_LPENH]);
+    }
+    mon_out("\nBeam position (to draw next):\n"
+            "charline %d, rasterline %d (ch+%d), %d lines to end of vsync\n",
+            crtc.current_charline,
+            crtc.current_line,
+            crtc.current_line % scanlines,
+            crtc.vsync);
+    mon_out("CLOCK at start of frame %"PRIu64", + rasterline %"PRIu64", line length %d\n",
+            crtc.frame_start,
+            crtc.rl_start - crtc.frame_start,
+            crtc.rl_len);
+
+    if (crtc.raster_draw_alarm) {
+        CLOCK then = crtc.raster_draw_alarm->context->next_pending_alarm_clk;
+        mon_out("next raster line draw alarm: %"PRIu64" (now+%"PRIu64")\n",
+                then, then - maincpu_clk);
     }
     return 0;
 }

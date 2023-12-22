@@ -43,8 +43,8 @@
 #include "kbd.h"
 #include "keyboard.h"
 #include "lib.h"
+#include "log.h"
 #include "machine.h"
-#include "patchrom.h"
 #include "resources.h"
 #include "reu.h"
 #include "georam.h"
@@ -53,6 +53,8 @@
 #include "vicii-resources.h"
 #include "vicii.h"
 #include "c64fastiec.h"
+#include "hvsc.h"
+#include "archdep.h"
 
 /* force  commit */
 
@@ -74,6 +76,11 @@ static char *basic_rom_name = NULL;
 
 /* Name of the Kernal ROM.  */
 static char *kernal_rom_name = NULL;
+
+/** \brief  Root directory of the High Voltage collection
+ */
+static char *hvsc_root = NULL;
+
 
 /* Kernal revision for ROM patcher.  */
 int kernal_revision = C64_KERNAL_REV3;
@@ -109,17 +116,63 @@ static int set_basic_rom_name(const char *val, void *param)
     return c64rom_load_basic(basic_rom_name);
 }
 
+struct kernal_s {
+    const char *name;
+    int rev;
+};
+
+static struct kernal_s kernal_match[] = {
+    { C64_KERNAL_REV1_NAME, C64_KERNAL_REV1 },
+    { C64_KERNAL_REV2_NAME, C64_KERNAL_REV2 },
+    { C64_KERNAL_REV3_NAME, C64_KERNAL_REV3 },
+    { C64_KERNAL_JAP_NAME,  C64_KERNAL_JAP },
+    { C64_KERNAL_SX64_NAME, C64_KERNAL_SX64 },
+    { C64_KERNAL_GS64_NAME, C64_KERNAL_GS64 },
+    { C64_KERNAL_4064_NAME, C64_KERNAL_4064 },
+    { C64_KERNAL_NONE_NAME, C64_KERNAL_NONE },
+    { NULL, C64_KERNAL_UNKNOWN }
+};
+
 static int set_kernal_revision(int val, void *param)
 {
-    if(!c64rom_isloaded()) {
+    int n = 0, rev = C64_KERNAL_UNKNOWN;
+    const char *name = NULL;
+    log_verbose("set_kernal_revision was kernal_revision: %d new val:%d", kernal_revision, val);
+
+    if (val == C64_KERNAL_UNKNOWN) {
+        kernal_revision = C64_KERNAL_UNKNOWN;
         return 0;
     }
-    if ((val != -1) && (patch_rom_idx(val) < 0)) {
-        kernal_revision = -1;
-    } else {
-        kernal_revision = val;
+
+    /* find given revision */
+    do {
+        if (kernal_match[n].rev == val) {
+            rev = kernal_match[n].rev;
+            name = kernal_match[n].name;
+        }
+        ++n;
+    } while ((rev == C64_KERNAL_UNKNOWN) && (kernal_match[n].name != NULL));
+
+    if (rev == C64_KERNAL_UNKNOWN) {
+        log_error(LOG_DEFAULT, "invalid kernal revision (%d)", val);
+        return -1;
     }
+
+    log_verbose("set_kernal_revision found rev:%d name: %s", rev, name);
+
+    if (resources_set_string("KernalName", name) < 0) {
+        log_error(LOG_DEFAULT, "failed to set kernal name (%s)", name);
+        return -1;
+    }
+
     memcpy(c64memrom_kernal64_trap_rom, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
+
+    if (kernal_revision != rev) {
+        machine_trigger_reset(MACHINE_RESET_MODE_HARD);
+    }
+
+    kernal_revision = rev;
+    log_verbose("set_kernal_revision new kernal_revision: %d", kernal_revision);
     return 0;
 }
 
@@ -163,16 +216,40 @@ static int set_sync_factor(int val, void *param)
     return 0;
 }
 
+
+static int set_hvsc_root(const char *path, void *param)
+{
+    char *result = NULL;
+
+    /* empty means use the 'HVSC_BASE' env var */
+    if (path != NULL && *path != '\0') {
+        /* expand ~, no effect on Windows */
+        archdep_expand_path(&result, path);
+    }
+
+    util_string_set(&hvsc_root, result);
+
+    /* "reboot" hvsclib */
+    hvsc_exit();
+    hvsc_init(result);
+    lib_free(result);
+    return 0;
+}
+
+
 static const resource_string_t resources_string[] = {
-    { "ChargenName", "chargen", RES_EVENT_NO, NULL,
+    { "ChargenName", C64_CHARGEN_NAME, RES_EVENT_NO, NULL,
       /* FIXME: should be same but names may differ */
       &chargen_rom_name, set_chargen_rom_name, NULL },
-    { "KernalName", "kernal", RES_EVENT_NO, NULL,
+    { "KernalName", C64_KERNAL_REV3_NAME, RES_EVENT_NO, NULL,
       /* FIXME: should be same but names may differ */
       &kernal_rom_name, set_kernal_rom_name, NULL },
-    { "BasicName", "basic", RES_EVENT_NO, NULL,
+    { "BasicName", C64_BASIC_NAME, RES_EVENT_NO, NULL,
       /* FIXME: should be same but names may differ */
       &basic_rom_name, set_basic_rom_name, NULL },
+    /* When empty the HVSC_BASE env var is used */
+    { "HVSCRoot", "", RES_EVENT_NO, NULL,
+      &hvsc_root, set_hvsc_root, NULL },
     RESOURCE_STRING_LIST_END
 };
 
@@ -181,10 +258,20 @@ static const resource_int_t resources_int[] = {
       &sync_factor, set_sync_factor, NULL },
     { "KernalRev", C64_KERNAL_REV3, RES_EVENT_SAME, NULL,
       &kernal_revision, set_kernal_revision, NULL },
-    { "SidStereoAddressStart", 0xde00, RES_EVENT_SAME, NULL,
-      (int *)&sid_stereo_address_start, sid_set_sid_stereo_address, NULL },
-    { "SidTripleAddressStart", 0xdf00, RES_EVENT_SAME, NULL,
-      (int *)&sid_triple_address_start, sid_set_sid_triple_address, NULL },
+    { "Sid2AddressStart", 0xde00, RES_EVENT_SAME, NULL,
+      (int *)&sid2_address_start, sid_set_sid2_address, NULL },
+    { "Sid3AddressStart", 0xdf00, RES_EVENT_SAME, NULL,
+      (int *)&sid3_address_start, sid_set_sid3_address, NULL },
+    { "Sid4AddressStart", 0xdf80, RES_EVENT_SAME, NULL,
+      (int *)&sid4_address_start, sid_set_sid4_address, NULL },
+    { "Sid5AddressStart", 0xde80, RES_EVENT_SAME, NULL,
+      (int *)&sid5_address_start, sid_set_sid5_address, NULL },
+    { "Sid6AddressStart", 0xdf40, RES_EVENT_SAME, NULL,
+      (int *)&sid6_address_start, sid_set_sid6_address, NULL },
+    { "Sid7AddressStart", 0xde40, RES_EVENT_SAME, NULL,
+      (int *)&sid7_address_start, sid_set_sid7_address, NULL },
+    { "Sid8AddressStart", 0xdfc0, RES_EVENT_SAME, NULL,
+      (int *)&sid8_address_start, sid_set_sid8_address, NULL },
     RESOURCE_INT_LIST_END
 };
 
@@ -193,16 +280,6 @@ int c64_resources_init(void)
     if (resources_register_string(resources_string) < 0) {
         return -1;
     }
-#if 0 /* FIXME: remove? */
-#ifdef COMMON_KBD
-    /* Set defaults of keymaps */
-    keyboard_set_keymap_file(KBD_C64_SYM_US, (void *)KBD_INDEX_SYM);
-    keyboard_set_keymap_file(KBD_C64_POS, (void *)KBD_INDEX_POS);
-    keyboard_set_keymap_file(KBD_C64_SYM_DE, (void *)KBD_INDEX_USERSYM);
-    keyboard_set_keymap_file(KBD_C64_SYM_DE, (void *)KBD_INDEX_USERPOS);
-    keyboard_set_keymap_index(KBD_INDEX_C64_DEFAULT, NULL);
-#endif
-#endif
     return resources_register_int(resources_int);
 }
 
@@ -211,4 +288,8 @@ void c64_resources_shutdown(void)
     lib_free(chargen_rom_name);
     lib_free(basic_rom_name);
     lib_free(kernal_rom_name);
+    if (hvsc_root != NULL) {
+        lib_free(hvsc_root);
+    }
+    hvsc_exit();
 }

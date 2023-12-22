@@ -32,7 +32,6 @@
 #include "uimenu.h"
 
 extern void kbd_arch_init(void);
-extern int kbd_arch_get_host_mapping(void);
 
 extern signed long kbd_arch_keyname_to_keynum(char *keyname);
 extern const char *kbd_arch_keynum_to_keyname(signed long keynum);
@@ -40,10 +39,9 @@ extern void kbd_initialize_numpad_joykeys(int *joykeys);
 
 #define KBD_PORT_PREFIX "sdl"
 
-#ifdef USE_SDLUI2
+#ifdef USE_SDL2UI
 #define SDLKey SDL_Keycode
 #define SDLMod SDL_Keymod
-#define SDLK_LAST SDL_NUM_SCANCODES
 #define SDLK_KP0 SDLK_KP_0
 #define SDLK_KP1 SDLK_KP_1
 #define SDLK_KP2 SDLK_KP_2
@@ -57,10 +55,12 @@ extern void kbd_initialize_numpad_joykeys(int *joykeys);
 #define KMOD_META KMOD_GUI
 #define SDLK_LMETA SDLK_LGUI
 #define SDLK_RMETA SDLK_RGUI
-#define SDLK_COMPOSE	SDLK_APPLICATION
+#define SDLK_COMPOSE SDLK_APPLICATION
 #define SDLK_PRINT SDLK_PRINTSCREEN
 #define SDLK_NUMLOCK SDLK_NUMLOCKCLEAR
 #define SDLK_SCROLLOCK SDLK_SCROLLLOCK
+#else
+#define SDL_NUM_SCANCODES   512 /* this must be the same value as in SDL2 headers */
 #endif
 
 #define VICE_SDLK_RIGHT     275
@@ -74,6 +74,7 @@ extern void kbd_initialize_numpad_joykeys(int *joykeys);
 #define VICE_SDLK_RETURN      SDLK_RETURN
 
 extern SDLKey SDL2x_to_SDL1x_Keys(SDLKey key);
+extern SDLKey SDL1x_to_SDL2x_Keys(SDLKey key);
 
 extern ui_menu_action_t sdlkbd_press(SDLKey key, SDLMod mod);
 extern ui_menu_action_t sdlkbd_release(SDLKey key, SDLMod mod);
@@ -93,5 +94,9 @@ extern void kbd_enter_leave(void);
 extern void kbd_focus_change(void);
 
 extern int sdl_ui_menukeys[];
+
+extern char *kbd_get_menu_keyname(void);
+
+extern char *kbd_get_path_keyname(char *path);
 
 #endif

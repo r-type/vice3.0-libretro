@@ -34,29 +34,22 @@
 #include "machine.h"
 #include "raster-cmdline-options.h"
 #include "resources.h"
-#include "translate.h"
 #include "vic-cmdline-options.h"
 #include "vic-resources.h"
 #include "vic.h"
 #include "victypes.h"
 
-int border_set_func(const char *value, void *extra_param)
+static int border_set_func(const char *value, void *extra_param)
 {
-    int video;
-
-    resources_get_int("MachineVideoStandard", &video);
-
     if (strcmp(value, "1") == 0 || strcmp(value, "full") == 0) {
-        vic_resources.border_mode = VIC_FULL_BORDERS;
+        resources_set_int("VICBorderMode", 1);
     } else if (strcmp(value, "2") == 0 || strcmp(value, "debug") == 0) {
-        vic_resources.border_mode = VIC_DEBUG_BORDERS;
+        resources_set_int("VICBorderMode", 2);
     } else if (strcmp(value, "3") == 0 || strcmp(value, "none") == 0) {
-        vic_resources.border_mode = VIC_NO_BORDERS;
+        resources_set_int("VICBorderMode", 3);
     } else {
-        vic_resources.border_mode = VIC_NORMAL_BORDERS;
+        resources_set_int("VICBorderMode", 0);
     }
-
-    machine_change_timing(video, vic_resources.border_mode);
 
     return 0;
 }
@@ -64,11 +57,9 @@ int border_set_func(const char *value, void *extra_param)
 /* VIC command-line options.  */
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-VICborders", CALL_FUNCTION, 1,
-      border_set_func, NULL, "VICBorderMode", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_MODE, IDCLS_SET_BORDER_MODE,
-      NULL, NULL },
+    { "-VICborders", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
+      border_set_func, NULL, NULL, NULL,
+      "<Mode>", "Set border display mode (0: normal, 1: full, 2: debug, 3: none)" },
     CMDLINE_LIST_END
 };
 

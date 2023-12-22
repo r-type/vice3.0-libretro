@@ -39,11 +39,12 @@
 #include "cmdline.h"
 #include "export.h"
 #include "lib.h"
+#include "log.h"
 #include "mem.h"
 #include "monitor.h"
+#include "ram.h"
 #include "resources.h"
 #include "snapshot.h"
-#include "translate.h"
 #include "types.h"
 #include "util.h"
 
@@ -76,10 +77,12 @@
 /* #define DBGDQBB */
 
 #ifdef DBGDQBB
-#define DBG(x) printf x
+#define DBG(x) log_debug x
 #else
 #define DBG(x)
 #endif
+
+static log_t dqbb_log = LOG_DEFAULT; /*!< the log output for the dqbb_log */
 
 /* DQBB register bits */
 static int dqbb_a000_mapped;
@@ -87,7 +90,7 @@ static int dqbb_readwrite;
 static int dqbb_off;
 
 /* DQBB image.  */
-static BYTE *dqbb_ram = NULL;
+static uint8_t *dqbb_ram = NULL;
 
 static int dqbb_activate(void);
 static int dqbb_deactivate(void);
@@ -107,23 +110,24 @@ static int dqbb_write_image = 0;
 
 /* ------------------------------------------------------------------------- */
 
-static BYTE dqbb_io1_peek(WORD addr);
-static void dqbb_io1_store(WORD addr, BYTE byte);
+static uint8_t dqbb_io1_peek(uint16_t addr);
+static void dqbb_io1_store(uint16_t addr, uint8_t byte);
 static int dqbb_dump(void);
 
 static io_source_t dqbb_io1_device = {
-    CARTRIDGE_NAME_DQBB,
-    IO_DETACH_RESOURCE,
-    "DQBB",
-    0xde00, 0xdeff, 0x01,
-    0,
-    dqbb_io1_store,
-    NULL,
-    dqbb_io1_peek,
-    dqbb_dump,
-    CARTRIDGE_DQBB,
-    0,
-    0
+    CARTRIDGE_NAME_DQBB,  /* name of the device */
+    IO_DETACH_RESOURCE,   /* use resource to detach the device when involved in a read-collision */
+    "DQBB",               /* resource to set to '0' */
+    0xde00, 0xdeff, 0xff, /* range for the device, address is ignored, reg:$de00, mirrors: $de01-$deff */
+    0,                    /* read is never valid, device is write only */
+    dqbb_io1_store,       /* store function */
+    NULL,                 /* NO poke function */
+    NULL,                 /* NO read function */
+    dqbb_io1_peek,        /* peek function */
+    dqbb_dump,            /* device state information dump function */
+    CARTRIDGE_DQBB,       /* cartridge ID */
+    IO_PRIO_NORMAL,       /* normal priority, device read needs to be checked for collisions */
+    0                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *dqbb_io1_list_item = NULL;
@@ -156,7 +160,7 @@ static void dqbb_change_config(void)
     }
 }
 
-static void dqbb_io1_store(WORD addr, BYTE byte)
+static void dqbb_io1_store(uint16_t addr, uint8_t byte)
 {
     dqbb_a000_mapped = (byte & 4) >> 2;
     dqbb_readwrite = (byte & 0x10) >> 4;
@@ -165,7 +169,7 @@ static void dqbb_io1_store(WORD addr, BYTE byte)
     reg_value = byte;
 }
 
-static BYTE dqbb_io1_peek(WORD addr)
+static uint8_t dqbb_io1_peek(uint16_t addr)
 {
     return reg_value;
 }
@@ -180,10 +184,43 @@ static int dqbb_dump(void)
 
 /* ------------------------------------------------------------------------- */
 
+/* FIXME: this still needs to be tweaked to match the hardware */
+static RAMINITPARAM ramparam = {
+    .start_value = 255,
+    .value_invert = 2,
+    .value_offset = 1,
+
+    .pattern_invert = 0x100,
+    .pattern_invert_value = 255,
+
+    .random_start = 0,
+    .random_repeat = 0,
+    .random_chance = 0,
+};
+
+void dqbb_powerup(void)
+{
+    DBG(("dqbb_powerup"));
+    if ((dqbb_filename != NULL) && (*dqbb_filename != 0)) {
+        /* do not init ram if a file is used for ram content (like battery backup) */
+        return;
+    }
+    if (dqbb_ram) {
+        DBG(("dqbb_powerup ram clear"));
+        ram_init_with_pattern(dqbb_ram, DQBB_RAM_SIZE, &ramparam);
+    }
+}
+
 static int dqbb_activate(void)
 {
+    DBG(("dqbb_activate"));
     lib_free(dqbb_ram);
     dqbb_ram = lib_malloc(DQBB_RAM_SIZE);
+    ram_init_with_pattern(dqbb_ram, DQBB_RAM_SIZE, &ramparam);
+
+    if (dqbb_log == LOG_DEFAULT) {
+        dqbb_log = log_open("DQBB");
+    }
 
     if (!util_check_null_string(dqbb_filename)) {
         if (util_file_load(dqbb_filename, dqbb_ram, DQBB_RAM_SIZE, UTIL_FILE_LOAD_RAW) < 0) {
@@ -192,7 +229,10 @@ static int dqbb_activate(void)
                 if (util_file_save(dqbb_filename, dqbb_ram, DQBB_RAM_SIZE) < 0) {
                     return -1;
                 }
+                log_message(dqbb_log, "created '%s'", dqbb_filename);
             }
+        } else {
+            log_message(dqbb_log, "loaded '%s'", dqbb_filename);
         }
     }
     return 0;
@@ -315,31 +355,21 @@ void dqbb_resources_shutdown(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-dqbb", SET_RESOURCE, 0,
+    { "-dqbb", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "DQBB", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_DQBB,
-      NULL, NULL },
-    { "+dqbb", SET_RESOURCE, 0,
+      NULL, "Enable Double Quick Brown Box" },
+    { "+dqbb", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "DQBB", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_DQBB,
-      NULL, NULL },
-    { "-dqbbimage", SET_RESOURCE, 1,
+      NULL, "Disable Double Quick Brown Box" },
+    { "-dqbbimage", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "DQBBfilename", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_DQBB_NAME,
-      NULL, NULL },
-    { "-dqbbimagerw", SET_RESOURCE, 0,
+      "<Name>", "Specify Double Quick Brown Box filename" },
+    { "-dqbbimagerw", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "DQBBImageWrite", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ALLOW_WRITING_TO_DQBB_IMAGE,
-      NULL, NULL },
-    { "+dqbbimagerw", SET_RESOURCE, 0,
+      NULL, "Allow writing to DQBB image" },
+    { "+dqbbimagerw", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "DQBBImageWrite", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DO_NOT_WRITE_TO_DQBB_IMAGE,
-      NULL, NULL },
+      NULL, "Do not write to DQBB image" },
     CMDLINE_LIST_END
 };
 
@@ -365,7 +395,7 @@ void dqbb_reset(void)
     }
 }
 
-void dqbb_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void dqbb_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
     switch (addr & 0xf000) {
         case 0xb000:
@@ -389,7 +419,7 @@ void dqbb_init_config(void)
     dqbb_reset();
 }
 
-void dqbb_config_setup(BYTE *rawcart)
+void dqbb_config_setup(uint8_t *rawcart)
 {
     memcpy(dqbb_ram, rawcart, DQBB_RAM_SIZE);
 }
@@ -409,7 +439,23 @@ int dqbb_enable(void)
     return 0;
 }
 
-int dqbb_bin_attach(const char *filename, BYTE *rawcart)
+
+/** \brief  Disable the cart
+ *
+ * Does the same as dqbb_detach(), but required for symmetry I suppose.
+ *
+ * \return  0 on success, -1 on failure
+ */
+int dqbb_disable(void)
+{
+    if (resources_set_int("DQBB", 0) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+
+int dqbb_bin_attach(const char *filename, uint8_t *rawcart)
 {
     if (util_file_load(filename, rawcart, DQBB_RAM_SIZE, UTIL_FILE_LOAD_RAW) < 0) {
         return -1;
@@ -441,12 +487,12 @@ int dqbb_flush_image(void)
 
 /* ------------------------------------------------------------------------- */
 
-BYTE dqbb_roml_read(WORD addr)
+uint8_t dqbb_roml_read(uint16_t addr)
 {
     return dqbb_ram[addr & 0x1fff];
 }
 
-void dqbb_roml_store(WORD addr, BYTE byte)
+void dqbb_roml_store(uint16_t addr, uint8_t byte)
 {
     if (dqbb_readwrite) {
         dqbb_ram[addr & 0x1fff] = byte;
@@ -454,12 +500,12 @@ void dqbb_roml_store(WORD addr, BYTE byte)
     mem_store_without_romlh(addr, byte);
 }
 
-BYTE dqbb_romh_read(WORD addr)
+uint8_t dqbb_romh_read(uint16_t addr)
 {
     return dqbb_ram[(addr & 0x1fff) + 0x2000];
 }
 
-void dqbb_romh_store(WORD addr, BYTE byte)
+void dqbb_romh_store(uint16_t addr, uint8_t byte)
 {
     if (dqbb_readwrite) {
         dqbb_ram[(addr & 0x1fff) + 0x2000] = byte;
@@ -467,7 +513,7 @@ void dqbb_romh_store(WORD addr, BYTE byte)
     mem_store_without_romlh(addr, byte);
 }
 
-int dqbb_peek_mem(WORD addr, BYTE *value)
+int dqbb_peek_mem(uint16_t addr, uint8_t *value)
 {
     if ((addr >= 0x8000) && (addr <= 0x9fff)) {
         *value = dqbb_ram[addr & 0x1fff];
@@ -493,7 +539,7 @@ int dqbb_peek_mem(WORD addr, BYTE *value)
    ARRAY | RAM        | 16768 BYTES of RAM data
  */
 
-static char snap_module_name[] = "CARTDQBB";
+static const char snap_module_name[] = "CARTDQBB";
 #define SNAP_MAJOR   0
 #define SNAP_MINOR   0
 
@@ -508,11 +554,11 @@ int dqbb_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || (SMW_B(m, (BYTE)dqbb_enabled) < 0)
-        || (SMW_B(m, (BYTE)dqbb_readwrite) < 0)
-        || (SMW_B(m, (BYTE)dqbb_a000_mapped) < 0)
-        || (SMW_B(m, (BYTE)dqbb_off) < 0)
-        || (SMW_B(m, (BYTE)reg_value) < 0)
+        || (SMW_B(m, (uint8_t)dqbb_enabled) < 0)
+        || (SMW_B(m, (uint8_t)dqbb_readwrite) < 0)
+        || (SMW_B(m, (uint8_t)dqbb_a000_mapped) < 0)
+        || (SMW_B(m, (uint8_t)dqbb_off) < 0)
+        || (SMW_B(m, (uint8_t)reg_value) < 0)
         || (SMW_BA(m, dqbb_ram, DQBB_RAM_SIZE) < 0)) {
         snapshot_module_close(m);
         return -1;
@@ -523,7 +569,7 @@ int dqbb_snapshot_write_module(snapshot_t *s)
 
 int dqbb_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &vmajor, &vminor);
@@ -533,7 +579,7 @@ int dqbb_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (vmajor > SNAP_MAJOR || vminor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(vmajor, vminor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         snapshot_module_close(m);
         return -1;

@@ -1,9 +1,9 @@
-scpu64dir = $(VICEDIR)/SCPU64
+scpu64dir = $(VICE_DATADIR)/SCPU64
 
 roms = \
 	scpu64 \
-	chargen \
-	jpchrgen
+	chargen-901225-01.bin \
+	chargen-906143-02.bin
 
 romsets = \
 	default.vrs
@@ -24,57 +24,82 @@ palettes = \
 	colodore.vpl \
 	ptoing.vpl \
 	deekay.vpl \
+	cjam.vpl \
+	palette.vpl \
+	pixcen.vpl \
 	rgb.vpl
 
-x11_keymaps = \
-	x11_sym.vkm \
-	x11_pos.vkm \
-	x11_pos_de.vkm \
-	x11_sym_de.vkm
+gtk3_hotkeys = \
+	gtk3-hotkeys.vhk \
+	gtk3-hotkeys-mac.vhk
+
+gtk3_keymaps = \
+	gtk3_sym.vkm \
+	gtk3_pos.vkm \
+	gtk3_pos_de.vkm \
+	gtk3_pos_se.vkm \
+	gtk3_pos_it.vkm \
+	gtk3_pos_es.vkm \
+	gtk3_pos_uk.vkm \
+	gtk3_pos_tr.vkm \
+	gtk3_sym_de.vkm \
+	gtk3_sym_be.vkm \
+	gtk3_sym_da.vkm \
+	gtk3_sym_nl.vkm \
+	gtk3_sym_se.vkm \
+	gtk3_sym_it.vkm \
+	gtk3_sym_fr.vkm \
+	gtk3_sym_uk.vkm \
+	gtk3_sym_tr.vkm \
+	gtk3_keyrah.vkm \
+	gtk3_keyrah_de.vkm \
+	gtk3_the64_de.vkm \
+	gtk3_pos_bmc64.vkm
 
 sdl_keymaps = \
 	sdl_keyrah.vkm \
 	sdl_keyrah_de.vkm \
+	sdl_keyrah_retropie.vkm \
+	sdl_keyrah_retropie_de.vkm \
+	sdl_keyrah_combian.vkm \
 	sdl_pos.vkm \
+	sdl_pos_uk.vkm \
+	sdl_pos_ch.vkm \
 	sdl_pos_da.vkm \
 	sdl_pos_de.vkm \
 	sdl_pos_fi.vkm \
 	sdl_pos_no.vkm \
-	sdl_sym.vkm
+	sdl_pos_tr.vkm \
+	sdl_sym.vkm \
+	sdl_sym_uk.vkm \
+	sdl_sym_de.vkm \
+	sdl_sym_nl.vkm \
+	sdl_sym_fr.vkm \
+	sdl_sym_tr.vkm \
+	sdl_sym_da.vkm
 
-extra_keymaps = \
-	amiga_sym.vkm \
-	amiga_pos.vkm \
-	beos_sym.vkm \
-	beos_pos.vkm \
-	dos_sym.vkm \
-	dos_pos.vkm \
-	os2.vkm \
-	os2_sym.vkm \
-	osx_pos.vkm \
-	osx_sym_de.vkm \
-	osx_sym.vkm \
-	win_pos.vkm \
-	win_pos_de.vkm \
-	win_sym.vkm \
-	win_sym_de.vkm \
-	win_sym_it.vkm \
-	x11_keyrah.vkm \
-	x11_keyrah_de.vkm
-
-win32_files = \
-	win_hotkeys.vhk \
-	win_shortcuts.vsc
+sdl_hotkeys = \
+	sdl-hotkeys.vhk
 
 sym_file = \
 	scpu64mem.sym
 
-if SDL_COMPILE
-scpu64_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps) $(sym_file)
+if USE_SDLUI
+scpu64_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps) $(sdl_hotkeys) $(sym_file)
+EXTRA_DIST = $(scpu64_DATA) $(gtk3_keymaps) $(gtk3_hotkeys)
+endif
 
-EXTRA_DIST = $(scpu64_DATA) $(extra_keymaps) $(x11_keymaps) $(win32_files)
-else
-scpu64_DATA = $(roms) $(romsets) $(palettes) $(x11_keymaps) $(sym_file)
+if USE_SDL2UI
+scpu64_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps) $(sdl_hotkeys) $(sym_file)
+EXTRA_DIST = $(scpu64_DATA) $(gtk3_keymaps) $(gtk3_hotkeys)
+endif
 
-EXTRA_DIST = $(scpu64_DATA) $(extra_keymaps) $(sdl_keymaps) $(win32_files)
+if USE_GTK3UI
+scpu64_DATA = $(roms) $(romsets) $(palettes) $(gtk3_hotkeys) $(gtk3_keymaps) $(sym_file)
+EXTRA_DIST = $(scpu64_DATA) $(sdl_keymaps) $(sdl_hotkeys)
+endif
+
+if USE_HEADLESSUI
+scpu64_DATA = $(roms) $(romsets) $(palettes) $(sym_file)
+EXTRA_DIST = $(scpu64_DATA) $(sdl_keymaps) $(sdl_hotkeys) $(gtk3_hotkeys) $(gtk3_keymaps)
 endif

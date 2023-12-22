@@ -36,13 +36,13 @@
 #include "c64rom.h"
 #include "c64memrom.h"
 #include "c64mem.h"
+#include "c64model.h"
 #include "cartio.h"
 #include "cartridge.h"
 #include "cia.h"
 #include "lib.h"
 #include "log.h"
 #include "machine.h"
-#include "patchrom.h"
 #include "resources.h"
 #include "reu.h"
 #include "georam.h"
@@ -73,7 +73,7 @@ int kernal_revision = C64_KERNAL_REV3;
 int cia1_model;
 int cia2_model;
 
-static int board_type = 0;
+static int board_type = BOARD_C64;
 static int iec_reset = 0;
 
 static int set_chargen_rom_name(const char *val, void *param)
@@ -85,6 +85,12 @@ static int set_chargen_rom_name(const char *val, void *param)
     return c64rom_load_chargen(chargen_rom_name);
 }
 
+#ifdef __LIBRETRO__
+#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
+extern unsigned int opt_jiffydos_kernal_skip;
+#endif
+#endif
+
 static int set_kernal_rom_name(const char *val, void *param)
 {
     int ret, changed = 1;
@@ -92,6 +98,10 @@ static int set_kernal_rom_name(const char *val, void *param)
     if ((val != NULL) && (kernal_rom_name != NULL)) {
         changed = (strcmp(val, kernal_rom_name) != 0);
     }
+#ifdef __LIBRETRO__
+    if (opt_jiffydos_kernal_skip)
+        return 0;
+#endif
     if (util_string_set(&kernal_rom_name, val)) {
         return 0;
     }
@@ -178,32 +188,109 @@ static int set_cia2_model(int val, void *param)
     return 0;
 }
 
+#define NUM_TRAP_DEVICES 9  /* FIXME: is there a better constant ? */
+static int trapfl[NUM_TRAP_DEVICES];
+static int trapdevices[NUM_TRAP_DEVICES + 1] = { 1, 4, 5, 6, 7, 8, 9, 10, 11, -1 };
+
+static void get_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_get_int_sprintf("VirtualDevice%d", &trapfl[i], trapdevices[i]);
+    }
+}
+
+static void clear_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("VirtualDevice%d", 0, trapdevices[i]);
+    }
+}
+
+static void restore_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("VirtualDevice%d", trapfl[i], trapdevices[i]);
+    }
+}
+
+struct kernal_s {
+    const char *name;
+    int rev;
+};
+
+/* NOTE: also update the table in c64rom.c */
+static struct kernal_s kernal_match[] = {
+    { C64_KERNAL_REV1_NAME, C64_KERNAL_REV1 },
+    { C64_KERNAL_REV2_NAME, C64_KERNAL_REV2 },
+    { C64_KERNAL_REV3_NAME, C64_KERNAL_REV3 },
+    { C64_KERNAL_JAP_NAME,  C64_KERNAL_JAP },
+    { C64_KERNAL_SX64_NAME, C64_KERNAL_SX64 },
+    { C64_KERNAL_GS64_NAME, C64_KERNAL_GS64 },
+    { C64_KERNAL_4064_NAME, C64_KERNAL_4064 },
+    { C64_KERNAL_NONE_NAME, C64_KERNAL_NONE },
+    { NULL, C64_KERNAL_UNKNOWN }
+};
+
 static int set_kernal_revision(int val, void *param)
 {
-    int trapfl;
+    int n = 0, rev = C64_KERNAL_UNKNOWN;
+    const char *name = NULL;
+    log_verbose("set_kernal_revision was kernal_revision: %d new val:%d", kernal_revision, val);
 
-    log_verbose("set_kernal_revision val:%d kernal_revision: %d", val, kernal_revision);
-    if(!c64rom_isloaded()) {
+    if (val == C64_KERNAL_UNKNOWN) {
+        if(!c64rom_isloaded()) {
+            /* disable device traps before kernal patching */
+            if (machine_class != VICE_MACHINE_VSID) {
+                get_trapflags();
+                clear_trapflags();
+            }
+        }
+        kernal_revision = C64_KERNAL_UNKNOWN;
         return 0;
     }
-    /* disable device traps before kernal patching */
-    if (machine_class != VICE_MACHINE_VSID) {
-        resources_get_int("VirtualDevices", &trapfl);
-        resources_set_int("VirtualDevices", 0);
+
+    /* find given revision */
+    do {
+        if (kernal_match[n].rev == val) {
+            rev = kernal_match[n].rev;
+            name = kernal_match[n].name;
+        }
+        ++n;
+    } while ((rev == C64_KERNAL_UNKNOWN) && (kernal_match[n].name != NULL));
+
+    if (rev == C64_KERNAL_UNKNOWN) {
+        log_error(LOG_DEFAULT, "invalid kernal revision (%d)", val);
+        return -1;
     }
-    /* patch kernal to given revision */
-    if ((val != -1) && (patch_rom_idx(val) < 0)) {
-        val = -1;
+
+    if(!c64rom_isloaded()) {
+        /* disable device traps before kernal patching */
+        if (machine_class != VICE_MACHINE_VSID) {
+            get_trapflags();
+            clear_trapflags();
+        }
     }
+
+    log_verbose("set_kernal_revision found rev:%d name: %s", rev, name);
+
+    if (resources_set_string("KernalName", name) < 0) {
+        log_error(LOG_DEFAULT, "failed to set kernal name (%s)", name);
+        return -1;
+    }
+
     memcpy(c64memrom_kernal64_trap_rom, c64memrom_kernal64_rom, C64_KERNAL_ROM_SIZE);
-    if (kernal_revision != val) {
+
+    if (kernal_revision != rev) {
         machine_trigger_reset(MACHINE_RESET_MODE_HARD);
     }
     /* restore traps */
     if (machine_class != VICE_MACHINE_VSID) {
-        resources_set_int("VirtualDevices", trapfl);
+        restore_trapflags();
     }
-    kernal_revision = val;
+    kernal_revision = rev;
     log_verbose("set_kernal_revision new kernal_revision: %d", kernal_revision);
     return 0;
 }
@@ -218,44 +305,30 @@ static int set_sync_factor(int val, void *param)
 
     switch (val) {
         case MACHINE_SYNC_PAL:
-            sync_factor = val;
-            if (change_timing) {
-                machine_change_timing(MACHINE_SYNC_PAL, vicii_resources.border_mode);
-            }
-            break;
         case MACHINE_SYNC_NTSC:
-            sync_factor = val;
-            if (change_timing) {
-                machine_change_timing(MACHINE_SYNC_NTSC, vicii_resources.border_mode);
-            }
-            break;
         case MACHINE_SYNC_NTSCOLD:
-            sync_factor = val;
-            if (change_timing) {
-                machine_change_timing(MACHINE_SYNC_NTSCOLD, vicii_resources.border_mode);
-            }
-            break;
         case MACHINE_SYNC_PALN:
-            sync_factor = val;
-            if (change_timing) {
-                machine_change_timing(MACHINE_SYNC_PALN, vicii_resources.border_mode);
-            }
             break;
         default:
             return -1;
+    }
+    sync_factor = val;
+    if (change_timing) {
+        vicii_comply_with_video_standard(val);
+        machine_change_timing(val, vicii_resources.border_mode);
     }
 
     return 0;
 }
 
 static const resource_string_t resources_string[] = {
-    { "ChargenName", "chargen", RES_EVENT_NO, NULL,
+    { "ChargenName", C64_CHARGEN_NAME, RES_EVENT_NO, NULL,
       /* FIXME: should be same but names may differ */
       &chargen_rom_name, set_chargen_rom_name, NULL },
-    { "KernalName", "kernal", RES_EVENT_NO, NULL,
+    { "KernalName", C64_KERNAL_REV3_NAME, RES_EVENT_NO, NULL,
       /* FIXME: should be same but names may differ */
       &kernal_rom_name, set_kernal_rom_name, NULL },
-    { "BasicName", "basic", RES_EVENT_NO, NULL,
+    { "BasicName", C64_BASIC_NAME, RES_EVENT_NO, NULL,
       /* FIXME: should be same but names may differ */
       &basic_rom_name, set_basic_rom_name, NULL },
     RESOURCE_STRING_LIST_END
@@ -264,7 +337,7 @@ static const resource_string_t resources_string[] = {
 static const resource_int_t resources_int[] = {
     { "MachineVideoStandard", MACHINE_SYNC_PAL, RES_EVENT_SAME, NULL,
       &sync_factor, set_sync_factor, NULL },
-    { "BoardType", 0, RES_EVENT_SAME, NULL,
+    { "BoardType", BOARD_C64, RES_EVENT_SAME, NULL,
       &board_type, set_board_type, NULL },
     { "IECReset", 0, RES_EVENT_SAME, NULL,
       &iec_reset, set_iec_reset, NULL },
@@ -274,10 +347,20 @@ static const resource_int_t resources_int[] = {
       &cia2_model, set_cia2_model, NULL },
     { "KernalRev", C64_KERNAL_REV3, RES_EVENT_SAME, NULL,
       &kernal_revision, set_kernal_revision, NULL },
-    { "SidStereoAddressStart", 0xde00, RES_EVENT_SAME, NULL,
-      (int *)&sid_stereo_address_start, sid_set_sid_stereo_address, NULL },
-    { "SidTripleAddressStart", 0xdf00, RES_EVENT_SAME, NULL,
-      (int *)&sid_triple_address_start, sid_set_sid_triple_address, NULL },
+    { "Sid2AddressStart", 0xde00, RES_EVENT_SAME, NULL,
+      (int *)&sid2_address_start, sid_set_sid2_address, NULL },
+    { "Sid3AddressStart", 0xdf00, RES_EVENT_SAME, NULL,
+      (int *)&sid3_address_start, sid_set_sid3_address, NULL },
+    { "Sid4AddressStart", 0xdf80, RES_EVENT_SAME, NULL,
+      (int *)&sid4_address_start, sid_set_sid4_address, NULL },
+    { "Sid5AddressStart", 0xde80, RES_EVENT_SAME, NULL,
+      (int *)&sid5_address_start, sid_set_sid5_address, NULL },
+    { "Sid6AddressStart", 0xdf40, RES_EVENT_SAME, NULL,
+      (int *)&sid6_address_start, sid_set_sid6_address, NULL },
+    { "Sid7AddressStart", 0xde40, RES_EVENT_SAME, NULL,
+      (int *)&sid7_address_start, sid_set_sid7_address, NULL },
+    { "Sid8AddressStart", 0xdfc0, RES_EVENT_SAME, NULL,
+      (int *)&sid8_address_start, sid_set_sid8_address, NULL },
     { "BurstMod", BURST_MOD_NONE, RES_EVENT_NO, NULL,
       &burst_mod, set_burst_mod, NULL },
     RESOURCE_INT_LIST_END

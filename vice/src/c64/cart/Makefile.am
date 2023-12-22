@@ -1,16 +1,26 @@
 AM_CPPFLAGS = \
+	@VICE_CPPFLAGS@ \
 	@ARCH_INCLUDES@ \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/core \
 	-I$(top_srcdir)/src/drive \
-	-I$(top_srcdir)/src/rtc \
+	-I$(top_srcdir)/src/core/rtc \
 	-I$(top_srcdir)/src/c64 \
 	-I$(top_srcdir)/src/sid \
 	-I$(top_srcdir)/src/lib/p64 \
 	-I$(top_srcdir)/src/vicii \
 	-I$(top_srcdir)/src/rtc \
-	-I$(top_srcdir)/src/samplerdrv
+	-I$(top_srcdir)/src/samplerdrv \
+	-I$(top_srcdir)/src/rs232drv \
+	-I$(top_srcdir)/src/arch/shared
+
+AM_CFLAGS = @VICE_CFLAGS@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
 
 noinst_LIBRARIES = libc64cartsystem.a libc64cart.a libc64commoncart.a
 
@@ -19,9 +29,7 @@ libc64cartsystem_a_SOURCES = \
 	c64carthooks.c \
 	c64cartmem.c \
 	c64cartmem.h \
-	c64cartsystem.h \
-	crt.c \
-	crt.h
+	c64cartsystem.h
 
 libc64cart_a_SOURCES = \
 	actionreplay2.c \
@@ -34,6 +42,16 @@ libc64cart_a_SOURCES = \
 	actionreplay.h \
 	atomicpower.c \
 	atomicpower.h \
+	blackbox3.c \
+	blackbox3.h \
+	blackbox4.c \
+	blackbox4.h \
+	blackbox8.c \
+	blackbox8.h \
+	blackbox9.c \
+	blackbox9.h \
+	bisplus.c \
+	bisplus.h \
 	c64-generic.c \
 	c64-generic.h \
 	c64-midi.c \
@@ -68,6 +86,8 @@ libc64cart_a_SOURCES = \
 	dinamic.h \
 	dqbb.c \
 	dqbb.h \
+	drean.c \
+	drean.h \
 	easycalc.c \
 	easycalc.h \
 	easyflash.c \
@@ -88,6 +108,8 @@ libc64cart_a_SOURCES = \
 	formel64.h \
 	freezeframe.c \
 	freezeframe.h \
+	freezeframe2.c \
+	freezeframe2.h \
 	freezemachine.c \
 	freezemachine.h \
 	funplay.c \
@@ -96,16 +118,22 @@ libc64cart_a_SOURCES = \
 	gamekiller.h \
 	gmod2.c \
 	gmod2.h \
+	gmod3.c \
+	gmod3.h \
 	gs.c \
 	gs.h \
 	ide64.c \
 	ide64.h \
+	ieeeflash64.c \
+	ieeeflash64.h \
 	isepic.c \
 	isepic.h \
 	kcs.c \
 	kcs.h \
 	kingsoft.c \
 	kingsoft.h \
+	ltkernal.c \
+	ltkernal.h \
 	mach5.c \
 	mach5.h \
 	magicdesk.c \
@@ -114,26 +142,36 @@ libc64cart_a_SOURCES = \
 	magicformel.h \
 	magicvoice.c \
 	magicvoice.h \
+	maxbasic.c \
+	maxbasic.h \
 	mikroass.c \
 	mikroass.h \
 	mmcreplay.c \
 	mmcreplay.h \
 	mmc64.c \
 	mmc64.h \
+	multimax.c \
+	multimax.h \
 	ocean.c \
 	ocean.h \
 	pagefox.c \
 	pagefox.h \
+	partner64.c \
+	partner64.h \
 	prophet64.c \
 	prophet64.h \
 	ramcart.c \
 	ramcart.h \
+	ramlink.c \
+	ramlink.h \
 	retroreplay.c \
 	retroreplay.h \
 	reu.c \
 	reu.h \
 	rexep256.c \
 	rexep256.h \
+	rexramfloppy.c \
+	rexramfloppy.h \
 	rexutility.c \
 	rexutility.h \
 	rgcd.c \
@@ -142,6 +180,8 @@ libc64cart_a_SOURCES = \
 	ross.h \
 	rrnetmk3.c \
 	rrnetmk3.h \
+	sdbox.c \
+	sdbox.h \
 	shortbus.c \
 	shortbus.h \
 	shortbus_digimax.c \
@@ -166,12 +206,16 @@ libc64cart_a_SOURCES = \
 	supersnapshot.h \
 	supersnapshot4.c \
 	supersnapshot4.h \
+	turtlegraphics.c \
+	turtlegraphics.h \
 	warpspeed.c \
 	warpspeed.h \
 	westermann.c \
 	westermann.h \
 	zaxxon.c \
-	zaxxon.h
+	zaxxon.h \
+	zippcode48.c \
+	zippcode48.h
 
 libc64commoncart_a_SOURCES = \
 	c64acia.h \

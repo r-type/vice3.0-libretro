@@ -35,10 +35,12 @@
 
 #include "types.h"
 
-extern void crtc_store(WORD addr, BYTE value);
-extern BYTE crtc_read(WORD addr);
-extern BYTE crtc_peek(WORD addr);
+extern void crtc_store(uint16_t addr, uint8_t value);
+extern uint8_t crtc_read(uint16_t addr);
+extern uint8_t crtc_peek(uint16_t addr);
 extern int crtc_dump(void);
+
+extern uint8_t crtc_peek_register(uint8_t regno);
 
 extern void crtc_set_char(int crom);
 

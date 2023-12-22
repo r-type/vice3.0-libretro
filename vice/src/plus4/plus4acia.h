@@ -34,9 +34,9 @@
 struct snapshot_s;
 
 extern void acia_init(void);
-extern BYTE acia_read(WORD a);
-extern BYTE acia_peek(WORD a);
-extern void acia_store(WORD a, BYTE b);
+extern uint8_t acia_read(uint16_t a);
+extern uint8_t acia_peek(uint16_t a);
+extern void acia_store(uint16_t a, uint8_t b);
 extern void acia_reset(void);
 
 extern int acia_cmdline_options_init(void);
@@ -46,6 +46,5 @@ extern int acia_snapshot_read_module(struct snapshot_s *);
 extern int acia_snapshot_write_module(struct snapshot_s *);
 
 extern int acia_enabled(void);
-extern int acia_dump(void *ctx);
 
 #endif

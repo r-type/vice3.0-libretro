@@ -35,6 +35,7 @@
 #include "menu_joystick.h"
 #include "menu_ram.h"
 #include "menu_rom.h"
+#include "menu_userport.h"
 #include "plus4memhacks.h"
 #include "plus4model.h"
 
@@ -114,17 +115,6 @@ static const ui_menu_entry_t v364speech_menu[] = {
     SDL_MENU_LIST_END
 };
 
-UI_MENU_DEFINE_TOGGLE(UserportDAC)
-
-static const ui_menu_entry_t userport_menu[] = {
-    SDL_MENU_ITEM_TITLE("Userport devices"),
-    { "8 bit DAC enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportDAC_callback,
-      NULL },
-    SDL_MENU_LIST_END
-};
-
 UI_MENU_DEFINE_RADIO(MemoryHack)
 UI_MENU_DEFINE_RADIO(RamSize)
 UI_MENU_DEFINE_TOGGLE(Acia1Enable)
@@ -132,7 +122,7 @@ UI_MENU_DEFINE_TOGGLE(Acia1Enable)
 const ui_menu_entry_t plus4_hardware_menu[] = {
     { "Select Plus4 model",
       MENU_ENTRY_SUBMENU,
-      submenu_callback,
+      submenu_radio_callback,
       (ui_callback_data_t)plus4_model_submenu },
     { "Joyport settings",
       MENU_ENTRY_SUBMENU,
@@ -174,7 +164,7 @@ const ui_menu_entry_t plus4_hardware_menu[] = {
       submenu_callback,
       (ui_callback_data_t)rs232_nouser_menu },
 #endif
-    { "Userport devices",
+    { "Userport settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)userport_menu },
@@ -184,15 +174,15 @@ const ui_menu_entry_t plus4_hardware_menu[] = {
       (ui_callback_data_t)tapeport_devices_menu },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Memory"),
-    { "16kB",
+    { "16KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)16 },
-    { "32kB",
+    { "32KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)32 },
-    { "64kB",
+    { "64KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)64 },
@@ -201,19 +191,19 @@ const ui_menu_entry_t plus4_hardware_menu[] = {
       MENU_ENTRY_RESOURCE_RADIO,
       radio_MemoryHack_callback,
       (ui_callback_data_t)MEMORY_HACK_NONE},
-    { "256kB (CSORY)",
+    { "256KiB (CSORY)",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_MemoryHack_callback,
       (ui_callback_data_t)MEMORY_HACK_C256K},
-    { "256kB (HANNES)",
+    { "256KiB (HANNES)",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_MemoryHack_callback,
       (ui_callback_data_t)MEMORY_HACK_H256K },
-    { "1024kB (HANNES)",
+    { "1MiB (HANNES)",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_MemoryHack_callback,
       (ui_callback_data_t)MEMORY_HACK_H1024K },
-    { "4096kB (HANNES)",
+    { "4MiB (HANNES)",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_MemoryHack_callback,
       (ui_callback_data_t)MEMORY_HACK_H4096K },

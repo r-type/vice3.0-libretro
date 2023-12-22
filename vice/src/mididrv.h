@@ -44,11 +44,17 @@ extern void mididrv_out_close(void);
 
 /* MIDI device I/O */
 /* return: -1 if error, 1 if a byte was read to *b, 0 if no new bytes */
-extern int mididrv_in(BYTE *b);
-extern void mididrv_out(BYTE b);
+extern int mididrv_in(uint8_t *b);
+extern void mididrv_out(uint8_t b);
 
 extern int mididrv_resources_init(void);
 extern void mididrv_resources_shutdown(void);
 extern int mididrv_cmdline_options_init(void);
+
+#if defined(WINDOWS_COMPILE)
+/* get the list of MIDI devices */
+extern void mididrv_ui_reset_device_list(int device);
+extern char *mididrv_ui_get_next_device_name(int device, int *id);
+#endif
 
 #endif

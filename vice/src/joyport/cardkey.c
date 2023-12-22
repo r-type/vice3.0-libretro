@@ -32,7 +32,8 @@
 
 #include "joyport.h"
 #include "keyboard.h"
-#include "translate.h"
+
+#include "cardkey.h"
 
 /* Control port <--> Cardkey connections:
 
@@ -43,6 +44,11 @@
      3   | KEY2   |  I
      4   | KEY3   |  I
      5   | PRESS  |  I
+
+Works on:
+- native port(s) (x64/x64sc/scpu64/xvic)
+- sidcart joystick port (xplus4)
+
 
 The keypad has the following layout:
 
@@ -114,50 +120,51 @@ The PRESS (POT AY) line is used to indicate a key press.
 #define KEYPAD_KEY_ENTER ROW_COL(3,2)
 #define KEYPAD_KEY_PLUS  ROW_COL(3,3)
 
+#define KEYPAD_NUM_KEYS  16
+
 static int cardkey_enabled = 0;
 
-static unsigned int keys[16];
+static unsigned int keys[KEYPAD_NUM_KEYS];
 
 /* ------------------------------------------------------------------------- */
 
-#ifdef COMMON_KBD
 static void handle_keys(int row, int col, int pressed)
 {
+    /* sanity check of the rows and cols, rows should be 0-3 and cols should be 1-4 */
     if (row < 0 || row > 3 || col < 1 || col > 4) {
         return;
     }
 
+    /* change the state of the key that the row/col is wired to */
     keys[(row * 4) + col - 1] = (unsigned int)pressed;
 }
-#endif
 
 /* ------------------------------------------------------------------------- */
 
-static int joyport_cardkey_enable(int port, int value)
+static int joyport_cardkey_set_enabled(int port, int enabled)
 {
-    int val = value ? 1 : 0;
+    int new_state = enabled ? 1 : 0;
 
-    if (val == cardkey_enabled) {
+    if (new_state == cardkey_enabled) {
         return 0;
     }
 
-    if (val) {
-        memset(keys, 0, 16);
-#ifdef COMMON_KBD
+    if (new_state) {
+        /* enabled, clear keys and register the keypad */
+        memset(keys, 0, KEYPAD_NUM_KEYS * sizeof(unsigned int));
         keyboard_register_joy_keypad(handle_keys);
-#endif
     } else {
-#ifdef COMMON_KBD
+        /* disabled, unregister the keypad */
         keyboard_register_joy_keypad(NULL);
-#endif
     }
 
-    cardkey_enabled = val;
+    /* set the current state */
+    cardkey_enabled = new_state;
 
     return 0;
 }
 
-static BYTE cardkey_read_dig(int port)
+static uint8_t cardkey_read_dig(int port)
 {
     unsigned int retval = 0;
     unsigned int tmp;
@@ -171,7 +178,7 @@ static BYTE cardkey_read_dig(int port)
           keys[KEYPAD_KEY_5] |
           keys[KEYPAD_KEY_6] |
           keys[KEYPAD_KEY_7];
-    tmp <<= 3;
+    tmp <<= JOYPORT_RIGHT_BIT;   /* output key 3 on the joyport 'right' pin */
     retval |= tmp;
 
     /* KEY2 */
@@ -183,7 +190,7 @@ static BYTE cardkey_read_dig(int port)
           keys[KEYPAD_KEY_9] |
           keys[KEYPAD_KEY_PLUS] |
           keys[KEYPAD_KEY_MINUS];
-    tmp <<= 2;
+    tmp <<= JOYPORT_LEFT_BIT;   /* output key 2 on the joyport 'left' pin */
     retval |= tmp;
 
     /* KEY1 */
@@ -195,7 +202,7 @@ static BYTE cardkey_read_dig(int port)
           keys[KEYPAD_KEY_5] |
           keys[KEYPAD_KEY_DIV] |
           keys[KEYPAD_KEY_MULT];
-    tmp <<= 1;
+    tmp <<= JOYPORT_DOWN_BIT;   /* output key 1 on the joyport 'down' pin */
     retval |= tmp;
 
     /* KEY0 */
@@ -207,19 +214,20 @@ static BYTE cardkey_read_dig(int port)
           keys[KEYPAD_KEY_PLUS] |
           keys[KEYPAD_KEY_6] |
           keys[KEYPAD_KEY_DOT];
-    retval |= tmp;
+    retval |= tmp;   /* output key 0 on the joyport 'up' pin */
 
     retval |= 0xf0;
 
-    joyport_display_joyport(JOYPORT_ID_CARDCO_KEYPAD, (BYTE)~retval);
+    joyport_display_joyport(port, JOYPORT_ID_CARDCO_KEYPAD, (uint16_t)~retval);
 
-    return (BYTE)retval;
+    return (uint8_t)retval;
 }
 
-static BYTE cardkey_read_pot(void)
+static uint8_t cardkey_read_pot(int port)
 {
     int i;
 
+    /* if any of the keys is pressed return 0xff */
     for (i = 0; i < 16; ++i) {
         if (keys[i]) {
             return 0xff;
@@ -232,18 +240,23 @@ static BYTE cardkey_read_pot(void)
 /* ------------------------------------------------------------------------- */
 
 static joyport_t joyport_cardkey_device = {
-    "Cardco Cardkey 1 keypad",
-    IDGS_CARDKEY,
-    JOYPORT_RES_ID_KEYPAD,
-    JOYPORT_IS_NOT_LIGHTPEN,
-    JOYPORT_POT_REQUIRED,
-    joyport_cardkey_enable,
-    cardkey_read_dig,
-    NULL,				/* no digital store */
-    NULL,				/* no pot-x read */
-    cardkey_read_pot,
-    NULL,				/* no write snapshot */
-    NULL				/* no read snapshot */
+    "Keypad (Cardco Cardkey 1)", /* name of the device */
+    JOYPORT_RES_ID_KEYPAD,       /* device is a keypad, only 1 keypad can be active at the same time */
+    JOYPORT_IS_NOT_LIGHTPEN,     /* device is NOT a lightpen */
+    JOYPORT_POT_REQUIRED,        /* device uses the potentiometer lines */
+    JOYSTICK_ADAPTER_ID_NONE,    /* device is NOT a joystick adapter */
+    JOYPORT_DEVICE_KEYPAD,       /* device is a Keypad */
+    0,                           /* No output bits */
+    joyport_cardkey_set_enabled, /* device enable/disable function */
+    cardkey_read_dig,            /* digital line read function */
+    NULL,                        /* NO digital line store function */
+    NULL,                        /* NO pot-x read function */
+    cardkey_read_pot,            /* pot-y read function */
+    NULL,                        /* NO powerup function */
+    NULL,                        /* NO device write snapshot function */
+    NULL,                        /* NO device read snapshot function */
+    NULL,                        /* NO device hook function */
+    0                            /* NO device hook function mask */
 };
 
 /* ------------------------------------------------------------------------- */

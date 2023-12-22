@@ -31,7 +31,6 @@
 
 #include "interrupt.h"
 #include "6510core.h"
-#include "clkguard.h"
 #include "alarm.h"
 #include "main65816cpu.h"
 #include "mem.h"
@@ -41,6 +40,8 @@
 #include "viciitypes.h"
 #include "snapshot.h"
 #include "reu.h"
+
+#include "scpu64cpu.h"
 
 /* ------------------------------------------------------------------------- */
 
@@ -63,7 +64,7 @@
 /* ------------------------------------------------------------------------- */
 #define CYCLE_EXACT_ALARM
 
-BYTE scpu64_fastmode = 1;
+uint8_t scpu64_fastmode = 1;
 static CLOCK buffer_finish, buffer_finish_half;
 static CLOCK maincpu_diff, maincpu_accu;
 int scpu64_emulation_mode;
@@ -73,7 +74,7 @@ alarm_context_t *maincpu_alarm_context = NULL;
 int maincpu_ba_low_flags = 0;
 static CLOCK maincpu_ba_low_start = 0;
 
-int scpu64_get_half_cycle(void)
+CLOCK scpu64_get_half_cycle(void)
 {
     if (scpu64_fastmode) {
         return maincpu_accu / 1000000;
@@ -273,15 +274,15 @@ void scpu64_set_fastmode_nosync(int mode)
 }
 
 /* TODO: refresh */
-static DWORD simm_cell;
-static DWORD simm_row_mask = ~(2048 * 4 - 1);
+static uint32_t simm_cell;
+static uint32_t simm_row_mask = ~(2048 * 4 - 1);
 
 void scpu64_set_simm_row_size(int value)
 {
     simm_row_mask = ~((1 << value) - 1);
 }
 
-void scpu64_clock_read_stretch_simm(DWORD addr)
+void scpu64_clock_read_stretch_simm(uint32_t addr)
 {
     if (scpu64_fastmode) {
         if (!((simm_cell ^ addr) & ~3)) {
@@ -307,7 +308,7 @@ void scpu64_clock_read_stretch_simm(DWORD addr)
     }
 }
 
-void scpu64_clock_write_stretch_simm(DWORD addr)
+void scpu64_clock_write_stretch_simm(uint32_t addr)
 {
     if (scpu64_fastmode) {
         if ((simm_cell ^ addr) & simm_row_mask) {
@@ -320,7 +321,7 @@ void scpu64_clock_write_stretch_simm(DWORD addr)
             maincpu_accu -= 20000000;
             scpu64_maincpu_inc();
         }
-    } 
+    }
 }
 
 void scpu64_clock_read_ioram(void) /* scpu64 v1 $d200-$d3ff one extra 20 Mhz cycle */
@@ -330,56 +331,45 @@ void scpu64_clock_read_ioram(void) /* scpu64 v1 $d200-$d3ff one extra 20 Mhz cyc
     }
 }
 
-static void clk_overflow_callback(CLOCK sub, void *unused_data)
-{
-    if (buffer_finish > sub) {
-        buffer_finish -= sub;
-    } else {
-        buffer_finish = 0;
-    }
-}
-
-#define CPU_ADDITIONAL_INIT() clk_guard_add_callback(maincpu_clk_guard, clk_overflow_callback, NULL)
-
 /* SCPU64 needs external reg_pc */
 #define NEED_REG_PC
 
 #define STORE(addr, value) \
     do { \
-        DWORD tmpx1 = (addr); \
-        BYTE tmpx2 = (value); \
+        uint32_t tmpx1 = (addr); \
+        uint8_t tmpx2 = (value); \
         if (tmpx1 & ~0xffff) { \
             mem_store2(tmpx1, tmpx2); \
         } else { \
-            (*_mem_write_tab_ptr[tmpx1 >> 8])((WORD)tmpx1, tmpx2); \
+            (*_mem_write_tab_ptr[tmpx1 >> 8])((uint16_t)tmpx1, tmpx2); \
         } \
     } while (0)
 
 #define LOAD(addr) \
-    (((addr) & ~0xffff)?mem_read2(addr):(*_mem_read_tab_ptr[(addr) >> 8])((WORD)(addr)))
+    (((addr) & ~0xffff)?mem_read2(addr):(*_mem_read_tab_ptr[(addr) >> 8])((uint16_t)(addr)))
 
-#define STORE_LONG(addr, value) store_long((DWORD)(addr), (BYTE)(value))
+#define STORE_LONG(addr, value) store_long((uint32_t)(addr), (uint8_t)(value))
 
-static inline void store_long(DWORD addr, BYTE value)
+static inline void store_long(uint32_t addr, uint8_t value)
 {
     if (addr & ~0xffff) {
         mem_store2(addr, value);
     } else {
-        (*_mem_write_tab_ptr[addr >> 8])((WORD)addr, value);
+        (*_mem_write_tab_ptr[addr >> 8])((uint16_t)addr, value);
     }
     scpu64_clock_inc(1);
 }
 
 #define LOAD_LONG(addr) load_long(addr)
 
-static inline BYTE load_long(DWORD addr)
+static inline uint8_t load_long(uint32_t addr)
 {
-    BYTE tmp;
+    uint8_t tmp;
 
     if ((addr) & ~0xffff) {
         tmp = mem_read2(addr);
     } else {
-        tmp = (*_mem_read_tab_ptr[(addr) >> 8])((WORD)addr);
+        tmp = (*_mem_read_tab_ptr[(addr) >> 8])((uint16_t)addr);
     }
     scpu64_clock_inc(0);
     return tmp;
@@ -388,29 +378,29 @@ static inline BYTE load_long(DWORD addr)
 int scpu64_snapshot_write_cpu_state(snapshot_module_t *m)
 {
     return SMW_B(m, scpu64_fastmode) < 0
-        || SMW_DW(m, buffer_finish) < 0
-        || SMW_DW(m, buffer_finish_half) < 0
-        || SMW_DW(m, maincpu_accu) < 0
+        || SMW_CLOCK(m, buffer_finish) < 0
+        || SMW_CLOCK(m, buffer_finish_half) < 0
+        || SMW_CLOCK(m, maincpu_accu) < 0
         || SMW_DW(m, maincpu_ba_low_flags) < 0
-        || SMW_DW(m, maincpu_ba_low_start) < 0;
+        || SMW_CLOCK(m, maincpu_ba_low_start) < 0;
 }
 
 /* XXX: Assumes `CLOCK' is the same size as a `DWORD'.  */
 int scpu64_snapshot_read_cpu_state(snapshot_module_t *m)
 {
     return SMR_B(m, &scpu64_fastmode) < 0
-        || SMR_DW(m, &buffer_finish) < 0
-        || SMR_DW(m, &buffer_finish_half) < 0
-        || SMR_DW(m, &maincpu_accu) < 0
+        || SMR_CLOCK(m, &buffer_finish) < 0
+        || SMR_CLOCK(m, &buffer_finish_half) < 0
+        || SMR_CLOCK(m, &maincpu_accu) < 0
         || SMR_DW_INT(m, &maincpu_ba_low_flags) < 0
-        || SMR_DW(m, &maincpu_ba_low_start) < 0;
+        || SMR_CLOCK(m, &maincpu_ba_low_start) < 0;
 }
 
 #define EMULATION_MODE_CHANGED scpu64_emulation_mode = reg_emul
 
 #define CLK_INC(clock) scpu64_clock_inc(0)
 
-#define CPU_ADDITIONAL_RESET() (buffer_finish = maincpu_clk, buffer_finish_half = 0, maincpu_accu = 0, maincpu_diff = machine_get_cycles_per_second())
+#define CPU_ADDITIONAL_RESET() (buffer_finish = maincpu_clk, buffer_finish_half = 0, maincpu_accu = 0, maincpu_diff = (CLOCK)machine_get_cycles_per_second())
 
 #define FETCH_PARAM(addr) ((((int)(addr)) < bank_limit) ? (check_ba(), scpu64_clock_inc(0), bank_base[addr]) : LOAD_PBR(addr))
 #define FETCH_PARAM_DUMMY(addr) scpu64_clock_inc(0)

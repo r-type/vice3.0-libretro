@@ -32,25 +32,38 @@
 
 #include "archdep.h"
 #include "cmdline.h"
+#include "coproc.h"
 #include "lib.h"
 #include "log.h"
 #include "machine.h"
 #include "output-select.h"
-#include "output-text.h"
 #include "output.h"
 #include "resources.h"
-#include "translate.h"
 #include "types.h"
 #include "util.h"
 
-/* TODO: configure check that matches what arch/unix/coproc.c does... */
+#include "output-text.h"
+
+/* XXX: coproc.c now does the proper includes, and on systems where fork_coproc()
+ *      doesn't work an error is logged and -1 returned.
+ */
+#if 0
+/* TODO: configure check that matches what arch/shared/coproc.c does... */
 #if defined(HAVE_FORK)
-#  if !defined(MINIX_SUPPORT) && !defined(OPENSTEP_COMPILE) && !defined(RHAPSODY_COMPILE) && !defined(NEXTSTEP_COMPILE) && !defined(BEOS_COMPILE) && !defined(__MSDOS__) && !defined(__ANDROID__)
-#    include <unistd.h>
-#    define COPROC_SUPPORT        1
-#    include "coproc.h"
+# if !defined(BEOS_COMPILE)
+#   define COPROC_SUPPORT
 # endif
+#elif defined(WINDOWS_COMPILE)
+# include <windows.h>
+# define COPROC_SUPPORT
 #endif
+
+#ifdef COPROC_SUPPORT
+# include <unistd.h>
+# include "coproc.h"
+#endif
+#endif
+
 
 static char *PrinterDev[NUM_OUTPUT_SELECT] = { NULL, NULL, NULL };
 static int printer_device[NUM_OUTPUT_SELECT];
@@ -103,46 +116,32 @@ static const resource_int_t resources_int_userport[] = {
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-prtxtdev1", SET_RESOURCE, 1,
+    { "-prtxtdev1", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterTextDevice1", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_TEXT_DEVICE_DUMP_NAME,
-      NULL, NULL },
-    { "-prtxtdev2", SET_RESOURCE, 1,
+      "<Name>", "Specify name of printer text device or dump file" },
+    { "-prtxtdev2", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterTextDevice2", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_TEXT_DEVICE_DUMP_NAME,
-      NULL, NULL },
-    { "-prtxtdev3", SET_RESOURCE, 1,
+      "<Name>", "Specify name of printer text device or dump file" },
+    { "-prtxtdev3", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterTextDevice3", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_NAME, IDCLS_SPECIFY_TEXT_DEVICE_DUMP_NAME,
-      NULL, NULL },
-    { "-pr4txtdev", SET_RESOURCE, 1,
+      "<Name>", "Specify name of printer text device or dump file" },
+    { "-pr4txtdev", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer4TextDevice", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SPECIFY_TEXT_DEVICE_4,
-      "<0-2>", NULL },
-    { "-pr5txtdev", SET_RESOURCE, 1,
+      "<0-2>", "Specify printer text output device for printer #4" },
+    { "-pr5txtdev", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer5TextDevice", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SPECIFY_TEXT_DEVICE_5,
-      "<0-2>", NULL },
-    { "-pr6txtdev", SET_RESOURCE, 1,
+      "<0-2>", "Specify printer text output device for printer #5" },
+    { "-pr6txtdev", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "Printer6TextDevice", NULL,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SPECIFY_TEXT_DEVICE_6,
-      "<0-2>", NULL },
+      "<0-2>", "Specify printer text output device for printer #6" },
     CMDLINE_LIST_END
 };
 
 static const cmdline_option_t cmdline_options_userport[] =
 {
-    { "-prusertxtdev", SET_RESOURCE, 1,
+    { "-prusertxtdev", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "PrinterUserportTextDevice", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_SPECIFY_TEXT_USERPORT,
-      "<0-2>", NULL },
+      "<0-2>", "Specify printer text output device for userport printer" },
     CMDLINE_LIST_END
 };
 
@@ -162,24 +161,36 @@ int output_text_init_cmdline_options(void)
 
 /*
  * TODO: only do this on systems which support it.
+ *
+ * 2022-04-03:  On systems where this isn't supported fork_coproc() logs an error
+ *              and returns -1. --compyx
  */
-FILE *fopen_or_pipe(char *name)
+static FILE *fopen_or_pipe(char *name)
 {
     if (name[0] == '|') {
-#if COPROC_SUPPORT
         int fd_rd, fd_wr;
         if (fork_coproc(&fd_wr, &fd_rd, name + 1) < 0) {
-            /* error */
+            log_error(LOG_DEFAULT, "fopen_or_pipe(): Cannot fork process '%s'.", name + 1);
             return NULL;
         }
-        close(fd_rd);   /* We only want to write to the process */
-        return fdopen(fd_wr, MODE_WRITE);
-#else
-        log_error(LOG_DEFAULT, "Cannot fork process.");
-        return NULL;
-#endif
+        archdep_close(fd_rd);   /* We only want to write to the process */
+        return archdep_fdopen(fd_wr, MODE_WRITE);
     } else {
+#ifdef __LIBRETRO__
+        const char *path = util_concat(SAVEDIR, ARCHDEP_DIR_SEP_STR, name, NULL);
+
+        /* For some mythical reason MODE_APPEND does not create a new file,
+         * therefore check first and create a new one by force */
+        FILE *fd = fopen(path, MODE_READ);
+        if (fd == NULL)
+        {
+            fd = fopen(path, MODE_WRITE);
+            fclose(fd);
+        }
+        return fopen(path, MODE_APPEND);
+#else
         return fopen(name, MODE_APPEND);
+#endif
     }
 }
 
@@ -218,7 +229,7 @@ static void output_text_close(unsigned int prnr)
     output_fd[printer_device[prnr]] = NULL;
 }
 
-static int output_text_putc(unsigned int prnr, BYTE b)
+static int output_text_putc(unsigned int prnr, uint8_t b)
 {
     if (output_fd[printer_device[prnr]] == NULL) {
         return -1;
@@ -228,12 +239,12 @@ static int output_text_putc(unsigned int prnr, BYTE b)
     return 0;
 }
 
-static int output_text_getc(unsigned int prnr, BYTE *b)
+static int output_text_getc(unsigned int prnr, uint8_t *b)
 {
     if (output_fd[printer_device[prnr]] == NULL) {
         return -1;
     }
-    *b = fgetc(output_fd[printer_device[prnr]]);
+    *b = (uint8_t)fgetc(output_fd[printer_device[prnr]]);
     return 0;
 }
 
@@ -245,6 +256,11 @@ static int output_text_flush(unsigned int prnr)
 
     fflush(output_fd[printer_device[prnr]]);
     return 0;
+}
+
+static int output_text_formfeed(unsigned int prnr)
+{
+    return output_text_flush(prnr);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -259,6 +275,7 @@ int output_text_init_resources(void)
     output_select.output_putc = output_text_putc;
     output_select.output_getc = output_text_getc;
     output_select.output_flush = output_text_flush;
+    output_select.output_formfeed = output_text_formfeed;
 
     output_select_register(&output_select);
 

@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "cartridge.h"
 #include "cartio.h"
 #include "datasette.h"
 #include "digiblaster.h"
@@ -39,9 +40,12 @@
 #include "mem.h"
 #include "monitor.h"
 #include "plus4iec.h"
+#include "plus4cart.h"
 #include "plus4mem.h"
+#include "plus4memrom.h"
 #include "plus4memcsory256k.h"
 #include "plus4memhannes256k.h"
+#include "plus4memhacks.h"
 #include "plus4memlimit.h"
 #include "plus4memrom.h"
 #include "plus4pio1.h"
@@ -62,31 +66,20 @@ static int hard_reset_flag = 1;
 #define NUM_CONFIGS     32
 
 /* The Plus4 memory.  */
-BYTE mem_ram[PLUS4_RAM_SIZE];
-
-#ifdef USE_EMBEDDED
-#include "plus43plus1lo.h"
-#include "plus43plus1hi.h"
-#else
-BYTE extromlo1[PLUS4_BASIC_ROM_SIZE];
-BYTE extromhi1[PLUS4_KERNAL_ROM_SIZE];
-#endif
-
-BYTE extromlo2[PLUS4_BASIC_ROM_SIZE];
-BYTE extromlo3[PLUS4_BASIC_ROM_SIZE];
-BYTE extromhi2[PLUS4_KERNAL_ROM_SIZE];
-BYTE extromhi3[PLUS4_KERNAL_ROM_SIZE];
+uint8_t mem_ram[PLUS4_RAM_SIZE];
 
 /* Pointers to the currently used memory read and write tables.  */
 read_func_ptr_t *_mem_read_tab_ptr;
 store_func_ptr_t *_mem_write_tab_ptr;
-static BYTE **_mem_read_base_tab_ptr;
+read_func_ptr_t *_mem_read_tab_ptr_dummy;
+store_func_ptr_t *_mem_write_tab_ptr_dummy;
+static uint8_t **_mem_read_base_tab_ptr;
 static int *mem_read_limit_tab_ptr;
 
 /* Memory read and write tables.  */
 static store_func_ptr_t mem_write_tab[NUM_CONFIGS][0x101];
 static read_func_ptr_t mem_read_tab[NUM_CONFIGS][0x101];
-static BYTE *mem_read_base_tab[NUM_CONFIGS][0x101];
+static uint8_t *mem_read_base_tab[NUM_CONFIGS][0x101];
 static int mem_read_limit_tab[NUM_CONFIGS][0x101];
 
 static store_func_ptr_t mem_write_tab_watch[0x101];
@@ -105,7 +98,7 @@ unsigned int mem_config;
 #define RAM8 mem_ram + 0x8000
 #define RAMC mem_ram + 0xc000
 
-static BYTE *chargen_tab[8][16] = {
+static uint8_t *chargen_tab[8][16] = {
     /* 0000-3fff, RAM selected  */
     {       RAM0, RAM0, RAM0, RAM0,
             RAM0, RAM0, RAM0, RAM0,
@@ -138,6 +131,8 @@ static BYTE *chargen_tab[8][16] = {
             RAM4, RAM4, RAM4, RAM4,
             RAM4, RAM4, RAM4, RAM4 },
     /* 8000-bfff, ROM selected  */
+    /* FIXME: we cant directly point to cartridge ROM here, we need a better
+              (indirect) way to do this */
     {  plus4memrom_basic_rom, extromlo1, extromlo2, extromlo3,
        plus4memrom_basic_rom, extromlo1, extromlo2, extromlo3,
        plus4memrom_basic_rom, extromlo1, extromlo2, extromlo3,
@@ -151,7 +146,7 @@ static BYTE *chargen_tab[8][16] = {
 };
 
 
-BYTE *mem_get_tedmem_base(unsigned int segment)
+uint8_t *mem_get_tedmem_base(unsigned int segment)
 {
     return chargen_tab[segment][mem_config >> 1];
 }
@@ -159,19 +154,23 @@ BYTE *mem_get_tedmem_base(unsigned int segment)
 /* ------------------------------------------------------------------------- */
 
 /* Tape motor status.  */
-static BYTE old_port_data_out = 0xff;
+static uint8_t old_port_data_out = 0xff;
 
 /* Tape write line status.  */
-static BYTE old_port_write_bit = 0xff;
+static uint8_t old_port_write_bit = 0xff;
 
 /* Tape read input.  */
-static BYTE tape_read = 0xff;
+static uint8_t tape_read = 0xff;
 
-static BYTE tape_write_in = 0xff;
-static BYTE tape_motor_in = 0xff;
+static uint8_t tape_write_in = 0xff;
+static uint8_t tape_motor_in = 0xff;
 
-/* Current watchpoint state. 1 = watchpoints active, 0 = no watchpoints */
-static int watchpoints_active;
+/* Current watchpoint state.
+          0 = no watchpoints
+    bit0; 1 = watchpoints active
+    bit1; 2 = watchpoints trigger on dummy accesses
+*/
+static int watchpoints_active = 0;
 
 inline static void mem_proc_port_store(void)
 {
@@ -183,21 +182,21 @@ inline static void mem_proc_port_store(void)
 
     if (((~pport.dir | pport.data) & 0x02) != old_port_write_bit) {
         old_port_write_bit = (~pport.dir | pport.data) & 0x02;
-        tapeport_toggle_write_bit((~pport.dir | ~pport.data) & 0x02);
+        tapeport_toggle_write_bit(TAPEPORT_PORT_1, (~pport.dir | ~pport.data) & 0x02);
     }
 
-    (*iecbus_callback_write)((BYTE)~pport.data_out, last_write_cycle);
+    (*iecbus_callback_write)((uint8_t)~pport.data_out, last_write_cycle);
 
     if (((pport.dir & pport.data) & 0x08) != old_port_data_out) {
         old_port_data_out = (pport.dir & pport.data) & 0x08;
-        tapeport_set_motor(!old_port_data_out);
+        tapeport_set_motor(TAPEPORT_PORT_1, !old_port_data_out);
     }
 }
 
-inline static BYTE mem_proc_port_read(WORD addr)
+inline static uint8_t mem_proc_port_read(uint16_t addr)
 {
-    BYTE tmp;
-    BYTE input;
+    uint8_t tmp;
+    uint8_t input;
 
     /*  Correct clock */
     ted_handle_pending_alarms(0);
@@ -248,11 +247,11 @@ void mem_proc_port_set_motor_in(int val)
 
 /* ------------------------------------------------------------------------- */
 
-BYTE zero_read(WORD addr)
+uint8_t zero_read(uint16_t addr)
 {
     addr &= 0xff;
 
-    switch ((BYTE)addr) {
+    switch ((uint8_t)addr) {
         case 0:
         case 1:
             return mem_proc_port_read(addr);
@@ -264,11 +263,11 @@ BYTE zero_read(WORD addr)
     }
 }
 
-void zero_store(WORD addr, BYTE value)
+void zero_store(uint16_t addr, uint8_t value)
 {
     addr &= 0xff;
 
-    switch ((BYTE)addr) {
+    switch ((uint8_t)addr) {
         case 0:
             if (pport.dir != value) {
                 pport.dir = value & 0xdf;
@@ -298,17 +297,34 @@ void zero_store(WORD addr, BYTE value)
 
 /* ------------------------------------------------------------------------- */
 
+/* called by mem_config_set(), mem_toggle_watchpoints() */
+static void mem_update_tab_ptrs(int flag)
+{
+    if (flag) {
+        _mem_read_tab_ptr = mem_read_tab_watch;
+        _mem_write_tab_ptr = mem_write_tab_watch;
+        if (flag > 1) {
+            /* enable watchpoints on dummy accesses */
+            _mem_read_tab_ptr_dummy = mem_read_tab_watch;
+            _mem_write_tab_ptr_dummy = mem_write_tab_watch;
+        } else {
+            _mem_read_tab_ptr_dummy = mem_read_tab[mem_config];
+            _mem_write_tab_ptr_dummy = mem_write_tab[mem_config];
+        }
+    } else {
+        /* all watchpoints disabled */
+        _mem_read_tab_ptr = mem_read_tab[mem_config];
+        _mem_write_tab_ptr = mem_write_tab[mem_config];
+        _mem_read_tab_ptr_dummy = mem_read_tab[mem_config];
+        _mem_write_tab_ptr_dummy = mem_write_tab[mem_config];
+    }
+}
+
 static void mem_config_set(unsigned int config)
 {
     mem_config = config;
 
-    if (watchpoints_active) {
-        _mem_read_tab_ptr = mem_read_tab_watch;
-        _mem_write_tab_ptr = mem_write_tab_watch;
-    } else {
-        _mem_read_tab_ptr = mem_read_tab[mem_config];
-        _mem_write_tab_ptr = mem_write_tab[mem_config];
-    }
+    mem_update_tab_ptrs(watchpoints_active);
 
     _mem_read_base_tab_ptr = mem_read_base_tab[mem_config];
     mem_read_limit_tab_ptr = mem_read_limit_tab[mem_config];
@@ -328,28 +344,28 @@ void mem_config_rom_set(unsigned int config)
 
 /* ------------------------------------------------------------------------- */
 
-static BYTE zero_read_watch(WORD addr)
+static uint8_t zero_read_watch(uint16_t addr)
 {
     addr &= 0xff;
     monitor_watch_push_load_addr(addr, e_comp_space);
     return mem_read_tab[mem_config][0](addr);
 }
 
-static void zero_store_watch(WORD addr, BYTE value)
+static void zero_store_watch(uint16_t addr, uint8_t value)
 {
     addr &= 0xff;
     monitor_watch_push_store_addr(addr, e_comp_space);
     mem_write_tab[mem_config][0](addr, value);
 }
 
-static BYTE read_watch(WORD addr)
+static uint8_t read_watch(uint16_t addr)
 {
     monitor_watch_push_load_addr(addr, e_comp_space);
     return mem_read_tab[mem_config][addr >> 8](addr);
 }
 
 
-static void store_watch(WORD addr, BYTE value)
+static void store_watch(uint16_t addr, uint8_t value)
 {
     monitor_watch_push_store_addr(addr, e_comp_space);
     mem_write_tab[mem_config][addr >> 8](addr, value);
@@ -357,44 +373,38 @@ static void store_watch(WORD addr, BYTE value)
 
 void mem_toggle_watchpoints(int flag, void *context)
 {
-    if (flag) {
-        _mem_read_tab_ptr = mem_read_tab_watch;
-        _mem_write_tab_ptr = mem_write_tab_watch;
-    } else {
-        _mem_read_tab_ptr = mem_read_tab[mem_config];
-        _mem_write_tab_ptr = mem_write_tab[mem_config];
-    }
+    mem_update_tab_ptrs(flag);
     watchpoints_active = flag;
 }
 
 /* ------------------------------------------------------------------------- */
 
-static BYTE ram_read(WORD addr)
+static uint8_t ram_read(uint16_t addr)
 {
     return mem_ram[addr];
 }
 
-static BYTE ram_read_32k(WORD addr)
+static uint8_t ram_read_32k(uint16_t addr)
 {
     return mem_ram[addr & 0x7fff];
 }
 
-static BYTE ram_read_16k(WORD addr)
+static uint8_t ram_read_16k(uint16_t addr)
 {
     return mem_ram[addr & 0x3fff];
 }
 
-static void ram_store(WORD addr, BYTE value)
+static void ram_store(uint16_t addr, uint8_t value)
 {
     mem_ram[addr] = value;
 }
 
-static void ram_store_32k(WORD addr, BYTE value)
+static void ram_store_32k(uint16_t addr, uint8_t value)
 {
     mem_ram[addr & 0x7fff] = value;
 }
 
-static void ram_store_16k(WORD addr, BYTE value)
+static void ram_store_16k(uint16_t addr, uint8_t value)
 {
     mem_ram[addr & 0x3fff] = value;
 }
@@ -403,12 +413,12 @@ static void ram_store_16k(WORD addr, BYTE value)
 
 /* Generic memory access.  */
 
-void mem_store(WORD addr, BYTE value)
+void mem_store(uint16_t addr, uint8_t value)
 {
     _mem_write_tab_ptr[addr >> 8](addr, value);
 }
 
-BYTE mem_read(WORD addr)
+uint8_t mem_read(uint16_t addr)
 {
     return _mem_read_tab_ptr[addr >> 8](addr);
 }
@@ -424,7 +434,7 @@ BYTE mem_read(WORD addr)
     underlying RAM either. You can prove this quite easily on a stock 16k
     machine, where the memory is mirrored 4x across the entire address space."
 */
-static BYTE h256k_ram_ffxx_read(WORD addr)
+static uint8_t h256k_ram_ffxx_read(uint16_t addr)
 {
     if ((addr >= 0xff20) && (addr != 0xff3e) && (addr != 0xff3f)) {
         return h256k_read(addr);
@@ -433,7 +443,7 @@ static BYTE h256k_ram_ffxx_read(WORD addr)
     return ted_read(addr);
 }
 
-static BYTE cs256k_ram_ffxx_read(WORD addr)
+static uint8_t cs256k_ram_ffxx_read(uint16_t addr)
 {
     if ((addr >= 0xff20) && (addr != 0xff3e) && (addr != 0xff3f)) {
         return cs256k_read(addr);
@@ -442,7 +452,7 @@ static BYTE cs256k_ram_ffxx_read(WORD addr)
     return ted_read(addr);
 }
 
-static BYTE ram_ffxx_read(WORD addr)
+static uint8_t ram_ffxx_read(uint16_t addr)
 {
     if ((addr >= 0xff20) && (addr != 0xff3e) && (addr != 0xff3f)) {
         return ram_read(addr);
@@ -451,7 +461,7 @@ static BYTE ram_ffxx_read(WORD addr)
     return ted_read(addr);
 }
 
-static BYTE ram_ffxx_read_32k(WORD addr)
+static uint8_t ram_ffxx_read_32k(uint16_t addr)
 {
     if ((addr >= 0xff20) && (addr != 0xff3e) && (addr != 0xff3f)) {
         return ram_read_32k(addr);
@@ -460,7 +470,7 @@ static BYTE ram_ffxx_read_32k(WORD addr)
     return ted_read(addr);
 }
 
-static BYTE ram_ffxx_read_16k(WORD addr)
+static uint8_t ram_ffxx_read_16k(uint16_t addr)
 {
     if ((addr >= 0xff20) && (addr != 0xff3e) && (addr != 0xff3f)) {
         return ram_read_16k(addr);
@@ -470,7 +480,7 @@ static BYTE ram_ffxx_read_16k(WORD addr)
 }
 
 
-static void h256k_ram_ffxx_store(WORD addr, BYTE value)
+static void h256k_ram_ffxx_store(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -479,7 +489,7 @@ static void h256k_ram_ffxx_store(WORD addr, BYTE value)
     }
 }
 
-static void cs256k_ram_ffxx_store(WORD addr, BYTE value)
+static void cs256k_ram_ffxx_store(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -488,7 +498,7 @@ static void cs256k_ram_ffxx_store(WORD addr, BYTE value)
     }
 }
 
-static void ram_ffxx_store(WORD addr, BYTE value)
+static void ram_ffxx_store(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -497,7 +507,7 @@ static void ram_ffxx_store(WORD addr, BYTE value)
     }
 }
 
-static void ram_ffxx_store_32k(WORD addr, BYTE value)
+static void ram_ffxx_store_32k(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -506,7 +516,7 @@ static void ram_ffxx_store_32k(WORD addr, BYTE value)
     }
 }
 
-static void ram_ffxx_store_16k(WORD addr, BYTE value)
+static void ram_ffxx_store_16k(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -519,7 +529,7 @@ static void ram_ffxx_store_16k(WORD addr, BYTE value)
     and ff3f returns the contents of the underlying ROM, exactly as is does with
     ff20 - ff3d.
 */
-static BYTE rom_ffxx_read(WORD addr)
+static uint8_t rom_ffxx_read(uint16_t addr)
 {
     if (addr >= 0xff20) {
         return plus4memrom_rom_read(addr);
@@ -528,7 +538,7 @@ static BYTE rom_ffxx_read(WORD addr)
     return ted_read(addr);
 }
 
-static void rom_ffxx_store(WORD addr, BYTE value)
+static void rom_ffxx_store(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -537,7 +547,7 @@ static void rom_ffxx_store(WORD addr, BYTE value)
     }
 }
 
-static void h256k_rom_ffxx_store(WORD addr, BYTE value)
+static void h256k_rom_ffxx_store(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -546,7 +556,7 @@ static void h256k_rom_ffxx_store(WORD addr, BYTE value)
     }
 }
 
-static void cs256k_rom_ffxx_store(WORD addr, BYTE value)
+static void cs256k_rom_ffxx_store(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -555,7 +565,7 @@ static void cs256k_rom_ffxx_store(WORD addr, BYTE value)
     }
 }
 
-static void rom_ffxx_store_32k(WORD addr, BYTE value)
+static void rom_ffxx_store_32k(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -564,7 +574,7 @@ static void rom_ffxx_store_32k(WORD addr, BYTE value)
     }
 }
 
-static void rom_ffxx_store_16k(WORD addr, BYTE value)
+static void rom_ffxx_store_16k(uint16_t addr, uint8_t value)
 {
     if (addr < 0xff20 || addr == 0xff3e || addr == 0xff3f) {
         ted_store(addr, value);
@@ -575,12 +585,12 @@ static void rom_ffxx_store_16k(WORD addr, BYTE value)
 
 /* FIXME: this always returns 0x00, but it should return the
           last data floating on the bus. (cpu/ted/dma) */
-BYTE read_unused(WORD addr)
+uint8_t read_unused(uint16_t addr)
 {
     return 0;
 }
 
-static void mem_config_rom_set_store(WORD addr, BYTE value)
+static void mem_config_rom_set_store(uint16_t addr, uint8_t value)
 {
     mem_config_rom_set((addr & 0xf) << 1);
 }
@@ -712,32 +722,36 @@ void mem_initialize_memory(void)
         mem_read_base_tab[1][i] = plus4memrom_basic_rom + ((i & 0x3f) << 8);
         mem_read_tab[3][i] = plus4memrom_extromlo1_read;
         mem_read_base_tab[3][i] = extromlo1 + ((i & 0x3f) << 8);
-        mem_read_tab[5][i] = plus4memrom_extromlo2_read;
-        mem_read_base_tab[5][i] = extromlo2 + ((i & 0x3f) << 8);
+        mem_read_tab[5][i] = plus4cart_c1lo_read;
+        /*mem_read_base_tab[5][i] = extromlo2 + ((i & 0x3f) << 8);*/
+        mem_read_base_tab[5][i] = NULL;
         mem_read_tab[7][i] = plus4memrom_extromlo3_read;
         mem_read_base_tab[7][i] = extromlo3 + ((i & 0x3f) << 8);
         mem_read_tab[9][i] = plus4memrom_basic_read;
         mem_read_base_tab[9][i] = plus4memrom_basic_rom + ((i & 0x3f) << 8);
         mem_read_tab[11][i] = plus4memrom_extromlo1_read;
         mem_read_base_tab[11][i] = extromlo1 + ((i & 0x3f) << 8);
-        mem_read_tab[13][i] = plus4memrom_extromlo2_read;
-        mem_read_base_tab[13][i] = extromlo2 + ((i & 0x3f) << 8);
+        mem_read_tab[13][i] = plus4cart_c1lo_read;
+        /*mem_read_base_tab[13][i] = extromlo2 + ((i & 0x3f) << 8);*/
+        mem_read_base_tab[13][i] = NULL;
         mem_read_tab[15][i] = plus4memrom_extromlo3_read;
         mem_read_base_tab[15][i] = extromlo3 + ((i & 0x3f) << 8);
         mem_read_tab[17][i] = plus4memrom_basic_read;
         mem_read_base_tab[17][i] = plus4memrom_basic_rom + ((i & 0x3f) << 8);
         mem_read_tab[19][i] = plus4memrom_extromlo1_read;
         mem_read_base_tab[19][i] = extromlo1 + ((i & 0x3f) << 8);
-        mem_read_tab[21][i] = plus4memrom_extromlo2_read;
-        mem_read_base_tab[21][i] = extromlo2 + ((i & 0x3f) << 8);
+        mem_read_tab[21][i] = plus4cart_c1lo_read;
+        /*mem_read_base_tab[21][i] = extromlo2 + ((i & 0x3f) << 8);*/
+        mem_read_base_tab[21][i] = NULL;
         mem_read_tab[23][i] = plus4memrom_extromlo3_read;
         mem_read_base_tab[23][i] = extromlo3 + ((i & 0x3f) << 8);
         mem_read_tab[25][i] = plus4memrom_basic_read;
         mem_read_base_tab[25][i] = plus4memrom_basic_rom + ((i & 0x3f) << 8);
         mem_read_tab[27][i] = plus4memrom_extromlo1_read;
         mem_read_base_tab[27][i] = extromlo1 + ((i & 0x3f) << 8);
-        mem_read_tab[29][i] = plus4memrom_extromlo2_read;
-        mem_read_base_tab[29][i] = extromlo2 + ((i & 0x3f) << 8);
+        mem_read_tab[29][i] = plus4cart_c1lo_read;
+        /*mem_read_base_tab[29][i] = extromlo2 + ((i & 0x3f) << 8);*/
+        mem_read_base_tab[29][i] = NULL;
         mem_read_tab[31][i] = plus4memrom_extromlo3_read;
         mem_read_base_tab[31][i] = extromlo3 + ((i & 0x3f) << 8);
     }
@@ -764,14 +778,18 @@ void mem_initialize_memory(void)
         mem_read_base_tab[13][i] = extromhi1 + ((i & 0x3f) << 8);
         mem_read_tab[15][i] = plus4memrom_extromhi1_read;
         mem_read_base_tab[15][i] = extromhi1 + ((i & 0x3f) << 8);
-        mem_read_tab[17][i] = plus4memrom_extromhi2_read;
-        mem_read_base_tab[17][i] = extromhi2 + ((i & 0x3f) << 8);
-        mem_read_tab[19][i] = plus4memrom_extromhi2_read;
-        mem_read_base_tab[19][i] = extromhi2 + ((i & 0x3f) << 8);
-        mem_read_tab[21][i] = plus4memrom_extromhi2_read;
-        mem_read_base_tab[21][i] = extromhi2 + ((i & 0x3f) << 8);
-        mem_read_tab[23][i] = plus4memrom_extromhi2_read;
-        mem_read_base_tab[23][i] = extromhi2 + ((i & 0x3f) << 8);
+        mem_read_tab[17][i] = plus4cart_c1hi_read;
+        /*mem_read_base_tab[17][i] = extromhi2 + ((i & 0x3f) << 8);*/
+        mem_read_base_tab[17][i] = NULL;
+        mem_read_tab[19][i] = plus4cart_c1hi_read;
+        /*mem_read_base_tab[19][i] = extromhi2 + ((i & 0x3f) << 8);*/
+        mem_read_base_tab[19][i] = NULL;
+        mem_read_tab[21][i] = plus4cart_c1hi_read;
+        /*mem_read_base_tab[21][i] = extromhi2 + ((i & 0x3f) << 8);*/
+        mem_read_base_tab[21][i] = NULL;
+        mem_read_tab[23][i] = plus4cart_c1hi_read;
+        /*mem_read_base_tab[23][i] = extromhi2 + ((i & 0x3f) << 8);*/
+        mem_read_base_tab[23][i] = NULL;
         mem_read_tab[25][i] = plus4memrom_extromhi3_read;
         mem_read_base_tab[25][i] = extromhi3 + ((i & 0x3f) << 8);
         mem_read_tab[27][i] = plus4memrom_extromhi3_read;
@@ -863,13 +881,17 @@ void mem_initialize_memory(void)
     mem_read_limit_tab_ptr = mem_read_limit_tab[mem_config];
 }
 
-void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void mem_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
-    BYTE *p = _mem_read_base_tab_ptr[addr >> 8];
+    uint8_t *p = _mem_read_base_tab_ptr[addr >> 8];
 
-    *base = (p == NULL) ? NULL : (p - (addr & 0xff00));
-    *start = addr; /* TODO */
-    *limit = mem_read_limit_tab_ptr[addr >> 8];
+    if (p != NULL && addr > 1) {
+        *base = (p - (addr & 0xff00));
+        *start = addr; /* TODO */
+        *limit = mem_read_limit_tab_ptr[addr >> 8];
+    } else {
+        cartridge_mmu_translate(addr, base, start, limit);
+    }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -886,7 +908,7 @@ void mem_powerup(void)
 
 /* FIXME: this part needs to be checked.  */
 
-void mem_get_basic_text(WORD *start, WORD *end)
+void mem_get_basic_text(uint16_t *start, uint16_t *end)
 {
     if (start != NULL) {
         *start = mem_ram[0x2b] | (mem_ram[0x2c] << 8);
@@ -896,7 +918,7 @@ void mem_get_basic_text(WORD *start, WORD *end)
     }
 }
 
-void mem_set_basic_text(WORD start, WORD end)
+void mem_set_basic_text(uint16_t start, uint16_t end)
 {
     mem_ram[0x2b] = mem_ram[0xac] = start & 0xff;
     mem_ram[0x2c] = mem_ram[0xad] = start >> 8;
@@ -904,17 +926,41 @@ void mem_set_basic_text(WORD start, WORD end)
     mem_ram[0x2e] = mem_ram[0x30] = mem_ram[0x32] = mem_ram[0xaf] = end >> 8;
 }
 
-void mem_inject(DWORD addr, BYTE value)
+/* this function should always read from the screen currently used by the kernal
+   for output, normally this does just return system ram - except when the
+   videoram is not memory mapped.
+   used by autostart to "read" the kernal messages
+*/
+uint8_t mem_read_screen(uint16_t addr)
 {
-    /* just call mem_store() to be safe.
-       This could possibly be changed to write straight into the
-       memory array.  mem_ram[addr & mask] = value; */
-    mem_store((WORD)(addr & 0xffff), value);
+    return ram_read(addr);
+}
+
+void mem_inject(uint32_t addr, uint8_t value)
+{
+    /* printf("mem_inject addr: %04x  value: %02x\n", addr, value); */
+    if (!plus4_memory_hacks_ram_inject(addr, value)) {
+        /* just call mem_store() to be safe.
+           This could possibly be changed to write straight into the
+           memory array.  mem_ram[addr & mask] = value; */
+        mem_store((uint16_t)(addr & 0xffff), value);
+    }
+}
+
+/* In banked memory architectures this will always write to the bank that
+   contains the keyboard buffer and "number of keys in buffer", regardless of
+   what the CPU "sees" currently.
+   In all other cases this just writes to the first 64kb block, usually by
+   wrapping to mem_inject().
+*/
+void mem_inject_key(uint16_t addr, uint8_t value)
+{
+    mem_inject(addr, value);
 }
 
 /* ------------------------------------------------------------------------- */
 
-int mem_rom_trap_allowed(WORD addr)
+int mem_rom_trap_allowed(uint16_t addr)
 {
     return addr >= 0x8000 && (mem_config & 0x1);
 }
@@ -922,18 +968,35 @@ int mem_rom_trap_allowed(WORD addr)
 /* ------------------------------------------------------------------------- */
 
 /* Exported banked memory access functions for the monitor.  */
+#define MAXBANKS (8)
 
-static const char *banknames[] = {
-    "default", "cpu", "ram", "rom", "io", "funcrom", "cart1rom", "cart2rom", NULL
+static const char *banknames[MAXBANKS + 1] = {
+    "default",
+    "cpu",
+    "ram",
+    "rom",
+    "io",
+    "funcrom",
+    "cart1rom",
+    "cart2rom",
+    /* by convention, a "bank array" has a 2-hex-digit bank index appended */
+    NULL
 };
 
-static const int banknums[] = { 1, 0, 1, 2, 6, 3, 4, 5 };
+static const int banknums[MAXBANKS + 1] = { 0, 1, 1, 2, 6, 3, 4, 5, -1 };
+static const int bankindex[MAXBANKS + 1] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+static const int bankflags[MAXBANKS + 1] = { 0, 0, 0, 0, 0, 0, 0, 0, -1 };
 
 const char **mem_bank_list(void)
 {
     return banknames;
 }
 
+const int *mem_bank_list_nos(void) {
+    return banknums;
+}
+
+/* return bank number for a given literal bank name */
 int mem_bank_from_name(const char *name)
 {
     int i = 0;
@@ -947,7 +1010,34 @@ int mem_bank_from_name(const char *name)
     return -1;
 }
 
-void store_bank_io(WORD addr, BYTE byte)
+/* return current index for a given bank */
+int mem_bank_index_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankindex[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+int mem_bank_flags_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankflags[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+void store_bank_io(uint16_t addr, uint8_t byte)
 {
     if (addr >= 0xfd00 && addr <= 0xfdff) {
         plus4io_fd00_store(addr, byte);
@@ -965,7 +1055,7 @@ void store_bank_io(WORD addr, BYTE byte)
 }
 
 /* read i/o without side-effects */
-static BYTE peek_bank_io(WORD addr)
+static uint8_t peek_bank_io(uint16_t addr)
 {
     if ((addr >= 0xff00) && (addr <= 0xff3f)) {
         return ted_peek(addr);
@@ -982,7 +1072,7 @@ static BYTE peek_bank_io(WORD addr)
 }
 
 /* read i/o with side-effects */
-static BYTE read_bank_io(WORD addr)
+static uint8_t read_bank_io(uint16_t addr)
 {
     if ((addr >= 0xff00) && (addr <= 0xff3f)) {
         return ted_peek(addr);
@@ -1000,7 +1090,7 @@ static BYTE read_bank_io(WORD addr)
 }
 
 /* read memory without side-effects */
-BYTE mem_bank_peek(int bank, WORD addr, void *context)
+uint8_t mem_bank_peek(int bank, uint16_t addr, void *context)
 {
     switch (bank) {
         case 0:                   /* current */
@@ -1008,7 +1098,49 @@ BYTE mem_bank_peek(int bank, WORD addr, void *context)
                       when needed. doing this without checking is wrong, but we do it anyways to
                       avoid side effects
            */
-            if (addr >= 0xfd00) {
+            /*
+                $0000-$7fff   RAM
+                $8000-$9fff   RAM / BASIC / Function LO
+                $a000-$bfff   RAM / Kernal / Function HI
+
+                $c000-$cfff   RAM / Basic Extension
+
+                $d000-$d7ff   RAM / character ROM / Function HI
+                $d800-$fbff   RAM / operating system
+
+                $FC00-        Kernal Routines for switching banks
+
+                $FD00-$FF3F always I/O:
+
+                    $FD00-FD0F: 6551  (only on the +4.  4 registers.)
+                    $FD10-FD1F: 6529B (1 register)
+                    $FD30-FD3F: 6529B (1 register)
+
+                $FDD0-$FDDF ROM bank select
+
+                    a0 a1 bank
+                    0  0  BASIC (low internal #1)
+                    0  1  Function LO (low internal #2)
+                    1  0  Cartridge LO (low external #1)
+                    1  1  reserved
+
+                    a2 a3 bank
+                    0  0  Kernal (hi internal #1)
+                    0  1  Function HI (hi internal #2)
+                    1  0  Cartridge HI (hi external #1)
+                    1  1  reserved
+
+                $FF00-  TED registers
+
+                $FF3E   ROM select, Write switches on ROM bank
+                $FF3F   RAM select, Write switches on RAM bank
+
+                $FF40-$FFFF RAM / Kernal / Function HI
+            */
+            if ((addr >= 0xfd00) && (addr <= 0xfd3f)) {
+                return peek_bank_io(addr);
+            }
+            if ((addr >= 0xff00) && (addr <= 0xff3f)) {
                 return peek_bank_io(addr);
             }
             break;
@@ -1023,7 +1155,7 @@ BYTE mem_bank_peek(int bank, WORD addr, void *context)
 }
 
 /* read memory with side-effects */
-BYTE mem_bank_read(int bank, WORD addr, void *context)
+uint8_t mem_bank_read(int bank, uint16_t addr, void *context)
 {
     switch (bank) {
         case 0:                   /* current */
@@ -1049,10 +1181,12 @@ BYTE mem_bank_read(int bank, WORD addr, void *context)
             break;
         case 4:                   /* cart1rom */
             if (addr >= 0x8000 && addr <= 0xbfff) {
-                return extromlo2[addr & 0x3fff];
+                /* return extromlo2[addr & 0x3fff]; */
+                return plus4cart_c1lo_read(addr);
             }
             if (addr >= 0xc000) {
-                return extromhi2[addr & 0x3fff];
+                /* return extromhi2[addr & 0x3fff]; */
+                return plus4cart_c1hi_read(addr);
             }
             break;
         case 5:                   /* cart2rom */
@@ -1073,7 +1207,7 @@ BYTE mem_bank_read(int bank, WORD addr, void *context)
     return mem_ram[addr];
 }
 
-void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
+void mem_bank_write(int bank, uint16_t addr, uint8_t byte, void *context)
 {
     switch (bank) {
         case 0:                 /* current */
@@ -1120,7 +1254,13 @@ void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
     mem_ram[addr] = byte;
 }
 
-static int mem_dump_io(void *context, WORD addr)
+/* used by monitor if sfx off */
+void mem_bank_poke(int bank, uint16_t addr, uint8_t byte, void *context)
+{
+    mem_bank_write(bank, addr, byte, context);
+}
+
+static int mem_dump_io(void *context, uint16_t addr)
 {
     if ((addr >= 0xff00) && (addr <= 0xff3f)) {
         /* return ted_dump(machine_context.ted); */ /* FIXME */
@@ -1133,17 +1273,47 @@ mem_ioreg_list_t *mem_ioreg_list_get(void *context)
     mem_ioreg_list_t *mem_ioreg_list = NULL;
 
     io_source_ioreg_add_list(&mem_ioreg_list);
-    mon_ioreg_add_list(&mem_ioreg_list, "TED", 0xff00, 0xff3f, mem_dump_io, NULL);
+    mon_ioreg_add_list(&mem_ioreg_list, "TED", 0xff00, 0xff3f, mem_dump_io, NULL, IO_MIRROR_NONE);
 
     return mem_ioreg_list;
 }
 
-void mem_get_screen_parameter(WORD *base, BYTE *rows, BYTE *columns, int *bank)
+void mem_get_screen_parameter(uint16_t *base, uint8_t *rows, uint8_t *columns, int *bank)
 {
     *base = (ted_peek(0xff14) & 0xf8) << 8 | 0x400;
     *rows = 25;
     *columns = 40;
     *bank = 0;
+}
+
+/* used by autostart to locate and "read" kernal output on the current screen
+ * this function should return whatever the kernal currently uses, regardless
+ * what is currently visible/active in the UI
+ */
+void mem_get_cursor_parameter(uint16_t *screen_addr, uint8_t *cursor_column, uint8_t *line_length, int *blinking)
+{
+    unsigned int cursorposition = (ted_peek(0xff0d) + ((ted_peek(0xff0c) & 3) * 256));
+    unsigned int screenbase = ((ted_peek(0xff14) & 0xf8) << 8 | 0x400);
+
+    *line_length = 40;                 /* Physical Screen Line Length */
+
+    if (cursorposition < 1000) {
+        /* cursor position < 1000 means the cursor is visible/enabled, in
+           this case we will derive screen line and column from the position
+           of the hardware cursor */
+        *cursor_column = cursorposition % 40; /* Cursor Column on Current Line */
+        *screen_addr = screenbase + cursorposition - *cursor_column; /* Current Screen Line Address */
+        /* Cursor Blink enable: 1 = Flash Cursor, 0 = Cursor disabled, -1 = n/a */
+        *blinking = 1;
+    } else {
+        /* when cursor is disabled, we use the kernal pointers and hope they
+           are not completely wrong */
+        *screen_addr = mem_ram[0xc8] + mem_ram[0xc9] * 256; /* Current Screen Line Address */
+        *cursor_column = mem_ram[0xca];    /* Cursor Column on Current Line */
+        *blinking = 0;
+    }
+    /* printf("mem_get_cursor_parameter screen_addr:%04x column: %d line len: %d blinking:%d\n",
+           *screen_addr, *cursor_column, *line_length, *blinking); */
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1165,17 +1335,17 @@ static mem_config_t mem_config_table[] = {
     { "BASIC",  "CART-1" }, /* 0xfdd8 */
     { "3+1",    "CART-1" }, /* 0xfdd9 */
     { "CART-1", "CART-1" }, /* 0xfdda */
-    { "CART-2"  "CART-1" }, /* 0xfddb */
+    { "CART-2", "CART-1" }, /* 0xfddb */
     { "BASIC",  "CART-2" }, /* 0xfddc */
     { "3+1",    "CART-2" }, /* 0xfddd */
     { "CART-1", "CART-2" }, /* 0xfdde */
-    { "CART-2"  "CART-2" }  /* 0xfddf */
+    { "CART-2", "CART-2" }  /* 0xfddf */
 };
 
 static int memconfig_dump(void)
 {
-    mon_out("$8000-$BFFF: %s", (mem_config & 1) ? mem_config_table[mem_config >> 1].mem_8000 : "RAM");
-    mon_out("$C000-$FFFF: %s", (mem_config & 1) ? mem_config_table[mem_config >> 1].mem_c000 : "RAM");
+    mon_out("$8000-$BFFF: %s\n", (mem_config & 1) ? mem_config_table[mem_config >> 1].mem_8000 : "RAM");
+    mon_out("$C000-$FFFF: %s\n", (mem_config & 1) ? mem_config_table[mem_config >> 1].mem_c000 : "RAM");
 
     return 0;
 }
@@ -1183,93 +1353,99 @@ static int memconfig_dump(void)
 /* ------------------------------------------------------------------------- */
 
 static io_source_t mem_config_device = {
-    "MEMCONFIG",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xfdd0, 0xfddf, 0xf,
-    0, /* read is never valid */
-    mem_config_rom_set_store,
-    NULL, /* no read */
-    NULL, /* no peek */
-    memconfig_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "MEMCONFIG",              /* name of the chip */
+    IO_DETACH_NEVER,          /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE,    /* does not use a resource for detach */
+    0xfdd0, 0xfddf, 0x0f,     /* range of the device, regs:$fdd0-$fddf */
+    0,                        /* read is never valid */
+    mem_config_rom_set_store, /* store function */
+    NULL,                     /* NO poke function */
+    NULL,                     /* NO read function */
+    NULL,                     /* NO peek function */
+    memconfig_dump,           /* chip state information dump function */
+    IO_CART_ID_NONE,          /* not a cartridge */
+    IO_PRIO_NORMAL,           /* normal priority, device read needs to be checked for collisions */
+    0                         /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t pio1_with_mirrors_device = {
-    "PIO1",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xfd10, 0xfd1f, 1,
-    1, /* read is always valid */
-    pio1_store,
-    pio1_read,
-    NULL, /* no peek */
-    NULL, /* nothing to dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "PIO1",                /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xfd10, 0xfd1f, 0x00,  /* range for the device, reg:$fd10, mirrors:$fd11-$fd1f */
+    1,                     /* read is always valid */
+    pio1_store,            /* store function */
+    NULL,                  /* NO poke function */
+    pio1_read,             /* read function */
+    NULL,                  /* TODO: peek function */
+    NULL,                  /* nothing to dump */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t pio1_only_device = {
-    "PIO1",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xfd10, 0xfd10, 1,
-    1, /* read is always valid */
-    pio1_store,
-    pio1_read,
-    NULL, /* no peek */
-    NULL, /* nothing to dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "PIO1",                /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xfd10, 0xfd10, 0x00,  /* range for the device, reg:$fd10 */
+    1,                     /* read is always valid */
+    pio1_store,            /* store function */
+    NULL,                  /* NO poke function */
+    pio1_read,             /* read function */
+    NULL,                  /* TODO: peek function */
+    NULL,                  /* nothing to dump */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t pio2_device = {
-    "PIO2",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xfd30, 0xfd3f, 1,
-    1, /* read is always valid */
-    pio2_store,
-    pio2_read,
-    NULL, /* no peek */
-    NULL, /* nothing to dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "PIO2",                /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xfd30, 0xfd3f, 0x00,  /* range for the device, reg:$fd30, mirrors:$fd31-$fd3f */
+    1,                     /* read is always valid */
+    pio2_store,            /* store function */
+    NULL,                  /* NO poke function */
+    pio2_read,             /* read function */
+    NULL,                  /* TODO: peek function */
+    NULL,                  /* nothing to dump */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t tcbm1_device = {
-    "TCBM1",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xfee0, 0xfeff, 0x1f,
-    1, /* read is always valid */
-    plus4tcbm1_store,
-    plus4tcbm1_read,
-    NULL, /* no peek */
-    NULL, /* TODO: dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "TCBM1",               /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xfee0, 0xfeff, 0x1f,  /* range for the device, regs:$fee0-$feff */
+    1,                     /* read is always valid */
+    plus4tcbm1_store,      /* store function */
+    NULL,                  /* NO poke function */
+    plus4tcbm1_read,       /* read function */
+    NULL,                  /* TODO: peek function */
+    NULL,                  /* TODO: chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t tcbm2_device = {
-    "TCBM2",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xfec0, 0xfedf, 0x1f,
-    1, /* read is always valid */
-    plus4tcbm2_store,
-    plus4tcbm2_read,
-    NULL, /* no peek */
-    NULL, /* TODO: dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_NORMAL,
-    0
+    "TCBM2",               /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xfec0, 0xfedf, 0x1f,  /* range for the device, regs:$fec0-$fedf */
+    1,                     /* read is always valid */
+    plus4tcbm2_store,      /* store function */
+    NULL,                  /* NO poke function */
+    plus4tcbm2_read,       /* read function */
+    NULL,                  /* TODO: peek function */
+    NULL,                  /* TODO: chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_NORMAL,        /* normal priority, device read needs to be checked for collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *mem_config_list_item = NULL;
@@ -1309,3 +1485,4 @@ void plus4io_init(void)
     tcbm1_list_item = io_source_register(&tcbm1_device);
     tcbm2_list_item = io_source_register(&tcbm2_device);
 }
+

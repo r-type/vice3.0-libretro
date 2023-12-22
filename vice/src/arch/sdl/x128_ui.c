@@ -1,10 +1,11 @@
+/** \file   x128_ui.c
+ * \brief   Implementation of the C128-specific part of the UI.
+ *
+ * \author  Hannu Nuotio <hannu.nuotio@tut.fi>
+ * \author  arco van den Heuvel <blackystardust68@yahoo.com>
+ */
+
 /*
- * x128_ui.c - Implementation of the C128-specific part of the UI.
- *
- * Written by
- *  Hannu Nuotio <hannu.nuotio@tut.fi>
- *  Marco van den Heuvel <blackystardust68@yahoo.com>
- *
  * This file is part of VICE, the Versatile Commodore Emulator.
  * See README for copyright notice.
  *
@@ -32,18 +33,23 @@
 
 #include "debug.h"
 #include "c128mem.h"
+#include "c128ui.h"
+#include "c128rom.h"
 #include "menu_c128hw.h"
 #include "menu_c64_common_expansions.h"
 #include "menu_c64cart.h"
 #include "menu_common.h"
 #include "menu_debug.h"
 #include "menu_drive.h"
+#include "menu_edit.h"
 #include "menu_ethernet.h"
 #include "menu_ethernetcart.h"
 #include "menu_ffmpeg.h"
 #include "menu_help.h"
 #include "menu_jam.h"
 #include "menu_joyport.h"
+#include "menu_joystick.h"
+#include "menu_media.h"
 #include "menu_midi.h"
 #include "menu_monitor.h"
 #include "menu_network.h"
@@ -57,14 +63,18 @@
 #include "menu_sound.h"
 #include "menu_speed.h"
 #include "menu_tape.h"
+#include "menu_userport.h"
 #include "menu_video.h"
 #include "resources.h"
 #include "ui.h"
+#include "uifonts.h"
 #include "uimenu.h"
 #include "videoarch.h"
 #include "vkbd.h"
 
-static const ui_menu_entry_t x128_main_menu[] = {
+static UI_MENU_CALLBACK(pause_callback_wrapper);
+
+static ui_menu_entry_t x128_main_menu[] = {
     { "Autostart image",
       MENU_ENTRY_DIALOG,
       autostart_callback,
@@ -105,10 +115,10 @@ static const ui_menu_entry_t x128_main_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)snapshot_menu },
-    { "Screenshot",
+    { "Save media file",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
-      (ui_callback_data_t)screenshot_vic_vicii_vdc_menu },
+      (ui_callback_data_t)media_menu },
     { "Speed settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -128,19 +138,25 @@ static const ui_menu_entry_t x128_main_menu[] = {
       (ui_callback_data_t)network_menu },
 #endif
     { "Pause",
+      MENU_ENTRY_OTHER_TOGGLE,
+      pause_callback_wrapper,
+      NULL },
+    /* Caution: index is hardcoded below */
+    { "Advance Frame",
       MENU_ENTRY_OTHER,
-      pause_callback,
+      advance_frame_callback,
       NULL },
     { "Monitor",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)monitor_menu },
+    /* Caution: index is hardcoded below */
     { "Virtual keyboard",
       MENU_ENTRY_OTHER,
       vkbd_callback,
       NULL },
     { "Statusbar",
-      MENU_ENTRY_OTHER,
+      MENU_ENTRY_OTHER_TOGGLE,
       statusbar_callback,
       NULL },
 #ifdef DEBUG
@@ -157,6 +173,12 @@ static const ui_menu_entry_t x128_main_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)settings_manager_menu },
+#ifdef USE_SDL2UI
+    { "Edit",
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)edit_menu },
+#endif
     { "Quit emulator",
       MENU_ENTRY_OTHER,
       quit_callback,
@@ -164,17 +186,62 @@ static const ui_menu_entry_t x128_main_menu[] = {
     SDL_MENU_LIST_END
 };
 
-void c128ui_set_menu_params(int index, menu_draw_t *menu_draw)
+#ifdef HAVE_NETWORK
+# define MENU_ADVANCE_FRAME_IDX      16
+# define MENU_VIRTUAL_KEYBOARD_IDX   18
+#else
+# define MENU_ADVANCE_FRAME_IDX      15
+# define MENU_VIRTUAL_KEYBOARD_IDX   17
+#endif
+static UI_MENU_CALLBACK(pause_callback_wrapper)
 {
-    if (index == 0) { /* VICII */
+    x128_main_menu[MENU_ADVANCE_FRAME_IDX].status =
+        sdl_pause_state || !sdl_menu_state ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    x128_main_menu[MENU_VIRTUAL_KEYBOARD_IDX].status =
+        sdl_pause_state ? MENU_STATUS_INACTIVE : MENU_STATUS_ACTIVE;
+    return pause_callback(activated, param);
+}
+
+static void c128ui_set_menu_params(int index, menu_draw_t *menu_draw)
+{
+    if (index == 0) {
+        /* VICII */
         menu_draw->max_text_x = 40;
-        menu_draw->color_front = 1;
-    } else {         /* VDC */
+        menu_draw->color_front = menu_draw->color_default_front = 1;
+        menu_draw->color_back = menu_draw->color_default_back = 0;
+        menu_draw->color_cursor_back = 6;
+        menu_draw->color_cursor_revers = 0;
+        menu_draw->color_active_green = 13;
+        menu_draw->color_inactive_red = 2;
+        menu_draw->color_active_grey = 15;
+        menu_draw->color_inactive_grey = 11;
+    } else {
+        /* VDC */
         menu_draw->max_text_x = 80;
-        menu_draw->color_front = 15;
+        menu_draw->color_front = menu_draw->color_default_front = 15;
+        menu_draw->color_back = menu_draw->color_default_back = 0;
+        menu_draw->color_cursor_back = 2;
+        menu_draw->color_cursor_revers = 0;
+        menu_draw->color_active_green = 4;
+        menu_draw->color_inactive_red = 8;
+        menu_draw->color_active_grey = 13;
+        menu_draw->color_inactive_grey = 9;
     }
 }
 
+/** \brief  Pre-initialize the UI before the canvas window gets created
+ *
+ * \return  0 on success, -1 on failure
+ */
+int c128ui_init_early(void)
+{
+    return 0;
+}
+
+/** \brief  Initialize the UI
+ *
+ * \return  0 on success, -1 on failure
+ */
 int c128ui_init(void)
 {
     int columns_key;
@@ -182,12 +249,14 @@ int c128ui_init(void)
 #ifdef SDL_DEBUG
     fprintf(stderr, "%s\n", __func__);
 #endif
-    resources_get_int("40/80ColumnKey", &columns_key);
+    resources_get_int("C128ColumnKey", &columns_key);
     sdl_video_canvas_switch(columns_key ^ 1);
 
     sdl_ui_set_menu_params = c128ui_set_menu_params;
 
-    uijoyport_menu_create(1, 1, 1, 1, 0);
+    uijoyport_menu_create(1, 1, 1, 1, 1);
+    uijoystick_menu_create(1, 1, 1, 1, 1);
+    uiuserport_menu_create(1);
     uisampler_menu_create();
     uicart_menu_create();
     uidrive_menu_create();
@@ -196,9 +265,9 @@ int c128ui_init(void)
     uisid_menu_create();
     uiclockport_rr_mmc_menu_create();
     uiclockport_ide64_menu_create();
-
+    uimedia_menu_create();
     sdl_ui_set_main_menu(x128_main_menu);
-    sdl_ui_set_menu_font(mem_chargen_rom + 0x800, 8, 8);
+    sdl_ui_font_init(C128_CHARGEN_NAME, 0, 0x800, 0);
     sdl_vkbd_set_vkbd(&vkbd_c128);
 
 #ifdef HAVE_FFMPEG
@@ -215,16 +284,21 @@ void c128ui_shutdown(void)
     uicart_menu_shutdown();
     uipalette_menu_shutdown();
     uijoyport_menu_shutdown();
+    uijoystick_menu_shutdown();
+    uiuserport_menu_shutdown();
+    uitapeport_menu_shutdown();
+    uimedia_menu_shutdown();
 #ifdef HAVE_MIDI
     sdl_menu_midi_in_free();
     sdl_menu_midi_out_free();
 #endif
 
-#ifdef HAVE_PCAP
+#ifdef HAVE_RAWNET
     sdl_menu_ethernet_interface_free();
 #endif
 
 #ifdef HAVE_FFMPEG
     sdl_menu_ffmpeg_shutdown();
 #endif
+    sdl_ui_font_shutdown();
 }

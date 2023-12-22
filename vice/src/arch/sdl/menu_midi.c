@@ -37,7 +37,7 @@
 #include "uimenu.h"
 
 /* *nix MIDI settings */
-#if defined(UNIX_COMPILE) && !defined(MACOSX_SUPPORT)
+#if defined(UNIX_COMPILE) && !defined(MACOS_COMPILE)
 
 void sdl_menu_midi_in_free(void)
 {
@@ -47,25 +47,28 @@ void sdl_menu_midi_out_free(void)
 {
 }
 
-/* only show driver/device items when a midi driver exists */
-#if defined(USE_OSS) || defined (USE_ALSA)
+#if defined(USE_OSS)
 UI_MENU_DEFINE_STRING(MIDIInDev)
 UI_MENU_DEFINE_STRING(MIDIOutDev)
+#endif
+
+#if defined(USE_ALSA)
+UI_MENU_DEFINE_STRING(MIDIName)
+#endif
+
+/* only show driver/device items when a midi driver exists */
+#if defined(USE_OSS) && defined (USE_ALSA)
 UI_MENU_DEFINE_RADIO(MIDIDriver)
 
 static const ui_menu_entry_t midi_driver_menu[] = {
-#ifdef USE_OSS
     { "OSS",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_MIDIDriver_callback,
       (ui_callback_data_t)0 },
-#endif
-#ifdef USE_ALSA
     { "ALSA",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_MIDIDriver_callback,
       (ui_callback_data_t)1 },
-#endif
     SDL_MENU_LIST_END
 };
 
@@ -75,6 +78,36 @@ static const ui_menu_entry_t midi_driver_menu[] = {
       MENU_ENTRY_SUBMENU,                      \
       submenu_radio_callback,                  \
       (ui_callback_data_t)midi_driver_menu },  \
+    SDL_MENU_ITEM_SEPARATOR,                   \
+    SDL_MENU_ITEM_TITLE("ALSA client"),        \
+    { "Name",                                  \
+      MENU_ENTRY_RESOURCE_STRING,              \
+      string_MIDIName_callback,                \
+      (ui_callback_data_t)"ALSA client name" },\
+    SDL_MENU_ITEM_SEPARATOR,                   \
+    SDL_MENU_ITEM_TITLE("OSS driver devices"), \
+    { "MIDI-In",                               \
+      MENU_ENTRY_RESOURCE_STRING,              \
+      string_MIDIInDev_callback,               \
+      (ui_callback_data_t)"MIDI-In device" },  \
+    { "MIDI-Out",                              \
+      MENU_ENTRY_RESOURCE_STRING,              \
+      string_MIDIOutDev_callback,              \
+      (ui_callback_data_t)"MIDI-Out device" },
+
+#elif defined (USE_ALSA)
+
+#define VICE_SDL_MIDI_ARCHDEP_ITEMS            \
+    SDL_MENU_ITEM_SEPARATOR,                   \
+    SDL_MENU_ITEM_TITLE("ALSA client"),        \
+    { "Name",                                  \
+      MENU_ENTRY_RESOURCE_STRING,              \
+      string_MIDIName_callback,                \
+      (ui_callback_data_t)"ALSA client name" },
+
+#elif defined(USE_OSS)
+
+#define VICE_SDL_MIDI_ARCHDEP_ITEMS            \
     SDL_MENU_ITEM_SEPARATOR,                   \
     SDL_MENU_ITEM_TITLE("OSS driver devices"), \
     { "MIDI-In",                               \
@@ -90,10 +123,10 @@ static const ui_menu_entry_t midi_driver_menu[] = {
 #define VICE_SDL_MIDI_ARCHDEP_ITEMS
 #endif
 
-#endif /* defined(UNIX_COMPILE) && !defined(MACOSX_SUPPORT) */
+#endif /* defined(UNIX_COMPILE) && !defined(MACOS_COMPILE) */
 
 /* OSX MIDI settings */
-#ifdef MACOSX_SUPPORT
+#ifdef MACOS_COMPILE
 UI_MENU_DEFINE_STRING(MIDIName)
 UI_MENU_DEFINE_STRING(MIDIInName)
 UI_MENU_DEFINE_STRING(MIDIOutName)
@@ -121,10 +154,10 @@ void sdl_menu_midi_out_free(void)
       string_MIDIOutName_callback,                  \
       (ui_callback_data_t)"Name of MIDI-Out Port" },
 
-#endif /* defined(MACOSX_SUPPORT) */
+#endif /* defined(MACOS_COMPILE) */
 
 /* win32 MIDI settings */
-#if defined(WIN32_COMPILE) && !defined(__XBOX__)
+#ifdef WINDOWS_COMPILE
 
 #include <windows.h>
 #include <mmsystem.h>
@@ -174,7 +207,7 @@ UI_MENU_CALLBACK(MIDIInDev_dynmenu_callback)
     }
 
     if (num_in == 0) {
-        midi_in_dyn_menu[i].string = (char *)lib_stralloc("No Devices Present");
+        midi_in_dyn_menu[i].string = (char *)lib_strdup("No Devices Present");
         midi_in_dyn_menu[i].type = MENU_ENTRY_TEXT;
         midi_in_dyn_menu[i].callback = seperator_callback;
         midi_in_dyn_menu[i].data = NULL;
@@ -183,10 +216,10 @@ UI_MENU_CALLBACK(MIDIInDev_dynmenu_callback)
         for (j = 0; (j < num_in) && (i < 20); j++) {
             ret = midiInGetDevCaps(j, &mic, sizeof(MIDIINCAPS));
             if (ret == MMSYSERR_NOERROR) {
-                midi_in_dyn_menu[i].string = (char *)lib_stralloc(mic.szPname);
+                midi_in_dyn_menu[i].string = (char *)lib_strdup(mic.szPname);
                 midi_in_dyn_menu[i].type = MENU_ENTRY_RESOURCE_RADIO;
                 midi_in_dyn_menu[i].callback = radio_MIDIInDev_callback;
-                midi_in_dyn_menu[i].data = (ui_callback_data_t)j;
+                midi_in_dyn_menu[i].data = (ui_callback_data_t)(int_to_void_ptr(j));
                 i++;
             }
         }
@@ -197,7 +230,7 @@ UI_MENU_CALLBACK(MIDIInDev_dynmenu_callback)
     midi_in_dyn_menu[i].callback = NULL;
     midi_in_dyn_menu[i].data = NULL;
 
-    return "->";
+    return MENU_SUBMENU_STRING;
 }
 
 UI_MENU_CALLBACK(MIDIOutDev_dynmenu_callback)
@@ -216,7 +249,7 @@ UI_MENU_CALLBACK(MIDIOutDev_dynmenu_callback)
     }
 
     if (num_out == 0) {
-        midi_out_dyn_menu[i].string = (char *)lib_stralloc("No Devices Present");
+        midi_out_dyn_menu[i].string = (char *)lib_strdup("No Devices Present");
         midi_out_dyn_menu[i].type = MENU_ENTRY_TEXT;
         midi_out_dyn_menu[i].callback = seperator_callback;
         midi_out_dyn_menu[i].data = NULL;
@@ -225,10 +258,10 @@ UI_MENU_CALLBACK(MIDIOutDev_dynmenu_callback)
         for (j = 0; (j < num_out) && (i < 20); j++) {
             ret = midiOutGetDevCaps(j, &moc, sizeof(MIDIOUTCAPS));
             if (ret == MMSYSERR_NOERROR) {
-                midi_out_dyn_menu[i].string = (char *)lib_stralloc(moc.szPname);
+                midi_out_dyn_menu[i].string = (char *)lib_strdup(moc.szPname);
                 midi_out_dyn_menu[i].type = MENU_ENTRY_RESOURCE_RADIO;
                 midi_out_dyn_menu[i].callback = radio_MIDIOutDev_callback;
-                midi_out_dyn_menu[i].data = (ui_callback_data_t)j;
+                midi_out_dyn_menu[i].data = (ui_callback_data_t)(int_to_void_ptr(j));
                 i++;
             }
         }
@@ -239,7 +272,7 @@ UI_MENU_CALLBACK(MIDIOutDev_dynmenu_callback)
     midi_out_dyn_menu[i].callback = NULL;
     midi_out_dyn_menu[i].data = NULL;
 
-    return "->";
+    return MENU_SUBMENU_STRING;
 }
 
 #define VICE_SDL_MIDI_ARCHDEP_ITEMS           \
@@ -253,7 +286,7 @@ UI_MENU_CALLBACK(MIDIOutDev_dynmenu_callback)
       MIDIOutDev_dynmenu_callback,            \
       (ui_callback_data_t)midi_out_dyn_menu },
 
-#endif /* defined(WIN32_COMPILE) && !defined(__XBOX__) */
+#endif /* defined(WINDOWS_COMPILE) */
 
 /* Common menus */
 

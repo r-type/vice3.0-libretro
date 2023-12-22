@@ -34,6 +34,7 @@
 #include "log.h"
 #include "mem.h"
 #include "snapshot.h"
+#include "raster-snapshot.h"
 #include "raster-sprite-status.h"
 #include "raster-sprite.h"
 #include "ted-irq.h"
@@ -102,7 +103,7 @@ void ted_snapshot_prepare(void)
 
 static char snap_module_name[] = "TED";
 #define SNAP_MAJOR 1
-#define SNAP_MINOR 3
+#define SNAP_MINOR 5
 
 int ted_snapshot_write_module(snapshot_t *s)
 {
@@ -119,23 +120,23 @@ int ted_snapshot_write_module(snapshot_t *s)
     DBG(("TED write snapshot at clock: %d cycle: %d tedline: %d rasterline: %d\n", maincpu_clk, TED_RASTER_CYCLE(maincpu_clk), TED_RASTER_Y(maincpu_clk), ted.raster.current_line));
 
     if (0
-        || SMW_DW(m, ted.last_emulate_line_clk) < 0
+        || SMW_CLOCK(m, ted.last_emulate_line_clk) < 0
         /* AllowBadLines */
-        || SMW_B(m, (BYTE)ted.allow_bad_lines) < 0
+        || SMW_B(m, (uint8_t)ted.allow_bad_lines) < 0
         /* BadLine */
-        || SMW_B(m, (BYTE)ted.bad_line) < 0
+        || SMW_B(m, (uint8_t)ted.bad_line) < 0
         /* Blank */
-        || SMW_B(m, (BYTE)ted.raster.blank_enabled) < 0
+        || SMW_B(m, (uint8_t)ted.raster.blank_enabled) < 0
         /* ColorBuf */
         || SMW_BA(m, ted.cbuf, 40) < 0
         /* IdleState */
-        || SMW_B(m, (BYTE)ted.idle_state) < 0
+        || SMW_B(m, (uint8_t)ted.idle_state) < 0
         /* MatrixBuf */
         || SMW_BA(m, ted.vbuf, 40) < 0
         /* RasterCycle */
-        || SMW_B(m, (BYTE)TED_RASTER_CYCLE(maincpu_clk)) < 0
+        || SMW_B(m, (uint8_t)TED_RASTER_CYCLE(maincpu_clk)) < 0
         /* RasterLine */
-        || SMW_W(m, (WORD)(TED_RASTER_Y(maincpu_clk))) < 0
+        || SMW_W(m, (uint16_t)(TED_RASTER_Y(maincpu_clk))) < 0
         ) {
         goto fail;
     }
@@ -148,23 +149,31 @@ int ted_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || SMW_DW(m, (DWORD)ted.ted_raster_counter) < 0
+        || SMW_DW(m, ted.tv_current_line) < 0
+        || SMW_DW(m, ted.screen_height) < 0
+        || SMW_DW(m, ted.first_displayed_line) < 0
+        || SMW_DW(m, ted.last_displayed_line) < 0
+        || SMW_DW(m, (uint32_t)ted.ted_raster_counter) < 0
         /* Vc */
-        || SMW_W(m, (WORD)ted.mem_counter) < 0
+        || SMW_W(m, (uint16_t)ted.mem_counter) < 0
         /* VcInc */
-        || SMW_B(m, (BYTE)ted.mem_counter_inc) < 0
+        || SMW_B(m, (uint8_t)ted.mem_counter_inc) < 0
         /* VcBase */
-        || SMW_W(m, (WORD)ted.memptr) < 0
+        || SMW_W(m, (uint16_t)ted.memptr) < 0
         /* VideoInt */
-        || SMW_B(m, (BYTE)ted.irq_status) < 0
+        || SMW_B(m, (uint8_t)ted.irq_status) < 0
         ) {
         goto fail;
     }
 
     if (0
         /* FetchEventTick */
-        || SMW_DW(m, ted.fetch_clk - maincpu_clk) < 0
+        || SMW_CLOCK(m, ted.fetch_clk - maincpu_clk) < 0
         ) {
+        goto fail;
+    }
+
+    if (raster_snapshot_write(m, &ted.raster)) {
         goto fail;
     }
 
@@ -181,8 +190,10 @@ fail:
 
 int ted_snapshot_read_module(snapshot_t *s)
 {
-    BYTE major_version, minor_version;
+    uint8_t major_version, minor_version;
     int i;
+    uint16_t RasterLine;
+    uint8_t RasterCycle;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name,
@@ -191,7 +202,7 @@ int ted_snapshot_read_module(snapshot_t *s)
         return -1;
     }
 
-    if (major_version > SNAP_MAJOR || minor_version > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major_version, minor_version, SNAP_MAJOR, SNAP_MINOR)) {
         log_error(ted.log,
                   "Snapshot module version (%d.%d) newer than %d.%d.",
                   major_version, minor_version,
@@ -202,7 +213,7 @@ int ted_snapshot_read_module(snapshot_t *s)
     /* FIXME: initialize changes?  */
 
     if (0
-        || SMR_DW(m, &ted.last_emulate_line_clk) < 0
+        || SMR_CLOCK(m, &ted.last_emulate_line_clk) < 0
         /* AllowBadLines */
         || SMR_B_INT(m, &ted.allow_bad_lines) < 0
         /* BadLine */
@@ -215,37 +226,10 @@ int ted_snapshot_read_module(snapshot_t *s)
         || SMR_B_INT(m, &ted.idle_state) < 0
         /* MatrixBuf */
         || SMR_BA(m, ted.vbuf, 40) < 0
+        || SMR_B(m, &RasterCycle) < 0
+        || SMR_W(m, &RasterLine) < 0
         ) {
         goto fail;
-    }
-
-    /* Read the current raster line and the current raster cycle.  As they
-       are a function of `clk', this is just a sanity check.  */
-    {
-        WORD RasterLine;
-        BYTE RasterCycle;
-
-        if (SMR_B(m, &RasterCycle) < 0 || SMR_W(m, &RasterLine) < 0) {
-            goto fail;
-        }
-
-        DBG(("TED read snapshot at clock: %d cycle: %d (%d) tedline: %d (%d) rasterline: %d\n",
-             maincpu_clk, TED_RASTER_CYCLE(maincpu_clk), RasterCycle, TED_RASTER_Y(maincpu_clk),
-             RasterLine, ted.raster.current_line));
-
-        if (RasterCycle != (BYTE)TED_RASTER_CYCLE(maincpu_clk)) {
-            log_error(ted.log,
-                      "Not matching raster cycle (%d) in snapshot; should be %d.",
-                      RasterCycle, TED_RASTER_CYCLE(maincpu_clk));
-            goto fail;
-        }
-
-        if (RasterLine != (WORD)TED_RASTER_Y(maincpu_clk)) {
-            log_error(ted.log,
-                      "Not matching raster line (%d) in snapshot; should be %d.",
-                      RasterLine, TED_RASTER_Y(maincpu_clk));
-            goto fail;
-        }
     }
 
     for (i = 0; i < 0x40; i++) {
@@ -255,6 +239,10 @@ int ted_snapshot_read_module(snapshot_t *s)
     }
 
     if (0
+        || SMR_DW(m, &ted.tv_current_line) < 0
+        || SMR_DW(m, &ted.screen_height) < 0
+        || SMR_DW_INT(m, &ted.first_displayed_line) < 0
+        || SMR_DW_INT(m, &ted.last_displayed_line) < 0
         || SMR_DW_INT(m, (int*)&ted.ted_raster_counter) < 0
         /* Vc */
         || SMR_W_INT(m, &ted.mem_counter) < 0
@@ -264,6 +252,25 @@ int ted_snapshot_read_module(snapshot_t *s)
         || SMR_W_INT(m, &ted.memptr) < 0
         /* VideoInt */
         || SMR_B_INT(m, &ted.irq_status) < 0) {
+        goto fail;
+    }
+
+    /* Sanity check the current raster line and the current raster cycle */
+    DBG(("TED read snapshot at clock: %d cycle: %d (%d) tedline: %d (%d) rasterline: %d\n",
+         maincpu_clk, TED_RASTER_CYCLE(maincpu_clk), RasterCycle, TED_RASTER_Y(maincpu_clk),
+         RasterLine, ted.raster.current_line));
+
+    if (RasterCycle != (uint8_t)TED_RASTER_CYCLE(maincpu_clk)) {
+        log_error(ted.log,
+                  "Not matching raster cycle (%d) in snapshot; should be %u.",
+                  RasterCycle, TED_RASTER_CYCLE(maincpu_clk));
+        goto fail;
+    }
+
+    if (RasterLine != (uint16_t)TED_RASTER_Y(maincpu_clk)) {
+        log_error(ted.log,
+                  "Not matching raster line (%d) in snapshot; should be %u.",
+                  RasterLine, TED_RASTER_Y(maincpu_clk));
         goto fail;
     }
 
@@ -327,19 +334,24 @@ int ted_snapshot_read_module(snapshot_t *s)
     alarm_set(ted.raster_draw_alarm, ted.draw_clk);
 
     {
-        DWORD dw;
+        CLOCK qw;
 
-        if (SMR_DW(m, &dw) < 0) {  /* FetchEventTick */
+        if (SMR_CLOCK(m, &qw) < 0) {  /* FetchEventTick */
             goto fail;
         }
 
-        ted.fetch_clk = maincpu_clk + dw;
+        ted.fetch_clk = maincpu_clk + qw;
 
         alarm_set(ted.raster_fetch_alarm, ted.fetch_clk);
     }
 
     if (ted.irq_status & 0x80) {
         interrupt_restore_irq(maincpu_int_status, ted.int_num, 1);
+    }
+
+
+    if (raster_snapshot_read(m, &ted.raster)) {
+        goto fail;
     }
 
     raster_force_repaint(&ted.raster);

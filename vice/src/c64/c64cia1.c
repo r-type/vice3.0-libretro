@@ -51,41 +51,36 @@
 #include "userport.h"
 #include "vicii.h"
 
-#if defined(HAVE_RS232DEV) || defined(HAVE_RS232NET)
-#include "rsuser.h"
-#endif
-
-#ifdef HAVE_MOUSE
-#include "mouse.h"
-#endif
-
 /* #define DEBUG_KBD */
 
 #ifdef DEBUG_KBD
+#define DBG(x) printf x
 #define DBGA(x) printf x
 #define DBGB(x) printf x
 #else
+#define DBG(x)
 #define DBGA(x)
 #define DBGB(x)
 #endif
 
-static BYTE cia1_cra = 0;
+static uint8_t cia1_cra = 0;    /* last value written to control register A */
 
-void cia1_store(WORD addr, BYTE data)
+void cia1_store(uint16_t addr, uint8_t data)
 {
     if ((addr & 0xf) == CIA_CRA) {
         cia1_cra = data;
+        DBG(("cia1_store cra: %02x\n", data));
     }
 
     ciacore_store(machine_context.cia1, addr, data);
 }
 
-BYTE cia1_read(WORD addr)
+uint8_t cia1_read(uint16_t addr)
 {
     return ciacore_read(machine_context.cia1, addr);
 }
 
-BYTE cia1_peek(WORD addr)
+uint8_t cia1_peek(uint16_t addr)
 {
     return ciacore_peek(machine_context.cia1, addr);
 }
@@ -111,7 +106,7 @@ static void cia_restore_int(cia_context_t *cia_context, int value)
  * I/O
  */
 
-void cia1_set_extended_keyboard_rows_mask(BYTE value)
+void cia1_set_extended_keyboard_rows_mask(uint8_t value)
 {
 }
 
@@ -138,11 +133,11 @@ static void do_reset_cia(cia_context_t *cia_context)
 {
 }
 
-static void cia1_internal_lightpen_check(BYTE pa, BYTE pb)
+static void cia1_internal_lightpen_check(uint8_t pa, uint8_t pb)
 {
-    BYTE val = 0xff;
-    BYTE msk = pa & read_joyport_dig(JOYPORT_2);
-    BYTE m;
+    uint8_t val = 0xff;
+    uint8_t msk = pa & read_joyport_dig(JOYPORT_2);
+    uint8_t m;
     int i;
 
     if (c64keyboard_active) {
@@ -163,7 +158,7 @@ void cia1_check_lightpen(void)
     cia1_internal_lightpen_check(machine_context.cia1->old_pa, machine_context.cia1->old_pb);
 }
 
-static void store_ciapa(cia_context_t *cia_context, CLOCK rclk, BYTE b)
+static void store_ciapa(cia_context_t *cia_context, CLOCK rclk, uint8_t b)
 {
     cia1_internal_lightpen_check(b, machine_context.cia1->old_pb);
 
@@ -172,18 +167,18 @@ static void store_ciapa(cia_context_t *cia_context, CLOCK rclk, BYTE b)
     store_joyport_dig(JOYPORT_2, b, 0xff);
 }
 
-static void undump_ciapa(cia_context_t *cia_context, CLOCK rclk, BYTE b)
+static void undump_ciapa(cia_context_t *cia_context, CLOCK rclk, uint8_t b)
 {
 }
 
-static void store_ciapb(cia_context_t *cia_context, CLOCK rclk, BYTE byte)
+static void store_ciapb(cia_context_t *cia_context, CLOCK rclk, uint8_t byte)
 {
     cia1_internal_lightpen_check(machine_context.cia1->old_pa, byte);
 
     store_joyport_dig(JOYPORT_1, byte, 0xff);
 }
 
-static void undump_ciapb(cia_context_t *cia_context, CLOCK rclk, BYTE byte)
+static void undump_ciapb(cia_context_t *cia_context, CLOCK rclk, uint8_t byte)
 {
 }
 
@@ -200,12 +195,12 @@ static void undump_ciapb(cia_context_t *cia_context, CLOCK rclk, BYTE byte)
          the toplevel keyboard emulation later, so it can be used by all machines
          with a similar keyboard matrix. (VIC20, C16 ...)
  */
-static void matrix_activate_column(int column, BYTE *activerows, BYTE *activecolumns);
-static void matrix_activate_row(int row, BYTE *activerows, BYTE *activecolumns);
+static void matrix_activate_column(int column, uint8_t *activerows, uint8_t *activecolumns);
+static void matrix_activate_row(int row, uint8_t *activerows, uint8_t *activecolumns);
 
-static void matrix_activate_row(int row, BYTE *activerows, BYTE *activecolumns)
+static void matrix_activate_row(int row, uint8_t *activerows, uint8_t *activecolumns)
 {
-    BYTE msk;
+    uint8_t msk;
     int m, i;
 
     if ((1 << row) & ~(*activerows)) {
@@ -223,9 +218,9 @@ static void matrix_activate_row(int row, BYTE *activerows, BYTE *activecolumns)
     }
 }
 
-static void matrix_activate_column(int column, BYTE *activerows, BYTE *activecolumns)
+static void matrix_activate_column(int column, uint8_t *activerows, uint8_t *activecolumns)
 {
-    BYTE msk;
+    uint8_t msk;
     int m, i;
 
     if ((1 << column) & ~(*activecolumns)) {
@@ -244,37 +239,37 @@ static void matrix_activate_column(int column, BYTE *activerows, BYTE *activecol
 }
 
 /* get all connected rows for one active column */
-inline static BYTE matrix_get_active_rows_by_column(int column)
+inline static uint8_t matrix_get_active_rows_by_column(int column)
 {
-    BYTE activerows = 0;
-    BYTE activecolumns = 0;
+    uint8_t activerows = 0;
+    uint8_t activecolumns = 0;
     matrix_activate_column(column, &activerows, &activecolumns);
     return activerows;
 }
 
 /* get all connected rows for one active row */
-inline static BYTE matrix_get_active_rows_by_row(int row)
+inline static uint8_t matrix_get_active_rows_by_row(int row)
 {
-    BYTE activerows = 0;
-    BYTE activecolumns = 0;
+    uint8_t activerows = 0;
+    uint8_t activecolumns = 0;
     matrix_activate_row(row, &activerows, &activecolumns);
     return activerows;
 }
 
 /* get all connected columns for one active row */
-inline static BYTE matrix_get_active_columns_by_column(int column)
+inline static uint8_t matrix_get_active_columns_by_column(int column)
 {
-    BYTE activerows = 0;
-    BYTE activecolumns = 0;
+    uint8_t activerows = 0;
+    uint8_t activecolumns = 0;
     matrix_activate_column(column, &activerows, &activecolumns);
     return activecolumns;
 }
 
 /* get all connected columns for one active row */
-inline static BYTE matrix_get_active_columns_by_row(int row)
+inline static uint8_t matrix_get_active_columns_by_row(int row)
 {
-    BYTE activerows = 0;
-    BYTE activecolumns = 0;
+    uint8_t activerows = 0;
+    uint8_t activecolumns = 0;
     matrix_activate_row(row, &activerows, &activecolumns);
     return activecolumns;
 }
@@ -288,12 +283,12 @@ inline static BYTE matrix_get_active_columns_by_row(int row)
     - add improvements also to C128
 */
 
-static BYTE read_ciapa(cia_context_t *cia_context)
+static uint8_t read_ciapa(cia_context_t *cia_context)
 {
-    BYTE byte;
-    BYTE val = 0xff;
-    BYTE msk;
-    BYTE m, tmp;
+    uint8_t byte;
+    uint8_t val = 0xff;
+    uint8_t msk;
+    uint8_t m, tmp;
     int i;
 
     DBGA(("PA ddra:%02x pa:%02x ddrb:%02x pb:%02x ",
@@ -346,15 +341,13 @@ static BYTE read_ciapa(cia_context_t *cia_context)
     return byte;
 }
 
-inline static int ciapb_forcelow(int row, BYTE mask)
+inline static int ciapb_forcelow(int row, uint8_t mask)
 {
-    BYTE v;
+    uint8_t v;
 
     if (c64keyboard_active) {
-        /* Check for shift lock.
-           FIXME: keyboard_shiftlock state may be inconsistent
-                  with the (rev_)keyarr state. */
-        if ((row == 1) && keyboard_shiftlock) {
+        /* Check for shift lock. */
+        if ((row == 1) && keyboard_get_shiftlock()) {
             return 1;
         }
 
@@ -369,13 +362,13 @@ inline static int ciapb_forcelow(int row, BYTE mask)
     return 0;
 }
 
-static BYTE read_ciapb(cia_context_t *cia_context)
+static uint8_t read_ciapb(cia_context_t *cia_context)
 {
-    BYTE byte;
-    BYTE val = 0xff;
-    BYTE val_outhi;
-    BYTE msk, tmp;
-    BYTE m;
+    uint8_t byte;
+    uint8_t val = 0xff;
+    uint8_t val_outhi;
+    uint8_t msk, tmp;
+    uint8_t m;
     int i;
 
     /* loop over rows,
@@ -405,7 +398,7 @@ static BYTE read_ciapb(cia_context_t *cia_context)
                 if ((cia_context->c_cia[CIA_DDRA] & ~cia_context->c_cia[CIA_PRA] & m) &&
                     (cia_context->c_cia[CIA_DDRB] & cia_context->c_cia[CIA_PRB] & tmp)) {
                     DBGB(("(%d)", i));
-                    if (ciapb_forcelow(i, (BYTE)(cia_context->c_cia[CIA_DDRA] & ~cia_context->c_cia[CIA_PRA]))) {
+                    if (ciapb_forcelow(i, (uint8_t)(cia_context->c_cia[CIA_DDRA] & ~cia_context->c_cia[CIA_PRA]))) {
                         val_outhi &= ~tmp;
                         DBGB(("<force low, val_outhi:%02x>", val_outhi));
                     }
@@ -420,6 +413,7 @@ static BYTE read_ciapb(cia_context_t *cia_context)
        handles the case when port b is used for both input and output
      */
     msk = cia_context->old_pb & read_joyport_dig(JOYPORT_1);
+    DBGB((" oldpb: %02x msk: %02x", cia_context->old_pb, msk));
     if (c64keyboard_active) {
         for (m = 0x1, i = 0; i < 8; m <<= 1, i++) {
             if (!(msk & m)) {
@@ -427,6 +421,7 @@ static BYTE read_ciapb(cia_context_t *cia_context)
             }
         }
     }
+
     DBGB((" val:%02x", val));
 
     byte = val & (cia_context->c_cia[CIA_PRB] | ~(cia_context->c_cia[CIA_DDRB]));
@@ -451,37 +446,34 @@ static void read_sdr(cia_context_t *cia_context)
         drive_cpu_execute_all(maincpu_clk);
     }
     cia_context->c_cia[CIA_SDR] = read_userport_sp1(cia_context->c_cia[CIA_SDR]);
+    DBG(("read_sdr sp1: %02x\n", cia_context->c_cia[CIA_SDR]));
 }
 
-static void store_sdr(cia_context_t *cia_context, BYTE byte)
+static void store_sdr(cia_context_t *cia_context, uint8_t byte)
 {
-    if ((cia1_cra & 0x59) == 0x51) {
+    if ((cia1_cra & 0x49) == 0x41) {
+        DBG(("store_sdr sp1: %02x\n", byte));
         store_userport_sp1(byte);
     }
 
     if (c64iec_active) {
         if (burst_mod == BURST_MOD_CIA1) {
-            c64fastiec_fast_cpu_write((BYTE)byte);
+            c64fastiec_fast_cpu_write((uint8_t)byte);
         }
     }
-#if defined(HAVE_RS232DEV) || defined(HAVE_RS232NET)
-    if (rsuser_enabled) {
-        rsuser_tx_byte(byte);
-    }
-#endif
 }
 
 void cia1_init(cia_context_t *cia_context)
 {
-    ciacore_init(machine_context.cia1, maincpu_alarm_context, maincpu_int_status, maincpu_clk_guard);
+    ciacore_init(machine_context.cia1, maincpu_alarm_context, maincpu_int_status);
 }
 
-void cia1_setup_context(machine_context_t *machine_context)
+void cia1_setup_context(machine_context_t *machinecontext)
 {
     cia_context_t *cia;
 
-    machine_context->cia1 = lib_calloc(1, sizeof(cia_context_t));
-    cia = machine_context->cia1;
+    machinecontext->cia1 = lib_calloc(1, sizeof(cia_context_t));
+    cia = machinecontext->cia1;
 
     cia->prv = NULL;
     cia->context = NULL;

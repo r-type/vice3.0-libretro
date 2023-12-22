@@ -30,6 +30,7 @@
 
 #include "types.h"
 
+#include "c128.h"
 #include "c128model.h"
 #include "cartridge.h"
 #include "cia.h"
@@ -55,8 +56,9 @@
 
 #include "menu_sid.h"
 #include "menu_tape.h"
+#include "menu_userport.h"
 
-#ifdef HAVE_PCAP
+#ifdef HAVE_RAWNET
 #include "menu_ethernet.h"
 #include "menu_ethernetcart.h"
 #endif
@@ -70,7 +72,7 @@
           MENU_ENTRY_RESOURCE_TOGGLE,                           \
           radio_CIA##xyz##Model_callback,                       \
           (ui_callback_data_t)CIA_MODEL_6526 },                 \
-        { "6526 (new)",                                        \
+        { "8521 (new)",                                        \
           MENU_ENTRY_RESOURCE_TOGGLE,                           \
           radio_CIA##xyz##Model_callback,                       \
           (ui_callback_data_t)CIA_MODEL_6526A },                \
@@ -84,19 +86,29 @@ CIA_MODEL_MENU(2)
 
 static UI_MENU_CALLBACK(select_c128_model_callback)
 {
-    int model;
+    int model, selected;
 
-    model = vice_ptr_to_int(param);
+    selected = vice_ptr_to_int(param);
+
     if (activated) {
-        c128model_set(model);
+        c128model_set(selected);
+    } else {
+        model = c128model_get();
+
+        if (selected == model) {
+            return sdl_menu_text_tick;
+        }
     }
+
     return NULL;
 }
 
 static const ui_menu_entry_t c128_model_menu[] = {
     { "C128 (PAL)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128_PAL },
+    { "C128 D (PAL)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128D_PAL },
     { "C128 DCR (PAL)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128DCR_PAL },
     { "C128 (NTSC)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128_NTSC },
+    { "C128 D (NTSC)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128D_NTSC },
     { "C128 DCR (NTSC)", MENU_ENTRY_OTHER, select_c128_model_callback, (ui_callback_data_t)C128MODEL_C128DCR_NTSC },
     SDL_MENU_LIST_END
 };
@@ -120,71 +132,68 @@ static const ui_menu_entry_t vdc_menu[] = {
       (ui_callback_data_t)2 },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("VDC memory size"),
-    { "16kB",
+    { "16KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_VDC64KB_callback,
       (ui_callback_data_t)0 },
-    { "64kB",
+    { "64KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_VDC64KB_callback,
       (ui_callback_data_t)1 },
     SDL_MENU_LIST_END
 };
 
-UI_MENU_DEFINE_TOGGLE(UserportDAC)
-UI_MENU_DEFINE_TOGGLE(UserportDIGIMAX)
-UI_MENU_DEFINE_TOGGLE(UserportRTCDS1307)
-UI_MENU_DEFINE_TOGGLE(UserportRTCDS1307Save)
-UI_MENU_DEFINE_TOGGLE(UserportRTC58321a)
-UI_MENU_DEFINE_TOGGLE(UserportRTC58321aSave)
-UI_MENU_DEFINE_TOGGLE(Userport4bitSampler)
-UI_MENU_DEFINE_TOGGLE(Userport8BSS)
+UI_MENU_DEFINE_RADIO(MachineType)
 
-static const ui_menu_entry_t userport_menu[] = {
-    SDL_MENU_ITEM_TITLE("Userport devices"),
-    { "8 bit DAC enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportDAC_callback,
-      NULL },
-    { "DigiMAX enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportDIGIMAX_callback,
-      NULL },
-    { "RTC (58321a) enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTC58321a_callback,
-      NULL },
-    { "Save RTC (58321a) data when changed",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTC58321aSave_callback,
-      NULL },
-    { "4 bit sampler enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_Userport4bitSampler_callback,
-      NULL },
-    { "8 bit stereo sampler enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_Userport8BSS_callback,
-      NULL },
-    { "RTC (DS1307) enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTCDS1307_callback,
-      NULL },
-    { "Save RTC (DS1307) data when changed",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTCDS1307Save_callback,
-      NULL },
+static const ui_menu_entry_t machine_type_menu[] = {
+    { "International",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_MachineType_callback,
+      (ui_callback_data_t)C128_MACHINE_INT },
+    { "Finnish",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_MachineType_callback,
+      (ui_callback_data_t)C128_MACHINE_FINNISH },
+    { "French",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_MachineType_callback,
+      (ui_callback_data_t)C128_MACHINE_FRENCH },
+    { "German",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_MachineType_callback,
+      (ui_callback_data_t)C128_MACHINE_GERMAN },
+    { "Italian",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_MachineType_callback,
+      (ui_callback_data_t)C128_MACHINE_ITALIAN },
+    { "Norwegian",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_MachineType_callback,
+      (ui_callback_data_t)C128_MACHINE_NORWEGIAN },
+    { "Swedish",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_MachineType_callback,
+      (ui_callback_data_t)C128_MACHINE_SWEDISH },
+    { "Swiss",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_MachineType_callback,
+      (ui_callback_data_t)C128_MACHINE_SWISS },
     SDL_MENU_LIST_END
 };
 
 UI_MENU_DEFINE_TOGGLE(IEEE488)
 UI_MENU_DEFINE_TOGGLE(C128FullBanks)
+UI_MENU_DEFINE_TOGGLE(Go64Mode)
 
 const ui_menu_entry_t c128_hardware_menu[] = {
     { "Select C128 model",
       MENU_ENTRY_SUBMENU,
-      submenu_callback,
+      submenu_radio_callback,
       (ui_callback_data_t)c128_model_menu },
+    { "Select machine type",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)machine_type_menu },
     SDL_MENU_ITEM_SEPARATOR,
     { "Joyport settings",
       MENU_ENTRY_SUBMENU,
@@ -198,6 +207,7 @@ const ui_menu_entry_t c128_hardware_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)sid_c128_menu },
+    SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("CIA models"),
     { "CIA 1 model",
       MENU_ENTRY_SUBMENU,
@@ -207,6 +217,7 @@ const ui_menu_entry_t c128_hardware_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
       (ui_callback_data_t)cia2_model_submenu },
+    SDL_MENU_ITEM_SEPARATOR,
     { "VDC settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -229,6 +240,10 @@ const ui_menu_entry_t c128_hardware_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)c128_rom_menu },
+    { "Switch to C64 mode on reset",
+        MENU_ENTRY_RESOURCE_TOGGLE,
+        toggle_Go64Mode_callback,
+        NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Hardware expansions"),
 #if defined(HAVE_RS232DEV) || defined(HAVE_RS232NET)
@@ -249,7 +264,7 @@ const ui_menu_entry_t c128_hardware_menu[] = {
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_IEEE488_callback,
       NULL },
-    { "Userport devices",
+    { "Userport settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)userport_menu },
@@ -263,7 +278,7 @@ const ui_menu_entry_t c128_hardware_menu[] = {
       submenu_callback,
       (ui_callback_data_t)midi_c64_menu },
 #endif
-#ifdef HAVE_PCAP
+#ifdef HAVE_RAWNET
     { "Ethernet settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,

@@ -49,7 +49,6 @@
 #include "c64memrom.h"
 #include "c64ui.h"
 #include "cia.h"
-#include "clkguard.h"
 #include "coplin_keypad.h"
 #include "debug.h"
 #include "debugcart.h"
@@ -63,8 +62,10 @@
 #include "fsdevice.h"
 #include "gfxoutput.h"
 #include "imagecontents.h"
+#include "inception.h"
 #include "init.h"
 #include "joyport.h"
+#include "joyport_io_sim.h"
 #include "joystick.h"
 #include "kbdbuf.h"
 #include "keyboard.h"
@@ -76,11 +77,13 @@
 #include "maincpu.h"
 #include "mem.h"
 #include "monitor.h"
+#include "multijoy.h"
 #include "network.h"
+#include "ninja_snespad.h"
 #include "paperclip64.h"
 #include "parallel.h"
-#include "patchrom.h"
 #include "printer.h"
+#include "protopad.h"
 #include "ps2mouse.h"
 #include "resources.h"
 #include "rs232drv.h"
@@ -95,11 +98,13 @@
 #include "sid.h"
 #include "sound.h"
 #include "tape.h"
+#include "tapecart.h"
 #include "tapeport.h"
-#include "translate.h"
 #include "traps.h"
+#include "trapthem_snespad.h"
 #include "types.h"
 #include "userport.h"
+#include "userport_io_sim.h"
 #include "userport_joystick.h"
 #include "vice-event.h"
 #include "vicii.h"
@@ -110,6 +115,11 @@
 #ifdef HAVE_MOUSE
 #include "mouse.h"
 #endif
+
+/** \brief  Delay in seconds before pasting -keybuf argument into the buffer
+ */
+#define KBDBUF_ALARM_DELAY   7
+
 
 machine_context_t machine_context;
 
@@ -243,31 +253,104 @@ static const trap_t c64dtv_flash_traps[] = {
 
 /* ------------------------------------------------------------------------ */
 
-static joyport_port_props_t control_port_1 = 
+static joyport_port_props_t control_port_1 =
 {
     "Control port 1",
-    IDGS_CONTROL_PORT_1,
-    0,				/* has NO potentiometer connected to this port */
-    0,				/* has NO lightpen support on this port */
-    1					/* port is always active */
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    1,                  /* has joystick adapter on this port */
+    1,                  /* has output support on this port */
+    1                   /* port is always active */
 };
 
-static joyport_port_props_t control_port_2 = 
+static joyport_port_props_t control_port_2 =
 {
     "Control port 2",
-    IDGS_CONTROL_PORT_2,
-    0,				/* has NO potentiometer connected to this port */
-    0,				/* has NO lightpen support on this port */
-    1					/* port is always active */
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    1,                  /* has joystick adapter on this port */
+    1,                  /* has output support on this port */
+    1                   /* port is always active */
 };
 
-static joyport_port_props_t userport_joy_control_port = 
+static joyport_port_props_t joy_adapter_control_port_1 =
 {
-    "Userport joystick adapter port 1",
-    IDGS_USERPORT_JOY_ADAPTER_PORT_1,
-    0,				/* has NO potentiometer connected to this port */
-    0,				/* has NO lightpen support on this port */
-    0					/* port can be switched on/off */
+    "Joystick adapter port 1",
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    0,                  /* has NO joystick adapter on this port */
+    1,                  /* has output support on this port */
+    0                   /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_2 =
+{
+    "Joystick adapter port 2",
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    0,                  /* has NO joystick adapter on this port */
+    1,                  /* has output support on this port */
+    0                   /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_3 =
+{
+    "Joystick adapter port 3",
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    0,                  /* has NO joystick adapter on this port */
+    1,                  /* has output support on this port */
+    0                   /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_4 =
+{
+    "Joystick adapter port 4",
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    0,                  /* has NO joystick adapter on this port */
+    1,                  /* has output support on this port */
+    0                   /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_5 =
+{
+    "Joystick adapter port 5",
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    0,                  /* has NO joystick adapter on this port */
+    1,                  /* has output support on this port */
+    0                   /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_6 =
+{
+    "Joystick adapter port 6",
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    0,                  /* has NO joystick adapter on this port */
+    1,                  /* has output support on this port */
+    0                   /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_7 =
+{
+    "Joystick adapter port 7",
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    0,                  /* has NO joystick adapter on this port */
+    1,                  /* has output support on this port */
+    0                   /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_8 =
+{
+    "Joystick adapter port 8",
+    0,                  /* has NO potentiometer connected to this port */
+    0,                  /* has NO lightpen support on this port */
+    0,                  /* has NO joystick adapter on this port */
+    1,                  /* has output support on this port */
+    0                   /* port can be switched on/off */
 };
 
 static int init_joyport_ports(void)
@@ -278,7 +361,28 @@ static int init_joyport_ports(void)
     if (joyport_port_register(JOYPORT_2, &control_port_2) < 0) {
         return -1;
     }
-    return joyport_port_register(JOYPORT_3, &userport_joy_control_port);
+    if (joyport_port_register(JOYPORT_3, &joy_adapter_control_port_1) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_4, &joy_adapter_control_port_2) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_5, &joy_adapter_control_port_3) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_6, &joy_adapter_control_port_4) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_7, &joy_adapter_control_port_5) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_8, &joy_adapter_control_port_6) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_9, &joy_adapter_control_port_7) < 0) {
+        return -1;
+    }
+    return joyport_port_register(JOYPORT_10, &joy_adapter_control_port_8);
 }
 
 /* C64DTV-specific resource initialization.  This is called before initializing
@@ -325,6 +429,10 @@ int machine_resources_init(void)
         init_resource_fail("joyport ports");
         return -1;
     }
+    if (userport_resources_init() < 0) {
+        init_resource_fail("userport devices");
+        return -1;
+    }
     if (joyport_resources_init() < 0) {
         init_resource_fail("joyport devices");
         return -1;
@@ -353,16 +461,28 @@ int machine_resources_init(void)
         init_resource_fail("joyport rushware keypad");
         return -1;
     }
+    if (joyport_trapthem_snespad_resources_init() < 0) {
+        init_resource_fail("joyport trapthem snespad");
+        return -1;
+    }
+    if (joyport_ninja_snespad_resources_init() < 0) {
+        init_resource_fail("joyport ninja snespad");
+        return -1;
+    }
+    if (joyport_protopad_resources_init() < 0) {
+        init_resource_fail("joyport protopad");
+        return -1;
+    }
+    if (joyport_inception_resources_init() < 0) {
+        init_resource_fail("joyport inception");
+        return -1;
+    }
+    if (joyport_multijoy_resources_init() < 0) {
+        init_resource_fail("joyport multijoy");
+        return -1;
+    }
     if (joystick_resources_init() < 0) {
         init_resource_fail("joystick");
-        return -1;
-    }
-    if (userport_resources_init() < 0) {
-        init_resource_fail("userport devices");
-        return -1;
-    }
-    if (gfxoutput_resources_init() < 0) {
-        init_resource_fail("gfxoutput");
         return -1;
     }
     if (sampler_resources_init() < 0) {
@@ -411,14 +531,12 @@ int machine_resources_init(void)
     }
 #endif
 #ifdef HAVE_MOUSE
-    if (mouse_ps2_resources_init() < 0) {
+    if (mouse_resources_init() < 0) {
         init_resource_fail("mouse");
         return -1;
     }
-#endif
-#ifndef COMMON_KBD
-    if (kbd_resources_init() < 0) {
-        init_resource_fail("kbd");
+    if (mouse_ps2_resources_init() < 0) {
+        init_resource_fail("ps2mouse");
         return -1;
     }
 #endif
@@ -426,8 +544,16 @@ int machine_resources_init(void)
         init_resource_fail("drive");
         return -1;
     }
-    if (userport_joystick_resources_init() < 0) {
-        init_resource_fail("userport joystick");
+    if (userport_joystick_hummer_resources_init() < 0) {
+        init_resource_fail("userport hummer joystick");
+        return -1;
+    }
+    if (userport_io_sim_resources_init() < 0) {
+        init_resource_fail("userport I/O simulation");
+        return -1;
+    }
+    if (joyport_io_sim_resources_init() < 0) {
+        init_resource_fail("joyport I/O simulation");
         return -1;
     }
     if (debugcart_resources_init() < 0) {
@@ -450,7 +576,6 @@ void machine_resources_shutdown(void)
     fsdevice_resources_shutdown();
     disk_image_resources_shutdown();
     sampler_resources_shutdown();
-    userport_resources_shutdown();
     joyport_bbrtc_resources_shutdown();
     debugcart_resources_shutdown();
 }
@@ -474,7 +599,7 @@ int machine_cmdline_options_init(void)
         init_cmdline_options_fail("vicii");
         return -1;
     }
-    if (sid_cmdline_options_init() < 0) {
+    if (sid_cmdline_options_init(SIDTYPE_SIDDTV) < 0) {
         init_cmdline_options_fail("sid");
         return -1;
     }
@@ -508,10 +633,6 @@ int machine_cmdline_options_init(void)
     }
     if (userport_cmdline_options_init() < 0) {
         init_cmdline_options_fail("userport");
-        return -1;
-    }
-    if (gfxoutput_cmdline_options_init() < 0) {
-        init_cmdline_options_fail("gfxoutput");
         return -1;
     }
     if (sampler_cmdline_options_init() < 0) {
@@ -564,18 +685,8 @@ int machine_cmdline_options_init(void)
         return -1;
     }
 #endif
-#ifndef COMMON_KBD
-    if (kbd_cmdline_options_init() < 0) {
-        init_cmdline_options_fail("kbd");
-        return -1;
-    }
-#endif
     if (drive_cmdline_options_init() < 0) {
         init_cmdline_options_fail("drive");
-        return -1;
-    }
-    if (userport_joystick_cmdline_options_init() < 0) {
-        init_cmdline_options_fail("userport_joystick");
         return -1;
     }
     if (debugcart_cmdline_options_init() < 0) {
@@ -589,7 +700,7 @@ static void c64dtv_monitor_init(void)
 {
     unsigned int dnr;
     monitor_cpu_type_t asm6502dtv, asm6502, asmR65C02;
-    monitor_interface_t *drive_interface_init[DRIVE_NUM];
+    monitor_interface_t *drive_interface_init[NUM_DISK_UNITS];
     monitor_cpu_type_t *asmarray[4];
 
     asmarray[0] = &asm6502dtv;
@@ -601,7 +712,7 @@ static void c64dtv_monitor_init(void)
     asm6502_init(&asm6502);
     asmR65C02_init(&asmR65C02);
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
         drive_interface_init[dnr] = drive_cpu_monitor_interface_get(dnr);
     }
 
@@ -620,8 +731,6 @@ void machine_setup_context(void)
 /* C64DTV-specific initialization.  */
 int machine_specific_init(void)
 {
-    int delay;
-
     c64_log = log_open("C64");
 
     if (mem_load() < 0) {
@@ -660,21 +769,13 @@ int machine_specific_init(void)
     disk_image_init();
 
     /* Initialize autostart.  */
-    resources_get_int("AutostartDelay", &delay);
-    if (delay == 0) {
-        delay = 3; /* default */
-    }
-    autostart_init((CLOCK)(delay * C64_PAL_RFSH_PER_SEC * C64_PAL_CYCLES_PER_RFSH),
-                   1, 0xcc, 0xd1, 0xd3, 0xd5);
+    autostart_init(7, 1);
 
-#ifdef USE_BEOS_UI
     /* Pre-init C64DTV-specific parts of the menus before vicii_init()
-       creates a canvas window with a menubar at the top. This could
-       also be used by other ports, e.g. GTK+...  */
+       creates a canvas window with a menubar at the top. */
     if (!console_mode) {
         c64dtvui_init_early();
     }
-#endif
 
     if (vicii_init(VICII_DTV) == NULL && !console_mode) {
         return -1;
@@ -683,13 +784,7 @@ int machine_specific_init(void)
     cia1_init(machine_context.cia1);
     cia2_init(machine_context.cia2);
 
-#ifndef COMMON_KBD
     /* Initialize the keyboard.  */
-    if (c64_kbd_init() < 0) {
-        return -1;
-    }
-#endif
-
     c64keyboard_init();
 
     c64dtv_monitor_init();
@@ -707,10 +802,11 @@ int machine_specific_init(void)
 
     /* Initialize sound.  Notice that this does not really open the audio
        device yet.  */
-    sound_init(machine_timing.cycles_per_sec, machine_timing.cycles_per_rfsh);
+    sound_init((unsigned int)machine_timing.cycles_per_sec,
+               (unsigned int)machine_timing.cycles_per_rfsh);
 
     /* Initialize keyboard buffer.  */
-    kbdbuf_init(631, 198, 10, (CLOCK)(machine_timing.rfsh_per_sec * machine_timing.cycles_per_rfsh));
+    kbdbuf_init(631, 198, 10, (CLOCK)(machine_timing.rfsh_per_sec *                                 machine_timing.cycles_per_rfsh * KBDBUF_ALARM_DELAY));
 
     /* Initialize the C64DTV-specific part of the UI.  */
     if (!console_mode) {
@@ -733,16 +829,6 @@ int machine_specific_init(void)
     c64fastiec_init();
 
     machine_drive_stub();
-#if defined (USE_XF86_EXTENSIONS) && (defined(USE_XF86_VIDMODE_EXT) || defined (HAVE_XRANDR))
-    {
-        /* set fullscreen if user used `-fullscreen' on cmdline */
-        int fs;
-        resources_get_int("UseFullscreen", &fs);
-        if (fs) {
-            resources_set_int("VICIIFullscreen", 1);
-        }
-    }
-#endif
 
     return 0;
 }
@@ -776,6 +862,8 @@ void machine_specific_reset(void)
 void machine_specific_powerup(void)
 {
     vicii_reset_registers();
+    userport_powerup();
+    joyport_powerup();
 }
 
 void machine_specific_shutdown(void)
@@ -792,12 +880,14 @@ void machine_specific_shutdown(void)
 
     c64dtvmem_shutdown();
 
+    sid_cmdline_options_shutdown();
+
     if (!console_mode) {
         c64dtvui_shutdown();
     }
 }
 
-void machine_handle_pending_alarms(int num_write_cycles)
+void machine_handle_pending_alarms(CLOCK num_write_cycles)
 {
     vicii_handle_pending_alarms_external(num_write_cycles);
 }
@@ -807,21 +897,11 @@ void machine_handle_pending_alarms(int num_write_cycles)
 /* This hook is called at the end of every frame.  */
 static void machine_vsync_hook(void)
 {
-    CLOCK sub;
-
     network_hook();
 
     drive_vsync_hook();
 
-    autostart_advance();
-
     screenshot_record();
-
-    sub = clk_guard_prevent_overflow(maincpu_clk_guard);
-
-    /* The drive has to deal both with our overflowing and its own one, so
-       it is called even when there is no overflowing in the main CPU.  */
-    drive_cpu_prevent_clk_overflow_all(sub);
 }
 
 void machine_set_restore_key(int v)
@@ -850,7 +930,7 @@ void machine_get_line_cycle(unsigned int *line, unsigned int *cycle, int *half_c
 {
     *line = (unsigned int)((maincpu_clk) / machine_timing.cycles_per_line % machine_timing.screen_lines);
 
-    *cycle = (unsigned int)((maincpu_clk) % machine_timing.cycles_per_line);
+    *cycle = (unsigned int)(maincpu_clk % machine_timing.cycles_per_line);
 
     *half_cycle = (int)-1;
 }
@@ -887,11 +967,14 @@ void machine_change_timing(int timeval, int border_mode)
     drive_set_machine_parameter(machine_timing.cycles_per_sec);
     serial_iec_device_set_machine_parameter(machine_timing.cycles_per_sec);
     sid_set_machine_parameter(machine_timing.cycles_per_sec);
-    clk_guard_set_clk_base(maincpu_clk_guard, machine_timing.cycles_per_rfsh);
 
     vicii_change_timing(&machine_timing, border_mode);
-    cia1_set_timing(machine_context.cia1, machine_timing.cycles_per_sec, machine_timing.power_freq);
-    cia2_set_timing(machine_context.cia2, machine_timing.cycles_per_sec, machine_timing.power_freq);
+    cia1_set_timing(machine_context.cia1,
+                    (int)machine_timing.cycles_per_sec,
+                    (int)machine_timing.power_freq);
+    cia2_set_timing(machine_context.cia2,
+                    (int)machine_timing.cycles_per_sec,
+                    (int)machine_timing.power_freq);
 
     machine_trigger_reset(MACHINE_RESET_MODE_HARD);
 }
@@ -901,12 +984,20 @@ void machine_change_timing(int timeval, int border_mode)
 int machine_write_snapshot(const char *name, int save_roms, int save_disks,
                            int event_mode)
 {
-    return c64dtv_snapshot_write(name, save_roms, save_disks, event_mode);
+    int err = c64dtv_snapshot_write(name, save_roms, save_disks, event_mode);
+    if ((err < 0) && (snapshot_get_error() == SNAPSHOT_NO_ERROR)) {
+        snapshot_set_error(SNAPSHOT_CANNOT_WRITE_SNAPSHOT);
+    }
+    return err;
 }
 
 int machine_read_snapshot(const char *name, int event_mode)
 {
-    return c64dtv_snapshot_read(name, event_mode);
+    int err = c64dtv_snapshot_read(name, event_mode);
+    if ((err < 0) && (snapshot_get_error() == SNAPSHOT_NO_ERROR)) {
+        snapshot_set_error(SNAPSHOT_CANNOT_READ_SNAPSHOT);
+    }
+    return err;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -942,43 +1033,43 @@ struct image_contents_s *machine_diskcontents_bus_read(unsigned int unit)
     return diskcontents_iec_read(unit);
 }
 
-BYTE machine_tape_type_default(void)
+uint8_t machine_tape_type_default(void)
 {
     return TAPE_CAS_TYPE_PRG;
 }
 
-BYTE machine_tape_behaviour(void)
+uint8_t machine_tape_behaviour(void)
 {
     return TAPE_BEHAVIOUR_NORMAL;
 }
 
-int machine_autodetect_psid(const char *name)
-{
-    return -1;
-}
-
-tapeport_device_list_t *tapeport_device_register(tapeport_device_t *device)
-{
-    return NULL;
-}
-
-void tapeport_device_unregister(tapeport_device_list_t *device)
-{
-}
-
-void tapeport_trigger_flux_change(unsigned int on, int id)
-{
-}
-
-void tapeport_set_tape_sense(int sense, int id)
-{
-}
-
 int machine_addr_in_ram(unsigned int addr)
 {
+    /* Hack to make autostarting prg files work - the DTV splash screen runs from RAM */
+    if (maincpu_clk <= 6817181 && addr >= 0x824 && addr <= 0x884) {
+        return 0;
+    }
+
+#if 0
+    /*
+     * If autostart stops working on DTV, use this to check if the splash screen is
+     * excuting stuff from RAM, in which case modify the above check.
+     */
+    if (
+        addr < 0xe000
+            && !(addr >= 0xa000 && addr < 0xc000)
+            && !(addr >= 0x0073 && addr <= 0x008a)) {
+        log_message(LOG_DEFAULT, "%llu RAM: %x", maincpu_clk, addr);
+        return 0;
+    }
+#endif
+
     /* NOTE: while the RAM/ROM distinction is more complicated, this is
        sufficient from autostart's perspective */
-    return (addr < 0xe000 && !(addr >= 0xa000 && addr < 0xc000)) ? 1 : 0;
+    return (
+        addr < 0xe000
+            && !(addr >= 0xa000 && addr < 0xc000)
+            && !(addr >= 0x0073 && addr <= 0x008a));
 }
 
 const char *machine_get_name(void)
@@ -989,11 +1080,12 @@ const char *machine_get_name(void)
 /* ------------------------------------------------------------------------- */
 
 static userport_port_props_t userport_props = {
-    0, /* NO pa2 pin */
-    0, /* NO pa3 pin */
-    0, /* NO flag pin */
-    0, /* NO pc pin */
-    0  /* NO cnt1, cnt2 or sp pins */
+    0,    /* port does NOT have the pa2 pin */
+    0,    /* port does NOT have the pa3 pin */
+    NULL, /* port does NOT have the flag pin */
+    0,    /* port does NOT have the pc pin */
+    0,    /* port does NOT have the cnt1, cnt2 or sp pins */
+    0     /* port does NOT have the reset pin */
 };
 
 int machine_register_userport(void)
@@ -1001,4 +1093,42 @@ int machine_register_userport(void)
     userport_port_register(&userport_props);
 
     return 0;
+}
+
+/* ------------------------------------------------------------------------- */
+
+/** \brief  List of drive type names and ID's supported by C64DTV
+ *
+ * Convenience function for UI's. This list should be updated whenever drive
+ * types are added or removed.
+ *
+ * XXX: This is here because there is no c64dtvdrive.c.
+ */
+static drive_type_info_t drive_type_info_list[] = {
+    { DRIVE_NAME_NONE, DRIVE_TYPE_NONE },
+    { DRIVE_NAME_1540, DRIVE_TYPE_1540 },
+    { DRIVE_NAME_1541, DRIVE_TYPE_1541 },
+    { DRIVE_NAME_1541II, DRIVE_TYPE_1541II },
+    { DRIVE_NAME_1570, DRIVE_TYPE_1570 },
+    { DRIVE_NAME_1571, DRIVE_TYPE_1571 },
+    { DRIVE_NAME_1581, DRIVE_TYPE_1581 },
+    { DRIVE_NAME_2000, DRIVE_TYPE_2000 },
+    { DRIVE_NAME_4000, DRIVE_TYPE_4000 },
+    { DRIVE_NAME_CMDHD, DRIVE_TYPE_CMDHD },
+    { NULL, -1 }
+};
+
+/** \brief  Get a list of (name, id) tuples for the drives handles by C64DTV
+ *
+ * Usefull for UI's, get a list of currently supported drive types with a name
+ * to display and and ID to use in callbacks.
+ *
+ * \return  list of drive types, NULL terminated
+ *
+ * \note    'supported' in this context means the drives C64DTV can support,
+ *          not what actually is supported due to ROMs and other settings
+ */
+drive_type_info_t *machine_drive_get_type_info_list(void)
+{
+    return drive_type_info_list;
 }

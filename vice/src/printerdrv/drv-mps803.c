@@ -40,19 +40,18 @@
 #include "output-select.h"
 #include "output.h"
 #include "palette.h"
+#include "printer.h"
 #include "sysfile.h"
 #include "types.h"
 
 #ifdef DEBUG_MPS803
-#define DBG(x) printf x
+#define DBG(x) log_debug x
 #else
 #define DBG(x)
 #endif
 
 #define MAX_COL 480
 #define MAX_ROW 66 * 10
-
-#define MPS803_ROM_SIZE (7 * 512)
 
 #define MPS_REVERSE  0x01
 #define MPS_CRSRUP   0x02 /* set in gfxmode (default) unset in businessmode */
@@ -64,27 +63,47 @@
 #define MPS_BUSINESS 0x80 /* opened with SA = 7 in businessmode */
 
 struct mps_s {
-    BYTE line[MAX_COL][7];
-    int bitcnt;
+    uint8_t line[MAX_COL][7];
     int repeatn;
     int pos;
     int tab;
-    BYTE tabc[3];
+    uint8_t tabc[3];
     int mode;
 };
 typedef struct mps_s mps_t;
 
+#ifdef __LIBRETRO__
+static uint8_t charset[512][7];
+#else
 #ifdef USE_EMBEDDED
 #include "printermps803.h"
 #else
-static BYTE charset[512][7];
+static uint8_t charset[512][7];
 #endif
+#endif /* __LIBRETRO__ */
 
 static mps_t drv_mps803[NUM_OUTPUT_SELECT];
 static palette_t *palette = NULL;
 
 /* Logging goes here.  */
 static log_t drv803_log = LOG_ERR;
+
+#ifdef DEBUG_MPS803
+static void dump_charset(void)
+{
+    int ch, row, col, bit;
+    for (ch = 0; ch < 512; ch++) {
+        printf("%d\n", ch);
+        for (row = 0; row < 7; row++) {
+            for (col = 0; col < 7; col++) {
+                bit = charset[ch][row] & (1 << (7 - col));
+                printf("%c", bit ? '*' : '.');
+            }
+            printf("\n");
+        }
+    }
+}
+#endif
 
 /* ------------------------------------------------------------------------- */
 /* MPS803 printer engine. */
@@ -116,7 +135,7 @@ static int get_charset_bit(mps_t *mps, int nr, unsigned int col,
     return result;
 }
 
-static void print_cbm_char(mps_t *mps, const BYTE rawchar)
+static void print_cbm_char(mps_t *mps, const uint8_t rawchar)
 {
     unsigned int y, x;
     int c, err = 0;
@@ -166,10 +185,10 @@ static void write_line(mps_t *mps, unsigned int prnr)
 
     for (y = 0; y < 7; y++) {
         for (x = 0; x < 480; x++) {
-            output_select_putc(prnr, (BYTE)(mps->line[x][y]
+            output_select_putc(prnr, (uint8_t)(mps->line[x][y]
                                             ? OUTPUT_PIXEL_BLACK : OUTPUT_PIXEL_WHITE));
         }
-        output_select_putc(prnr, (BYTE)(OUTPUT_NEWLINE));
+        output_select_putc(prnr, (uint8_t)(OUTPUT_NEWLINE));
     }
 
     if (!is_mode(mps, MPS_BITMODE)) {
@@ -198,55 +217,34 @@ static void clear_buffer(mps_t *mps)
 
 static void bitmode_off(mps_t *mps)
 {
-    unsigned int i, x;
-    int y;
-    unsigned int err = 0;
-
-    for (i = 0; i < (unsigned int)mps->repeatn; i++) {
-        for (x = 0; x < (unsigned int)mps->bitcnt; x++) {
-            if ((mps->pos + x) >= MAX_COL) {
-                err = 1;
-                break;
-            }
-            if ((mps->pos - mps->bitcnt + x) >= MAX_COL) {
-                err = 1;
-                break;
-            }
-            if ((mps->pos + x) < (unsigned int)mps->bitcnt) {
-                err = 1;
-                break;
-            }
-            for (y = 0; y < 7; y++) {
-                mps->line[mps->pos + x][y]
-                    = mps->line[mps->pos - mps->bitcnt + x][y];
-            }
-        }
-        mps->pos += mps->bitcnt;
-    }
     del_mode(mps, MPS_BITMODE);
-    if (err) {
-        log_error(drv803_log, "Printing beyond limit of %d dots.", MAX_COL);
-    }
 }
 
-static void print_bitmask(mps_t *mps, const char c)
+static void print_bitmask(mps_t *mps, unsigned int prnr, const char c)
 {
     unsigned int y;
+    unsigned int i;
 
-    for (y = 0; y < 7; y++) {
-        mps->line[mps->pos][y] = c & (1 << (6 - y)) ? 1 : 0;
+    if (!mps->repeatn) {
+        mps->repeatn=1;
     }
 
-    mps->bitcnt++;
+    for (i = 0; i < (unsigned int)(mps->repeatn); i++) {
+        if (mps->pos >= MAX_COL) {  /* flush buffer*/
+            write_line(mps, prnr);
+            clear_buffer(mps);
+        }
+    for (y = 0; y < 7; y++) {
+        mps->line[mps->pos][y] = c & (1 << (y)) ? 1 : 0;
+    }
+
     mps->pos++;
+    }
+    mps->repeatn=0;
 }
 
-static void print_char(mps_t *mps, unsigned int prnr, const BYTE c)
+static void print_char(mps_t *mps, unsigned int prnr, const uint8_t c)
 {
-    if (mps->pos >= MAX_COL) {  /* flush buffer*/
-        write_line(mps, prnr);
-        clear_buffer(mps);
-    }
     if (mps->tab) {     /* decode tab-number*/
         mps->tabc[2 - mps->tab] = c;
 
@@ -274,7 +272,7 @@ static void print_char(mps_t *mps, unsigned int prnr, const BYTE c)
     }
 
     if (is_mode(mps, MPS_BITMODE) && (c & 128)) {
-        print_bitmask(mps, c);
+        print_bitmask(mps, prnr, c);
         return;
     }
 
@@ -301,7 +299,6 @@ static void print_char(mps_t *mps, unsigned int prnr, const BYTE c)
         switch (c) {
             case 8:
                 set_mode(mps, MPS_BITMODE);
-                mps->bitcnt = 0;
                 return;
 
             case 10: /* LF*/
@@ -369,8 +366,7 @@ static void print_char(mps_t *mps, unsigned int prnr, const BYTE c)
 
             case 26: /* repeat last chr$(8) c times.*/
                 set_mode(mps, MPS_REPEAT);
-                mps->repeatn = 0;
-                mps->bitcnt = 0;
+                mps->repeatn = 1;
                 return;
 
             case 27:
@@ -384,7 +380,7 @@ static void print_char(mps_t *mps, unsigned int prnr, const BYTE c)
         return;
     }
 
-   /* 
+   /*
     * When an odd number of CHR$(34) is detected in a line, the control
     * codes $00-$1F and $80-$9F will be made visible by printing a
     * reverse character for each of these controls. This will continue
@@ -395,16 +391,21 @@ static void print_char(mps_t *mps, unsigned int prnr, const BYTE c)
         mps->mode ^= MPS_QUOTED;
     }
 
+    if (mps->pos >= MAX_COL) {  /* flush buffer*/
+        write_line(mps, prnr);
+        clear_buffer(mps);
+    }
+
     if (is_mode(mps, MPS_QUOTED)) {
         if (c <= 0x1f) {
             set_mode(mps, MPS_REVERSE);
-            print_cbm_char(mps, (BYTE)(c + 0x40));
+            print_cbm_char(mps, (uint8_t)(c + 0x40));
             del_mode(mps, MPS_REVERSE);
             return;
         }
         if ((c >= 0x80) && (c <= 0x9f)) {
             set_mode(mps, MPS_REVERSE);
-            print_cbm_char(mps, (BYTE)(c - 0x20));
+            print_cbm_char(mps, (uint8_t)(c - 0x20));
             del_mode(mps, MPS_REVERSE);
             return;
         }
@@ -413,17 +414,20 @@ static void print_char(mps_t *mps, unsigned int prnr, const BYTE c)
     print_cbm_char(mps, c);
 }
 
-static int init_charset(BYTE charset[512][7], const char *name)
+static int init_charset(uint8_t chrset[512][7], const char *name)
 {
-    BYTE romimage[MPS803_ROM_SIZE];
+    uint8_t romimage[MPS803_ROM_SIZE];
 
-    if (sysfile_load(name, romimage, MPS803_ROM_SIZE, MPS803_ROM_SIZE) < 0) {
+    if (sysfile_load(name, "PRINTER", romimage, MPS803_ROM_SIZE, MPS803_ROM_SIZE) < 0) {
         log_error(drv803_log, "Could not load MPS-803 charset '%s'.", name);
         return -1;
     }
 
-    memcpy(charset, romimage, MPS803_ROM_SIZE);
+    memcpy(chrset, romimage, MPS803_ROM_SIZE);
 
+#ifdef DEBUG_MPS803
+    dump_charset();
+#endif
     return 0;
 }
 
@@ -470,28 +474,28 @@ static void drv_mps803_close(unsigned int prnr, unsigned int secondary)
  * mode associated with SA=0 or 7.
  */
 
-static int drv_mps803_putc(unsigned int prnr, unsigned int secondary, BYTE b)
+static int drv_mps803_putc(unsigned int prnr, unsigned int secondary, uint8_t b)
 {
-    DBG(("drv_mps803_putc(%d,%d:$%02x)\n", prnr, secondary, b));
+    DBG(("drv_mps803_putc(%u,%u:$%02x)\n", prnr, secondary, b));
     print_char(&drv_mps803[prnr], prnr, b);
     return 0;
 }
 
-static int drv_mps803_getc(unsigned int prnr, unsigned int secondary, BYTE *b)
+static int drv_mps803_getc(unsigned int prnr, unsigned int secondary, uint8_t *b)
 {
-    DBG(("drv_mps803_getc(%d,%d)\n", prnr, secondary));
+    DBG(("drv_mps803_getc(%u,%u)\n", prnr, secondary));
     return output_select_getc(prnr, b);
 }
 
 static int drv_mps803_flush(unsigned int prnr, unsigned int secondary)
 {
-    DBG(("drv_mps803_flush(%d,%d)\n", prnr, secondary));
+    DBG(("drv_mps803_flush(%u,%u)\n", prnr, secondary));
     return output_select_flush(prnr);
 }
 
 static int drv_mps803_formfeed(unsigned int prnr)
 {
-    DBG(("drv_mps803_formfeed(%d)\n", prnr));
+    DBG(("drv_mps803_formfeed(%u)\n", prnr));
     return 0;
 }
 
@@ -514,11 +518,11 @@ int drv_mps803_init_resources(void)
 
 int drv_mps803_init(void)
 {
-    static const char *color_names[2] = {"Black", "White"};
+    const char *color_names[2] = {"Black", "White"};
 
     drv803_log = log_open("MPS-803");
 
-    init_charset(charset, "mps803");
+    init_charset(charset, MPS803_ROM_NAME);
 
     palette = palette_create(2, color_names);
 
@@ -526,9 +530,11 @@ int drv_mps803_init(void)
         return -1;
     }
 
-    if (palette_load("mps803" FSDEV_EXT_SEP_STR "vpl", palette) < 0) {
+    if (palette_load("mps803.vpl", "PRINTER", palette) < 0) {
+#ifndef __LIBRETRO__
         log_error(drv803_log, "Cannot load palette file `%s'.",
-                  "mps803" FSDEV_EXT_SEP_STR "vpl");
+                  "mps803.vpl");
+#endif
         return -1;
     }
 

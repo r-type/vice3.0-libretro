@@ -33,13 +33,9 @@
 #include "debug.h"
 #include "vicefeatures.h"
 
-/* FIXME: define "UNIX" for all supported unixish OS */
-#if !defined(__OS2__) && !defined(BEOS_COMPILE) && !defined(__MSDOS__) && !defined(AMIGA_SUPPORT) && !defined(WIN32)
-#define UNIX
-#endif
 
-static feature_list_t featurelist[] = {
-#ifdef UNIX /* unix */
+static const feature_list_t featurelist[] = {
+#ifdef UNIX_COMPILE /* unix */
     { "BSD_JOYSTICK", "Enable support for BSD style joysticks.",
 #ifndef BSD_JOYSTICK
         0 },
@@ -54,13 +50,12 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-#ifdef UNIX /* unix */
-    { "ENABLE_NLS", "Define if NLS support is enabled.",
-#ifndef ENABLE_NLS
-        0 },
-#else
+/* all */
+    { "HAVE_DEBUG_THREADS", "Enable thread debugging code",
+#ifdef HAVE_DEBUG_THREADS
         1 },
-#endif
+#else
+        0 },
 #endif
 /* (all) */
     { "FEATURE_CPUMEMHISTORY", "Use the memmap feature.",
@@ -69,15 +64,7 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-#ifdef UNIX /* (unix) */
-    { "HAS_DIGITAL_JOYSTICK", "Enable emulation for digital joysticks.",
-#ifndef HAS_DIGITAL_JOYSTICK
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef MACOSX_SUPPORT /* (osx) */
+#ifdef MACOS_COMPILE /* (osx) */
     { "HAS_HIDMGR", "Enable Mac IOHIDManager Joystick driver.",
 #ifndef HAS_HIDMGR
         0 },
@@ -85,14 +72,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-/* (all) */
-    { "HAS_JOYSTICK", "Enable joystick emulation.",
-#ifndef HAS_JOYSTICK
-        0 },
-#else
-        1 },
-#endif
-#ifdef UNIX /* (unix) */
+#ifdef UNIX_COMPILE /* (unix) */
     { "HAS_USB_JOYSTICK", "Enable emulation for USB joysticks.",
 #ifndef HAS_USB_JOYSTICK
         0 },
@@ -100,7 +80,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(MACOSX_SUPPORT) /* (osx) */
+#if defined(MACOS_COMPILE) /* (osx) */
     { "HAVE_AUDIO_UNIT", "Enable AudioUnit support.",
 #ifndef HAVE_AUDIO_UNIT
         0 },
@@ -108,15 +88,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#ifdef UNIX /* (unix) */
-    { "HAVE_CAIRO", "Enable Cairo rendering support",
-#ifndef HAVE_CAIRO
-        0 },
-#else
-        1 },
-#endif
-#endif
-#if defined(AMIGA_SUPPORT) || defined(BEOS_COMPILE) || defined(__MSDOS__) || defined(UNIX) || defined(WIN32) /* (amiga/beos/dos/unix/windows) */
+#if defined(BEOS_COMPILE) || defined(UNIX_COMPILE) || defined(WINDOWS_COMPILE) /* (beos/unix/windows) */
     { "HAVE_CATWEASELMKIII", "Support for Catweasel MKIII.",
 #ifndef HAVE_CATWEASELMKIII
         0 },
@@ -124,23 +96,8 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#ifdef WIN32  /* (windows) */
-    { "HAVE_D3D9_H", "Support for DirectX9.",
-#ifndef HAVE_D3D9_H
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef AMIGA_SUPPORT  /* (amiga) */
-    { "HAVE_DEVICES_AHI_H", "Define to 1 if you have the <devices/ahi.h> header file.",
-#ifndef HAVE_DEVICES_AHI_H
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef WIN32 /* (windows) */
+
+#ifdef WINDOWS_COMPILE /* (windows) */
     { "HAVE_DINPUT", "Use DirectInput joystick driver",
 #ifndef HAVE_DINPUT
         0 },
@@ -148,7 +105,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(UNIX) || defined(MACOSX_SUPPORT) || defined(WIN32) /* (unix/osx/windows) */
+#if defined(UNIX_COMPILE) || defined(MACOS_COMPILE) || defined(WINDOWS_COMPILE) /* (unix/osx/windows) */
     { "HAVE_DYNLIB_SUPPORT", "Support for dynamic library loading.",
 #ifndef HAVE_DYNLIB_SUPPORT
         0 },
@@ -192,34 +149,13 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
  /* (all) */
-    { "SHARED_FFMPEG", "FFMPEG libraries are shared",
-#ifndef SHARED_FFMPEG
-        0 },
-#else
-        1 },
-#endif
- /* (all) */
-    { "STATIC_FFMPEG", "FFMPEG libraries are static",
-#ifndef STATIC_FFMPEG
-        0 },
-#else
-        1 },
-#endif
- /* (all) */
-    { "HAVE_FULLSCREEN", "Enable Fullscreen support.",
-#ifndef HAVE_FULLSCREEN
-        0 },
-#else
-        1 },
-#endif
- /* (all) */
     { "HAVE_GIF", "Can we use the GIF or UNGIF library?",
 #ifndef HAVE_GIF
         0 },
 #else
         1 },
 #endif
-#if defined(AMIGA_SUPPORT) || defined(BEOS_COMPILE) || defined(__MSDOS__) || defined(UNIX) || defined(WIN32) /* (amiga/beos/dos/unix/windows) */
+#if defined(BEOS_COMPILE) || defined(UNIX_COMPILE) || defined(WINDOWS_COMPILE) /* (beos/unix/windows) */
     { "HAVE_HARDSID", "Support for HardSID.",
 #ifndef HAVE_HARDSID
         0 },
@@ -227,7 +163,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(AMIGA_SUPPORT) || defined(USE_SDLUI) || defined(USE_SDLUI2) || defined(UNIX) || defined(MACOSX_SUPPORT) || defined(WIN32) /* (amiga/sdl/unix/osx/windows) */
+#if defined(USE_SDLUI) /* (optional only in sdl1) */
     { "HAVE_HWSCALE", "Enable arbitrary window scaling",
 #ifndef HAVE_HWSCALE
         0 },
@@ -242,14 +178,7 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-/* (all) */
-    { "HAVE_JPEG", "Can we use the JPEG library?",
-#ifndef HAVE_JPEG
-        0 },
-#else
-        1 },
-#endif
-#if defined(UNIX) || defined(WIN32) /* (unix/windows) */
+#if defined(UNIX_COMPILE) || defined(WINDOWS_COMPILE) /* (unix/windows) */
     { "HAVE_LIBIEEE1284", "Define to 1 if you have the `ieee1284' library", /* (-lieee1284) */
 #ifndef HAVE_LIBIEEE1284
         0 },
@@ -257,15 +186,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#ifdef UNIX /* (unix) */
-    { "HAVE_LIBXPM", "Is libXpm available?",
-#ifndef HAVE_LIBXPM
-        0 },
-#else
-        1 },
-#endif
-#endif
-#if defined(UNIX) || defined(MACOSX_SUPPORT) || defined(WIN32) /* (unix/osx/windows) */
+#if defined(UNIX_COMPILE) || defined(MACOS_COMPILE) || defined(WINDOWS_COMPILE) /* (unix/osx/windows) */
     { "HAVE_MIDI", "Enable MIDI emulation.",
 #ifndef HAVE_MIDI
         0 },
@@ -294,31 +215,22 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-#if defined(UNIX) || defined(WIN32) /* (unix/windows) */
-    { "HAVE_OPENCBM", "Support for OpenCBM", /* (former CBM4Linux). */
-#ifndef HAVE_OPENCBM
+#if defined(UNIX_COMPILE) || defined(WINDOWS_COMPILE) /* (unix/windows) */
+    { "HAVE_REALDEVICE", "Support for OpenCBM", /* (former CBM4Linux). */
+#ifndef HAVE_REALDEVICE
         0 },
 #else
         1 },
 #endif
 #endif
-#if defined(USE_SDLUI) || defined(USE_SDLUI2) || defined(UNIX) /* (sdl/unix) */
-    { "HAVE_OPENGL_SYNC", "Enable openGL synchronization",
-#ifndef HAVE_OPENGL_SYNC
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef UNIX /* (unix) */
+/* (all) */
     { "HAVE_PANGO", "Enable support for Pango",
 #ifndef HAVE_PANGO
         0 },
 #else
         1 },
 #endif
-#endif
-#if defined(BEOS_COMPILE) || defined(__MSDOS__) || defined(UNIX) || defined(WIN32) /* (beos/dos/unix/windows) */
+#if defined(BEOS_COMPILE) || defined(UNIX_COMPILE) || defined(WINDOWS_COMPILE) /* (beos/unix/windows) */
     { "HAVE_PARSID", "Support for ParSID.",
 #ifndef HAVE_PARSID
         0 },
@@ -333,62 +245,32 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-#ifdef AMIGA_SUPPORT /* (amiga) */
-    { "HAVE_PROTO_CYBERGRAPHICS_H", "Define to 1 if you have the <proto/cybergraphics.h> header file.",
-#ifndef HAVE_PROTO_CYBERGRAPHICS_H
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef AMIGA_SUPPORT /* (amiga) */
-    { "HAVE_PROTO_OPENPCI_H", "Define to 1 if you have the <proto/openpci.h> header file.",
-#ifndef HAVE_PROTO_OPENPCI_H
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef AMIGA_SUPPORT /* (amiga) */
-    { "HAVE_PROTO_PICASSO96API_H", "Define to 1 if you have the <proto/Picasso96API.h> header file.",
-#ifndef HAVE_PROTO_PICASSO96API_H
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef AMIGA_SUPPORT /* (amiga) */
-    { "HAVE_PROTO_PICASSO96_H", "Define to 1 if you have the <proto/Picasso96.h> header file.",
-#ifndef HAVE_PROTO_PICASSO96_H
-        0 },
-#else
-        1 },
-#endif
-#endif
-#if defined(MACOSX_SUPPORT) || defined(WIN32) /* (osx/windows) */
-    { "HAVE_QUICKTIME", "Enable QuickTime support.",
-#ifndef HAVE_QUICKTIME
-        0 },
-#else
-        1 },
-#endif
-#endif
+
 /* (all) */
-    { "HAVE_RAWDRIVE", "Support for block device disk image access.",
-#ifndef HAVE_RAWDRIVE
+    { "HAVE_FASTSID", "Enable FASTSID support.",
+#ifndef HAVE_FASTSID
         0 },
 #else
         1 },
 #endif
 /* (all) */
-    { "HAVE_RESID", "This version provides ReSID support.",
+    { "HAVE_RESID", "Enable ReSID support.",
 #ifndef HAVE_RESID
         0 },
 #else
         1 },
 #endif
+#ifdef HAVE_RESID
 /* (all) */
-    { "HAVE_RESID_DTV", "This version provides ReSID-DTV support.",
+    { "HAVE_NEW_8580_FILTER", "Enable experimental new 8580 Filter emulation.",
+#ifndef HAVE_NEW_8580_FILTER
+        0 },
+#else
+        1 },
+#endif
+#endif
+/* (all) */
+    { "HAVE_RESID_DTV", "Enable ReSID-DTV support.",
 #ifndef HAVE_RESID_DTV
         0 },
 #else
@@ -408,7 +290,7 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-#if defined(USE_SDLUI) || defined(USE_SDLUI2) /* (sdl) */
+#if defined(USE_SDLUI) || defined(USE_SDL2UI) /* (sdl) */
     { "HAVE_SDL_NUMJOYSTICKS", "Define to 1 if you have the `SDL_NumJoysticks' function.",
 #ifndef HAVE_SDL_NUMJOYSTICKS
         0 },
@@ -416,7 +298,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(AMIGA_SUPPORT) || defined(BEOS_COMPILE) || defined(__MSDOS__) || defined(UNIX) || defined(WIN32) /* (amiga/beos/dos/unix/windows) */
+#if defined(BEOS_COMPILE) || defined(UNIX_COMPILE) || defined(WINDOWS_COMPILE) /* (amiga/beos/unix/windows) */
     { "HAVE_SSI2001", "Support for SSI-2001.",
 #ifndef HAVE_SSI2001
         0 },
@@ -424,7 +306,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(UNIX) /* (unix) */
+#if defined(UNIX_COMPILE) /* (unix) */
     { "HAVE_SYS_AUDIO_H", "Define to 1 if you have the <sys/audio.h> header file.",
 #ifndef HAVE_SYS_AUDIO_H
         0 },
@@ -432,7 +314,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(UNIX) /* (unix) */
+#if defined(UNIX_COMPILE) /* (unix) */
     { "HAVE_SYS_AUDIOIO_H", "Define to 1 if you have the <sys/audioio.h> header file.",
 #ifndef HAVE_SYS_AUDIOIO_H
         0 },
@@ -441,36 +323,42 @@ static feature_list_t featurelist[] = {
 #endif
 #endif
 /* (all) */
-    { "HAVE_PCAP", "Support for The Final Ethernet",
+    { "HAVE_RAWNET", "Enable raw ethernet emulation.",
+#ifndef HAVE_RAWNET
+        0 },
+#else
+        1 },
+#endif
+/* (all) */
+    { "HAVE_PCAP", "Support for PCAP library.",
 #ifndef HAVE_PCAP
         0 },
 #else
         1 },
 #endif
-#ifdef UNIX /* (unix) */
-    { "HAVE_VTE", "VTE support",
-#ifndef HAVE_VTE
+/* (all) */
+    { "HAVE_TUNTAP", "Support for TUN/TAP virtual network interface.",
+#ifndef HAVE_TUNTAP
+        0 },
+#else
+        1 },
+#endif
+#if defined(UNIX_COMPILE) /* (unix) */
+    { "HAVE_CAPABILITIES", "Support for POSIX 1003.1e capabilities",
+#ifndef HAVE_CAPABILITIES
         0 },
 #else
         1 },
 #endif
 #endif
-#ifdef UNIX /* (unix) */
-    { "HAVE_XRANDR", "Enable XRandR extension.",
-#ifndef HAVE_XRANDR
-        0 },
+/* (all) */
+    { "HAVE_X64_IMAGE", "Support for X64 image files",
+#ifndef HAVE_X64_IMAGE
+      0 },
 #else
-        1 },
+      1 },
 #endif
-#endif
-#ifdef UNIX /* (unix) */
-    { "HAVE_XVIDEO", "Enable XVideo support.",
-#ifndef HAVE_XVIDEO
-        0 },
-#else
-        1 },
-#endif
-#endif
+
 /* (all) */
     { "HAVE_ZLIB", "Can we use the ZLIB compression library?",
 #ifndef HAVE_ZLIB
@@ -478,7 +366,7 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-#ifdef UNIX /* (unix) */
+#ifdef UNIX_COMPILE /* (unix) */
     { "LINUX_JOYSTICK", "Enable support for Linux style joysticks.",
 #ifndef LINUX_JOYSTICK
         0 },
@@ -486,7 +374,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#ifdef MACOSX_SUPPORT /* (osx) */
+#ifdef MACOS_COMPILE /* (osx) */
     { "MAC_JOYSTICK", "Enable Mac Joystick support.",
 #ifndef MAC_JOYSTICK
         0 },
@@ -494,15 +382,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(UNIX) /* (unix) */
-    { "USE_AIX_AUDIO", "Enable aix sound support.",
-#ifndef USE_AIX_AUDIO
-        0 },
-#else
-        1 },
-#endif
-#endif
-#if defined(UNIX) /* (unix) */
+#if defined(UNIX_COMPILE) /* (unix) */
     { "USE_ALSA", "Enable alsa support.",
 #ifndef USE_ALSA
         0 },
@@ -510,15 +390,7 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(UNIX) /* (unix) */
-    { "USE_ARTS", "Enable aRts support.",
-#ifndef USE_ARTS
-        0 },
-#else
-        1 },
-#endif
-#endif
-#if defined(MACOSX_SUPPORT) /* (osx) */
+#if defined(MACOS_COMPILE) /* (osx) */
     { "USE_COREAUDIO", "Enable CoreAudio support.",
 #ifndef USE_COREAUDIO
         0 },
@@ -526,28 +398,13 @@ static feature_list_t featurelist[] = {
         1 },
 #endif
 #endif
-#if defined(UNIX) /* (unix) */
-    { "USE_DMEDIA", "Enable sgi sound support.",
-#ifndef USE_DMEDIA
-        0 },
-#else
-        1 },
-#endif
-#endif
-#if defined(WIN32) /* (windows) */
+#if defined(WINDOWS_COMPILE) /* (windows) */
     { "USE_DXSOUND", "Enable directx sound support.",
 #ifndef USE_DXSOUND
         0 },
 #else
         1 },
 #endif
-#endif
-/* (all) */
-    { "USE_EMBEDDED", "Use embedded data files.",
-#ifndef USE_EMBEDDED
-        0 },
-#else
-        1 },
 #endif
 /* (all) */
     { "USE_LAMEMP3", "Enable lamemp3 encoding support.",
@@ -584,23 +441,7 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-#ifdef __MSDOS__ /* (dos) */
-    { "USE_MIDAS_SOUND", "Use MIDAS Sound System instead of the Allegro library.",
-#ifndef USE_MIDAS_SOUND
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef UNIX /* (unix) */
-    { "USE_MITSHM", "Enable MITSHM extensions.",
-#ifndef USE_MITSHM
-        0 },
-#else
-        1 },
-#endif
-#endif
-#if defined(UNIX) /* (unix) */
+#if defined(UNIX_COMPILE) /* (unix) */
     { "USE_OSS", "Enable oss support.",
 #ifndef USE_OSS
         0 },
@@ -622,42 +463,40 @@ static feature_list_t featurelist[] = {
 #else
         1 },
 #endif
-#ifdef UNIX /* (unix) */
+#if 0
+# ifdef UNIX_COMPILE /* (unix) */
     { "USE_UI_THREADS", "Enable multithreaded UI.",
-#ifndef USE_UI_THREADS
+#  ifndef USE_UI_THREADS
+        0 },
+#  else
+        1 },
+#  endif
+# endif
+#endif
+
+/*
+ * Used in Gtk3 for Unix. Gtk3 can also use fontconfig as a backend on MacOS
+ * and Windows.
+ */
+    { "HAVE_FONTCONFIG", "Fontconfig support for dynamical font loading.",
+#ifndef HAVE_FONTCONFIG
         0 },
 #else
         1 },
 #endif
-#endif
-#ifdef UNIX /* (unix) */
-    { "USE_XAW3D", "Enable Xaw3d.",
-#ifndef USE_XAW3D
+
+/* Gtk3UI debubbing support */
+    { "HAVE_DEBUG_GTK3UI", "Enable debugging messages in the Gtk3 UI.",
+#ifndef HAVE_DEBUG_GTK3UI
         0 },
 #else
         1 },
 #endif
-#endif
-#ifdef UNIX /* (unix) */
-    { "USE_XF86_EXTENSIONS", "Enable XF86 extensions.",
-#ifndef USE_XF86_EXTENSIONS
-        0 },
-#else
-        1 },
-#endif
-#endif
-#ifdef UNIX /* (unix) */
-    { "USE_XF86_VIDMODE_EXT", "Enable XF86 VidMode extensions.",
-#ifndef USE_XF86_VIDMODE_EXT
-        0 },
-#else
-        1 },
-#endif
-#endif
+
     { NULL, NULL, 0 }
 };
 
-feature_list_t *vice_get_feature_list(void)
+const feature_list_t *vice_get_feature_list(void)
 {
     return &featurelist[0];
 }

@@ -28,9 +28,10 @@
 
 #include <stdio.h>
 
+#include "machine.h"
 #include "romset.h"
 
-const char *machine_romset_resources_list[] = {
+static const char * const machine_romset_resources_list[] = {
     "KernalName",
     "BasicName",
     "FunctionLowName",

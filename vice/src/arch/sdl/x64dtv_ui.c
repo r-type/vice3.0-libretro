@@ -32,14 +32,19 @@
 
 #include "debug.h"
 #include "c64mem.h"
+#include "c64rom.h"
+#include "c64ui.h"
 #include "menu_c64dtvhw.h"
 #include "menu_common.h"
 #include "menu_debug.h"
 #include "menu_drive.h"
+#include "menu_edit.h"
 #include "menu_ffmpeg.h"
 #include "menu_help.h"
 #include "menu_jam.h"
 #include "menu_joyport.h"
+#include "menu_joystick.h"
+#include "menu_media.h"
 #include "menu_monitor.h"
 #include "menu_network.h"
 #include "menu_printer.h"
@@ -51,12 +56,16 @@
 #include "menu_snapshot.h"
 #include "menu_sound.h"
 #include "menu_speed.h"
+#include "menu_userport.h"
 #include "menu_video.h"
 #include "ui.h"
+#include "uifonts.h"
 #include "uimenu.h"
 #include "vkbd.h"
 
-static const ui_menu_entry_t x64dtv_main_menu[] = {
+static UI_MENU_CALLBACK(pause_callback_wrapper);
+
+static ui_menu_entry_t x64dtv_main_menu[] = {
     { "Autostart image",
       MENU_ENTRY_DIALOG,
       autostart_callback,
@@ -65,6 +74,8 @@ static const ui_menu_entry_t x64dtv_main_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)drive_menu },
+    /* no tape support */
+    /* no cartridge support */
     { "Printer",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -89,10 +100,10 @@ static const ui_menu_entry_t x64dtv_main_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)snapshot_menu },
-    { "Screenshot",
+    { "Save media file",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
-      (ui_callback_data_t)screenshot_vic_vicii_vdc_menu },
+      (ui_callback_data_t)media_menu },
     { "Speed settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
@@ -112,19 +123,25 @@ static const ui_menu_entry_t x64dtv_main_menu[] = {
       (ui_callback_data_t)network_menu },
 #endif
     { "Pause",
+      MENU_ENTRY_OTHER_TOGGLE,
+      pause_callback_wrapper,
+      NULL },
+    /* Caution: index is hardcoded below */
+    { "Advance Frame",
       MENU_ENTRY_OTHER,
-      pause_callback,
+      advance_frame_callback,
       NULL },
     { "Monitor",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)monitor_menu },
+    /* Caution: index is hardcoded below */
     { "Virtual keyboard",
       MENU_ENTRY_OTHER,
       vkbd_callback,
       NULL },
     { "Statusbar",
-      MENU_ENTRY_OTHER,
+      MENU_ENTRY_OTHER_TOGGLE,
       statusbar_callback,
       NULL },
 #ifdef DEBUG
@@ -141,6 +158,12 @@ static const ui_menu_entry_t x64dtv_main_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)settings_manager_menu },
+#ifdef USE_SDL2UI
+    { "Edit",
+      MENU_ENTRY_SUBMENU,
+      submenu_callback,
+      (ui_callback_data_t)edit_menu },
+#endif
     { "Quit emulator",
       MENU_ENTRY_OTHER,
       quit_callback,
@@ -148,13 +171,51 @@ static const ui_menu_entry_t x64dtv_main_menu[] = {
     SDL_MENU_LIST_END
 };
 
-void c64dtvui_set_menu_params(int index, menu_draw_t *menu_draw)
+#ifdef HAVE_NETWORK
+# define MENU_ADVANCE_FRAME_IDX      14
+# define MENU_VIRTUAL_KEYBOARD_IDX   16
+#else
+# define MENU_ADVANCE_FRAME_IDX      13
+# define MENU_VIRTUAL_KEYBOARD_IDX   15
+#endif
+static UI_MENU_CALLBACK(pause_callback_wrapper)
 {
-    menu_draw->color_front = 15;
+    x64dtv_main_menu[MENU_ADVANCE_FRAME_IDX].status =
+        sdl_pause_state || !sdl_menu_state ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+    x64dtv_main_menu[MENU_VIRTUAL_KEYBOARD_IDX].status =
+        sdl_pause_state ? MENU_STATUS_INACTIVE : MENU_STATUS_ACTIVE;
+    return pause_callback(activated, param);
+}
+
+static void c64dtvui_set_menu_params(int index, menu_draw_t *menu_draw)
+{
+    /* VICII-DTV */
+    menu_draw->max_text_x = 40;
+    menu_draw->color_front = menu_draw->color_default_front = 15;
+    menu_draw->color_back = menu_draw->color_default_back = 0;
+    menu_draw->color_cursor_back = (9*16)+6;
+    menu_draw->color_cursor_revers = 0;
+    menu_draw->color_active_green = (14*16)+13;
+    menu_draw->color_inactive_red = (4*16)+6;
+    menu_draw->color_active_grey = 10;
+    menu_draw->color_inactive_grey = 5;
 
     sdl_ui_set_menu_params = NULL;
 }
 
+/** \brief  Pre-initialize the UI before the canvas window gets created
+ *
+ * \return  0 on success, -1 on failure
+ */
+int c64dtvui_init_early(void)
+{
+    return 0;
+}
+
+/** \brief  Initialize the UI
+ *
+ * \return  0 on success, -1 on failure
+ */
 int c64dtvui_init(void)
 {
 #ifdef SDL_DEBUG
@@ -163,14 +224,17 @@ int c64dtvui_init(void)
 
     sdl_ui_set_menu_params = c64dtvui_set_menu_params;
 
-    uijoyport_menu_create(1, 1, 1, 0, 0);
+    uijoyport_menu_create(1, 1, 1, 1, 1);
+    uijoystick_menu_create(1, 1, 1, 1, 1);
+    uiuserport_menu_create(0);
     uisampler_menu_create();
     uidrive_menu_create();
     uikeyboard_menu_create();
     uisid_menu_create();
+    uimedia_menu_create();
 
     sdl_ui_set_main_menu(x64dtv_main_menu);
-    sdl_ui_set_menu_font(mem_chargen_rom + 0x800, 8, 8);
+    sdl_ui_font_init(C64_CHARGEN_NAME, 0, 0x800, 0);
     sdl_vkbd_set_vkbd(&vkbd_c64dtv);
 
 #ifdef HAVE_FFMPEG
@@ -185,6 +249,9 @@ void c64dtvui_shutdown(void)
     uikeyboard_menu_shutdown();
     uisid_menu_shutdown();
     uijoyport_menu_shutdown();
+    uijoystick_menu_shutdown();
+    uiuserport_menu_shutdown();
+    uimedia_menu_shutdown();
 #ifdef SDL_DEBUG
     fprintf(stderr,"%s\n",__func__);
 #endif
@@ -192,4 +259,5 @@ void c64dtvui_shutdown(void)
 #ifdef HAVE_FFMPEG
     sdl_menu_ffmpeg_shutdown();
 #endif
+    sdl_ui_font_shutdown();
 }

@@ -79,12 +79,12 @@ struct interrupt_cpu_status_s {
        left at the start of this particular DMA (needed by *_set_irq() to
        calculate irq_clk).  */
     unsigned int num_dma_per_opcode;
-    unsigned int num_cycles_left[INTRRUPT_MAX_DMA_PER_OPCODE];
+    CLOCK num_cycles_left[INTRRUPT_MAX_DMA_PER_OPCODE];
     CLOCK dma_start_clk[INTRRUPT_MAX_DMA_PER_OPCODE];
 
     /* counters for delay between interrupt request and handler */
-    unsigned int irq_delay_cycles;
-    unsigned int nmi_delay_cycles;
+    CLOCK irq_delay_cycles;
+    CLOCK nmi_delay_cycles;
 
     /* If 1, do a RESET.  */
     int reset;
@@ -92,17 +92,26 @@ struct interrupt_cpu_status_s {
     /* If 1, call the trapping function.  */
     int trap;
 
-    /* Debugging function.  */
-    void (*trap_func)(WORD, void *data);
+    /* Various subsystems use this to call a function next cycle  */
+    void (**trap_func)(uint16_t, void *data);
 
-    /* Data to pass to the debugging function when called.  */
-    void *trap_data;
+    /* Data to pass to the trap_func when called. */
+    void **trap_data;
+
+    /* Size of the trap funcs/datas array. */
+    int traps_size;
+
+    /* Index of the next trap func to execute. */
+    int traps_next;
+
+    /* How many pending trap funcs to call. */
+    int traps_count;
 
     /* Pointer to the last executed opcode information.  */
     unsigned int *last_opcode_info_ptr;
 
     /* Number of cycles we have stolen to the processor last time.  */
-    int num_last_stolen_cycles;
+    CLOCK num_last_stolen_cycles;
 
     /* Clock tick at which these cycles have been stolen.  */
     CLOCK last_stolen_cycles_clk;
@@ -150,7 +159,9 @@ inline static void interrupt_set_irq(interrupt_cpu_status_t *cs,
                cycles are stolen from the CPU.  */
 #ifdef DEBUG
             if (debug.maincpu_traceflg) {
-                log_debug("ICLK=%i  last_stolen_cycle=%d", cpu_clk, cs->last_stolen_cycles_clk);
+                log_debug("ICLK=%lu  last_stolen_cycle=%lu",
+                        (unsigned long)cpu_clk,
+                        (unsigned long)(cs->last_stolen_cycles_clk));
             }
 #endif
             cs->irq_delay_cycles = 0;
@@ -194,7 +205,9 @@ inline static void interrupt_set_nmi(interrupt_cpu_status_t *cs,
 
 #ifdef DEBUG
                 if (debug.maincpu_traceflg) {
-                    log_debug("ICLK=%i  last_stolen_cycle=%d", cpu_clk, cs->last_stolen_cycles_clk);
+                    log_debug("ICLK=%lu  last_stolen_cycle=%lu",
+                            (unsigned long)cpu_clk,
+                            (unsigned long)(cs->last_stolen_cycles_clk));
                 }
 #endif
                 /* This makes sure that NMI delay is correctly emulated when
@@ -278,8 +291,8 @@ extern unsigned int interrupt_cpu_status_int_new(interrupt_cpu_status_t *cs,
                                                  const char *name);
 extern void interrupt_ack_reset(interrupt_cpu_status_t *cs);
 extern void interrupt_set_reset_trap_func(interrupt_cpu_status_t *cs, void (*reset_trap_func)(void));
-extern void interrupt_maincpu_trigger_trap(void (*trap_func)(WORD, void *data), void *data);
-extern void interrupt_do_trap(interrupt_cpu_status_t *cs, WORD address);
+extern void interrupt_maincpu_trigger_trap(void (*trap_func)(uint16_t, void *data), void *data);
+extern void interrupt_do_trap(interrupt_cpu_status_t *cs, uint16_t address);
 
 extern void interrupt_monitor_trap_on(interrupt_cpu_status_t *cs);
 extern void interrupt_monitor_trap_off(interrupt_cpu_status_t *cs);

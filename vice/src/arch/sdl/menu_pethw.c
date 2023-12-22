@@ -37,6 +37,8 @@
 #include "menu_mouse.h"
 #include "menu_ram.h"
 #include "menu_rom.h"
+#include "menu_settings.h"
+#include "menu_userport.h"
 #include "pet.h"
 #include "petmodel.h"
 #include "pet-resources.h"
@@ -62,27 +64,27 @@ UI_MENU_DEFINE_TOGGLE(RamA)
 
 static const ui_menu_entry_t pet_memory_menu[] = {
     SDL_MENU_ITEM_TITLE("Memory size"),
-    { "4kB",
+    { "4KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)4 },
-    { "8kB",
+    { "8KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)8 },
-    { "16kB",
+    { "16KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)16 },
-    { "32kB",
+    { "32KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)32 },
-    { "96kB",
+    { "96KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)96 },
-    { "128kB",
+    { "128KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_RamSize_callback,
       (ui_callback_data_t)128 },
@@ -92,7 +94,7 @@ static const ui_menu_entry_t pet_memory_menu[] = {
       MENU_ENTRY_RESOURCE_RADIO,
       radio_IOSize_callback,
       (ui_callback_data_t)0x100 },
-    { "2kB",
+    { "2KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_IOSize_callback,
       (ui_callback_data_t)0x800 },
@@ -128,19 +130,19 @@ static const ui_menu_entry_t petreu_menu[] = {
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Memory size"),
-    { "128kB",
+    { "128KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_PETREUsize_callback,
       (ui_callback_data_t)128 },
-    { "512kB",
+    { "512KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_PETREUsize_callback,
       (ui_callback_data_t)512 },
-    { "1024kB",
+    { "1MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_PETREUsize_callback,
       (ui_callback_data_t)1024 },
-    { "2048kB",
+    { "2MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_PETREUsize_callback,
       (ui_callback_data_t)2048 },
@@ -199,6 +201,27 @@ static const ui_menu_entry_t petcolour_menu[] = {
     SDL_MENU_LIST_END
 };
 
+/* SUPERPET CPU */
+
+UI_MENU_DEFINE_RADIO(CPUswitch)
+
+static const ui_menu_entry_t superpet_cpu_menu[] = {
+    SDL_MENU_ITEM_TITLE("SuperPET CPU switch"),
+    { "MOS 6502",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_CPUswitch_callback,
+      (ui_callback_data_t)SUPERPET_CPU_6502 },
+    { "Motorola 6809",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_CPUswitch_callback,
+      (ui_callback_data_t)SUPERPET_CPU_6809 },
+    { "Programmable",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_CPUswitch_callback,
+      (ui_callback_data_t)SUPERPET_CPU_PROG },
+    SDL_MENU_LIST_END
+};
+
 /* PET MODEL SELECTION */
 
 static UI_MENU_CALLBACK(custom_PETModel_callback)
@@ -236,17 +259,37 @@ static const ui_menu_entry_t pet_model_menu[] = {
     SDL_MENU_LIST_END
 };
 
-UI_MENU_DEFINE_RADIO(KeyboardType)
+/* FIXME */
+#if 0
+void uikeyboard_update_pet_type_menu(void)
+{
+    int idx, type, mapping;
 
+    resources_get_int("KeymapIndex", &idx);
+    resources_get_int("KeyboardMapping", &mapping);
+}
+#endif
+
+static UI_MENU_CALLBACK(radio_KeyboardType_callback)
+{
+    const char *res = sdl_ui_menu_radio_helper(activated, param, "KeyboardType");
+    if (activated) {
+        uikeyboard_update_index_menu();
+        uikeyboard_update_mapping_menu();
+    }
+    return res;
+}
+
+/* FIXME: this should be dynamic/generated */
 static const ui_menu_entry_t pet_keyboard_menu[] = {
-    { "Business (US)",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_KeyboardType_callback,
-      (ui_callback_data_t)KBD_TYPE_BUSINESS_US },
     { "Business (UK)",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_KeyboardType_callback,
       (ui_callback_data_t)KBD_TYPE_BUSINESS_UK },
+    { "Business (US)",
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_KeyboardType_callback,
+      (ui_callback_data_t)KBD_TYPE_BUSINESS_US },
     { "Business (DE)",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_KeyboardType_callback,
@@ -262,49 +305,22 @@ static const ui_menu_entry_t pet_keyboard_menu[] = {
     SDL_MENU_LIST_END
 };
 
-UI_MENU_DEFINE_TOGGLE(UserportDAC)
-UI_MENU_DEFINE_TOGGLE(UserportRTCDS1307)
-UI_MENU_DEFINE_TOGGLE(UserportRTCDS1307Save)
-UI_MENU_DEFINE_TOGGLE(UserportRTC58321a)
-UI_MENU_DEFINE_TOGGLE(UserportRTC58321aSave)
-
-static const ui_menu_entry_t userport_menu[] = {
-    SDL_MENU_ITEM_TITLE("Userport devices"),
-    { "8 bit DAC enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportDAC_callback,
-      NULL },
-    { "RTC (58321a) enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTC58321a_callback,
-      NULL },
-    { "Save RTC (58321a) data when changed",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTC58321aSave_callback,
-      NULL },
-    { "RTC (DS1307) enable",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTCDS1307_callback,
-      NULL },
-    { "Save RTC (DS1307) data when changed",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_UserportRTCDS1307Save_callback,
-      NULL },
-    SDL_MENU_LIST_END
-};
-
 UI_MENU_DEFINE_TOGGLE(Crtc)
 UI_MENU_DEFINE_TOGGLE(PETHRE)
 
 const ui_menu_entry_t pet_hardware_menu[] = {
     { "Select PET model",
       MENU_ENTRY_SUBMENU,
-      submenu_callback,
+      submenu_radio_callback,
       (ui_callback_data_t)pet_model_menu },
     { "Keyboard",
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
       (ui_callback_data_t)pet_keyboard_menu },
+    { "SuperPET CPU switch",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)superpet_cpu_menu },
     SDL_MENU_ITEM_SEPARATOR,
     { "Joyport settings",
       MENU_ENTRY_SUBMENU,
@@ -348,14 +364,14 @@ const ui_menu_entry_t pet_hardware_menu[] = {
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_PETHRE_callback,
       NULL },
-    { "Userport devices",
+    { "Userport settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
       (ui_callback_data_t)userport_menu },
     { "Tape port devices",
       MENU_ENTRY_SUBMENU,
       submenu_callback,
-      (ui_callback_data_t)tapeport_devices_menu },
+      (ui_callback_data_t)tapeport_pet_devices_menu },
     { "Memory and I/O settings",
       MENU_ENTRY_SUBMENU,
       submenu_callback,

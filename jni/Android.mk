@@ -1,49 +1,38 @@
 LOCAL_PATH := $(call my-dir)
 
-include $(CLEAR_VARS)
+CORE_DIR := $(LOCAL_PATH)/..
 
-LOCAL_MODULE    := retro
-CPU_ARCH        :=
+COMMONFLAGS :=
+INCFLAGS    :=
 
-ifeq ($(TARGET_ARCH),arm)
-LOCAL_CFLAGS += -DANDROID_ARM
-LOCAL_ARM_MODE := arm
-endif
-
-ifeq ($(TARGET_ARCH),x86)
-LOCAL_CFLAGS +=  -DANDROID_X86
-endif
-
-ifeq ($(TARGET_ARCH),mips)
-LOCAL_CFLAGS += -DANDROID_MIPS -D__mips__ -D__MIPSEL__
-endif
-
-EMUTYPE     := x64
-CORE_DIR    := ..
-
-SOURCES_C   :=
-SOURCES_ASM :=
-
-LOCAL_CFLAGS += -DCORE_NAME=\"$(EMUTYPE)\"
-
-ifeq ($(HAVE_DYNAREC),1)
-LOCAL_CFLAGS += -DHAVE_DYNAREC
-endif
-
-ifeq ($(CPU_ARCH),arm)
-LOCAL_CFLAGS  += -DARM_ARCH
-endif
-
-ifeq ($(DEBUG),1)
-APP_OPTIM := -O0 -g
-else
-APP_OPTIM := -O2 -DNDEBUG
-endif
+EMUTYPE     ?= x64
 
 include $(CORE_DIR)/Makefile.common
 
-LOCAL_SRC_FILES := $(SOURCES_C) $(SOURCES_CC) $(SOURCES_CXX) $(SOURCES_ASM)
-LOCAL_CFLAGS += $(APP_OPTIM) -D__LIBRETRO__ -DFRONTEND_SUPPORTS_RGB565 $(INCFLAGS) $(CXXFLAGS) -DHAVE_INET_ATON -DWANT_ZLIB
-LOCAL_CPP_FEATURES += rtti exceptions
-LOCAL_LDLIBS += -llog 
+COREFLAGS := -DCORE_NAME=\"$(EMUTYPE)\" \
+  -D__LIBRETRO__ \
+  -DUSE_LIBRETRO_VFS \
+  -DANDROID \
+  $(INCFLAGS) $(COMMONFLAGS) \
+  -DHAVE_INET_ATON \
+  -DHAVE_7ZIP -D_7ZIP_ST \
+  -D_INTTYPES_H
+
+GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
+ifneq ($(GIT_VERSION)," unknown")
+  COREFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
+
+ifeq ($(TARGET_ARCH),arm)
+  COREFLAGS += -DARM_ARCH
+endif
+
+include $(CLEAR_VARS)
+LOCAL_MODULE       := retro
+LOCAL_SRC_FILES    := $(SOURCES_C) $(SOURCES_CXX)
+LOCAL_CPPFLAGS     := $(COREFLAGS)
+LOCAL_CFLAGS       := $(COREFLAGS)
+LOCAL_LDFLAGS      := -Wl,-version-script=$(CORE_DIR)/libretro/link.T -ldl
+LOCAL_LDLIBS       := -llog
+LOCAL_CPP_FEATURES := exceptions
 include $(BUILD_SHARED_LIBRARY)

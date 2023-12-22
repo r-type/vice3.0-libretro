@@ -36,27 +36,18 @@
 #include "ui.h"
 #include "vsyncapi.h"
 
-#ifdef ANDROID_COMPILE
-int mouse_x, mouse_y;
-#else
-static int mouse_x, mouse_y;
-#endif
-
-static unsigned long mouse_timestamp = 0;
 static mouse_func_t mouse_funcs;
 
 void mousedrv_mouse_changed(void)
 {
+    ui_set_mouse_grab_window_title(_mouse_enabled);
     ui_check_mouse_cursor();
 }
 
-int mousedrv_resources_init(mouse_func_t *funcs)
+int mousedrv_resources_init(const mouse_func_t *funcs)
 {
-    mouse_funcs.mbl = funcs->mbl;
-    mouse_funcs.mbr = funcs->mbr;
-    mouse_funcs.mbm = funcs->mbm;
-    mouse_funcs.mbu = funcs->mbu;
-    mouse_funcs.mbd = funcs->mbd;
+    /* Copy entire 'mouse_func_t' structure. */
+    mouse_funcs = *funcs;
     return 0;
 }
 
@@ -88,7 +79,7 @@ void mouse_button(int bnumber, int state)
             mouse_funcs.mbr(state);
             break;
 /* FIXME: fix for SDL2 */
-#ifndef USE_SDLUI2
+#ifndef USE_SDL2UI
         case SDL_BUTTON_WHEELUP:
             mouse_funcs.mbu(state);
             break;
@@ -99,28 +90,6 @@ void mouse_button(int bnumber, int state)
         default:
             break;
     }
-}
-
-int mousedrv_get_x(void)
-{
-    return mouse_x;
-}
-
-int mousedrv_get_y(void)
-{
-    return mouse_y;
-}
-
-void mouse_move(int x, int y)
-{
-    mouse_x += x;
-    mouse_y -= y;
-    mouse_timestamp = vsyncarch_gettime();
-}
-
-unsigned long mousedrv_get_timestamp(void)
-{
-    return mouse_timestamp;
 }
 
 void mousedrv_button_left(int pressed)

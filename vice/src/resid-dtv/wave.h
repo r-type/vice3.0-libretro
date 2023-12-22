@@ -31,7 +31,7 @@
 
 #include "bittrain.h"
 
-namespace reSID
+namespace reSID_dtv
 {
 
 // ----------------------------------------------------------------------------
@@ -116,7 +116,7 @@ void WaveformGenerator::clock_noise()
   reg24 bit0 = ((shift_register >> 22) ^ (shift_register >> 17)) & 0x1;
   shift_register <<= 1;
   shift_register |= bit0;
-    
+
   noise =
     ((shift_register & 0x400000) >> 11) |
     ((shift_register & 0x100000) >> 10) |
@@ -260,6 +260,6 @@ unsigned int WaveformGenerator::output()
 
 #endif // RESID_INLINING || defined(__WAVE_CC__)
 
-} // namespace reSID
+} // namespace reSID_dtv
 
 #endif // not __WAVE_H__

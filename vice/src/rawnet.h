@@ -24,13 +24,17 @@
  *
  */
 
-#ifdef HAVE_PCAP
+#ifdef HAVE_RAWNET
 #else
-  #error RAWNET.H should not be included if HAVE_PCAP is not defined!
-#endif /* #ifdef HAVE_PCAP */
+  #error RAWNET.H should not be included if HAVE_RAWNET is not defined!
+#endif /* #ifdef HAVE_RAWNET */
 
 #ifndef VICE_RAWNET_H
 #define VICE_RAWNET_H
+
+extern int rawnet_resources_init(void);
+extern int rawnet_cmdline_options_init(void);
+extern void rawnet_resources_shutdown(void);
 
 /*
  This is a helper for the _receive() function of the emulated ethernet chip to determine
@@ -58,6 +62,8 @@ extern void rawnet_set_should_accept_func(int (*func)(unsigned char *, int, int 
 
    For each of these parameters, new memory is allocated, so it has to be
    freed with lib_free().
+   Note: The description can be NULL, since pcap_if_t.desc can be NULL, so
+   check the description before calling lib_free() on it.
 
  rawnet_enumadapter_close() must be used to stop processing.
 
@@ -69,5 +75,10 @@ extern int rawnet_enumadapter_open(void);
 extern int rawnet_enumadapter(char **ppname, char **ppdescription);
 extern int rawnet_enumadapter_close(void);
 extern char *rawnet_get_standard_interface(void);
+
+extern int rawnet_enumdriver_open(void);
+extern int rawnet_enumdriver(char **ppname, char **ppdescription);
+extern int rawnet_enumdriver_close(void);
+extern char *rawnet_get_standard_driver(void);
 
 #endif

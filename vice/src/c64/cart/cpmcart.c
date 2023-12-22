@@ -48,7 +48,6 @@
 #include "monitor.h"
 #include "resources.h"
 #include "snapshot.h"
-#include "translate.h"
 #include "types.h"
 #include "z80regs.h"
 
@@ -58,35 +57,35 @@
 #define CLK_ADD(clock, amount) clock += amount
 #endif
 
-static BYTE reg_a = 0;
-static BYTE reg_b = 0;
-static BYTE reg_c = 0;
-static BYTE reg_d = 0;
-static BYTE reg_e = 0;
-static BYTE reg_f = 0;
-static BYTE reg_h = 0;
-static BYTE reg_l = 0;
-static BYTE reg_ixh = 0;
-static BYTE reg_ixl = 0;
-static BYTE reg_iyh = 0;
-static BYTE reg_iyl = 0;
-static WORD reg_sp = 0;
-static DWORD z80_reg_pc = 0;
-static BYTE reg_i = 0;
-static BYTE reg_r = 0;
+static uint8_t reg_a = 0;
+static uint8_t reg_b = 0;
+static uint8_t reg_c = 0;
+static uint8_t reg_d = 0;
+static uint8_t reg_e = 0;
+static uint8_t reg_f = 0;
+static uint8_t reg_h = 0;
+static uint8_t reg_l = 0;
+static uint8_t reg_ixh = 0;
+static uint8_t reg_ixl = 0;
+static uint8_t reg_iyh = 0;
+static uint8_t reg_iyl = 0;
+static uint16_t reg_sp = 0;
+static uint32_t z80_reg_pc = 0;
+static uint8_t reg_i = 0;
+static uint8_t reg_r = 0;
 
-static BYTE iff1 = 0;
-static BYTE iff2 = 0;
-static BYTE im_mode = 0;
+static uint8_t iff1 = 0;
+static uint8_t iff2 = 0;
+static uint8_t im_mode = 0;
 
-static BYTE reg_a2 = 0;
-static BYTE reg_b2 = 0;
-static BYTE reg_c2 = 0;
-static BYTE reg_d2 = 0;
-static BYTE reg_e2 = 0;
-static BYTE reg_f2 = 0;
-static BYTE reg_h2 = 0;
-static BYTE reg_l2 = 0;
+static uint8_t reg_a2 = 0;
+static uint8_t reg_b2 = 0;
+static uint8_t reg_c2 = 0;
+static uint8_t reg_d2 = 0;
+static uint8_t reg_e2 = 0;
+static uint8_t reg_f2 = 0;
+static uint8_t reg_h2 = 0;
+static uint8_t reg_l2 = 0;
 
 static int z80_started = 0;
 static int cpmcart_enabled = 0;
@@ -94,26 +93,25 @@ static int cpmcart_enabled = 0;
 static read_func_ptr_t cpmcart_mem_read_tab[0x101];
 static store_func_ptr_t cpmcart_mem_write_tab[0x101];
 
-static BYTE cpmcart_wrap_read(WORD addr)
+static uint8_t cpmcart_wrap_read(uint16_t addr)
 {
-    DWORD address = ((DWORD)addr + 0x1000) & 0xffff;
-
-    return cpmcart_mem_read_tab[addr >> 8]((WORD)address);
+    uint32_t address = ((uint32_t)addr + 0x1000) & 0xffff;
+    return cpmcart_mem_read_tab[addr >> 8]((uint16_t)address);
 }
 
-static void cpmcart_wrap_store(WORD addr, BYTE value)
+static void cpmcart_wrap_store(uint16_t addr, uint8_t value)
 {
-    DWORD address = ((DWORD)addr + 0x1000) & 0xffff;
+    uint32_t address = ((uint32_t)addr + 0x1000) & 0xffff;
 
-    cpmcart_mem_write_tab[addr >> 8]((WORD)address, value);
+    cpmcart_mem_write_tab[addr >> 8]((uint16_t)address, value);
 }
 
-static void set_read_item(int index, BYTE (*func)(WORD addr))
+static void set_read_item(int index, uint8_t (*func)(uint16_t addr))
 {
     cpmcart_mem_read_tab[index] = func;
 }
 
-static void set_write_item(int index, void (*func)(WORD addr, BYTE val))
+static void set_write_item(int index, void (*func)(uint16_t addr, uint8_t val))
 {
     cpmcart_mem_write_tab[index] = func;
 }
@@ -147,7 +145,7 @@ static void cpmcart_mem_init(void)
     set_write_item(0xc7, c64io_d700_store);
 
     /* z80 $c800-$cbff -> c64 $d800-$dbff (VICII colorram) */
-    for (i = 0xd8; i <= 0xdb; ++i) {
+    for (i = 0xc8; i <= 0xcb; ++i) {
         set_read_item(i, colorram_read);
         set_write_item(i, colorram_store);
     }
@@ -181,7 +179,7 @@ static void cpmcart_mem_init(void)
     }
 }
 
-static void cpmcart_io_store(WORD addr, BYTE byte)
+static void cpmcart_io_store(uint16_t addr, uint8_t byte)
 {
     int val = byte & 1;
 
@@ -204,18 +202,19 @@ static int cpmcart_dump(void)
 }
 
 static io_source_t cpmcart_device = {
-    "CP/M Cartridge",
-    IO_DETACH_RESOURCE,
-    "CPMCart",
-    0xde00, 0xdeff, 0xff,
-    0,
-    cpmcart_io_store,
-    NULL, /* no read */
-    NULL, /* no peek */
-    cpmcart_dump,
-    CARTRIDGE_CPM,
-    0,
-    0
+    "CP/M Cartridge",     /* name of the device */
+    IO_DETACH_RESOURCE,   /* use resource to detach the device when involved in a read-collision */
+    "CPMCart",            /* resource to set to '0' */
+    0xde00, 0xdeff, 0xff, /* range of the device, address is ignored, reg:$de00, mirrors:$de01-$deff */
+    0,                    /* read is never valid, device is write only */
+    cpmcart_io_store,     /* store function */
+    NULL,                 /* NO poke function */
+    NULL,                 /* NO read function */
+    NULL,                 /* NO peek function */
+    cpmcart_dump,         /* device state information dump function */
+    CARTRIDGE_CPM,        /* cartridge ID */
+    IO_PRIO_NORMAL,       /* normal priority, device read needs to be checked for collisions */
+    0                     /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *cpmcart_list_item = NULL;
@@ -261,16 +260,12 @@ int cpmcart_resources_init(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-cpmcart", SET_RESOURCE, 0,
+    { "-cpmcart", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "CPMCart", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_CPM_CART,
-      NULL, NULL },
-    { "+cpmcart", SET_RESOURCE, 0,
+      NULL, "Enable the CP/M cartridge" },
+    { "+cpmcart", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "CPMCart", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_CPM_CART,
-      NULL, NULL },
+      NULL, "Disable the CP/M cartridge" },
     CMDLINE_LIST_END
 };
 
@@ -316,9 +311,9 @@ void cpmcart_reset(void)
         z80_reg_pc = (addr);                            \
     } while (0)
 
-#define LOAD(addr) (cpmcart_wrap_read((WORD)(addr)))
+#define LOAD(addr) (cpmcart_wrap_read((uint16_t)(addr)))
 
-#define STORE(addr, value) (cpmcart_wrap_store((WORD)(addr), (BYTE)(value)))
+#define STORE(addr, value) (cpmcart_wrap_store((uint16_t)(addr), (uint8_t)(value)))
 
 /* undefine IN and OUT first for platforms that have them already defined as something else */
 #undef IN
@@ -327,7 +322,7 @@ void cpmcart_reset(void)
 #undef OUT
 #define OUT(addr, value) STORE(addr, value)
 
-#define opcode_t DWORD
+#define opcode_t uint32_t
 
 #define FETCH_OPCODE(o) ((o) = (LOAD(z80_reg_pc)               \
                                 | (LOAD(z80_reg_pc + 1) << 8)  \
@@ -584,7 +579,7 @@ static unsigned int z80_last_opcode_addr;
 #define LOCAL_ZERO()      (reg_f & Z_FLAG)
 #define LOCAL_SIGN()      (reg_f & S_FLAG)
 
-static const BYTE SZP[256] = {
+static const uint8_t SZP[256] = {
     P_FLAG | Z_FLAG,               0,               0,          P_FLAG,
                   0,          P_FLAG,          P_FLAG,               0,
                   0,          P_FLAG,          P_FLAG,               0,
@@ -670,7 +665,7 @@ static void import_registers(void)
     reg_iyh = z80_regs.reg_iy >> 8;
     reg_iyl = z80_regs.reg_iy & 0xff;
     reg_sp = z80_regs.reg_sp;
-    z80_reg_pc = (DWORD)z80_regs.reg_pc;
+    z80_reg_pc = (uint32_t)z80_regs.reg_pc;
     reg_i = z80_regs.reg_i;
     reg_r = z80_regs.reg_r;
     reg_a2 = z80_regs.reg_af2 >> 8;
@@ -692,7 +687,7 @@ static void export_registers(void)
     z80_regs.reg_ix = (reg_ixh << 8) | reg_ixl;
     z80_regs.reg_iy = (reg_iyh << 8) | reg_iyl;
     z80_regs.reg_sp = reg_sp;
-    z80_regs.reg_pc = (WORD)z80_reg_pc;
+    z80_regs.reg_pc = (uint16_t)z80_reg_pc;
     z80_regs.reg_i = reg_i;
     z80_regs.reg_r = reg_r;
     z80_regs.reg_af2 = (reg_a2 << 8) | reg_f2;
@@ -707,21 +702,21 @@ static void export_registers(void)
 
 #define DO_INTERRUPT(int_kind)                                                            \
     do {                                                                                  \
-        BYTE ik = (int_kind);                                                             \
+        uint8_t ik = (int_kind);                                                             \
                                                                                           \
         if (ik & (IK_IRQ | IK_NMI)) {                                                     \
             if ((ik & IK_NMI) && 0) {                                                     \
             } else if ((ik & IK_IRQ) && iff1 && !OPINFO_DISABLES_IRQ(LAST_OPCODE_INFO)) { \
-                WORD jumpdst;                                                             \
+                uint16_t jumpdst;                                                             \
                 if (monitor_mask[e_comp_space] & (MI_STEP)) {                             \
                     monitor_check_icount_interrupt();                                     \
                 }                                                                         \
                 CLK_ADD(CLK, 4);                                                          \
                 --reg_sp;                                                                 \
-                STORE((reg_sp), ((BYTE)(z80_reg_pc >> 8)));                               \
+                STORE((reg_sp), ((uint8_t)(z80_reg_pc >> 8)));                               \
                 CLK_ADD(CLK, 4);                                                          \
                 --reg_sp;                                                                 \
-                STORE((reg_sp), ((BYTE)(z80_reg_pc & 0xff)));                             \
+                STORE((reg_sp), ((uint8_t)(z80_reg_pc & 0xff)));                             \
                 iff1 = 0;                                                                 \
                 iff2 = 0;                                                                 \
                 if (im_mode == 1) {                                                       \
@@ -741,7 +736,7 @@ static void export_registers(void)
         if (ik & (IK_TRAP | IK_RESET)) {                                                  \
             if (ik & IK_TRAP) {                                                           \
                 export_registers();                                                       \
-                interrupt_do_trap(cpu_int_status, (WORD)z80_reg_pc);                      \
+                interrupt_do_trap(cpu_int_status, (uint16_t)z80_reg_pc);                      \
                 import_registers();                                                       \
                 if (cpu_int_status->global_pending_int & IK_RESET) {                      \
                     ik |= IK_RESET;                                                       \
@@ -760,15 +755,15 @@ static void export_registers(void)
                 export_registers();                                                       \
             }                                                                             \
             if (monitor_mask[e_comp_space] & (MI_STEP)) {                                 \
-                monitor_check_icount((WORD)z80_reg_pc);                                   \
+                monitor_check_icount((uint16_t)z80_reg_pc);                                   \
             }                                                                             \
             if (monitor_mask[e_comp_space] & (MI_BREAK)) {                                \
-                if (monitor_check_breakpoints(e_comp_space, (WORD)z80_reg_pc)) {          \
+                if (monitor_check_breakpoints(e_comp_space, (uint16_t)z80_reg_pc)) {          \
                     monitor_startup(e_comp_space);                                        \
                 }                                                                         \
             }                                                                             \
             if (monitor_mask[e_comp_space] & (MI_WATCH)) {                                \
-                monitor_check_watchpoints(LAST_OPCODE_ADDR, (WORD)z80_reg_pc);            \
+                monitor_check_watchpoints(LAST_OPCODE_ADDR, (uint16_t)z80_reg_pc);            \
             }                                                                             \
         }                                                                                 \
     } while (0)
@@ -779,14 +774,14 @@ static void export_registers(void)
 
 #define ADC(loadval, clk_inc1, clk_inc2, pc_inc)                                    \
     do {                                                                            \
-        BYTE tmp, carry, value;                                                     \
+        uint8_t tmp, carry, value;                                                     \
                                                                                     \
         CLK_ADD(CLK, clk_inc1);                                                     \
-        value = (BYTE)(loadval);                                                    \
+        value = (uint8_t)(loadval);                                                    \
         carry = LOCAL_CARRY();                                                      \
         tmp = reg_a + value + carry;                                                \
         reg_f = SZP[tmp];                                                           \
-        LOCAL_SET_CARRY((WORD)((WORD)reg_a + (WORD)value + (WORD)(carry)) & 0x100); \
+        LOCAL_SET_CARRY((uint16_t)((uint16_t)reg_a + (uint16_t)value + (uint16_t)(carry)) & 0x100); \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);                        \
         LOCAL_SET_PARITY((~(reg_a ^ value)) & (reg_a ^ tmp) & 0x80);                \
         reg_a = tmp;                                                                \
@@ -796,49 +791,49 @@ static void export_registers(void)
 
 #define ADCHLREG(reg_valh, reg_vall)                                                       \
     do {                                                                                   \
-        DWORD tmp, carry;                                                                  \
+        uint32_t tmp, carry;                                                                  \
                                                                                            \
         carry = LOCAL_CARRY();                                                             \
-        tmp = (DWORD)((reg_h << 8) + reg_l) + (DWORD)((reg_valh << 8) + reg_vall) + carry; \
+        tmp = (uint32_t)((reg_h << 8) + reg_l) + (uint32_t)((reg_valh << 8) + reg_vall) + carry; \
         LOCAL_SET_ZERO(!(tmp & 0xffff));                                                   \
         LOCAL_SET_NADDSUB(0);                                                              \
         LOCAL_SET_SIGN(tmp & 0x8000);                                                      \
         LOCAL_SET_CARRY(tmp & 0x10000);                                                    \
         LOCAL_SET_HALFCARRY(((tmp >> 8) ^ reg_valh ^ reg_h) & H_FLAG);                     \
         LOCAL_SET_PARITY((~(reg_h ^ reg_valh)) & (reg_valh ^ (tmp >> 8)) & 0x80);          \
-        reg_h = (BYTE)(tmp >> 8);                                                          \
-        reg_l = (BYTE)(tmp & 0xff);                                                        \
+        reg_h = (uint8_t)(tmp >> 8);                                                          \
+        reg_l = (uint8_t)(tmp & 0xff);                                                        \
         CLK_ADD(CLK, 15);                                                                  \
         INC_PC(2);                                                                         \
     } while (0)
 
 #define ADCHLSP()                                                                           \
     do {                                                                                    \
-        DWORD tmp, carry;                                                                   \
+        uint32_t tmp, carry;                                                                   \
                                                                                             \
         carry = LOCAL_CARRY();                                                              \
-        tmp = (DWORD)((reg_h << 8) + reg_l) + (DWORD)(reg_sp) + carry;                      \
+        tmp = (uint32_t)((reg_h << 8) + reg_l) + (uint32_t)(reg_sp) + carry;                      \
         LOCAL_SET_ZERO(!(tmp & 0xffff));                                                    \
         LOCAL_SET_NADDSUB(0);                                                               \
         LOCAL_SET_SIGN(tmp & 0x8000);                                                       \
         LOCAL_SET_CARRY(tmp & 0x10000);                                                     \
         LOCAL_SET_HALFCARRY(((tmp >> 8) ^ (reg_sp >> 8) ^ reg_h) & H_FLAG);                 \
         LOCAL_SET_PARITY((~(reg_h ^ (reg_sp >> 8))) & ((reg_sp >> 8) ^ (tmp >> 8)) & 0x80); \
-        reg_h = (BYTE)(tmp >> 8);                                                           \
-        reg_l = (BYTE)(tmp & 0xff);                                                         \
+        reg_h = (uint8_t)(tmp >> 8);                                                           \
+        reg_l = (uint8_t)(tmp & 0xff);                                                         \
         CLK_ADD(CLK, 15);                                                                   \
         INC_PC(2);                                                                          \
     } while (0)
 
 #define ADD(loadval, clk_inc1, clk_inc2, pc_inc)                     \
     do {                                                             \
-        BYTE tmp, value;                                             \
+        uint8_t tmp, value;                                             \
                                                                      \
         CLK_ADD(CLK, clk_inc1);                                      \
-        value = (BYTE)(loadval);                                     \
+        value = (uint8_t)(loadval);                                     \
         tmp = reg_a + value;                                         \
         reg_f = SZP[tmp];                                            \
-        LOCAL_SET_CARRY((WORD)((WORD)reg_a + (WORD)value) & 0x100);  \
+        LOCAL_SET_CARRY((uint16_t)((uint16_t)reg_a + (uint16_t)value) & 0x100);  \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);         \
         LOCAL_SET_PARITY((~(reg_a ^ value)) & (reg_a ^ tmp) & 0x80); \
         reg_a = tmp;                                                 \
@@ -848,28 +843,28 @@ static void export_registers(void)
 
 #define ADDXXREG(reg_dsth, reg_dstl, reg_valh, reg_vall, clk_inc, pc_inc)                \
     do {                                                                                 \
-        DWORD tmp;                                                                       \
+        uint32_t tmp;                                                                       \
                                                                                          \
-        tmp = (DWORD)((reg_dsth << 8) + reg_dstl) + (DWORD)((reg_valh << 8) + reg_vall); \
+        tmp = (uint32_t)((reg_dsth << 8) + reg_dstl) + (uint32_t)((reg_valh << 8) + reg_vall); \
         LOCAL_SET_NADDSUB(0);                                                            \
         LOCAL_SET_CARRY(tmp & 0x10000);                                                  \
         LOCAL_SET_HALFCARRY(((tmp >> 8) ^ reg_valh ^ reg_dsth) & H_FLAG);                \
-        reg_dsth = (BYTE)(tmp >> 8);                                                     \
-        reg_dstl = (BYTE)(tmp & 0xff);                                                   \
+        reg_dsth = (uint8_t)(tmp >> 8);                                                     \
+        reg_dstl = (uint8_t)(tmp & 0xff);                                                   \
         CLK_ADD(CLK, clk_inc);                                                           \
         INC_PC(pc_inc);                                                                  \
     } while (0)
 
 #define ADDXXSP(reg_dsth, reg_dstl, clk_inc, pc_inc)                           \
     do {                                                                       \
-        DWORD tmp;                                                             \
+        uint32_t tmp;                                                             \
                                                                                \
-        tmp = (DWORD)((reg_dsth << 8) + reg_dstl) + (DWORD)(reg_sp);           \
+        tmp = (uint32_t)((reg_dsth << 8) + reg_dstl) + (uint32_t)(reg_sp);           \
         LOCAL_SET_NADDSUB(0);                                                  \
         LOCAL_SET_CARRY(tmp & 0x10000);                                        \
         LOCAL_SET_HALFCARRY(((tmp >> 8) ^ (reg_sp >> 8) ^ reg_dsth) & H_FLAG); \
-        reg_dsth = (BYTE)(tmp >> 8);                                           \
-        reg_dstl = (BYTE)(tmp & 0xff);                                         \
+        reg_dsth = (uint8_t)(tmp >> 8);                                           \
+        reg_dstl = (uint8_t)(tmp & 0xff);                                         \
         CLK_ADD(CLK, clk_inc);                                                 \
         INC_PC(pc_inc);                                                        \
     } while (0)
@@ -913,10 +908,10 @@ static void export_registers(void)
         INC_PC(pc_inc);                                     \
         CLK_ADD(CLK, clk_inc1);                             \
         --reg_sp;                                           \
-        STORE((reg_sp), ((BYTE)(z80_reg_pc >> 8)));         \
+        STORE((reg_sp), ((uint8_t)(z80_reg_pc >> 8)));         \
         CLK_ADD(CLK, clk_inc2);                             \
         --reg_sp;                                           \
-        STORE((reg_sp), ((BYTE)(z80_reg_pc & 0xff)));       \
+        STORE((reg_sp), ((uint8_t)(z80_reg_pc & 0xff)));       \
         JUMP(reg_val);                                      \
         CLK_ADD(CLK, clk_inc3);                             \
     } while (0)
@@ -942,10 +937,10 @@ static void export_registers(void)
 
 #define CP(loadval, clk_inc1, clk_inc2, pc_inc)                   \
     do {                                                          \
-        BYTE tmp, value;                                          \
+        uint8_t tmp, value;                                          \
                                                                   \
         CLK_ADD(CLK, clk_inc1);                                   \
-        value = (BYTE)(loadval);                                  \
+        value = (uint8_t)(loadval);                                  \
         tmp = reg_a - value;                                      \
         reg_f = N_FLAG | SZP[tmp];                                \
         LOCAL_SET_CARRY(value > reg_a);                           \
@@ -957,7 +952,7 @@ static void export_registers(void)
 
 #define CPDI(HL_FUNC)                                      \
     do {                                                   \
-        BYTE val, tmp;                                     \
+        uint8_t val, tmp;                                     \
                                                            \
         CLK_ADD(CLK, 4);                                   \
         val = LOAD(HL_WORD());                             \
@@ -973,7 +968,7 @@ static void export_registers(void)
 
 #define CPDIR(HL_FUNC)                                         \
     do {                                                       \
-        BYTE val, tmp;                                         \
+        uint8_t val, tmp;                                         \
                                                                \
         CLK_ADD(CLK, 4);                                       \
         val = LOAD(HL_WORD());                                 \
@@ -1001,7 +996,7 @@ static void export_registers(void)
 
 #define DAA(clk_inc, pc_inc)                                                                                         \
     do {                                                                                                             \
-        WORD tmp;                                                                                                    \
+        uint16_t tmp;                                                                                                    \
                                                                                                                      \
         tmp = reg_a | (LOCAL_CARRY() ? 0x100 : 0) | (LOCAL_HALFCARRY() ? 0x200 : 0) | (LOCAL_NADDSUB() ? 0x400 : 0); \
         reg_a = daa_reg_a[tmp];                                                                                      \
@@ -1012,7 +1007,7 @@ static void export_registers(void)
 
 #define DECXXIND(reg_val, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                        \
-        BYTE tmp;                                               \
+        uint8_t tmp;                                               \
                                                                 \
         CLK_ADD(CLK, clk_inc1);                                 \
         tmp = LOAD((reg_val));                                  \
@@ -1069,7 +1064,7 @@ static void export_registers(void)
 
 #define EXAFAF(clk_inc, pc_inc) \
     do {                        \
-        BYTE tmpl, tmph;        \
+        uint8_t tmpl, tmph;        \
                                 \
         tmph = reg_a;           \
         tmpl = reg_f;           \
@@ -1083,7 +1078,7 @@ static void export_registers(void)
 
 #define EXX(clk_inc, pc_inc)   \
     do {                       \
-        BYTE tmpl, tmph;       \
+        uint8_t tmpl, tmph;       \
                                \
         tmph = reg_b;          \
         tmpl = reg_c;          \
@@ -1109,7 +1104,7 @@ static void export_registers(void)
 
 #define EXDEHL(clk_inc, pc_inc) \
     do {                        \
-        BYTE tmpl, tmph;        \
+        uint8_t tmpl, tmph;        \
                                 \
         tmph = reg_d;           \
         tmpl = reg_e;           \
@@ -1123,7 +1118,7 @@ static void export_registers(void)
 
 #define EXXXSP(reg_valh, reg_vall, clk_inc1, clk_inc2, clk_inc3, clk_inc4, clk_inc5, pc_inc) \
     do {                                                                                     \
-        BYTE tmpl, tmph;                                                                     \
+        uint8_t tmpl, tmph;                                                                     \
                                                                                              \
         tmph = reg_valh;                                                                     \
         tmpl = reg_vall;                                                                     \
@@ -1171,7 +1166,7 @@ static void export_registers(void)
 
 #define INBC0(clk_inc1, clk_inc2, pc_inc) \
     do {                                  \
-        BYTE tmp;                         \
+        uint8_t tmp;                         \
         CLK_ADD(CLK, clk_inc1);           \
         tmp = IN(BC_WORD());              \
         reg_f = SZP[tmp] | LOCAL_CARRY(); \
@@ -1181,7 +1176,7 @@ static void export_registers(void)
 
 #define INCXXIND(reg_val, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                        \
-        BYTE tmp;                                               \
+        uint8_t tmp;                                               \
                                                                 \
         CLK_ADD(CLK, clk_inc1);                                 \
         tmp = LOAD((reg_val));                                  \
@@ -1207,7 +1202,7 @@ static void export_registers(void)
 
 #define INDI(HL_FUNC)           \
     do {                        \
-        BYTE tmp;               \
+        uint8_t tmp;               \
                                 \
         CLK_ADD(CLK, 4);        \
         tmp = IN(BC_WORD());    \
@@ -1223,7 +1218,7 @@ static void export_registers(void)
 
 #define INDIR(HL_FUNC)               \
     do {                             \
-        BYTE tmp;                    \
+        uint8_t tmp;                    \
                                      \
         CLK_ADD(CLK, 4);             \
         tmp = IN(BC_WORD());         \
@@ -1269,7 +1264,7 @@ static void export_registers(void)
 
 #define LDDI(DE_FUNC, HL_FUNC)           \
     do {                                 \
-        BYTE tmp;                        \
+        uint8_t tmp;                        \
                                          \
         CLK_ADD(CLK, 4);                 \
         tmp = LOAD(HL_WORD());           \
@@ -1287,7 +1282,7 @@ static void export_registers(void)
 
 #define LDDIR(DE_FUNC, HL_FUNC)     \
     do {                            \
-        BYTE tmp;                   \
+        uint8_t tmp;                   \
                                     \
         CLK_ADD(CLK, 4);            \
         tmp = LOAD(HL_WORD());      \
@@ -1319,7 +1314,7 @@ static void export_registers(void)
 #define LDSP(value, clk_inc1, clk_inc2, pc_inc) \
     do {                                        \
         CLK_ADD(CLK, clk_inc1);                 \
-        reg_sp = (WORD)(value);                 \
+        reg_sp = (uint16_t)(value);                 \
         CLK_ADD(CLK, clk_inc2);                 \
         INC_PC(pc_inc);                         \
     } while (0)
@@ -1336,10 +1331,10 @@ static void export_registers(void)
 
 #define LDREG(reg_dest, value, clk_inc1, clk_inc2, pc_inc) \
     do {                                                   \
-        BYTE tmp;                                          \
+        uint8_t tmp;                                          \
                                                            \
         CLK_ADD(CLK, clk_inc1);                            \
-        tmp = (BYTE)(value);                               \
+        tmp = (uint8_t)(value);                               \
         reg_dest = tmp;                                    \
         CLK_ADD(CLK, clk_inc2);                            \
         INC_PC(pc_inc);                                    \
@@ -1348,15 +1343,15 @@ static void export_registers(void)
 #define LDW(value, reg_valh, reg_vall, clk_inc1, clk_inc2, pc_inc) \
     do {                                                           \
         CLK_ADD(CLK, clk_inc1);                                    \
-        reg_vall = (BYTE)((value) & 0xff);                         \
-        reg_valh = (BYTE)((value) >> 8);                           \
+        reg_vall = (uint8_t)((value) & 0xff);                         \
+        reg_valh = (uint8_t)((value) >> 8);                           \
         CLK_ADD(CLK, clk_inc2);                                    \
         INC_PC(pc_inc);                                            \
     } while (0)
 
 #define NEG()                                        \
     do {                                             \
-        BYTE tmp;                                    \
+        uint8_t tmp;                                    \
                                                      \
         tmp = 0 - reg_a;                             \
         reg_f = N_FLAG | SZP[tmp];                   \
@@ -1401,7 +1396,7 @@ static void export_registers(void)
 
 #define OUTDI(HL_FUNC)          \
     do {                        \
-        BYTE tmp;               \
+        uint8_t tmp;               \
                                 \
         CLK_ADD(CLK, 4);        \
         tmp = LOAD(HL_WORD());  \
@@ -1417,7 +1412,7 @@ static void export_registers(void)
 
 #define OTDIR(HL_FUNC)               \
     do {                             \
-        BYTE tmp;                    \
+        uint8_t tmp;                    \
                                      \
         CLK_ADD(CLK, 4);             \
         tmp = LOAD(HL_WORD());       \
@@ -1468,7 +1463,7 @@ static void export_registers(void)
 
 #define RESXX(value, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                         \
-        BYTE tmp;                                                \
+        uint8_t tmp;                                                \
                                                                  \
         CLK_ADD(CLK, clk_inc1);                                  \
         tmp = LOAD((addr));                                      \
@@ -1481,7 +1476,7 @@ static void export_registers(void)
 
 #define RESXXREG(value, reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                                     \
-        BYTE tmp;                                                            \
+        uint8_t tmp;                                                            \
                                                                              \
         CLK_ADD(CLK, clk_inc1);                                              \
         tmp = LOAD((addr));                                                  \
@@ -1495,7 +1490,7 @@ static void export_registers(void)
 
 #define RET(clk_inc1, clk_inc2, clk_inc3) \
     do {                                  \
-        WORD tmp;                         \
+        uint16_t tmp;                         \
                                           \
         CLK_ADD(CLK, clk_inc1);           \
         tmp = LOAD(reg_sp);               \
@@ -1518,7 +1513,7 @@ static void export_registers(void)
 
 #define RETNI()                         \
     do {                                \
-        WORD tmp;                       \
+        uint16_t tmp;                       \
                                         \
         CLK_ADD(CLK, 4);                \
         tmp = LOAD(reg_sp);             \
@@ -1532,7 +1527,7 @@ static void export_registers(void)
 
 #define RL(reg_val)                               \
     do {                                          \
-        BYTE rot;                                 \
+        uint8_t rot;                                 \
                                                   \
         rot = (reg_val & 0x80) ? C_FLAG : 0;      \
         reg_val = (reg_val << 1) | LOCAL_CARRY(); \
@@ -1543,7 +1538,7 @@ static void export_registers(void)
 
 #define RLA(clk_inc, pc_inc)                  \
     do {                                      \
-        BYTE rot;                             \
+        uint8_t rot;                             \
                                               \
         rot = (reg_a & 0x80) ? C_FLAG : 0;    \
         reg_a = (reg_a << 1) | LOCAL_CARRY(); \
@@ -1556,7 +1551,7 @@ static void export_registers(void)
 
 #define RLC(reg_val)                         \
     do {                                     \
-        BYTE rot;                            \
+        uint8_t rot;                            \
                                              \
         rot = (reg_val & 0x80) ? C_FLAG : 0; \
         reg_val = (reg_val << 1) | rot;      \
@@ -1567,7 +1562,7 @@ static void export_registers(void)
 
 #define RLCA(clk_inc, pc_inc)              \
     do {                                   \
-        BYTE rot;                          \
+        uint8_t rot;                          \
                                            \
         rot = (reg_a & 0x80) ? C_FLAG : 0; \
         reg_a = (reg_a << 1) | rot;        \
@@ -1580,7 +1575,7 @@ static void export_registers(void)
 
 #define RLCXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1595,7 +1590,7 @@ static void export_registers(void)
 
 #define RLCXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -1611,7 +1606,7 @@ static void export_registers(void)
 
 #define RLD()                                          \
     do {                                               \
-        BYTE tmp;                                      \
+        uint8_t tmp;                                      \
                                                        \
         tmp = LOAD(HL_WORD());                         \
         CLK_ADD(CLK, 8);                               \
@@ -1624,7 +1619,7 @@ static void export_registers(void)
 
 #define RLXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                 \
-        BYTE rot, tmp;                                   \
+        uint8_t rot, tmp;                                   \
                                                          \
         CLK_ADD(CLK, clk_inc1);                          \
         tmp = LOAD((addr));                              \
@@ -1639,7 +1634,7 @@ static void export_registers(void)
 
 #define RLXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                             \
-        BYTE rot, tmp;                                               \
+        uint8_t rot, tmp;                                               \
                                                                      \
         CLK_ADD(CLK, clk_inc1);                                      \
         tmp = LOAD((addr));                                          \
@@ -1655,7 +1650,7 @@ static void export_registers(void)
 
 #define RR(reg_val)                                            \
     do {                                                       \
-        BYTE rot;                                              \
+        uint8_t rot;                                              \
                                                                \
         rot = reg_val & C_FLAG;                                \
         reg_val = (reg_val >> 1) | (LOCAL_CARRY() ? 0x80 : 0); \
@@ -1666,7 +1661,7 @@ static void export_registers(void)
 
 #define RRA(clk_inc, pc_inc)                               \
     do {                                                   \
-        BYTE rot;                                          \
+        uint8_t rot;                                          \
                                                            \
         rot = reg_a & C_FLAG;                              \
         reg_a = (reg_a >> 1) | (LOCAL_CARRY() ? 0x80 : 0); \
@@ -1679,7 +1674,7 @@ static void export_registers(void)
 
 #define RRC(reg_val)                                   \
     do {                                               \
-        BYTE rot;                                      \
+        uint8_t rot;                                      \
                                                        \
         rot = reg_val & C_FLAG;                        \
         reg_val = (reg_val >> 1) | ((rot) ? 0x80 : 0); \
@@ -1690,7 +1685,7 @@ static void export_registers(void)
 
 #define RRCA(clk_inc, pc_inc)                      \
     do {                                           \
-        BYTE rot;                                  \
+        uint8_t rot;                                  \
                                                    \
         rot = reg_a & C_FLAG;                      \
         reg_a = (reg_a >> 1) | ((rot) ? 0x80 : 0); \
@@ -1703,7 +1698,7 @@ static void export_registers(void)
 
 #define RRCXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1718,7 +1713,7 @@ static void export_registers(void)
 
 #define RRCXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -1734,7 +1729,7 @@ static void export_registers(void)
 
 #define RRD()                                        \
     do {                                             \
-        BYTE tmp;                                    \
+        uint8_t tmp;                                    \
                                                      \
         tmp = LOAD(HL_WORD());                       \
         CLK_ADD(CLK, 8);                             \
@@ -1747,7 +1742,7 @@ static void export_registers(void)
 
 #define RRXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                 \
-        BYTE rot, tmp;                                   \
+        uint8_t rot, tmp;                                   \
                                                          \
         CLK_ADD(CLK, clk_inc1);                          \
         tmp = LOAD((addr));                              \
@@ -1762,7 +1757,7 @@ static void export_registers(void)
 
 #define RRXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                             \
-        BYTE rot, tmp;                                               \
+        uint8_t rot, tmp;                                               \
                                                                      \
         CLK_ADD(CLK, clk_inc1);                                      \
         tmp = LOAD((addr));                                          \
@@ -1778,54 +1773,54 @@ static void export_registers(void)
 
 #define SBCHLREG(reg_valh, reg_vall)                                                     \
     do {                                                                                 \
-        DWORD tmp;                                                                       \
-        BYTE carry;                                                                      \
+        uint32_t tmp;                                                                       \
+        uint8_t carry;                                                                      \
                                                                                          \
         carry = LOCAL_CARRY();                                                           \
-        tmp = (DWORD)(HL_WORD()) - (DWORD)((reg_valh << 8) + reg_vall) - (DWORD)(carry); \
+        tmp = (uint32_t)(HL_WORD()) - (uint32_t)((reg_valh << 8) + reg_vall) - (uint32_t)(carry); \
         reg_f = N_FLAG;                                                                  \
         LOCAL_SET_CARRY(tmp & 0x10000);                                                  \
         LOCAL_SET_HALFCARRY((reg_h ^ reg_valh ^ (tmp >> 8)) & H_FLAG);                   \
         LOCAL_SET_PARITY(((reg_h ^ (tmp >> 8)) & (reg_h ^ reg_valh)) & 0x80);            \
         LOCAL_SET_ZERO(!(tmp & 0xffff));                                                 \
         LOCAL_SET_SIGN(tmp & 0x8000);                                                    \
-        reg_h = (BYTE)(tmp >> 8);                                                        \
-        reg_l = (BYTE)(tmp & 0xff);                                                      \
+        reg_h = (uint8_t)(tmp >> 8);                                                        \
+        reg_l = (uint8_t)(tmp & 0xff);                                                      \
         CLK_ADD(CLK, 15);                                                                \
         INC_PC(2);                                                                       \
     } while (0)
 
 #define SBCHLSP()                                                                  \
     do {                                                                           \
-        DWORD tmp;                                                                 \
-        BYTE carry;                                                                \
+        uint32_t tmp;                                                                 \
+        uint8_t carry;                                                                \
                                                                                    \
         carry = LOCAL_CARRY();                                                     \
-        tmp = (DWORD)(HL_WORD()) - (DWORD)reg_sp - (DWORD)(carry);                 \
+        tmp = (uint32_t)(HL_WORD()) - (uint32_t)reg_sp - (uint32_t)(carry);                 \
         reg_f = N_FLAG;                                                            \
         LOCAL_SET_CARRY(tmp & 0x10000);                                            \
         LOCAL_SET_HALFCARRY((reg_h ^ (reg_sp >> 8) ^ (tmp >> 8)) & H_FLAG);        \
         LOCAL_SET_PARITY(((reg_h ^ (tmp >> 8)) & (reg_h ^ (reg_sp >> 8))) & 0x80); \
         LOCAL_SET_ZERO(!(tmp & 0xffff));                                           \
         LOCAL_SET_SIGN(tmp & 0x8000);                                              \
-        reg_h = (BYTE)(tmp >> 8);                                                  \
-        reg_l = (BYTE)(tmp & 0xff);                                                \
+        reg_h = (uint8_t)(tmp >> 8);                                                  \
+        reg_l = (uint8_t)(tmp & 0xff);                                                \
         CLK_ADD(CLK, 15);                                                          \
         INC_PC(2);                                                                 \
     } while (0)
 
 #define SBC(loadval, clk_inc1, clk_inc2, pc_inc)                      \
     do {                                                              \
-        BYTE tmp, carry, value;                                       \
+        uint8_t tmp, carry, value;                                       \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
-        value = (BYTE)(loadval);                                      \
+        value = (uint8_t)(loadval);                                      \
         carry = LOCAL_CARRY();                                        \
         tmp = reg_a - value - carry;                                  \
         reg_f = N_FLAG | SZP[tmp];                                    \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);          \
         LOCAL_SET_PARITY((reg_a ^ value) & (reg_a ^ tmp) & 0x80);     \
-        LOCAL_SET_CARRY((WORD)((WORD)value + (WORD)(carry)) > reg_a); \
+        LOCAL_SET_CARRY((uint16_t)((uint16_t)value + (uint16_t)(carry)) > reg_a); \
         reg_a = tmp;                                                  \
         CLK_ADD(CLK, clk_inc2);                                       \
         INC_PC(pc_inc);                                               \
@@ -1849,7 +1844,7 @@ static void export_registers(void)
 
 #define SETXX(value, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                         \
-        BYTE tmp;                                                \
+        uint8_t tmp;                                                \
                                                                  \
         CLK_ADD(CLK, clk_inc1);                                  \
         tmp = LOAD((addr));                                      \
@@ -1862,7 +1857,7 @@ static void export_registers(void)
 
 #define SETXXREG(value, reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                                     \
-        BYTE tmp;                                                            \
+        uint8_t tmp;                                                            \
                                                                              \
         CLK_ADD(CLK, clk_inc1);                                              \
         tmp = LOAD((addr));                                                  \
@@ -1876,7 +1871,7 @@ static void export_registers(void)
 
 #define SLA(reg_val)                         \
     do {                                     \
-        BYTE rot;                            \
+        uint8_t rot;                            \
                                              \
         rot = (reg_val & 0x80) ? C_FLAG : 0; \
         reg_val <<= 1;                       \
@@ -1887,7 +1882,7 @@ static void export_registers(void)
 
 #define SLAXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1902,7 +1897,7 @@ static void export_registers(void)
 
 #define SLAXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -1918,7 +1913,7 @@ static void export_registers(void)
 
 #define SLL(reg_val)                         \
     do {                                     \
-        BYTE rot;                            \
+        uint8_t rot;                            \
                                              \
         rot = (reg_val & 0x80) ? C_FLAG : 0; \
         reg_val = (reg_val << 1) | 1;        \
@@ -1929,7 +1924,7 @@ static void export_registers(void)
 
 #define SLLXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1944,7 +1939,7 @@ static void export_registers(void)
 
 #define SLLXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -1960,7 +1955,7 @@ static void export_registers(void)
 
 #define SRA(reg_val)                                 \
     do {                                             \
-        BYTE rot;                                    \
+        uint8_t rot;                                    \
                                                      \
         rot = reg_val & C_FLAG;                      \
         reg_val = (reg_val >> 1) | (reg_val & 0x80); \
@@ -1971,7 +1966,7 @@ static void export_registers(void)
 
 #define SRAXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -1986,7 +1981,7 @@ static void export_registers(void)
 
 #define SRAXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -2002,7 +1997,7 @@ static void export_registers(void)
 
 #define SRL(reg_val)                \
     do {                            \
-        BYTE rot;                   \
+        uint8_t rot;                   \
                                     \
         rot = reg_val & C_FLAG;     \
         reg_val >>= 1;              \
@@ -2013,7 +2008,7 @@ static void export_registers(void)
 
 #define SRLXX(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
-        BYTE rot, tmp;                                    \
+        uint8_t rot, tmp;                                    \
                                                           \
         CLK_ADD(CLK, clk_inc1);                           \
         tmp = LOAD((addr));                               \
@@ -2028,7 +2023,7 @@ static void export_registers(void)
 
 #define SRLXXREG(reg_val, addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                              \
-        BYTE rot, tmp;                                                \
+        uint8_t rot, tmp;                                                \
                                                                       \
         CLK_ADD(CLK, clk_inc1);                                       \
         tmp = LOAD((addr));                                           \
@@ -2045,9 +2040,9 @@ static void export_registers(void)
 #define STW(addr, reg_valh, reg_vall, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                                    \
         CLK_ADD(CLK, clk_inc1);                                             \
-        STORE((WORD)(addr), reg_vall);                                      \
+        STORE((uint16_t)(addr), reg_vall);                                      \
         CLK_ADD(CLK, clk_inc2);                                             \
-        STORE((WORD)(addr + 1), reg_valh);                                  \
+        STORE((uint16_t)(addr + 1), reg_valh);                                  \
         CLK_ADD(CLK, clk_inc3);                                             \
         INC_PC(pc_inc);                                                     \
     } while (0)
@@ -2055,9 +2050,9 @@ static void export_registers(void)
 #define STSPW(addr, clk_inc1, clk_inc2, clk_inc3, pc_inc) \
     do {                                                  \
         CLK_ADD(CLK, clk_inc1);                           \
-        STORE((WORD)(addr), (reg_sp & 0xff));             \
+        STORE((uint16_t)(addr), (reg_sp & 0xff));             \
         CLK_ADD(CLK, clk_inc2);                           \
-        STORE((WORD)(addr + 1), (reg_sp >> 8));           \
+        STORE((uint16_t)(addr + 1), (reg_sp >> 8));           \
         CLK_ADD(CLK, clk_inc3);                           \
         INC_PC(pc_inc);                                   \
     } while (0)
@@ -2072,10 +2067,10 @@ static void export_registers(void)
 
 #define SUB(loadval, clk_inc1, clk_inc2, pc_inc)                  \
     do {                                                          \
-        BYTE tmp, value;                                          \
+        uint8_t tmp, value;                                          \
                                                                   \
         CLK_ADD(CLK, clk_inc1);                                   \
-        value = (BYTE)(loadval);                                  \
+        value = (uint8_t)(loadval);                                  \
         tmp = reg_a - value;                                      \
         reg_f = N_FLAG | SZP[tmp];                                \
         LOCAL_SET_HALFCARRY((reg_a ^ value ^ tmp) & H_FLAG);      \
@@ -2100,7 +2095,7 @@ static void export_registers(void)
 
 /* Extended opcodes.  */
 
-static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
+static void opcode_cb(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint16_t ip12, uint16_t ip23)
 {
     switch (ip1) {
         case 0x00: /* RLC B */
@@ -2876,7 +2871,7 @@ static void opcode_cb(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
     }
 }
 
-static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
+static void opcode_dd_cb(uint8_t iip2, uint8_t iip3, uint16_t iip23)
 {
     switch (iip3) {
         case 0x00: /* RLC (IX+d),B */
@@ -3540,7 +3535,7 @@ static void opcode_dd_cb(BYTE iip2, BYTE iip3, WORD iip23)
     }
 }
 
-static void opcode_dd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
+static void opcode_dd(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint16_t ip12, uint16_t ip23)
 {
     switch (ip1) {
         case 0x00: /* NOP */
@@ -4123,7 +4118,7 @@ static void opcode_dd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             PUSH(reg_b, reg_c, 2);
             break;
         case 0xcb: /* OPCODE DD CB */
-            opcode_dd_cb((BYTE)ip2, (BYTE)ip3, (WORD)ip23);
+            opcode_dd_cb((uint8_t)ip2, (uint8_t)ip3, (uint16_t)ip23);
             break;
         case 0xd1: /* POP DE */
             POP(reg_d, reg_e, 2);
@@ -4189,7 +4184,7 @@ static void opcode_dd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
     }
 }
 
-static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
+static void opcode_ed(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint16_t ip12, uint16_t ip23)
 {
     switch (ip1) {
         case 0x40: /* IN B BC */
@@ -4268,7 +4263,7 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             IM(2);
             break;
         case 0x5f: /* LD A R */
-            LDAIR((BYTE)(CLK & 0xff));
+            LDAIR((uint8_t)(CLK & 0xff));
             break;
         case 0x60: /* IN H BC */
             INBC(reg_h, 4, 8, 2);
@@ -4394,7 +4389,7 @@ static void opcode_ed(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
     }
 }
 
-static void opcode_fd_cb(BYTE iip2, BYTE iip3, WORD iip23)
+static void opcode_fd_cb(uint8_t iip2, uint8_t iip3, uint16_t iip23)
 {
     switch (iip3) {
         case 0x00: /* RLC (IY+d),B */
@@ -5058,7 +5053,7 @@ static void opcode_fd_cb(BYTE iip2, BYTE iip3, WORD iip23)
     }
 }
 
-static void opcode_fd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
+static void opcode_fd(uint8_t ip1, uint8_t ip2, uint8_t ip3, uint16_t ip12, uint16_t ip23)
 {
     switch (ip1) {
         case 0x00: /* NOP */
@@ -5641,7 +5636,7 @@ static void opcode_fd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
             PUSH(reg_b, reg_c, 2);
             break;
         case 0xcb: /* OPCODE FD CB */
-            opcode_fd_cb((BYTE)ip2, (BYTE)ip3, (WORD)ip23);
+            opcode_fd_cb((uint8_t)ip2, (uint8_t)ip3, (uint16_t)ip23);
             break;
         case 0xd1: /* POP DE */
             POP(reg_d, reg_e, 2);
@@ -5711,7 +5706,7 @@ static void opcode_fd(BYTE ip1, BYTE ip2, BYTE ip3, WORD ip12, WORD ip23)
 
 /* Z80 mainloop.  */
 
-void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *cpu_alarm_context)
+static void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *cpu_alarm_context)
 {
     opcode_t opcode;
 
@@ -6358,7 +6353,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 JMP_COND(p12, LOCAL_ZERO(), 10, 10);
                 break;
             case 0xcb: /* OPCODE CB */
-                opcode_cb((BYTE)p1, (BYTE)p2, (BYTE)p3, (WORD)p12, (WORD)p23);
+                opcode_cb((uint8_t)p1, (uint8_t)p2, (uint8_t)p3, (uint16_t)p12, (uint16_t)p23);
                 break;
             case 0xcc: /* CALL Z */
                 CALL_COND(p12, LOCAL_ZERO(), 3, 3, 4, 10, 3);
@@ -6412,7 +6407,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL_COND(p12, LOCAL_CARRY(), 3, 3, 4, 10, 3);
                 break;
             case 0xdd: /*  OPCODE DD */
-                opcode_dd((BYTE)p1, (BYTE)p2, (BYTE)p3, (WORD)p12, (WORD)p23);
+                opcode_dd((uint8_t)p1, (uint8_t)p2, (uint8_t)p3, (uint16_t)p12, (uint16_t)p23);
                 break;
             case 0xde: /* SBC # */
                 SBC(p1, 4, 3, 2);
@@ -6460,7 +6455,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL_COND(p12, LOCAL_PARITY(), 3, 3, 4, 10, 3);
                 break;
             case 0xed: /* OPCODE ED */
-                opcode_ed((BYTE)p1, (BYTE)p2, (BYTE)p3, (WORD)p12, (WORD)p23);
+                opcode_ed((uint8_t)p1, (uint8_t)p2, (uint8_t)p3, (uint16_t)p12, (uint16_t)p23);
                 break;
             case 0xee: /* XOR # */
                 XOR(p1, 4, 3, 2);
@@ -6508,7 +6503,7 @@ void cpmcart_mainloop(interrupt_cpu_status_t *cpu_int_status, alarm_context_t *c
                 CALL_COND(p12, LOCAL_SIGN(), 3, 3, 4, 10, 3);
                 break;
             case 0xfd: /* OPCODE FD */
-                opcode_fd((BYTE)p1, (BYTE)p2, (BYTE)p3, (WORD)p12, (WORD)p23);
+                opcode_fd((uint8_t)p1, (uint8_t)p2, (uint8_t)p3, (uint16_t)p12, (uint16_t)p23);
                 break;
             case 0xfe: /* CP # */
                 CP(p1, 4, 3, 2);
@@ -6569,7 +6564,7 @@ void cpmcart_check_and_run_z80(void)
    DWORD | opcode address | last opcode address
  */
 
-static char snap_module_name[] = "CPMCART";
+static const char snap_module_name[] = "CPMCART";
 #define SNAP_MAJOR 0
 #define SNAP_MINOR 0
 
@@ -6584,7 +6579,7 @@ int cpmcart_snapshot_write_module(snapshot_t *s)
     }
 
     if (0
-        || SMW_DW(m, maincpu_clk) < 0
+        || SMW_CLOCK(m, maincpu_clk) < 0
         || SMW_B(m, reg_a) < 0
         || SMW_B(m, reg_b) < 0
         || SMW_B(m, reg_c) < 0
@@ -6612,9 +6607,9 @@ int cpmcart_snapshot_write_module(snapshot_t *s)
         || SMW_B(m, reg_f2) < 0
         || SMW_B(m, reg_h2) < 0
         || SMW_B(m, reg_l2) < 0
-        || SMW_B(m, (BYTE)z80_started) < 0
-        || SMW_DW(m, (DWORD)z80_last_opcode_info) < 0
-        || SMW_DW(m, (DWORD)z80_last_opcode_addr) < 0) {
+        || SMW_B(m, (uint8_t)z80_started) < 0
+        || SMW_DW(m, (uint32_t)z80_last_opcode_info) < 0
+        || SMW_DW(m, (uint32_t)z80_last_opcode_addr) < 0) {
         snapshot_module_close(m);
         return -1;
     }
@@ -6624,7 +6619,7 @@ int cpmcart_snapshot_write_module(snapshot_t *s)
 
 int cpmcart_snapshot_read_module(snapshot_t *s)
 {
-    BYTE major, minor;
+    uint8_t major, minor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &major, &minor);
@@ -6634,18 +6629,17 @@ int cpmcart_snapshot_read_module(snapshot_t *s)
     }
 
     /* Do not accept versions higher than current */
-    if (major > SNAP_MAJOR || minor > SNAP_MINOR) {
+    if (snapshot_version_is_bigger(major, minor, SNAP_MAJOR, SNAP_MINOR)) {
         snapshot_set_error(SNAPSHOT_MODULE_HIGHER_VERSION);
         goto fail;
-    } 
+    }
 
     /* FIXME: This is a mighty kludge to prevent VIC-II from stealing the
        wrong number of cycles.  */
     maincpu_rmw_flag = 0;
 
-    /* XXX: Assumes `CLOCK' is the same size as a `DWORD'.  */
     if (0
-        || SMR_DW(m, &maincpu_clk) < 0
+        || SMR_CLOCK(m, &maincpu_clk) < 0
         || SMR_B(m, &reg_a) < 0
         || SMR_B(m, &reg_b) < 0
         || SMR_B(m, &reg_c) < 0

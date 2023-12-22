@@ -30,6 +30,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "archdep.h"
 #include "cartio.h"
 #include "cartridge.h"
 #include "cmdline.h"
@@ -37,7 +38,6 @@
 #include "log.h"
 #include "monitor.h"
 #include "resources.h"
-#include "translate.h"
 #include "types.h"
 #include "uiapi.h"
 #include "util.h"
@@ -89,13 +89,12 @@ static void io_source_detach(io_source_detach_t *source)
             resources_set_int(source->det_name, 0);
             break;
     }
-    ui_update_menus();
 }
 
 /*
     amount is 2 or more
 */
-static void io_source_msg_detach_all(WORD addr, int amount, io_source_list_t *start)
+static void io_source_msg_detach_all(uint16_t addr, int amount, io_source_list_t *start)
 {
     io_source_detach_t *detach_list = lib_malloc(sizeof(io_source_detach_t) * amount);
     io_source_list_t *current = start;
@@ -119,7 +118,7 @@ static void io_source_msg_detach_all(WORD addr, int amount, io_source_list_t *st
 
             /* first part of the message "read collision at x from" */
             if (found == 0) {
-                old_msg = lib_stralloc(translate_text(IDGS_IO_READ_COLL_AT_X_FROM));
+                old_msg = lib_strdup("I/O read collision at %X from ");
                 new_msg = util_concat(old_msg, current->device->name, NULL);
                 lib_free(old_msg);
             }
@@ -130,7 +129,7 @@ static void io_source_msg_detach_all(WORD addr, int amount, io_source_list_t *st
             }
             if (found == amount - 1) {
                 old_msg = new_msg;
-                new_msg = util_concat(old_msg, translate_text(IDGS_AND), current->device->name, translate_text(IDGS_ALL_DEVICES_DETACHED), NULL);
+                new_msg = util_concat(old_msg, " and ", current->device->name, ".\nAll the named devices will be detached.", NULL);
                 lib_free(old_msg);
             }
             found++;
@@ -158,7 +157,7 @@ static void io_source_msg_detach_all(WORD addr, int amount, io_source_list_t *st
 /*
     amount is 2 or more
 */
-static void io_source_msg_detach_last(WORD addr, int amount, io_source_list_t *start, unsigned int lowest)
+static void io_source_msg_detach_last(uint16_t addr, int amount, io_source_list_t *start, unsigned int lowest)
 {
     io_source_detach_t *detach_list = lib_malloc(sizeof(io_source_detach_t) * amount);
     io_source_list_t *current = start;
@@ -188,7 +187,7 @@ static void io_source_msg_detach_last(WORD addr, int amount, io_source_list_t *s
 
             /* first part of the message "read collision at x from" */
             if (found == 0) {
-                old_msg = lib_stralloc(translate_text(IDGS_IO_READ_COLL_AT_X_FROM));
+                old_msg = lib_strdup("I/O read collision at %X from ");
                 new_msg = util_concat(old_msg, current->device->name, NULL);
                 lib_free(old_msg);
             }
@@ -199,7 +198,7 @@ static void io_source_msg_detach_last(WORD addr, int amount, io_source_list_t *s
             }
             if (found == amount - 1) {
                 old_msg = new_msg;
-                new_msg = util_concat(old_msg, translate_text(IDGS_AND), current->device->name, translate_text(IDGS_ALL_DEVICES_EXCEPT), first_cart, translate_text(IDGS_WILL_BE_DETACHED), NULL);
+                new_msg = util_concat(old_msg, " and ", current->device->name, ".\nAll devices except ", first_cart, " will be detached.", NULL);
                 lib_free(old_msg);
             }
             found++;
@@ -229,7 +228,7 @@ static void io_source_msg_detach_last(WORD addr, int amount, io_source_list_t *s
 /*
     amount is 2 or more
 */
-static void io_source_log_collisions(WORD addr, int amount, io_source_list_t *start)
+static void io_source_log_collisions(uint16_t addr, int amount, io_source_list_t *start)
 {
     io_source_list_t *current = start;
     char *old_msg = NULL;
@@ -247,7 +246,7 @@ static void io_source_log_collisions(WORD addr, int amount, io_source_list_t *st
 
             /* first part of the message "read collision at x from" */
             if (found == 0) {
-                old_msg = lib_stralloc(translate_text(IDGS_IO_READ_COLL_AT_X_FROM));
+                old_msg = lib_strdup("I/O read collision at %X from ");
                 new_msg = util_concat(old_msg, current->device->name, NULL);
                 lib_free(old_msg);
             }
@@ -258,7 +257,7 @@ static void io_source_log_collisions(WORD addr, int amount, io_source_list_t *st
             }
             if (found == amount - 1) {
                 old_msg = new_msg;
-                new_msg = util_concat(old_msg, translate_text(IDGS_AND), current->device->name, NULL);
+                new_msg = util_concat(old_msg, " and ", current->device->name, NULL);
                 lib_free(old_msg);
             }
             found++;
@@ -275,19 +274,22 @@ static void io_source_log_collisions(WORD addr, int amount, io_source_list_t *st
     }
 }
 
-static inline BYTE io_read(io_source_list_t *list, WORD addr)
+/* FIXME: the upper 4 bits of the mask are used to indicate the register size if not equal to the mask,
+          this is done as a temporary HACK to keep mirrors working and still get the correct register size,
+          this needs to be fixed properly after the 3.6 release */
+static inline uint8_t io_read(io_source_list_t *list, uint16_t addr)
 {
     io_source_list_t *current = list->next;
     int io_source_counter = 0;
-    BYTE realval = 0;
-    BYTE retval = 0;
-    BYTE firstval = 0;
+    uint8_t realval = 0;
+    uint8_t retval = 0;
+    uint8_t firstval = 0;
     unsigned int lowest_order = 0xffffffff;
 
     while (current) {
         if (current->device->read != NULL) {
             if ((addr >= current->device->start_address) && (addr <= current->device->end_address)) {
-                retval = current->device->read((WORD)(addr & current->device->address_mask));
+                retval = current->device->read((uint16_t)(addr & (current->device->address_mask & 0x3ff)));
                 if (current->device->io_source_valid) {
                     if (current->device->io_source_prio == 1) {
                         return retval;
@@ -351,17 +353,20 @@ static inline BYTE io_read(io_source_list_t *list, WORD addr)
     return vic20_cpu_last_data;
 }
 
+/* FIXME: the upper 4 bits of the mask are used to indicate the register size if not equal to the mask,
+          this is done as a temporary HACK to keep mirrors working and still get the correct register size,
+          this needs to be fixed properly after the 3.6 release */
 /* peek from I/O area with no side-effects */
-static inline BYTE io_peek(io_source_list_t *list, WORD addr)
+static inline uint8_t io_peek(io_source_list_t *list, uint16_t addr)
 {
     io_source_list_t *current = list->next;
 
     while (current) {
         if (addr >= current->device->start_address && addr <= current->device->end_address) {
             if (current->device->peek) {
-                return current->device->peek((WORD)(addr & current->device->address_mask));
+                return current->device->peek((uint16_t)(addr & (current->device->address_mask & 0x3ff)));
             } else if (current->device->read) {
-                return current->device->read((WORD)(addr & current->device->address_mask));
+                return current->device->read((uint16_t)(addr & (current->device->address_mask & 0x3ff)));
             }
         }
         current = current->next;
@@ -370,7 +375,10 @@ static inline BYTE io_peek(io_source_list_t *list, WORD addr)
     return vic20_cpu_last_data;
 }
 
-static inline void io_store(io_source_list_t *list, WORD addr, BYTE value)
+/* FIXME: the upper 4 bits of the mask are used to indicate the register size if not equal to the mask,
+          this is done as a temporary HACK to keep mirrors working and still get the correct register size,
+          this needs to be fixed properly after the 3.6 release */
+static inline void io_store(io_source_list_t *list, uint16_t addr, uint8_t value)
 {
     io_source_list_t *current = list->next;
 
@@ -379,7 +387,7 @@ static inline void io_store(io_source_list_t *list, WORD addr, BYTE value)
     while (current) {
         if (current->device->store != NULL) {
             if (addr >= current->device->start_address && addr <= current->device->end_address) {
-                current->device->store((WORD)(addr & current->device->address_mask), value);
+                current->device->store((uint16_t)(addr & (current->device->address_mask & 0x3ff)), value);
             }
         }
         current = current->next;
@@ -406,6 +414,13 @@ io_source_list_t *io_source_register(io_source_t *device)
             break;
         case 0x9c00:
             current = &vic20io3_head;
+            break;
+        default:
+            log_error(LOG_DEFAULT,
+                    "io_source_register internal error: I/O range 0x%04x "
+                    "does not exist",
+                    device->start_address & 0xff00U);
+            archdep_vice_exit(-1);
             break;
     }
 
@@ -474,55 +489,55 @@ void cartio_set_highest_order(unsigned int nr)
 
 /* ---------------------------------------------------------------------------------------------------------- */
 
-BYTE vic20io0_read(WORD addr)
+uint8_t vic20io0_read(uint16_t addr)
 {
     DBGRW(("IO: io0 r %04x\n", addr));
     return io_read(&vic20io0_head, addr);
 }
 
-BYTE vic20io0_peek(WORD addr)
+uint8_t vic20io0_peek(uint16_t addr)
 {
     DBGRW(("IO: io0 p %04x\n", addr));
     return io_peek(&vic20io0_head, addr);
 }
 
-void vic20io0_store(WORD addr, BYTE value)
+void vic20io0_store(uint16_t addr, uint8_t value)
 {
     DBGRW(("IO: io0 w %04x %02x\n", addr, value));
     io_store(&vic20io0_head, addr, value);
 }
 
-BYTE vic20io2_read(WORD addr)
+uint8_t vic20io2_read(uint16_t addr)
 {
     DBGRW(("IO: io2 r %04x\n", addr));
     return io_read(&vic20io2_head, addr);
 }
 
-BYTE vic20io2_peek(WORD addr)
+uint8_t vic20io2_peek(uint16_t addr)
 {
     DBGRW(("IO: io2 p %04x\n", addr));
     return io_peek(&vic20io2_head, addr);
 }
 
-void vic20io2_store(WORD addr, BYTE value)
+void vic20io2_store(uint16_t addr, uint8_t value)
 {
     DBGRW(("IO: io2 w %04x %02x\n", addr, value));
     io_store(&vic20io2_head, addr, value);
 }
 
-BYTE vic20io3_read(WORD addr)
+uint8_t vic20io3_read(uint16_t addr)
 {
     DBGRW(("IO: io3 r %04x\n", addr));
     return io_read(&vic20io3_head, addr);
 }
 
-BYTE vic20io3_peek(WORD addr)
+uint8_t vic20io3_peek(uint16_t addr)
 {
     DBGRW(("IO: io3 p %04x\n", addr));
     return io_peek(&vic20io3_head, addr);
 }
 
-void vic20io3_store(WORD addr, BYTE value)
+void vic20io3_store(uint16_t addr, uint8_t value)
 {
     DBGRW(("IO: io3 w %04x %02x\n", addr, value));
     io_store(&vic20io3_head, addr, value);
@@ -530,43 +545,33 @@ void vic20io3_store(WORD addr, BYTE value)
 
 /* ---------------------------------------------------------------------------------------------------------- */
 
-static int decodemask(WORD mask)
+/* FIXME: the upper 4 bits of the mask are used to indicate the register size if not equal to the mask,
+          this is done as a temporary HACK to keep mirrors working and still get the correct register size,
+          this needs to be fixed properly after the 3.6 release */
+static void io_source_ioreg_add_onelist(struct mem_ioreg_list_s **mem_ioreg_list, io_source_list_t *current)
 {
-    int len = 255;
+    uint16_t end;
 
-    while (((mask & 0x200) == 0) && (len > 0)) {
-        mask <<= 1;
-        len >>= 1;
+    while (current) {
+        end = current->device->end_address;
+        if (current->device->address_mask & 0xf000) {
+            end = current->device->start_address + (current->device->address_mask >> 12);
+        } else if (end > current->device->start_address + current->device->address_mask) {
+            end = current->device->start_address + current->device->address_mask;
+        }
+
+        mon_ioreg_add_list(mem_ioreg_list, current->device->name, current->device->start_address,
+                           end, current->device->dump, NULL, current->device->mirror_mode);
+        current = current->next;
     }
-
-    return len;
 }
 
 /* add all registered I/O devices to the list for the monitor */
 void io_source_ioreg_add_list(struct mem_ioreg_list_s **mem_ioreg_list)
 {
-    io_source_list_t *current;
-
-    current = vic20io0_head.next;
-
-    while (current) {
-        mon_ioreg_add_list(mem_ioreg_list, current->device->name, current->device->start_address, current->device->start_address + decodemask(current->device->address_mask), current->device->dump, NULL);
-        current = current->next;
-    }
-
-    current = vic20io2_head.next;
-
-    while (current) {
-        mon_ioreg_add_list(mem_ioreg_list, current->device->name, current->device->start_address, current->device->start_address + decodemask(current->device->address_mask), current->device->dump, NULL);
-        current = current->next;
-    }
-
-    current = vic20io3_head.next;
-
-    while (current) {
-        mon_ioreg_add_list(mem_ioreg_list, current->device->name, current->device->start_address, current->device->start_address + decodemask(current->device->address_mask), current->device->dump, NULL);
-        current = current->next;
-    }
+    io_source_ioreg_add_onelist(mem_ioreg_list, vic20io0_head.next);
+    io_source_ioreg_add_onelist(mem_ioreg_list, vic20io2_head.next);
+    io_source_ioreg_add_onelist(mem_ioreg_list, vic20io3_head.next);
 }
 
 /* ---------------------------------------------------------------------------------------------------------- */
@@ -599,12 +604,11 @@ int cartio_resources_init(void)
     return resources_register_int(resources_int);
 }
 
-static const cmdline_option_t cmdline_options[] = {
-    { "-iocollision", SET_RESOURCE, 1,
+static const cmdline_option_t cmdline_options[] =
+{
+    { "-iocollision", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "IOCollisionHandling", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_METHOD, IDCLS_SELECT_CONFLICT_HANDLING,
-      NULL, NULL },
+      "<method>", "Select the way the I/O collisions should be handled, (0: error message and detach all involved carts, 1: error message and detach last attached involved carts, 2: warning in log and 'AND' the valid return values" },
     CMDLINE_LIST_END
 };
 

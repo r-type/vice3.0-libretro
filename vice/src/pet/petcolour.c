@@ -52,19 +52,19 @@
  * character set) and, assuming it is the usual monochrome, replace them
  * by coloured pixels.
  */
-static void DRAW_rgbi(BYTE *p, int xstart, int xend, int scr_rel, int ymod8)
+static void DRAW_rgbi(uint8_t *p, int xstart, int xend, int scr_rel, int ymod8)
 {
     if (ymod8 < 8 && xstart < xend) {
-        BYTE *colour_ptr = crtc.screen_base + COLOUR_MEMORY_START;
+        uint8_t *colour_ptr = crtc.screen_base + COLOUR_MEMORY_START;
         int i;
 
 #if DEBUG_GFX
         printf("DRAW_rgbi: xstart=%d, xend=%d, ymod8=%d, scr_rel=%04x\n", xstart, xend, ymod8, scr_rel);
 #endif
         for (i = xstart; i < xend; i++) {
-            BYTE colour = colour_ptr[scr_rel & crtc.vaddr_mask];
-            BYTE bg = (colour >> 4) & 0x0F;
-            BYTE fg =  colour       & 0x0F;
+            uint8_t colour = colour_ptr[scr_rel & crtc.vaddr_mask];
+            uint8_t bg = (colour >> 4) & 0x0F;
+            uint8_t fg =  colour       & 0x0F;
 
             int pixel;
             for (pixel = 0; pixel < 8; pixel++) {
@@ -81,17 +81,17 @@ static void DRAW_rgbi(BYTE *p, int xstart, int xend, int scr_rel, int ymod8)
     }
 }
 
-static void DRAW_analog(BYTE *p, int xstart, int xend, int scr_rel, int ymod8)
+static void DRAW_analog(uint8_t *p, int xstart, int xend, int scr_rel, int ymod8)
 {
     if (ymod8 < 8 && xstart < xend) {
-        BYTE *colour_ptr = crtc.screen_base + COLOUR_MEMORY_START;
+        uint8_t *colour_ptr = crtc.screen_base + COLOUR_MEMORY_START;
         int i;
 
 #if DEBUG_GFX
         printf("DRAW_analog: xstart=%d, xend=%d, ymod8=%d, scr_rel=%04x\n", xstart, xend, ymod8, scr_rel);
 #endif
         for (i = xstart; i < xend; i++) {
-            BYTE colour = colour_ptr[scr_rel & crtc.vaddr_mask];
+            uint8_t colour = colour_ptr[scr_rel & crtc.vaddr_mask];
 
             int pixel;
             for (pixel = 0; pixel < 8; pixel++) {
@@ -120,22 +120,22 @@ static void DRAW_analog(BYTE *p, int xstart, int xend, int scr_rel, int ymod8)
 #define MAKE_RGB(x) (((x)>>16) & 0xff), (((x)>>8) & 0xff), (((x)>>0) & 0xff)
 static video_cbm_color_t rgbi_colors[RGBI_NUM_COLORS] =
 {
-    { MAKE_RGB(0x000000), "Black"       },
-    { MAKE_RGB(0x555555), "Medium Gray" },
-    { MAKE_RGB(0x0000AA), "Blue"        },
-    { MAKE_RGB(0x5555FF), "Light Blue"  },
-    { MAKE_RGB(0x00AA00), "Green"       },
-    { MAKE_RGB(0x55FF55), "Light Green" },
-    { MAKE_RGB(0x00AAAA), "Cyan"        },
-    { MAKE_RGB(0x55FFFF), "Light Cyan"  },
-    { MAKE_RGB(0xAA0000), "Red"         },
-    { MAKE_RGB(0xFF5555), "Light Red"   },
-    { MAKE_RGB(0xAA00AA), "Purple"      },
-    { MAKE_RGB(0xFF55FF), "Light Purple"},
-    { MAKE_RGB(0xAA5500), "Brown"       }, /* "brown fix", aka "dark yellow" 0xAAAA00 */
-    { MAKE_RGB(0xFFFF55), "Yellow"      },
-    { MAKE_RGB(0xAAAAAA), "Light Gray"  },
-    { MAKE_RGB(0xFFFFFF), "White"       },
+    { MAKE_RGB(0x000000), RGBI_SATURATION, "Black"       },
+    { MAKE_RGB(0x555555), RGBI_SATURATION, "Medium Gray" },
+    { MAKE_RGB(0x0000AA), RGBI_SATURATION, "Blue"        },
+    { MAKE_RGB(0x5555FF), RGBI_SATURATION, "Light Blue"  },
+    { MAKE_RGB(0x00AA00), RGBI_SATURATION, "Green"       },
+    { MAKE_RGB(0x55FF55), RGBI_SATURATION, "Light Green" },
+    { MAKE_RGB(0x00AAAA), RGBI_SATURATION, "Cyan"        },
+    { MAKE_RGB(0x55FFFF), RGBI_SATURATION, "Light Cyan"  },
+    { MAKE_RGB(0xAA0000), RGBI_SATURATION, "Red"         },
+    { MAKE_RGB(0xFF5555), RGBI_SATURATION, "Light Red"   },
+    { MAKE_RGB(0xAA00AA), RGBI_SATURATION, "Purple"      },
+    { MAKE_RGB(0xFF55FF), RGBI_SATURATION, "Light Purple"},
+    { MAKE_RGB(0xAA5500), RGBI_SATURATION, "Brown"       }, /* "brown fix", aka "dark yellow" 0xAAAA00 */
+    { MAKE_RGB(0xFFFF55), RGBI_SATURATION, "Yellow"      },
+    { MAKE_RGB(0xAAAAAA), RGBI_SATURATION, "Light Gray"  },
+    { MAKE_RGB(0xFFFFFF), RGBI_SATURATION, "White"       },
 };
 #undef MAKE_RGB
 
@@ -143,7 +143,7 @@ static video_cbm_palette_t rgbi_palette =
 {
     RGBI_NUM_COLORS,
     rgbi_colors,
-    RGBI_SATURATION,
+    NULL, NULL,
     RGBI_PHASE,
     CBM_PALETTE_RGB
 };
@@ -154,7 +154,7 @@ static video_cbm_palette_t analog_palette =
 {
     ANALOG_NUM_COLORS,
     analog_colors,
-    RGBI_SATURATION,
+    NULL, NULL,
     RGBI_PHASE,
     CBM_PALETTE_RGB
 };

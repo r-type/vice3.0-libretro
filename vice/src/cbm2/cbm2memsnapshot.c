@@ -84,7 +84,7 @@ static const char module_name[] = "CBM2MEM";
 static int mem_write_ram_snapshot_module(snapshot_t *p)
 {
     snapshot_module_t *m;
-    BYTE config, memsize;
+    uint8_t config, memsize;
     int effective_ramsize, effective_start;
 
     m = snapshot_module_create(p, module_name,
@@ -115,10 +115,10 @@ static int mem_write_ram_snapshot_module(snapshot_t *p)
 
     SMW_B(m, memsize);
     SMW_B(m, config);
-    SMW_B(m, (BYTE)(cbm2_model_line & 3));
+    SMW_B(m, (uint8_t)(cbm2_model_line & 3));
 
-    SMW_B(m, (BYTE)(cbm2mem_bank_exec));
-    SMW_B(m, (BYTE)(cbm2mem_bank_ind));
+    SMW_B(m, (uint8_t)(cbm2mem_bank_exec));
+    SMW_B(m, (uint8_t)(cbm2mem_bank_ind));
 
     SMW_BA(m, mem_ram + 0xf0000, 0x0800);
     SMW_BA(m, mem_rom + 0xd000, 0x0800);
@@ -154,9 +154,9 @@ static int mem_write_ram_snapshot_module(snapshot_t *p)
 
 static int mem_read_ram_snapshot_module(snapshot_t *p)
 {
-    BYTE byte, vmajor, vminor;
+    uint8_t byte, vmajor, vminor;
     snapshot_module_t *m;
-    BYTE config, hwconfig;
+    uint8_t config, hwconfig;
     int memsize;
     int effective_ramsize, effective_start;
     int bank0;
@@ -210,11 +210,13 @@ static int mem_read_ram_snapshot_module(snapshot_t *p)
     cart6_ram = config & 16;
     cartC_ram = config & 32;
 
+#if 0 /* I think these are left over from earlier code, there are no corresponding writes in mem_write_ram_snapshot_module -- dqh */
     if (memsize < 4) {
         SMR_BA(m, mem_ram + 0x10000, memsize << 17);
     } else {
         SMR_BA(m, mem_ram, memsize << 17);
     }
+#endif
 
     if (memsize < 4) {  /* if 1M memory, bank 15 is included */
         if (config & 1) {
@@ -244,6 +246,34 @@ static int mem_read_ram_snapshot_module(snapshot_t *p)
     return 0;
 }
 
+#define NUM_TRAP_DEVICES 9  /* FIXME: is there a better constant ? */
+static int trapfl[NUM_TRAP_DEVICES];
+static int trapdevices[NUM_TRAP_DEVICES + 1] = { 1, 4, 5, 6, 7, 8, 9, 10, 11, -1 };
+
+static void get_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_get_int_sprintf("VirtualDevice%d", &trapfl[i], trapdevices[i]);
+    }
+}
+
+static void clear_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("VirtualDevice%d", 0, trapdevices[i]);
+    }
+}
+
+static void restore_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("VirtualDevice%d", trapfl[i], trapdevices[i]);
+    }
+}
+
 /*********************************************************************/
 
 /*
@@ -269,8 +299,7 @@ static const char module_rom_name[] = "CBM2ROM";
 static int mem_write_rom_snapshot_module(snapshot_t *p, int save_roms)
 {
     snapshot_module_t *m;
-    BYTE config;
-    int trapfl;
+    uint8_t config;
     const char *cart_1_name, *cart_2_name, *cart_4_name, *cart_6_name;
 
     if (!save_roms) {
@@ -284,8 +313,8 @@ static int mem_write_rom_snapshot_module(snapshot_t *p, int save_roms)
     }
 
     /* disable traps before saving the ROM */
-    resources_get_int("VirtualDevices", &trapfl);
-    resources_set_int("VirtualDevices", 0);
+    get_trapflags();
+    clear_trapflags();
 
     resources_get_string("Cart1Name", &cart_1_name);
     resources_get_string("Cart2Name", &cart_2_name);
@@ -329,7 +358,7 @@ static int mem_write_rom_snapshot_module(snapshot_t *p, int save_roms)
     }
 
     /* enable traps again when necessary */
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     snapshot_module_close(m);
 
@@ -338,10 +367,10 @@ static int mem_write_rom_snapshot_module(snapshot_t *p, int save_roms)
 
 static int mem_read_rom_snapshot_module(snapshot_t *p)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
-    BYTE config;
-    int i, trapfl;
+    uint8_t config;
+    int i;
 
     m = snapshot_module_open(p, module_rom_name, &vmajor, &vminor);
     if (m == NULL) {
@@ -353,8 +382,8 @@ static int mem_read_rom_snapshot_module(snapshot_t *p)
     }
 
     /* disable traps before loading the ROM */
-    resources_get_int("VirtualDevices", &trapfl);
-    resources_set_int("VirtualDevices", 0);
+    get_trapflags();
+    clear_trapflags();
 
     SMR_B(m, &config);
 
@@ -396,7 +425,7 @@ static int mem_read_rom_snapshot_module(snapshot_t *p)
     cbm2rom_checksum();
 
     /* enable traps again when necessary */
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     snapshot_module_close(m);
 

@@ -1,14 +1,14 @@
-cbm2dir = $(VICEDIR)/CBM-II
+cbm2dir = $(VICE_DATADIR)/CBM-II
 
 roms = \
-	basic.128 \
-	basic.256 \
-	basic.500 \
-	chargen.500 \
-	chargen.600 \
-	chargen.700 \
-	kernal \
-	kernal.500
+	basic-901242+3-04a.bin \
+	basic-901240+1-03.bin \
+	basic-901235+6-02.bin \
+	chargen-901225-01.bin \
+	chargen-901237-01.bin \
+	chargen-901232-01.bin \
+	kernal-901244-04a.bin \
+	kernal-901234-02.bin
 
 romsets = \
 	rom500.vrs \
@@ -32,44 +32,47 @@ palettes = \
 	colodore.vpl \
 	ptoing.vpl \
 	deekay.vpl \
+	cjam.vpl \
 	rgb.vpl \
 	vice.vpl \
-	\
+	palette.vpl \
+	pixcen.vpl \
 	amber.vpl \
 	green.vpl \
 	white.vpl
 
-x11_keymaps = \
-	x11_sym.vkm \
-	x11_sym_de.vkm
+gtk3_hotkeys = \
+	gtk3-hotkeys.vhk \
+	gtk3-hotkeys-mac.vhk
+
+gtk3_keymaps = \
+	gtk3_pos.vkm \
+	gtk3_sym.vkm \
+	gtk3_sym_de.vkm
 
 sdl_keymaps = \
-	sdl_sym.vkm
+	sdl_sym.vkm \
+	sdl_pos.vkm
 
-extra_keymaps = \
-	amiga_pos.vkm \
-	amiga_sym.vkm \
-	beos_bukp.vkm \
-	beos_buks.vkm \
-	dos_bukp.vkm \
-	dos_buks.vkm \
-	os2.vkm \
-	osx_pos_uk.vkm \
-	osx_sym_uk.vkm \
-	win_sym.vkm \
-	win_pos_uk.vkm \
-	win_sym_uk.vkm
+sdl_hotkeys = \
+	sdl-hotkeys.vhk
 
-win32_files = \
-	win_hotkeys.vhk \
-	win_shortcuts.vsc
+if USE_SDLUI
+cbm2_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps) $(sdl_hotkeys)
+EXTRA_DIST = $(cbm2_DATA) $(gtk3_keymaps) $(gtk3_hotkeys)
+endif
 
-if SDL_COMPILE
-cbm2_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps)
+if USE_SDL2UI
+cbm2_DATA = $(roms) $(romsets) $(palettes) $(sdl_keymaps) $(sdl_hotkeys)
+EXTRA_DIST = $(cbm2_DATA) $(gtk3_keymaps) $(gtk3_hotkeys)
+endif
 
-EXTRA_DIST = $(cbm2_DATA) $(extra_keymaps) $(x11_keymaps) $(win32_files)
-else
-cbm2_DATA = $(roms) $(romsets) $(palettes) $(x11_keymaps)
+if USE_GTK3UI
+cbm2_DATA = $(roms) $(romsets) $(palettes) $(gtk3_keymaps) $(gtk3_hotkeys)
+EXTRA_DIST = $(cbm2_DATA) $(sdl_keymaps) $(sdl_hotkeys)
+endif
 
-EXTRA_DIST = $(cbm2_DATA) $(extra_keymaps) $(sdl_keymaps) $(win32_files)
+if USE_HEADLESSUI
+cbm2_DATA = $(roms) $(romsets) $(palettes)
+EXTRA_DIST = $(cbm2_DATA) $(sdl_keymaps) $(sdl_hotkeys) $(gtk3_keymaps) $(gtk3_hotkeys)
 endif

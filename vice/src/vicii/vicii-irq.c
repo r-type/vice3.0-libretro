@@ -124,10 +124,18 @@ void vicii_irq_set_raster_line(unsigned int line)
     if (line < (unsigned int)vicii.screen_height) {
         unsigned int current_line = VICII_RASTER_Y(maincpu_clk);
 
-        vicii.raster_irq_clk = (VICII_LINE_START_CLK(maincpu_clk)
-                                + VICII_RASTER_IRQ_DELAY - INTERRUPT_DELAY
-                                + (vicii.cycles_per_line
-                                   * (line - current_line)));
+        if (line > current_line) {
+            vicii.raster_irq_clk = (VICII_LINE_START_CLK(maincpu_clk)
+                                    + VICII_RASTER_IRQ_DELAY - INTERRUPT_DELAY
+                                    + (vicii.cycles_per_line
+                                       * (line - current_line)));
+        } else {
+            vicii.raster_irq_clk = (VICII_LINE_START_CLK(maincpu_clk)
+                                    + VICII_RASTER_IRQ_DELAY - INTERRUPT_DELAY
+                                    + (vicii.cycles_per_line
+                                       * (line + vicii.screen_height - current_line)));
+        }
+
         if (vicii.viciidtv) {
             vicii.raster_irq_clk += vicii.raster_irq_offset;
         }
@@ -137,9 +145,6 @@ void vicii_irq_set_raster_line(unsigned int line)
             vicii.raster_irq_clk++;
         }
 
-        if (line <= current_line) {
-            vicii.raster_irq_clk += (vicii.screen_height * vicii.cycles_per_line);
-        }
         alarm_set(vicii.raster_irq_alarm, vicii.raster_irq_clk);
     } else {
         VICII_DEBUG_RASTER(("update_raster_irq(): "
@@ -157,7 +162,7 @@ void vicii_irq_set_raster_line(unsigned int line)
     vicii.raster_irq_line = line;
 }
 
-void vicii_irq_check_state(BYTE value, unsigned int high)
+void vicii_irq_check_state(uint8_t value, unsigned int high)
 {
     unsigned int irq_line, line;
     unsigned int old_raster_irq_line;

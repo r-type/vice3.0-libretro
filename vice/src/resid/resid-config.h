@@ -20,10 +20,11 @@
 #ifndef RESID_CONFIG_H
 #define RESID_CONFIG_H
 
-#ifdef IDE_COMPILE
-#include "ide-siddefs.h"
-#else
 #include "siddefs.h"
+
+#ifdef __LIBRETRO__
+#define NEW_8580_FILTER 1
+using namespace std;
 #endif
 
 #endif

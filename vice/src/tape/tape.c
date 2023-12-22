@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "archdep.h"
 #include "datasette.h"
 #include "lib.h"
 #include "log.h"
@@ -46,6 +47,7 @@
 #include "tape-internal.h"
 #include "tape.h"
 #include "tapeimage.h"
+#include "tapeport.h"
 #include "traps.h"
 #include "types.h"
 #include "uiapi.h"
@@ -60,15 +62,15 @@
 #define CAS_NAME_OFFSET 5       /* filename */
 
 /* CPU addresses for tape routine variables.  */
-static WORD buffer_pointer_addr;
-static WORD st_addr;
-static WORD verify_flag_addr;
-static WORD stal_addr;
-static WORD eal_addr;
-static WORD kbd_buf_addr;
-static WORD kbd_buf_pending_addr;
+static uint16_t buffer_pointer_addr;
+static uint16_t st_addr;
+static uint16_t verify_flag_addr;
+static uint16_t stal_addr;
+static uint16_t eal_addr;
+static uint16_t kbd_buf_addr;
+static uint16_t kbd_buf_pending_addr;
 static int irqval;
-static WORD irqtmp;
+static uint16_t irqtmp;
 
 /* Flag: has tape been initialized?  */
 static int tape_is_initialized = 0;
@@ -80,13 +82,13 @@ static const trap_t *tape_traps;
 static log_t tape_log = LOG_ERR;
 
 /* The tape image for device 1. */
-tape_image_t *tape_image_dev1 = NULL;
+tape_image_t *tape_image_dev[TAPEPORT_MAX_PORTS] = { NULL };
 
 /* ------------------------------------------------------------------------- */
 
-static inline void set_st(BYTE b)
+static inline void set_st(uint8_t b)
 {
-    mem_store(st_addr, (BYTE)(mem_read(st_addr) | b));
+    mem_store(st_addr, (uint8_t)(mem_read(st_addr) | b));
 }
 
 /* ------------------------------------------------------------------------- */
@@ -134,6 +136,8 @@ static void tape_init_vars(const tape_init_t *init)
 /* FIXME: This should be passed through a struct.  */
 int tape_init(const tape_init_t *init)
 {
+    int i;
+
     if (tape_log == LOG_ERR) {
         tape_log = log_open("Tape");
     }
@@ -141,8 +145,10 @@ int tape_init(const tape_init_t *init)
     tape_internal_init();
     tape_image_init();
 
-    lib_free(tape_image_dev1);
-    tape_image_dev1 = lib_calloc(1, sizeof(tape_image_t));
+    for (i = 0; i < TAPEPORT_MAX_PORTS; i++) {
+        lib_free(tape_image_dev[i]);
+        tape_image_dev[i] = lib_calloc(1, sizeof(tape_image_t));
+    }
 
     tap_init(init);
 
@@ -171,18 +177,25 @@ int tape_reinit(const tape_init_t *init)
 
 void tape_shutdown(void)
 {
-    lib_free(tape_image_dev1);
+    int i;
+
+    for (i = 0; i < TAPEPORT_MAX_PORTS; i++) {
+        lib_free(tape_image_dev[i]);
+    }
 }
 
 int tape_deinstall(void)
 {
+    int i;
+
     if (!tape_is_initialized) {
         return -1;
     }
 
-    if (tape_image_dev1->name != NULL &&
-        tape_image_dev1->type == TAPE_TYPE_T64) {
-        tape_image_detach_internal(1);
+    for (i = 0; i < TAPEPORT_MAX_PORTS; i++) {
+        if (tape_image_dev[i]->name != NULL && tape_image_dev[i]->type == TAPE_TYPE_T64) {
+            tape_image_detach_internal(i + 1);
+        }
     }
 
     tape_traps_deinstall();
@@ -205,18 +218,18 @@ int tape_deinstall(void)
 int tape_find_header_trap(void)
 {
     int err;
-    BYTE *cassette_buffer;
+    uint8_t *cassette_buffer;
 
-    cassette_buffer = mem_ram + (mem_read(buffer_pointer_addr) | (mem_read((WORD)(buffer_pointer_addr + 1)) << 8));
+    cassette_buffer = mem_ram + (mem_read(buffer_pointer_addr) | (mem_read((uint16_t)(buffer_pointer_addr + 1)) << 8));
 
-    if (tape_image_dev1->name == NULL
-        || tape_image_dev1->type != TAPE_TYPE_T64) {
+    if (tape_image_dev[TAPEPORT_PORT_1]->name == NULL
+        || tape_image_dev[TAPEPORT_PORT_1]->type != TAPE_TYPE_T64) {
         err = 1;
     } else {
         t64_t *t64;
         t64_file_record_t *rec;
 
-        t64 = (t64_t *)tape_image_dev1->data;
+        t64 = (t64_t *)tape_image_dev[TAPEPORT_PORT_1]->data;
         rec = NULL;
 
         err = 0;
@@ -248,8 +261,8 @@ int tape_find_header_trap(void)
     mem_store(verify_flag_addr, 0);
 
     if (irqtmp) {
-        mem_store(irqtmp, (BYTE)(irqval & 0xff));
-        mem_store((WORD)(irqtmp + 1), (BYTE)((irqval >> 8) & 0xff));
+        mem_store(irqtmp, (uint8_t)(irqval & 0xff));
+        mem_store((uint16_t)(irqtmp + 1), (uint8_t)((irqval >> 8) & 0xff));
     }
 
     /* Check if STOP has been pressed.  */
@@ -258,7 +271,7 @@ int tape_find_header_trap(void)
 
         maincpu_set_carry(0);
         for (i = 0; i < n; i++) {
-            if (mem_read((WORD)(kbd_buf_addr + i)) == 0x3) {
+            if (mem_read((uint16_t)(kbd_buf_addr + i)) == 0x3) {
                 maincpu_set_carry(1);
                 break;
             }
@@ -272,18 +285,18 @@ int tape_find_header_trap(void)
 int tape_find_header_trap_plus4(void)
 {
     int err;
-    BYTE *cassette_buffer;
+    uint8_t *cassette_buffer;
 
     cassette_buffer = mem_ram + buffer_pointer_addr;
 
-    if (tape_image_dev1->name == NULL
-        || tape_image_dev1->type != TAPE_TYPE_T64) {
+    if (tape_image_dev[TAPEPORT_PORT_1]->name == NULL
+        || tape_image_dev[TAPEPORT_PORT_1]->type != TAPE_TYPE_T64) {
         err = 1;
     } else {
         t64_t *t64;
         t64_file_record_t *rec;
 
-        t64 = (t64_t *)tape_image_dev1->data;
+        t64 = (t64_t *)tape_image_dev[TAPEPORT_PORT_1]->data;
         rec = NULL;
 
         err = 0;
@@ -323,7 +336,7 @@ int tape_find_header_trap_plus4(void)
 
         maincpu_set_carry(0);
         for (i = 0; i < n; i++) {
-            if (mem_read((WORD)(kbd_buf_addr + i)) == 0x3) {
+            if (mem_read((uint16_t)(kbd_buf_addr + i)) == 0x3) {
                 maincpu_set_carry(1);
                 break;
             }
@@ -347,11 +360,11 @@ int tape_find_header_trap_plus4(void)
 int tape_receive_trap(void)
 {
     int len;
-    WORD start, end;
-    BYTE st;
+    uint16_t start, end;
+    uint8_t st;
 
-    start = (mem_read(stal_addr) | (mem_read((WORD)(stal_addr + 1)) << 8));
-    end = (mem_read(eal_addr) | (mem_read((WORD)(eal_addr + 1)) << 8));
+    start = (mem_read(stal_addr) | (mem_read((uint16_t)(stal_addr + 1)) << 8));
+    end = (mem_read(eal_addr) | (mem_read((uint16_t)(eal_addr + 1)) << 8));
 
     switch (maincpu_get_x()) {
         case 0x0e:
@@ -359,7 +372,7 @@ int tape_receive_trap(void)
                 int amount;
 
                 len = (int)(end - start);
-                amount = t64_read((t64_t *)tape_image_dev1->data, mem_ram + (int)start, len);
+                amount = t64_read((t64_t *)tape_image_dev[TAPEPORT_PORT_1]->data, mem_ram + (int)start, len);
                 if (amount == len) {
                     st = 0x40;  /* EOF */
                 } else {
@@ -380,8 +393,8 @@ int tape_receive_trap(void)
     /* Set registers and flags like the Kernal routine does.  */
 
     if (irqtmp) {
-        mem_store(irqtmp, (BYTE)(irqval & 0xff));
-        mem_store((WORD)(irqtmp + 1), (BYTE)((irqval >> 8) & 0xff));
+        mem_store(irqtmp, (uint8_t)(irqval & 0xff));
+        mem_store((uint16_t)(irqtmp + 1), (uint8_t)((irqval >> 8) & 0xff));
     }
 
     set_st(st);                 /* EOF and possible errors */
@@ -393,16 +406,16 @@ int tape_receive_trap(void)
 
 int tape_receive_trap_plus4(void)
 {
-    WORD start, end, len;
-    BYTE st;
+    uint16_t start, end, len;
+    uint8_t st;
 
-    start = (mem_read(stal_addr) | (mem_read((WORD)(stal_addr + 1)) << 8));
-    end = (mem_read(eal_addr) | (mem_read((WORD)(eal_addr + 1)) << 8));
+    start = (mem_read(stal_addr) | (mem_read((uint16_t)(stal_addr + 1)) << 8));
+    end = (mem_read(eal_addr) | (mem_read((uint16_t)(eal_addr + 1)) << 8));
 
     /* Read block.  */
     len = end - start;
 
-    if (t64_read((t64_t *)tape_image_dev1->data,
+    if (t64_read((t64_t *)tape_image_dev[TAPEPORT_PORT_1]->data,
                  mem_ram + (int) start, (int)len) == (int) len) {
         st = 0x40;      /* EOF */
     } else {
@@ -419,19 +432,19 @@ int tape_receive_trap_plus4(void)
     return 1;
 }
 
-const char *tape_get_file_name(void)
+const char *tape_get_file_name(int port)
 {
-    if (tape_image_dev1 == NULL) {
+    if (tape_image_dev[port] == NULL) {
         return "";
     }
 
-    return tape_image_dev1->name;
+    return tape_image_dev[port]->name;
 }
 
-int tape_tap_attached(void)
+int tape_tap_attached(int port)
 {
-    if (tape_image_dev1->name != NULL
-        && tape_image_dev1->type == TAPE_TYPE_TAP) {
+    if (tape_image_dev[port]->name != NULL
+        && tape_image_dev[port]->type == TAPE_TYPE_TAP) {
         return 1;
     }
 
@@ -446,36 +459,36 @@ int tape_image_detach_internal(unsigned int unit)
     int retval = 0;
     char event_data[2];
 
-    if (unit != 1) {
+    if (unit != 1 && unit != 2) {
         return -1;
     }
 
-    if (tape_image_dev1 == NULL || tape_image_dev1->name == NULL) {
+    if (tape_image_dev[unit - 1] == NULL || tape_image_dev[unit - 1]->name == NULL) {
         return 0;
     }
 
-    switch (tape_image_dev1->type) {
+    switch (tape_image_dev[unit - 1]->type) {
         case TAPE_TYPE_T64:
             log_message(tape_log,
-                        "Detaching T64 image `%s'.", tape_image_dev1->name);
+                        "Detaching T64 image `%s'.", tape_image_dev[unit - 1]->name);
             /* Tape detached: release play button.  */
-            datasette_set_tape_sense(0);
+            datasette_set_tape_sense(unit - 1, 0);
             break;
         case TAPE_TYPE_TAP:
             log_message(tape_log,
-                        "Detaching TAP image `%s'.", tape_image_dev1->name);
-            datasette_set_tape_image(NULL);
+                        "Detaching TAP image `%s'.", tape_image_dev[unit - 1]->name);
+            datasette_set_tape_image(unit - 1, NULL);
 
             tape_traps_install();
             break;
         default:
-            log_error(tape_log, "Unknown tape type %i.",
-                      tape_image_dev1->type);
+            log_error(tape_log, "Unknown tape type %u.",
+                      tape_image_dev[unit - 1]->type);
     }
 
-    retval = tape_image_close(tape_image_dev1);
+    retval = tape_image_close(tape_image_dev[unit - 1]);
 
-    ui_display_tape_current_image("");
+    ui_display_tape_current_image(unit - 1, "");
 
     event_data[0] = (char)unit;
     event_data[1] = 0;
@@ -489,7 +502,7 @@ int tape_image_detach(unsigned int unit)
 {
     char event_data[2];
 
-    if (unit != 1) {
+    if (unit != 1 && unit != 2) {
         return -1;
     }
 
@@ -513,15 +526,24 @@ static int tape_image_attach_internal(unsigned int unit, const char *name)
 {
     tape_image_t tape_image;
 
-    if (unit != 1) {
+    if (unit != 1 && unit != 2) {
         return -1;
     }
 
     if (!name || !*name) {
         return -1;
+    } else {
+        /* Make sure this tape isn't already in the other datasette */
+        unsigned int other_index = 2 - unit;
+        if (tape_image_dev[other_index] &&
+            tape_image_dev[other_index]->name &&
+            archdep_real_path_equal(tape_image_dev[other_index]->name, name)) {
+            log_error(tape_log, "File `%s' already mounted on other tape unit", name);
+            return -1;
+        }
     }
 
-    tape_image.name = lib_stralloc(name);
+    tape_image.name = lib_strdup(name);
     tape_image.read_only = 0;
 
     if (tape_image_open(&tape_image) < 0) {
@@ -532,31 +554,31 @@ static int tape_image_attach_internal(unsigned int unit, const char *name)
 
     tape_image_detach_internal(unit);
 
-    memcpy(tape_image_dev1, &tape_image, sizeof(tape_image_t));
+    memcpy(tape_image_dev[unit - 1], &tape_image, sizeof(tape_image_t));
 
-    ui_display_tape_current_image(tape_image_dev1->name);
+    ui_display_tape_current_image(unit - 1, tape_image_dev[unit - 1]->name);
 
-    switch (tape_image_dev1->type) {
+    switch (tape_image_dev[unit - 1]->type) {
         case TAPE_TYPE_T64:
             log_message(tape_log, "T64 image '%s' attached.", name);
             /* Tape attached: press play button.  */
-            datasette_set_tape_sense(1);
+            datasette_set_tape_sense(unit - 1, 1);
             break;
         case TAPE_TYPE_TAP:
-            datasette_set_tape_image((tap_t *)tape_image_dev1->data);
+            datasette_set_tape_image(unit - 1, (tap_t *)tape_image_dev[unit - 1]->data);
             log_message(tape_log, "TAP image '%s' attached.", name);
             log_message(tape_log, "TAP image version: %i, system: %i.",
-                        ((tap_t *)tape_image_dev1->data)->version,
-                        ((tap_t *)tape_image_dev1->data)->system);
+                        ((tap_t *)tape_image_dev[unit - 1]->data)->version,
+                        ((tap_t *)tape_image_dev[unit - 1]->data)->system);
             tape_traps_deinstall();
             break;
         default:
-            log_error(tape_log, "Unknown tape type %i.",
-                      tape_image_dev1->type);
+            log_error(tape_log, "Unknown tape type %u.",
+                      tape_image_dev[unit - 1]->type);
             return -1;
     }
 
-    event_record_attach_image(unit, name, tape_image.read_only);
+    event_record_attach_image(unit, 0, name, tape_image.read_only);
 
     return 0;
 }

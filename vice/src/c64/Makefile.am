@@ -1,10 +1,13 @@
 SUBDIRS = cart
 
 AM_CPPFLAGS = \
+	@VICE_CPPFLAGS@ \
 	@ARCH_INCLUDES@ \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/c64/cart \
+	-I$(top_srcdir)/src/datasette \
+	-I$(top_srcdir)/src/printerdrv \
 	-I$(top_srcdir)/src/drive \
 	-I$(top_srcdir)/src/drive/iec/c64exp \
 	-I$(top_srcdir)/src/raster \
@@ -12,18 +15,36 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/tape \
 	-I$(top_srcdir)/src/userport \
 	-I$(top_srcdir)/src/viciisc \
-	-I$(top_srcdir)/src/viciivsid \
 	-I$(top_srcdir)/src/lib/p64 \
 	-I$(top_srcdir)/src/video \
-	-I$(top_srcdir)/src/rtc \
+	-I$(top_srcdir)/src/core/rtc \
 	-I$(top_srcdir)/src/joyport \
 	-I$(top_srcdir)/src/samplerdrv \
-	-I$(top_srcdir)/src/tapeport
+	-I$(top_srcdir)/src/tapeport \
+	-I$(top_srcdir)/src/core \
+	-I$(top_srcdir)/src/rs232drv \
+	-I$(top_srcdir)/src/hvsc \
+	-I$(top_srcdir)/src/vdrive \
+	-I$(top_srcdir)/src/fsdevice \
+	-I$(top_srcdir)/src/imagecontents
 
-noinst_LIBRARIES = libvsid.a libc64.a libc64sc.a libc64c128.a libc64c64dtv.a libc64scpu64.a
+AM_CFLAGS = @VICE_CFLAGS@
+
+AM_CXXFLAGS = @VICE_CXXFLAGS@
+
+AM_LDFLAGS = @VICE_LDFLAGS@
+
+
+noinst_LIBRARIES = libvsid.a libvsidstubs.a libc64.a libc64stubs.a libc64sc.a libc64scstubs.a libc64c128.a libc64c64dtv.a libc64scpu64.a
+
+libvsidstubs_a_SOURCES = \
+	vsid-stubs.c
 
 libvsid_a_SOURCES = \
-	c64embedded.c \
+	vsid-cmdline-options.c \
+	vsid-cmdline-options.h \
+	vsid-resources.c \
+	vsid-snapshot.c \
 	c64gluelogic.c \
 	c64gluelogic.h \
 	c64keyboard.c \
@@ -47,16 +68,12 @@ libvsid_a_SOURCES = \
 	vsid-debugcart.c \
 	vsid-debugcart.h \
 	musdrv.h \
-	patchrom.c \
-	patchrom.h \
 	psid.c \
 	psid.h \
 	psiddrv.a65 \
+	psiddrv.h \
 	reloc65.c \
 	vsid.c \
-	vsid-cmdline-options.c \
-	vsid-resources.c \
-	vsid-snapshot.c \
 	vsidcia1.c \
 	vsidcia2.c \
 	vsidcpu.c \
@@ -64,8 +81,10 @@ libvsid_a_SOURCES = \
 	vsidmeminit.c \
 	vsidmemsnapshot.c \
 	vsidpla.c \
-	vsidsound.c \
-	vsidstubs.c
+	vsidsound.c
+
+libc64stubs_a_SOURCES = \
+	c64-stubs.c
 
 libc64_a_SOURCES = \
 	c64-cmdline-options.c \
@@ -88,7 +107,6 @@ libc64_a_SOURCES = \
 	c64cpu.c \
 	c64datasette.c \
 	c64drive.c \
-	c64embedded.c \
 	c64export.c \
 	c64fastiec.c \
 	c64fastiec.h \
@@ -123,17 +141,13 @@ libc64_a_SOURCES = \
 	c64rsuser.h \
 	c64sound.c \
 	c64video.c \
-	patchrom.c \
-	patchrom.h \
 	plus256k.c \
 	plus256k.h \
 	plus60k.c \
-	plus60k.h \
-	psid.c \
-	psid.h \
-	psiddrv.a65 \
-	psiddrv.h \
-	reloc65.c
+	plus60k.h
+
+libc64scstubs_a_SOURCES = \
+	c64sc-stubs.c
 
 libc64sc_a_SOURCES = \
 	c64-cmdline-options.c \
@@ -156,7 +170,6 @@ libc64sc_a_SOURCES = \
 	c64cpusc.c \
 	c64datasette.c \
 	c64drive.c \
-	c64embedded.c \
 	c64export.c \
 	c64fastiec.c \
 	c64fastiec.h \
@@ -191,17 +204,10 @@ libc64sc_a_SOURCES = \
 	c64rsuser.h \
 	c64sound.c \
 	c64video.c \
-	patchrom.c \
-	patchrom.h \
 	plus256k.c \
 	plus256k.h \
 	plus60k.c \
-	plus60k.h \
-	psid.c \
-	psid.h \
-	psiddrv.a65 \
-	psiddrv.h \
-	reloc65.c
+	plus60k.h
 
 libc64c64dtv_a_SOURCES = \
 	c64bus.c \
@@ -217,9 +223,7 @@ libc64c64dtv_a_SOURCES = \
 	c64romset.c \
 	c64rsuser.c \
 	c64rsuser.h \
-	c64video.c \
-	patchrom.c \
-	patchrom.h
+	c64video.c
 
 libc64c128_a_SOURCES = \
 	c64bus.c \
@@ -246,9 +250,7 @@ libc64c128_a_SOURCES = \
 	c64parallel.h \
 	c64rsuser.c \
 	c64rsuser.h \
-	c64sound.c \
-	patchrom.c \
-	patchrom.h
+	c64sound.c
 
 libc64scpu64_a_SOURCES = \
 	c64bus.c \
@@ -258,7 +260,6 @@ libc64scpu64_a_SOURCES = \
 	c64cia2.c \
 	c64datasette.c \
 	c64drive.c \
-	c64embedded.c \
 	c64export.c \
 	c64fastiec.c \
 	c64fastiec.h \
@@ -277,10 +278,7 @@ libc64scpu64_a_SOURCES = \
 	c64rsuser.c \
 	c64rsuser.h \
 	c64sound.c \
-	c64video.c \
-	patchrom.c \
-	patchrom.h \
-	reloc65.c
+	c64video.c
 
 BUILT_SOURCES = psiddrv.h
 
@@ -289,8 +287,8 @@ EXTRA_DIST =
 SUFFIXES = .a65
 
 .a65.h:
-	xa -R -G $< -o $(srcdir)/$*.o65
-	od -v -An -w8 -tx1 $(srcdir)/$*.o65 | sed 's/\w\w/0x&,/g' > $(srcdir)/$@
+	$(XA) -R -G $< -o $*.o65 2>/dev/null
+	od -v -An -tx1 $*.o65 | sed 's/\([0-9a-f][0-9a-f]\)/0x\1,/g' > $@
 
 .PHONY: libc64cart libc64cartsystem libc64commoncart
 

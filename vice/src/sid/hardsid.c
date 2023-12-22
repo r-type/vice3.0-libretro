@@ -26,21 +26,47 @@
  *
  */
 
+/* #define DEBUG_HARDSID */
+/* define to trace hardsid stuff without having a hardsid */
+/* #define DEBUG_HARDSID_DUMMY */
+
 #include "vice.h"
+
+#include "hardsid.h"
 
 #ifdef HAVE_HARDSID
 
 #include <stdio.h>
 #include <string.h>
 
-#include "hardsid.h"
 #include "sid-snapshot.h"
 #include "types.h"
+#include "log.h"
+
+#if defined(DEBUG_HARDSID_DUMMY)
+
+#define hardsid_drv_available() 1
+#define hardsid_drv_reset() printf("hardsid_drv_reset\n")
+#define hardsid_drv_open() (printf("hardsid_drv_open\n"), 0)
+#define hardsid_drv_close() printf("hardsid_drv_close\n")
+#define hardsid_drv_read(addr, chipno)  (printf("hardsid_drv_read addr:%02x chip:%d\n", addr, chipno), 1)
+#define hardsid_drv_store(addr, val, chipno) printf("hardsid_drv_store addr:%02x val:%02x chip:%d\n", addr, val, chipno)
+#define hardsid_drv_set_device(chipno, device) printf("hardsid_drv_set_device chip:%02x device:%u\n", chipno, device)
+#define hardsid_drv_state_read(chipno, sid_state) printf("hardsid_drv_state_read chip:%d sid_state:%p\n", chipno, sid_state)
+#define hardsid_drv_state_write(chipno, sid_state) printf("hardsid_drv_state_write chip:%d sid_state:%p\n", chipno, sid_state)
+
+#endif
+
+#if defined(DEBUG_HARDSID_DUMMY) || defined(DEBUG_HARDSID)
+#define DBG(x)  log_debug x
+#else
+#define DBG(x)
+#endif
 
 static int hardsid_is_open = -1;
 
 /* buffer containing current register state of SIDs */
-static BYTE sidbuf[0x20 * HS_MAXSID];
+static uint8_t sidbuf[0x20 * HS_MAXSID];
 
 void hardsid_reset(void)
 {
@@ -55,6 +81,7 @@ int hardsid_open(void)
         hardsid_is_open = hardsid_drv_open();
         memset(sidbuf, 0, sizeof(sidbuf));
     }
+    DBG(("hardsid_open hardsid_is_open=%d\n", hardsid_is_open));
     return hardsid_is_open;
 }
 
@@ -64,10 +91,11 @@ int hardsid_close(void)
         hardsid_drv_close();
         hardsid_is_open = -1;
     }
+    DBG(("hardsid_close hardsid_is_open=%d\n", hardsid_is_open));
     return 0;
 }
 
-int hardsid_read(WORD addr, int chipno)
+int hardsid_read(uint16_t addr, int chipno)
 {
     if (!hardsid_is_open && chipno < HS_MAXSID) {
         /* use sidbuf[] for write-only registers */
@@ -80,7 +108,7 @@ int hardsid_read(WORD addr, int chipno)
     return 0;
 }
 
-void hardsid_store(WORD addr, BYTE val, int chipno)
+void hardsid_store(uint16_t addr, uint8_t val, int chipno)
 {
     if (!hardsid_is_open && chipno < HS_MAXSID) {
         /* write to sidbuf[] for write-only registers */

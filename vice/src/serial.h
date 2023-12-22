@@ -43,20 +43,21 @@ struct cbmdos_cmd_parse_s;
 struct disk_image_s;
 struct trap_s;
 struct vdrive_s;
+struct snapshot_s;
 
 typedef struct serial_s {
     int inuse;
     int isopen[16]; /* isopen flag for each secondary address */
     struct disk_image_s *image; /* pointer to the disk image data  */
     char *name; /* name of the device */
-    int (*getf)(struct vdrive_s *, BYTE *, unsigned int);
-    int (*putf)(struct vdrive_s *, BYTE, unsigned int);
-    int (*openf)(struct vdrive_s *, const BYTE *, unsigned int, unsigned int,
+    int (*getf)(struct vdrive_s *, uint8_t *, unsigned int);
+    int (*putf)(struct vdrive_s *, uint8_t, unsigned int);
+    int (*openf)(struct vdrive_s *, const uint8_t *, unsigned int, unsigned int,
                  struct cbmdos_cmd_parse_s *cmd_parse_ext);
     int (*closef)(struct vdrive_s *, unsigned int);
     void (*flushf)(struct vdrive_s *, unsigned int);
     void (*listenf)(struct vdrive_s *, unsigned int);
-    BYTE nextbyte[16]; /* next byte to send, per sec. addr. */
+    uint8_t nextbyte[16]; /* next byte to send, per sec. addr. */
     char nextok[16]; /* flag if nextbyte is valid */
 
     int nextst[16];
@@ -65,10 +66,14 @@ typedef struct serial_s {
     /* The PET hardware emulation can be interrupted while
        transferring a byte. Thus we also have to save the byte
        and status last sent, to be able to send it again. */
-    BYTE lastbyte[16];
+    uint8_t lastbyte[16];
     char lastok[16];
     int lastst[16];
 } serial_t;
+
+#define ISOPEN_CLOSED           0
+#define ISOPEN_AWAITING_NAME    1
+#define ISOPEN_OPEN             2
 
 extern int serial_init(const struct trap_s *trap_list);
 extern int serial_resources_init(void);
@@ -77,7 +82,7 @@ extern void serial_shutdown(void);
 extern int serial_install_traps(void);
 extern int serial_remove_traps(void);
 
-extern void serial_trap_init(WORD tmpin);
+extern void serial_trap_init(uint16_t tmpin);
 extern int serial_trap_attention(void);
 extern int serial_trap_send(void);
 extern int serial_trap_receive(void);
@@ -85,17 +90,17 @@ extern int serial_trap_ready(void);
 extern void serial_traps_reset(void);
 extern void serial_trap_eof_callback_set(void (*func)(void));
 extern void serial_trap_attention_callback_set(void (*func)(void));
-extern void serial_trap_truedrive_set(unsigned int flag);
+extern void serial_trap_truedrive_set(unsigned int unit, unsigned int flag);
 
 extern int serial_realdevice_enable(void);
 extern void serial_realdevice_disable(void);
 
 extern int serial_iec_lib_directory(unsigned int unit, const char *pattern,
-                                    BYTE **buf);
+                                    uint8_t **buf);
 extern int serial_iec_lib_read_sector(unsigned int unit, unsigned int track,
-                                      unsigned int sector, BYTE *buf);
+                                      unsigned int sector, uint8_t *buf);
 extern int serial_iec_lib_write_sector(unsigned int unit, unsigned int track,
-                                       unsigned int sector, BYTE *buf);
+                                       unsigned int sector, uint8_t *buf);
 
 extern serial_t *serial_device_get(unsigned int unit);
 extern unsigned int serial_device_type_get(unsigned int unit);
@@ -106,4 +111,7 @@ extern void serial_iec_device_exec(CLOCK clk_value);
 
 extern void serial_iec_bus_init(void);
 
+extern void fsdrive_snapshot_prepare(void);
+extern int fsdrive_snapshot_write_module(struct snapshot_s *s);
+extern int fsdrive_snapshot_read_module(struct snapshot_s *s);
 #endif

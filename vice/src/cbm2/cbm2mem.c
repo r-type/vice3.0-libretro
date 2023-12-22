@@ -57,23 +57,23 @@
 #include "types.h"
 #include "vsync.h"
 
-void cia1_set_extended_keyboard_rows_mask(BYTE foo)
+void cia1_set_extended_keyboard_rows_mask(uint8_t foo)
 {
 }
 
 /* ------------------------------------------------------------------------- */
 /* The CBM-II memory. */
 
-BYTE mem_ram[CBM2_RAM_SIZE];            /* 1M, banks 0-14 plus extension RAM
+uint8_t mem_ram[CBM2_RAM_SIZE];            /* 1M, banks 0-14 plus extension RAM
                                            in bank 15 */
-BYTE mem_rom[CBM2_ROM_SIZE];            /* complete bank 15 ROM + video RAM */
-BYTE mem_chargen_rom[CBM2_CHARGEN_ROM_SIZE];
+uint8_t mem_rom[CBM2_ROM_SIZE];            /* complete bank 15 ROM + video RAM */
+uint8_t mem_chargen_rom[CBM2_CHARGEN_ROM_SIZE];
 
 /* Pointer to the chargen ROM.  */
-BYTE *mem_chargen_rom_ptr;
+uint8_t *mem_chargen_rom_ptr;
 
-BYTE *mem_page_zero;
-BYTE *mem_page_one;
+uint8_t *mem_page_zero;
+uint8_t *mem_page_one;
 
 /* selected banks for normal access and indirect accesses */
 int cbm2mem_bank_exec = -1;
@@ -82,7 +82,7 @@ int cbm2mem_bank_ind = -1;
 /* Memory read and write tables - banked. */
 static read_func_ptr_t _mem_read_tab[16][0x101];
 static store_func_ptr_t _mem_write_tab[16][0x101];
-static BYTE *_mem_read_base_tab[16][0x101];
+static uint8_t *_mem_read_base_tab[16][0x101];
 static int mem_read_limit_tab[3][0x101];
 
 /* watch tables are fixed */
@@ -95,14 +95,26 @@ read_func_ptr_t *_mem_read_tab_ptr;
 read_func_ptr_t *_mem_read_ind_tab_ptr;
 store_func_ptr_t *_mem_write_tab_ptr;
 store_func_ptr_t *_mem_write_ind_tab_ptr;
-static BYTE **_mem_read_base_tab_ptr;
+read_func_ptr_t *_mem_read_tab_ptr_dummy;
+store_func_ptr_t *_mem_write_tab_ptr_dummy;
+read_func_ptr_t *_mem_read_ind_tab_ptr_dummy;
+store_func_ptr_t *_mem_write_ind_tab_ptr_dummy;
+
+static uint8_t **_mem_read_base_tab_ptr;
 static int *mem_read_limit_tab_ptr;
 
 int cbm2_init_ok = 0;
 
+/* Current watchpoint state.
+          0 = no watchpoints
+    bit0; 1 = watchpoints active
+    bit1; 2 = watchpoints trigger on dummy accesses
+*/
+static int watchpoints_active = 0;
+
 /* ------------------------------------------------------------------------- */
 
-void cbm2_set_tpi2pc(BYTE b)
+void cbm2_set_tpi2pc(uint8_t b)
 {
 }
 
@@ -122,11 +134,15 @@ void cbm2mem_set_bank_exec(int val)
     int i;
 
     val &= 0x0f;
+
     if (val != cbm2mem_bank_exec) {
         cbm2mem_bank_exec = val;
 
         _mem_read_tab_ptr = _mem_read_tab[cbm2mem_bank_exec];
         _mem_write_tab_ptr = _mem_write_tab[cbm2mem_bank_exec];
+        _mem_read_tab_ptr_dummy = _mem_read_tab[cbm2mem_bank_exec];
+        _mem_write_tab_ptr_dummy = _mem_write_tab[cbm2mem_bank_exec];
+
         _mem_read_base_tab_ptr = _mem_read_base_tab[cbm2mem_bank_exec];
         mem_read_limit_tab_ptr = mem_read_limit_tab[(cbm2mem_bank_exec < 15)
                                                     ? 0 : 1];
@@ -176,11 +192,11 @@ void cbm2mem_set_bank_ind(int val)
 }
 
 /* ------------------------------------------------------------------------- */
-BYTE zero_read(WORD addr)
+uint8_t zero_read(uint16_t addr)
 {
     addr &= 0xff;
 
-    switch ((BYTE)addr) {
+    switch ((uint8_t)addr) {
         case 0:
             return cbm2mem_bank_exec;
         case 1:
@@ -190,7 +206,7 @@ BYTE zero_read(WORD addr)
     return mem_page_zero[addr & 0xff];
 }
 
-void zero_store(WORD addr, BYTE value)
+void zero_store(uint16_t addr, uint8_t value)
 {
     if (addr == 0) {
         cbm2mem_set_bank_exec(value);
@@ -199,11 +215,11 @@ void zero_store(WORD addr, BYTE value)
         cbm2mem_set_bank_ind(value);
     }
 
-    _mem_write_tab_ptr[0]((WORD)(addr & 0xff), value);
+    _mem_write_tab_ptr[0]((uint16_t)(addr & 0xff), value);
 }
 
 #define STORE_ZERO(bank)                                 \
-    static void store_zero_##bank(WORD addr, BYTE value) \
+    static void store_zero_##bank(uint16_t addr, uint8_t value) \
     {                                                    \
         addr &= 0xff;                                    \
                                                          \
@@ -211,27 +227,33 @@ void zero_store(WORD addr, BYTE value)
             cbm2mem_set_bank_exec(value);                \
         } else if (addr == 1) {                          \
             cbm2mem_set_bank_ind(value);                 \
+        } else {                                         \
+            mem_ram[(0x##bank << 16) | addr] = value;    \
         }                                                \
-                                                         \
-        mem_ram[(0x##bank << 16) | addr] = value;        \
     }
 
 #define READ_ZERO(bank)                                   \
-    static BYTE read_zero_##bank(WORD addr)               \
+    static uint8_t read_zero_##bank(uint16_t addr)               \
     {                                                     \
         return mem_ram[(0x##bank << 16) | (addr & 0xff)]; \
     }
 
 #define READ_RAM(bank)                             \
-    static BYTE read_ram_##bank(WORD addr)         \
+    static uint8_t read_ram_##bank(uint16_t addr)         \
     {                                              \
         return mem_ram[(0x##bank << 16) | addr];   \
     }
 
-#define STORE_RAM(bank)                                \
-    static void store_ram_##bank(WORD addr, BYTE byte) \
-    {                                                  \
-        mem_ram[(0x##bank << 16) | addr] = byte;       \
+#define STORE_RAM(bank)                                       \
+    static void store_ram_##bank(uint16_t addr, uint8_t byte) \
+    {                                                         \
+        if (addr == 0) {                                      \
+            cbm2mem_set_bank_exec(byte);                      \
+        } else if (addr == 1) {                               \
+            cbm2mem_set_bank_ind(byte);                       \
+        } else {                                              \
+            mem_ram[(0x##bank << 16) | addr] = byte;          \
+        }                                                     \
     }
 
 STORE_ZERO(0)
@@ -331,37 +353,37 @@ static read_func_ptr_t read_zero_tab[16] = {
 };
 
 
-void store_zeroX(WORD addr, BYTE value)
+static void store_zeroX(uint16_t addr, uint8_t value)
 {
     if (addr == 0) {
         cbm2mem_set_bank_exec(value);
-    } else
-    if (addr == 1) {
+    } else if (addr == 1) {
         cbm2mem_set_bank_ind(value);
     }
 }
 
-BYTE rom_read(WORD addr)
+uint8_t rom_read(uint16_t addr)
 {
     return mem_rom[addr];
 }
 
-BYTE read_chargen(WORD addr)
-{
-    return mem_chargen_rom[addr & 0xfff];
-}
 
-void rom_store(WORD addr, BYTE value)
+void rom_store(uint16_t addr, uint8_t value)
 {
     mem_rom[addr] = value;
 }
 
-BYTE read_unused(WORD addr)
+uint8_t read_unused(uint16_t addr)
 {
+    if (addr == 0) {
+        return cbm2mem_bank_exec;
+    } else if (addr == 1) {
+        return cbm2mem_bank_ind;
+    }
     return 0xff; /* (addr >> 8) & 0xff; */
 }
 
-static void store_dummy(WORD addr, BYTE value)
+static void store_dummy(uint16_t addr, uint8_t value)
 {
     return;
 }
@@ -370,39 +392,39 @@ static void store_dummy(WORD addr, BYTE value)
 
 /* Functions for watchpoint memory access.  */
 
-static BYTE zero_read_watch(WORD addr)
+static uint8_t zero_read_watch(uint16_t addr)
 {
     addr &= 0xff;
     monitor_watch_push_load_addr(addr, e_comp_space);
     return _mem_read_tab[cbm2mem_bank_exec][0](addr);
 }
 
-static void zero_store_watch(WORD addr, BYTE value)
+static void zero_store_watch(uint16_t addr, uint8_t value)
 {
     addr &= 0xff;
     monitor_watch_push_store_addr(addr, e_comp_space);
     _mem_write_tab[cbm2mem_bank_exec][0](addr, value);
 }
 
-BYTE read_watch(WORD addr)
+static uint8_t read_watch(uint16_t addr)
 {
     monitor_watch_push_load_addr(addr, e_comp_space);
     return _mem_read_tab[cbm2mem_bank_exec][addr >> 8](addr);
 }
 
-void store_watch(WORD addr, BYTE value)
+static void store_watch(uint16_t addr, uint8_t value)
 {
     monitor_watch_push_store_addr(addr, e_comp_space);
     _mem_write_tab[cbm2mem_bank_exec][addr >> 8](addr, value);
 }
 
-BYTE read_ind_watch(WORD addr)
+static uint8_t read_ind_watch(uint16_t addr)
 {
     monitor_watch_push_load_addr(addr, e_comp_space);
     return _mem_read_tab[cbm2mem_bank_ind][addr >> 8](addr);
 }
 
-void store_ind_watch(WORD addr, BYTE value)
+static void store_ind_watch(uint16_t addr, uint8_t value)
 {
     monitor_watch_push_store_addr(addr, e_comp_space);
     _mem_write_tab[cbm2mem_bank_ind][addr >> 8](addr, value);
@@ -412,19 +434,19 @@ void store_ind_watch(WORD addr, BYTE value)
 
 /* Generic memory access.  */
 
-void mem_store(WORD addr, BYTE value)
+void mem_store(uint16_t addr, uint8_t value)
 {
     _mem_write_tab_ptr[addr >> 8](addr, value);
 }
 
-BYTE mem_read(WORD addr)
+uint8_t mem_read(uint16_t addr)
 {
     return _mem_read_tab_ptr[addr >> 8](addr);
 }
 
 /* ------------------------------------------------------------------------- */
 
-void store_io(WORD addr, BYTE value)
+static void store_io(uint16_t addr, uint8_t value)
 {
     switch (addr & 0xf800) {
         case 0xd000:
@@ -460,9 +482,9 @@ void store_io(WORD addr, BYTE value)
     }
 }
 
-BYTE read_io(WORD addr)
+static uint8_t read_io(uint16_t addr)
 {
-    BYTE last_access = 0xff;
+    uint8_t last_access = 0xff;
 
     switch (addr & 0xf800) {
         case 0xd000:
@@ -474,6 +496,7 @@ BYTE read_io(WORD addr)
                     break;
                 case 0xd900:
                     last_access = cbm2io_d900_read(addr);
+                    break;
                 case 0xda00:
                     last_access = cbm2io_da00_read(addr);
                     break;
@@ -497,16 +520,45 @@ BYTE read_io(WORD addr)
     return last_access;
 }
 
+/* called by mem_toggle_watchpoints() */
+static void mem_update_tab_ptrs(int flag)
+{
+    if (flag) {
+        _mem_read_tab_ptr = _mem_read_tab_watch;
+        _mem_write_tab_ptr = _mem_write_tab_watch;
+        _mem_read_ind_tab_ptr = _mem_read_ind_tab_watch;
+        _mem_write_ind_tab_ptr = _mem_write_ind_tab_watch;
+        if (flag > 1) {
+            /* enable watchpoints on dummy accesses */
+            _mem_read_tab_ptr_dummy = _mem_read_tab_watch;
+            _mem_write_tab_ptr_dummy = _mem_write_tab_watch;
+            _mem_read_ind_tab_ptr_dummy = _mem_read_ind_tab_watch;
+            _mem_write_ind_tab_ptr_dummy = _mem_write_ind_tab_watch;
+        } else {
+            _mem_read_tab_ptr_dummy = _mem_read_tab[cbm2mem_bank_exec];
+            _mem_write_tab_ptr_dummy = _mem_write_tab[cbm2mem_bank_exec];
+            _mem_read_ind_tab_ptr_dummy = _mem_read_tab[cbm2mem_bank_ind];
+            _mem_write_ind_tab_ptr_dummy = _mem_write_tab[cbm2mem_bank_ind];
+        }
+    } else {
+        /* all watchpoints disabled */
+        _mem_read_tab_ptr = _mem_read_tab[cbm2mem_bank_exec];
+        _mem_write_tab_ptr = _mem_write_tab[cbm2mem_bank_exec];
+        _mem_read_tab_ptr_dummy = _mem_read_tab[cbm2mem_bank_exec];
+        _mem_write_tab_ptr_dummy = _mem_write_tab[cbm2mem_bank_exec];
+        _mem_read_ind_tab_ptr = _mem_read_tab[cbm2mem_bank_ind];
+        _mem_write_ind_tab_ptr = _mem_write_tab[cbm2mem_bank_ind];
+        _mem_read_ind_tab_ptr_dummy = _mem_read_tab[cbm2mem_bank_ind];
+        _mem_write_ind_tab_ptr_dummy = _mem_write_tab[cbm2mem_bank_ind];
+    }
+}
 
 /* FIXME: TODO! */
 void mem_toggle_watchpoints(int flag, void *context)
 {
-    if (flag) {
-        _mem_read_tab_ptr = _mem_read_tab_watch;
-        _mem_read_ind_tab_ptr = _mem_read_ind_tab_watch;
-        _mem_write_tab_ptr = _mem_write_tab_watch;
-        _mem_write_ind_tab_ptr = _mem_write_ind_tab_watch;
-    } else {
+    mem_update_tab_ptrs(flag);
+    watchpoints_active = flag;
+    if (!flag) {
         cbm2mem_set_bank_exec(cbm2mem_bank_exec);
         cbm2mem_set_bank_ind(cbm2mem_bank_ind);
     }
@@ -628,6 +680,8 @@ void mem_initialize_memory_bank(int i)
                 _mem_read_tab[i][0] = read_zero_tab[i];
                 break;
             }
+            /* If this failed, we'll be handled by the failure case in case 14 */
+            /* FALL THROUGH */
         case 3:
         case 4:
             if (ramsize >= 256) {
@@ -640,6 +694,8 @@ void mem_initialize_memory_bank(int i)
                 _mem_read_tab[i][0] = read_zero_tab[i];
                 break;
             }
+            /* If this failed, we'll be handled by the failure case in case 14 */
+            /* FALL THROUGH */
         case 5:
         case 6:
         case 7:
@@ -653,6 +709,8 @@ void mem_initialize_memory_bank(int i)
                 _mem_read_tab[i][0] = read_zero_tab[i];
                 break;
             }
+            /* If this failed, we'll be handled by the failure case in case 14 */
+            /* FALL THROUGH */
         case 8:
         case 9:
         case 10:
@@ -758,9 +816,9 @@ void mem_initialize_memory_bank(int i)
     _mem_read_base_tab[i][0x100] = _mem_read_base_tab[i][0];
 }
 
-void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void mem_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
-    BYTE *p = _mem_read_base_tab_ptr[addr >> 8];
+    uint8_t *p = _mem_read_base_tab_ptr[addr >> 8];
 
     *base = (p == NULL) ? NULL : (p - (addr & 0xff00));
     *start = addr; /* TODO */
@@ -790,27 +848,55 @@ void mem_powerup(void)
 
 /* ------------------------------------------------------------------------- */
 
-/* FIXME: To do!  */
-
-void mem_get_basic_text(WORD *start, WORD *end)
+void mem_get_basic_text(uint16_t *start, uint16_t *end)
 {
+    if (start != NULL) {
+        *start = mem_page_zero[0x2d] | (mem_page_zero[0x2e] << 8);
+    }
+    if (end != NULL) {
+        *end = mem_page_zero[0x2f] | (mem_page_zero[0x30] << 8);
+    }
 }
 
-void mem_set_basic_text(WORD start, WORD end)
+/* FIXME: This is likely incomplete!  */
+void mem_set_basic_text(uint16_t start, uint16_t end)
 {
+    mem_page_zero[0x2d] = start & 0xff;
+    mem_page_zero[0x2e] = start >> 8;
+    mem_page_zero[0x2f] = end & 0xff;
+    mem_page_zero[0x30] = end >> 8;
 }
 
-void mem_inject(DWORD addr, BYTE value)
+/* this function should always read from the screen currently used by the kernal
+   for output, normally this does just return system ram - except when the
+   videoram is not memory mapped.
+   used by autostart to "read" the kernal messages
+*/
+uint8_t mem_read_screen(uint16_t addr)
 {
-    /* just call mem_store() to be safe.
-       This could possibly be changed to write straight into the
-       memory array.  mem_ram[addr & mask] = value; */
-    mem_store((WORD)(addr & 0xffff), value);
+    return mem_read(addr);
 }
 
+void mem_inject(uint32_t addr, uint8_t value)
+{
+    /* since this is used by autostart, this should point to basic memory */
+    /* FIXME: handle > 64kb */
+    mem_ram[0x10000 + (addr & 0xffff)] = value;
+}
+/* In banked memory architectures this will always write to the bank that
+   contains the keyboard buffer and "number of keys in buffer", regardless of
+   what the CPU "sees" currently.
+   In all other cases this just writes to the first 64kb block, usually by
+   wrapping to mem_inject().
+*/
+void mem_inject_key(uint16_t addr, uint8_t value)
+{
+    /* write to "romio" bank */
+    mem_bank_write(16, addr, value, NULL);
+}
 /* ------------------------------------------------------------------------- */
 
-int mem_rom_trap_allowed(WORD addr)
+int mem_rom_trap_allowed(uint16_t addr)
 {
     return 1;   /* (addr >= 0xf000) && !(map_reg & 0x80); */
 }
@@ -823,7 +909,7 @@ void mem_set_tape_sense(int value)
 
 /* Banked memory access functions for the monitor.  */
 
-static BYTE peek_bank_io(WORD addr)
+static uint8_t peek_bank_io(uint16_t addr)
 {
     switch (addr & 0xf800) {
         case 0xc000:
@@ -856,21 +942,49 @@ static BYTE peek_bank_io(WORD addr)
 
 /* Exported banked memory access functions for the monitor.  */
 
-static const char *banknames[] = {
-    "default", "cpu", "ram0", "ram1", "ram2", "ram3",
-    "ram4", "ram5", "ram6", "ram7", "ram8", "ram9",
-    "ramA", "ramB", "ramC", "ramD", "ramE", "ramF",
-    "romio", "io", NULL
+#define MAXBANKS (2 + 16 + 2)
+
+static const char *banknames[MAXBANKS + 1] = {
+    "default", "cpu",
+    /* by convention, a "bank array" has a 2-hex-digit bank index appended */
+    "ram00", "ram01", "ram02", "ram03", "ram04", "ram05", "ram06", "ram07",
+    "ram08", "ram09", "ram0a", "ram0b", "ram0c", "ram0d", "ram0e", "ram0f",
+    "romio", "io",
+    NULL
 };
 
-static const int banknums[] = {
-    17, 17, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16 };
+static const int banknums[MAXBANKS + 1] = {
+    17, 17,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    16, 16,
+    -1
+};
+
+static const int bankindex[MAXBANKS + 1] = {
+    -1, -1,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+    -1, -1,
+    -1
+};
+
+static const int bankflags[MAXBANKS + 1] = {
+    0, 0,
+    MEM_BANK_ISARRAY | MEM_BANK_ISARRAYFIRST, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYLAST,
+    0, 0,
+    -1
+};
 
 const char **mem_bank_list(void)
 {
     return banknames;
 }
 
+const int *mem_bank_list_nos(void) {
+    return banknums;
+}
+
+/* return bank number for a given literal bank name */
 int mem_bank_from_name(const char *name)
 {
     int i = 0;
@@ -884,7 +998,34 @@ int mem_bank_from_name(const char *name)
     return -1;
 }
 
-BYTE mem_bank_read(int bank, WORD addr, void *context)
+/* return current index for a given bank */
+int mem_bank_index_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankindex[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+int mem_bank_flags_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankflags[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+uint8_t mem_bank_read(int bank, uint16_t addr, void *context)
 {
     switch (bank) {
         case 17:                /* current */
@@ -895,14 +1036,15 @@ BYTE mem_bank_read(int bank, WORD addr, void *context)
             }
             return _mem_read_tab[15][addr >> 8](addr);
         default:
-            if (bank >= 0 && bank < 15) {
+            if (bank >= 0 && bank <= 15) {
                 return read_ram_tab[bank](addr);
             }
     }
     return read_unused(addr);
 }
 
-BYTE mem_bank_peek(int bank, WORD addr, void *context)
+/* used by monitor if sfx off */
+uint8_t mem_bank_peek(int bank, uint16_t addr, void *context)
 {
     if (bank == 16) {
         if (addr >= 0xc000 && addr < 0xe000) {
@@ -912,7 +1054,7 @@ BYTE mem_bank_peek(int bank, WORD addr, void *context)
     return mem_bank_read(bank, addr, context);
 }
 
-void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
+void mem_bank_write(int bank, uint16_t addr, uint8_t byte, void *context)
 {
     switch (bank) {
         case 17:                 /* current */
@@ -938,6 +1080,12 @@ void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
     store_dummy(addr, byte);
 }
 
+/* used by monitor if sfx off */
+void mem_bank_poke(int bank, uint16_t addr, uint8_t byte, void *context)
+{
+    mem_bank_write(bank, addr, byte, context);
+}
+
 mem_ioreg_list_t *mem_ioreg_list_get(void *context)
 {
     mem_ioreg_list_t *mem_ioreg_list = NULL;
@@ -947,12 +1095,27 @@ mem_ioreg_list_t *mem_ioreg_list_get(void *context)
     return mem_ioreg_list;
 }
 
-void mem_get_screen_parameter(WORD *base, BYTE *rows, BYTE *columns, int *bank)
+void mem_get_screen_parameter(uint16_t *base, uint8_t *rows, uint8_t *columns, int *bank)
 {
     *base = 0xd000;
-    *rows = 25;
-    *columns = 80;
     *bank = 16;
+    *columns = crtc_peek_register(CRTC_REG_HDISP);
+    *rows = crtc_peek_register(CRTC_REG_VDISP);
+}
+
+/* used by autostart to locate and "read" kernal output on the current screen
+ * this function should return whatever the kernal currently uses, regardless
+ * what is currently visible/active in the UI
+ */
+void mem_get_cursor_parameter(uint16_t *screen_addr, uint8_t *cursor_column, uint8_t *line_length, int *blinking)
+{
+    *screen_addr = zero_read(0xc8) + zero_read(0xc9) * 256; /* Current Screen Line Address */
+    *cursor_column = zero_read(0xcb);    /* Cursor Column on Current Line */
+
+    *line_length = crtc_peek_register(CRTC_REG_HDISP); /* Physical Screen Line Length */
+    /* Cursor Blink enable: 1 = Flash Cursor, 0 = Cursor disabled, -1 = n/a */
+    *blinking = (crtc_peek_register(CRTC_REG_CURSORSTART) != 1);
+    /* printf("mem_get_cursor_parameter %04x %d %d %d\n", *screen_addr, *cursor_column, *line_length, *blinking); */
 }
 
 /* ------------------------------------------------------------------------- */
@@ -975,93 +1138,99 @@ static int tpi2_dump(void)
 /* ------------------------------------------------------------------------- */
 
 static io_source_t crtc_device = {
-    "CRTC",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xd800, 0xd8ff, 1,
-    1, /* read is always valid */
-    crtc_store,
-    crtc_read,
-    crtc_peek,
-    crtc_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "CRTC",                /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xd800, 0xd8ff, 0x01,  /* range for the chip, regs:$d800-$d801, mirrors: $d802-$d8ff */
+    1,                     /* read is always valid */
+    crtc_store,            /* store function */
+    NULL,                  /* NO poke function */
+    crtc_read,             /* read function */
+    crtc_peek,             /* peek function */
+    crtc_dump,             /* chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_HIGH,          /* high priority, chip never involved in collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t sid_device = {
-    "SID",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xda00, 0xdaff, 0x1f,
-    1, /* read is always valid */
-    sid_store,
-    sid_read,
-    sid_peek,
-    sid_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "SID",                 /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xda00, 0xdaff, 0x1f,  /* range for the chip, regs:$da00-$da1f, mirrors:$da20-$daff */
+    1,                     /* read is always valid */
+    sid_store,             /* store function */
+    NULL,                  /* NO poke function */
+    sid_read,              /* read function */
+    sid_peek,              /* peek function */
+    sid_dump,              /* chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_HIGH,          /* high priority, chip never involved in collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t cia_device = {
-    "CIA",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xdc00, 0xdcff, 0xf,
-    1, /* read is always valid */
-    cia1_store,
-    cia1_read,
-    cia1_peek,
-    cia1_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "CIA",                 /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xdc00, 0xdcff, 0x0f,  /* range for the chip, regs:$dc00-$dc0f, mirrors:$dc10-$dcff */
+    1,                     /* read is always valid */
+    cia1_store,            /* store function */
+    NULL,                  /* NO poke function */
+    cia1_read,             /* read function */
+    cia1_peek,             /* peek function */
+    cia1_dump,             /* chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_HIGH,          /* high priority, chip never involved in collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t acia_device = {
-    "ACIA",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xdd00, 0xddff, 3,
-    1, /* read is always valid */
-    acia1_store,
-    acia1_read,
-    acia1_peek,
-    NULL, /* TODO: dump */
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "ACIA",                /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xdd00, 0xddff, 0x03,  /* range for the chip, regs:$dd00-$dd03, mirrors:$dd04-$ddff */
+    1,                     /* read is always valid */
+    acia1_store,           /* store function */
+    NULL,                  /* NO poke function */
+    acia1_read,            /* read function */
+    acia1_peek,            /* peek function */
+    acia1_dump,            /* chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_HIGH,          /* high priority, chip never involved in collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t tpi1_device = {
-    "TPI1",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xde00, 0xdeff, 7,
-    1, /* read is always valid */
-    tpi1_store,
-    tpi1_read,
-    tpi1_peek,
-    tpi1_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "TPI1",                /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xde00, 0xdeff, 0x07,  /* range for the chip, regs:$de00-$de07, mirrors:$de08-$deff */
+    1,                     /* read is always valid */
+    tpi1_store,            /* store function */
+    NULL,                  /* NO poke function */
+    tpi1_read,             /* read function */
+    tpi1_peek,             /* peek function */
+    tpi1_dump,             /* chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_HIGH,          /* high priority, chip never involved in collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_t tpi2_device = {
-    "TPI2",
-    IO_DETACH_CART, /* dummy */
-    NULL,           /* dummy */
-    0xdf00, 0xdfff, 7,
-    1, /* read is always valid */
-    tpi2_store,
-    tpi2_read,
-    tpi2_peek,
-    tpi2_dump,
-    0, /* dummy (not a cartridge) */
-    IO_PRIO_HIGH, /* priority, device and mirrors never involved in collisions */
-    0
+    "TPI2",                /* name of the chip */
+    IO_DETACH_NEVER,       /* chip is never involved in collisions, so no detach */
+    IO_DETACH_NO_RESOURCE, /* does not use a resource for detach */
+    0xdf00, 0xdfff, 0x07,  /* range for the chip, regs:$df00-$df07, mirrors:$df08-$dfff */
+    1,                     /* read is always valid */
+    tpi2_store,            /* store function */
+    NULL,                  /* NO poke function */
+    tpi2_read,             /* read function */
+    tpi2_peek,             /* peek function */
+    tpi2_dump,             /* chip state information dump function */
+    IO_CART_ID_NONE,       /* not a cartridge */
+    IO_PRIO_HIGH,          /* high priority, chip never involved in collisions */
+    0                      /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *crtc_list_item = NULL;
@@ -1081,3 +1250,4 @@ void cbm2io_init(void)
     tpi1_list_item = io_source_register(&tpi1_device);
     tpi2_list_item = io_source_register(&tpi2_device);
 }
+

@@ -44,26 +44,27 @@
 #include "uifilereq.h"
 #include "uimenu.h"
 #include "vkbd.h"
+#include "vsyncapi.h"
 
 
 /* ------------------------------------------------------------------ */
 /* Common strings */
 
-const char* sdl_menu_text_tick = "*";
-const char* sdl_menu_text_unknown = "?";
-const char* sdl_menu_text_exit_ui = "\1";
+const char* sdl_menu_text_tick = MENU_CHECKMARK_CHECKED_STRING;
+const char* sdl_menu_text_unknown = MENU_UNKNOWN_STRING;
+const char* sdl_menu_text_exit_ui = MENU_EXIT_UI_STRING;
 
 /* ------------------------------------------------------------------ */
 /* Common callbacks */
 
 UI_MENU_CALLBACK(submenu_callback)
 {
-    return "->";
+    return MENU_SUBMENU_STRING;
 }
 
 UI_MENU_CALLBACK(submenu_radio_callback)
 {
-    static char buf[100] = "-> ";
+    static char buf[100] = MENU_SUBMENU_STRING " ";
     char *dest = &(buf[3]);
     const char *src = NULL;
     ui_menu_entry_t *item = (ui_menu_entry_t *)param;
@@ -77,7 +78,7 @@ UI_MENU_CALLBACK(submenu_radio_callback)
     }
 
     if (src == NULL) {
-        return "-> ???";
+        return MENU_SUBMENU_STRING " ???";
     }
 
     while ((*dest++ = *src++)) {
@@ -96,12 +97,14 @@ UI_MENU_CALLBACK(autostart_callback)
     char *name = NULL;
 
     if (activated) {
-        name = sdl_ui_file_selection_dialog("Choose autostart image", FILEREQ_MODE_CHOOSE_FILE);
+        name = sdl_ui_file_selection_dialog("Choose autostart image", FILEREQ_MODE_CHOOSE_FILE_IN_IMAGE);
         if (name != NULL) {
-            if (autostart_autodetect(name, NULL, 0, AUTOSTART_MODE_RUN) < 0) {
+            /* FIXME: using last_selected_image_pos is kindof a hack */
+            if (autostart_autodetect(name, NULL, last_selected_image_pos, AUTOSTART_MODE_RUN) < 0) {
                 ui_error("could not start auto-image");
             }
             lib_free(name);
+            sdl_pause_state = 0;
             return sdl_menu_text_exit_ui;
         }
     }
@@ -110,11 +113,38 @@ UI_MENU_CALLBACK(autostart_callback)
 
 UI_MENU_CALLBACK(pause_callback)
 {
-    int paused = ui_emulation_is_paused();
-
+    if (sdl_menu_state) {
+        /* called from menu */
+        if (activated) {
+            sdl_pause_state ^= 1;
+        }
+        return sdl_pause_state ? sdl_menu_text_tick : NULL;
+    }
+    /* called in emulator */
     if (activated) {
-        ui_pause_emulation(!paused);
-        return sdl_menu_text_exit_ui;
+        ui_pause_toggle();
+    }
+    return NULL;
+}
+
+UI_MENU_CALLBACK(advance_frame_callback)
+{
+    if (sdl_menu_state) {
+        /* called from menu */
+        if (activated) {
+            if (sdl_pause_state) {
+                sdl_pause_state = 0;
+                vsyncarch_advance_frame();
+            }
+            return sdl_menu_text_exit_ui;
+        }
+        return NULL;
+    }
+    /* called in emulator */
+    if (activated) {
+        if (ui_pause_active()) {
+            vsyncarch_advance_frame();
+        }
     }
     return NULL;
 }
@@ -176,14 +206,16 @@ const char *sdl_ui_menu_radio_helper(int activated, ui_callback_data_t param, co
         int v;
         const char *w;
         if (resources_query_type(resource_name) == RES_INTEGER) {
-            resources_get_int(resource_name, &v);
-            if (v == vice_ptr_to_int(param)) {
-                return sdl_menu_text_tick;
+            if (resources_get_int(resource_name, &v) == 0) {
+                if (v == vice_ptr_to_int(param)) {
+                    return sdl_menu_text_tick;
+                }
             }
         } else {
-            resources_get_string(resource_name, &w);
-            if (!strcmp(w, (char *)param)) {
-                return sdl_menu_text_tick;
+            if (resources_get_string(resource_name, &w) == 0) {
+                if (!strcmp(w, (char *)param)) {
+                    return sdl_menu_text_tick;
+                }
             }
         }
     }
@@ -226,7 +258,7 @@ const char *sdl_ui_menu_int_helper(int activated, ui_callback_data_t param, cons
     if (activated) {
         value = sdl_ui_text_input_dialog((const char*)param, buf);
         if (value) {
-            new_value = strtol(value, NULL, 0);
+            new_value = (int)strtol(value, NULL, 0);
             resources_set_int(resource_name, new_value);
             lib_free(value);
         }
@@ -236,7 +268,7 @@ const char *sdl_ui_menu_int_helper(int activated, ui_callback_data_t param, cons
     return NULL;
 }
 
-#if (FSDEV_DIR_SEP_CHR == '\\')
+#if (ARCHDEP_DIR_SEP_CHR == '\\')
 char win32_path_buf[80];
 
 static char *sdl_ui_menu_file_translate_seperator(const char *text)
@@ -274,7 +306,7 @@ const char *sdl_ui_menu_file_string_helper(int activated, ui_callback_data_t par
             lib_free(value);
         }
     } else {
-#if (FSDEV_DIR_SEP_CHR == '\\')
+#if (ARCHDEP_DIR_SEP_CHR == '\\')
         if (previous != NULL && previous[0] != 0) {
             return (const char *)sdl_ui_menu_file_translate_seperator(previous);
         }

@@ -34,54 +34,45 @@
 #include "lib.h"
 #include "profdos.h"
 #include "resources.h"
+#include "stardos-exp.h"
 #include "supercard.h"
 #include "util.h"
 
 
 static char *profdos_1571_name = NULL;
 static char *supercard_name = NULL;
-
-
-static void set_drive_ram(unsigned int dnr)
-{
-    drive_t *drive = drive_context[dnr]->drive;
-
-    if (drive->type != DRIVE_TYPE_1570 && drive->type != DRIVE_TYPE_1571
-        && drive->type != DRIVE_TYPE_1571CR) {
-        return;
-    }
-
-    drivemem_init(drive_context[dnr], drive->type);
-
-    return;
-}
+static char *stardos_name = NULL;
 
 static int set_drive_parallel_cable(int val, void *param)
 {
-    drive_t *drive = drive_context[vice_ptr_to_uint(param)]->drive;
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
 
     switch (val) {
         case DRIVE_PC_NONE:
         case DRIVE_PC_STANDARD:
         case DRIVE_PC_DD3:
         case DRIVE_PC_FORMEL64:
+        case DRIVE_PC_21SEC_BACKUP:
             break;
         default:
             return -1;
     }
 
-    drive->parallel_cable = val;
-    set_drive_ram(vice_ptr_to_uint(param));
+    unit->parallel_cable = val;
+    /* don't reset CMDHD drives */
+    if (unit->type != DRIVE_TYPE_CMDHD) {
+        drivemem_init(unit);
+    }
 
     return 0;
 }
 
 static int set_drive_profdos(int val, void *param)
 {
-    drive_t *drive = drive_context[vice_ptr_to_uint(param)]->drive;
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
 
-    drive->profdos = val ? 1 : 0;
-    set_drive_ram(vice_ptr_to_uint(param));
+    unit->profdos = val ? 1 : 0;
+    drivemem_init(unit);
 
     return 0;
 }
@@ -97,10 +88,10 @@ static int set_profdos_1571_name(const char *val, void *param)
 
 static int set_drive_supercard(int val, void *param)
 {
-    drive_t *drive = drive_context[vice_ptr_to_uint(param)]->drive;
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
 
-    drive->supercard = val ? 1 : 0;
-    set_drive_ram(vice_ptr_to_uint(param));
+    unit->supercard = val ? 1 : 0;
+    drivemem_init(unit);
 
     return 0;
 }
@@ -114,6 +105,24 @@ static int set_supercard_name(const char *val, void *param)
     return supercard_load(supercard_name);
 }
 
+static int set_drive_stardos(int val, void *param)
+{
+    diskunit_context_t *unit = diskunit_context[vice_ptr_to_uint(param)];
+
+    unit->stardos = val ? 1 : 0;
+
+    return 0;
+}
+
+static int set_stardos_name(const char *val, void *param)
+{
+    if (util_string_set(&stardos_name, val)) {
+        return 0;
+    }
+
+    return stardos_exp_load(stardos_name);
+}
+
 static resource_int_t res_drive[] = {
     { NULL, DRIVE_PC_NONE, RES_EVENT_SAME, NULL,
       NULL, set_drive_parallel_cable, NULL },
@@ -121,6 +130,8 @@ static resource_int_t res_drive[] = {
       NULL, set_drive_profdos, NULL },
     { NULL, 0, RES_EVENT_SAME, NULL,
       NULL, set_drive_supercard, NULL },
+    { NULL, 0, RES_EVENT_SAME, NULL,
+      NULL, set_drive_stardos, NULL },
     RESOURCE_INT_LIST_END
 };
 
@@ -130,26 +141,30 @@ static const resource_string_t resources_string[] =
       &profdos_1571_name, set_profdos_1571_name, NULL },
     { "DriveSuperCardName", "", RES_EVENT_NO, NULL,
       &supercard_name, set_supercard_name, NULL },
+    { "DriveStarDosName", "", RES_EVENT_NO, NULL,
+      &stardos_name, set_stardos_name, NULL },
     RESOURCE_STRING_LIST_END
 };
 
 int c64exp_resources_init(void)
 {
-    unsigned int dnr;
-    drive_t *drive;
+    int dnr;
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
-        drive = drive_context[dnr]->drive;
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
+        diskunit_context_t *unit = diskunit_context[dnr];
 
         res_drive[0].name = lib_msprintf("Drive%iParallelCable", dnr + 8);
-        res_drive[0].value_ptr = &(drive->parallel_cable);
+        res_drive[0].value_ptr = &(unit->parallel_cable);
         res_drive[0].param = uint_to_void_ptr(dnr);
         res_drive[1].name = lib_msprintf("Drive%iProfDOS", dnr + 8);
-        res_drive[1].value_ptr = &(drive->profdos);
+        res_drive[1].value_ptr = &(unit->profdos);
         res_drive[1].param = uint_to_void_ptr(dnr);
         res_drive[2].name = lib_msprintf("Drive%iSuperCard", dnr + 8);
-        res_drive[2].value_ptr = &(drive->supercard);
+        res_drive[2].value_ptr = &(unit->supercard);
         res_drive[2].param = uint_to_void_ptr(dnr);
+        res_drive[3].name = lib_msprintf("Drive%iStarDos", dnr + 8);
+        res_drive[3].value_ptr = &(unit->stardos);
+        res_drive[3].param = uint_to_void_ptr(dnr);
 
         if (resources_register_int(res_drive) < 0) {
             return -1;
@@ -158,6 +173,7 @@ int c64exp_resources_init(void)
         lib_free(res_drive[0].name);
         lib_free(res_drive[1].name);
         lib_free(res_drive[2].name);
+        lib_free(res_drive[3].name);
     }
 
     return resources_register_string(resources_string);
@@ -167,4 +183,5 @@ void c64exp_resources_shutdown(void)
 {
     lib_free(profdos_1571_name);
     lib_free(supercard_name);
+    lib_free(stardos_name);
 }

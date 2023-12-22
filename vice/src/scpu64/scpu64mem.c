@@ -44,7 +44,6 @@
 #include "cartio.h"
 #include "cartridge.h"
 #include "cia.h"
-#include "clkguard.h"
 #include "machine.h"
 #include "main65816cpu.h"
 #include "mem.h"
@@ -79,7 +78,7 @@ pport_t pport;
 /* Number of possible mirroring configurations.  */
 #define NUM_MIRRORS     16
 
-static const WORD mem_mirrors[NUM_MIRRORS] = {
+static const uint16_t mem_mirrors[NUM_MIRRORS] = {
     0x80bf, 0x80bf, 0x003f, 0x023f,
     0x407f, 0x407f, 0xc0ff, 0xc0ff,
     0x0407, 0x0407,        0,    0,
@@ -87,42 +86,42 @@ static const WORD mem_mirrors[NUM_MIRRORS] = {
 };
 
 /* The C64 memory.  */
-BYTE mem_ram[SCPU64_RAM_SIZE];
-BYTE mem_sram[SCPU64_SRAM_SIZE];
-BYTE mem_trap_ram[SCPU64_KERNAL_ROM_SIZE];
-BYTE *mem_simm_ram = NULL;
+uint8_t mem_ram[SCPU64_RAM_SIZE];
+uint8_t mem_sram[SCPU64_SRAM_SIZE];
+uint8_t mem_trap_ram[SCPU64_KERNAL_ROM_SIZE];
+uint8_t *mem_simm_ram = NULL;
 static int mem_simm_page_size;
 static int mem_conf_page_size;
 static int mem_conf_size;
 unsigned int mem_simm_ram_mask = 0;
-BYTE mem_tooslow[1];
+uint8_t mem_tooslow[1];
 static int traps_pending;
 
 #ifdef USE_EMBEDDED
 #define C64_CHARGEN_ROM_SIZE SCPU64_CHARGEN_ROM_SIZE
 #include "c64chargen.h"
 #else
-BYTE mem_chargen_rom[SCPU64_CHARGEN_ROM_SIZE];
+uint8_t mem_chargen_rom[SCPU64_CHARGEN_ROM_SIZE];
 #endif
 
 /* Internal color memory.  */
-static BYTE mem_color_ram[0x400];
-BYTE *mem_color_ram_cpu, *mem_color_ram_vicii;
+static uint8_t mem_color_ram[0x400];
+uint8_t *mem_color_ram_cpu, *mem_color_ram_vicii;
 
 /* Pointer to the chargen ROM.  */
-BYTE *mem_chargen_rom_ptr;
+uint8_t *mem_chargen_rom_ptr;
 
 /* Pointers to the currently used memory read and write tables.  */
 read_func_ptr_t *_mem_read_tab_ptr;
 store_func_ptr_t *_mem_write_tab_ptr;
-static BYTE **_mem_read_base_tab_ptr;
-static DWORD *mem_read_limit_tab_ptr;
+static uint8_t **_mem_read_base_tab_ptr;
+static uint32_t *mem_read_limit_tab_ptr;
 
 /* Memory read and write tables.  */
 static store_func_ptr_t mem_write_tab[NUM_MIRRORS][NUM_CONFIGS][0x101];
 static read_func_ptr_t mem_read_tab[NUM_CONFIGS][0x101];
-static BYTE *mem_read_base_tab[NUM_CONFIGS][0x101];
-static DWORD mem_read_limit_tab[NUM_CONFIGS][0x101];
+static uint8_t *mem_read_base_tab[NUM_CONFIGS][0x101];
+static uint32_t mem_read_limit_tab[NUM_CONFIGS][0x101];
 
 static store_func_ptr_t mem_write_tab_watch[0x101];
 static read_func_ptr_t mem_read_tab_watch[0x101];
@@ -166,27 +165,27 @@ inline static void check_ba_write(void)
 }
 /* ------------------------------------------------------------------------- */
 
-static BYTE zero_read_watch(WORD addr)
+static uint8_t zero_read_watch(uint16_t addr)
 {
     addr &= 0xff;
     monitor_watch_push_load_addr(addr, e_comp_space);
     return mem_read_tab[mem_config][0](addr);
 }
 
-static void zero_store_watch(WORD addr, BYTE value)
+static void zero_store_watch(uint16_t addr, uint8_t value)
 {
     addr &= 0xff;
     monitor_watch_push_store_addr(addr, e_comp_space);
     mem_write_tab[mirror][mem_config][0](addr, value);
 }
 
-static BYTE read_watch(WORD addr)
+static uint8_t read_watch(uint16_t addr)
 {
     monitor_watch_push_load_addr(addr, e_comp_space);
     return mem_read_tab[mem_config][addr >> 8](addr);
 }
 
-static void store_watch(WORD addr, BYTE value)
+static void store_watch(uint16_t addr, uint8_t value)
 {
     monitor_watch_push_store_addr(addr, e_comp_space);
     mem_write_tab[mirror][mem_config][addr >> 8](addr, value);
@@ -214,7 +213,7 @@ void scpu64_mem_init(void)
 
 void mem_pla_config_changed(void)
 {
-    mem_config = ((mem_pport & 7) | (export.exrom << 3) | (export.game << 4) 
+    mem_config = ((mem_pport & 7) | (export.exrom << 3) | (export.game << 4)
                 | (mem_reg_hwenable << 5) | (mem_reg_dosext << 6) | (mem_reg_bootmap << 7));
 
     if (watchpoints_active) {
@@ -231,7 +230,7 @@ void mem_pla_config_changed(void)
     maincpu_resync_limits();
 }
 
-static void pport_store(WORD addr, BYTE value)
+static void pport_store(uint16_t addr, uint8_t value)
 {
     if (mem_pport != value) {
         mem_pport = value;
@@ -239,11 +238,11 @@ static void pport_store(WORD addr, BYTE value)
     }
 }
 
-BYTE zero_read(WORD addr)
+uint8_t zero_read(uint16_t addr)
 {
     addr &= 0xff;
 
-    switch ((BYTE)addr) {
+    switch ((uint8_t)addr) {
         case 0:
             return pport.dir_read;
         case 1:
@@ -253,74 +252,74 @@ BYTE zero_read(WORD addr)
     return mem_ram[addr & 0xff];
 }
 
-void zero_store(WORD addr, BYTE value)
+void zero_store(uint16_t addr, uint8_t value)
 {
     mem_sram[addr] = value;
 
     if (addr == 1) {
-        pport_store(addr, (BYTE)(value & 7));
+        pport_store(addr, (uint8_t)(value & 7));
     }
 }
 
-void zero_store_mirrored(WORD addr, BYTE value)
+static void zero_store_mirrored(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch();
     mem_sram[addr] = value;
     if (addr == 1) {
-        pport_store(addr, (BYTE)(value & 7));
+        pport_store(addr, (uint8_t)(value & 7));
     }
     mem_ram[addr] = value;
 }
 
-void zero_store_int(WORD addr, BYTE value)
+static void zero_store_int(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch();
     if (addr == 1) {
-        pport_store(addr, (BYTE)(value & 7));
+        pport_store(addr, (uint8_t)(value & 7));
     }
     mem_ram[addr] = value;
 }
 
 /* ------------------------------------------------------------------------- */
 
-BYTE chargen_read(WORD addr)
+uint8_t chargen_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return mem_chargen_rom[addr & 0xfff];
 }
 
-BYTE ram_read(WORD addr)
+uint8_t ram_read(uint16_t addr)
 {
     check_ba_read();
     return mem_sram[addr];
 }
 
-void ram_store(WORD addr, BYTE value)
+void ram_store(uint16_t addr, uint8_t value)
 {
     check_ba_write();
     mem_sram[addr] = value;
 }
 
-BYTE ram_read_int(WORD addr)
+uint8_t ram_read_int(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return mem_ram[addr];
 }
 
-void ram_store_int(WORD addr, BYTE value)
+void ram_store_int(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch();
     mem_ram[addr] = value;
 }
 
-static void ram_store_mirrored(WORD addr, BYTE value)
+static void ram_store_mirrored(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch();
     mem_sram[addr] = value;
     mem_ram[addr] = value;
 }
 /* ------------------------------------ */
-static void ram_hi_store_mirrored(WORD addr, BYTE value) /* mirrored, no vbank */
+static void ram_hi_store_mirrored(uint16_t addr, uint8_t value) /* mirrored, no vbank */
 {
     if (addr == 0xff00) {
         scpu64_clock_write_stretch_io_start();
@@ -335,7 +334,7 @@ static void ram_hi_store_mirrored(WORD addr, BYTE value) /* mirrored, no vbank *
     }
 }
 
-static void ram_hi_store(WORD addr, BYTE value) /* not mirrored */
+static void ram_hi_store(uint16_t addr, uint8_t value) /* not mirrored */
 {
     if (addr == 0xff00) {
         scpu64_clock_write_stretch_io_start();
@@ -348,7 +347,7 @@ static void ram_hi_store(WORD addr, BYTE value) /* not mirrored */
     }
 }
 
-static void ram_hi_store_int(WORD addr, BYTE value) /* internal */
+static void ram_hi_store_int(uint16_t addr, uint8_t value) /* internal */
 {
     if (addr == 0xff00) {
         scpu64_clock_write_stretch_io_start();
@@ -363,19 +362,19 @@ static void ram_hi_store_int(WORD addr, BYTE value) /* internal */
 
 /* ------------------------------------ */
 
-BYTE scpu64_kernalshadow_read(WORD addr)
+uint8_t scpu64_kernalshadow_read(uint16_t addr)
 {
     check_ba_read();
     return mem_sram[0x8000 + addr];
 }
 
-BYTE ram1_read(WORD addr)
+uint8_t ram1_read(uint16_t addr)
 {
     check_ba_read();
     return mem_sram[0x10000 + addr];
 }
 
-BYTE scpu64rom_scpu64_read(WORD addr)
+uint8_t scpu64rom_scpu64_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_eprom();
     return scpu64rom_scpu64_rom[addr];
@@ -383,19 +382,34 @@ BYTE scpu64rom_scpu64_read(WORD addr)
 
 /* ------------------------------------------------------------------------- */
 
-/* Generic memory access.  */
+/* DMA memory access, on c64 this is the same as generic memory access.  */
 
-void mem_store(WORD addr, BYTE value)
+void mem_dma_store(uint16_t addr, uint8_t value)
 {
     _mem_write_tab_ptr[addr >> 8](addr, value);
 }
 
-BYTE mem_read(WORD addr)
+uint8_t mem_dma_read(uint16_t addr)
 {
     return _mem_read_tab_ptr[addr >> 8](addr);
 }
 
-void mem_store2(DWORD addr, BYTE value)
+
+/* ------------------------------------------------------------------------- */
+
+/* Generic memory access.  */
+
+void mem_store(uint16_t addr, uint8_t value)
+{
+    _mem_write_tab_ptr[addr >> 8](addr, value);
+}
+
+uint8_t mem_read(uint16_t addr)
+{
+    return _mem_read_tab_ptr[addr >> 8](addr);
+}
+
+void mem_store2(uint32_t addr, uint8_t value)
 {
     switch (addr & 0xfe0000) {
     case 0xf60000:
@@ -408,7 +422,7 @@ void mem_store2(DWORD addr, BYTE value)
                 mem_simm_ram[addr & 0x1ffff] = value;
             }
             scpu64_clock_write_stretch_simm(addr);
-        } 
+        }
         return;
     case 0xf80000:
     case 0xfa0000:
@@ -440,7 +454,7 @@ void mem_store2(DWORD addr, BYTE value)
     }
 }
 
-BYTE mem_read2(DWORD addr)
+uint8_t mem_read2(uint32_t addr)
 {
     switch (addr & 0xfe0000) {
     case 0xf60000:
@@ -474,10 +488,10 @@ BYTE mem_read2(DWORD addr)
         }
         break;
     }
-    return (BYTE)(addr >> 16);
+    return (uint8_t)(addr >> 16);
 }
 
-BYTE mem_peek2(DWORD addr)
+static uint8_t mem_peek2(uint32_t addr)
 {
     switch (addr & 0xfe0000) {
     case 0xf60000:
@@ -508,10 +522,10 @@ BYTE mem_peek2(DWORD addr)
         }
         break;
     }
-    return (BYTE)(addr >> 16);
+    return (uint8_t)(addr >> 16);
 }
 
-void mem_store_without_ultimax(WORD addr, BYTE value)
+void mem_store_without_ultimax(uint16_t addr, uint8_t value)
 {
     store_func_ptr_t *write_tab_ptr;
 
@@ -520,7 +534,7 @@ void mem_store_without_ultimax(WORD addr, BYTE value)
     write_tab_ptr[addr >> 8](addr, value);
 }
 
-BYTE mem_read_without_ultimax(WORD addr)
+uint8_t mem_read_without_ultimax(uint16_t addr)
 {
     read_func_ptr_t *read_tab_ptr;
 
@@ -529,7 +543,7 @@ BYTE mem_read_without_ultimax(WORD addr)
     return read_tab_ptr[addr >> 8](addr);
 }
 
-void mem_store_without_romlh(WORD addr, BYTE value)
+void mem_store_without_romlh(uint16_t addr, uint8_t value)
 {
     store_func_ptr_t *write_tab_ptr;
 
@@ -539,9 +553,9 @@ void mem_store_without_romlh(WORD addr, BYTE value)
 }
 
 /* ------------------------------------------------------------------------- */
-static BYTE scpu64_hardware_read(WORD addr)
+static uint8_t scpu64_hardware_read(uint16_t addr)
 {
-    BYTE value = 0x00;
+    uint8_t value = 0x00;
 
     switch (addr) {
     case 0xd0b0:
@@ -593,20 +607,20 @@ static BYTE scpu64_hardware_read(WORD addr)
     return value | (mem_reg_optim & 7);
 }
 
-void scpu64_hardware_store(WORD addr, BYTE value)
+static void scpu64_hardware_store(uint16_t addr, uint8_t value)
 {
     switch (addr) {
     case 0xd071:
         break;
     case 0xd072: /* System 1MHz enable */
         if (!mem_reg_sys_1mhz) {
-            mem_reg_sys_1mhz = 1; 
+            mem_reg_sys_1mhz = 1;
             scpu64_set_fastmode(0);
         }
         break;
     case 0xd073: /* System 1MHz disable */
         if (mem_reg_sys_1mhz) {
-            mem_reg_sys_1mhz = 0; 
+            mem_reg_sys_1mhz = 0;
             scpu64_set_fastmode(!(mem_reg_soft_1mhz || (mem_reg_sw_1mhz && !mem_reg_hwenable)));
         }
         break;
@@ -627,7 +641,7 @@ void scpu64_hardware_store(WORD addr, BYTE value)
         break;
     case 0xd07a: /* Software 1MHz enable */
         if (!mem_reg_soft_1mhz) {
-            mem_reg_soft_1mhz = 1; 
+            mem_reg_soft_1mhz = 1;
             scpu64_set_fastmode(0);
         }
         break;
@@ -728,13 +742,13 @@ void scpu64_hardware_store(WORD addr, BYTE value)
     }
 }
 
-static void colorram_store(WORD addr, BYTE value)
+static void colorram_store(uint16_t addr, uint8_t value)
 {
     if (scpu64_version_v2) mem_sram[0x10000 + addr] = value;
     mem_color_ram[addr & 0x3ff] = value & 0xf;
 }
 
-static BYTE colorram_read(WORD addr)
+static uint8_t colorram_read(uint16_t addr)
 {
     if (scpu64_version_v2) {
         return mem_sram[0x10000 + addr];
@@ -742,24 +756,24 @@ static BYTE colorram_read(WORD addr)
     return mem_color_ram[addr & 0x3ff] | (vicii_read_phi1() & 0xf0);
 }
 
-static BYTE scpu64_d200_read(WORD addr)
+static uint8_t scpu64_d200_read(uint16_t addr)
 {
     return mem_sram[0x10000 + addr];
 }
 
-static void scpu64_d200_store(WORD addr, BYTE value)
+static void scpu64_d200_store(uint16_t addr, uint8_t value)
 {
     if (mem_reg_hwenable || addr == 0xd27e) {
         mem_sram[0x10000 + addr] = value;
     }
 }
 
-static BYTE scpu64_d300_read(WORD addr)
+static uint8_t scpu64_d300_read(uint16_t addr)
 {
     return mem_sram[0x10000 + addr];
 }
 
-static void scpu64_d300_store(WORD addr, BYTE value)
+static void scpu64_d300_store(uint16_t addr, uint8_t value)
 {
     if (mem_reg_hwenable) {
         mem_sram[0x10000 + addr] = value;
@@ -767,7 +781,7 @@ static void scpu64_d300_store(WORD addr, BYTE value)
 }
 /* ------------------------------------------------------------------------- */
 
-BYTE scpu64io_d000_read(WORD addr)
+uint8_t scpu64io_d000_read(uint16_t addr)
 {
     if ((addr & 0xfff0) == 0xd0b0) {
         if (scpu64_version_v2) {
@@ -781,7 +795,7 @@ BYTE scpu64io_d000_read(WORD addr)
     return c64io_d000_read(addr); /* i/o read */
 }
 
-static BYTE scpu64io_d000_peek(WORD addr)
+static uint8_t scpu64io_d000_peek(uint16_t addr)
 {
     if ((addr & 0xfff0) == 0xd0b0) {
         return scpu64_hardware_read(addr);
@@ -790,13 +804,13 @@ static BYTE scpu64io_d000_peek(WORD addr)
     }
 }
 
-void scpu64io_d000_store(WORD addr, BYTE value)
+void scpu64io_d000_store(uint16_t addr, uint8_t value)
 {
     int oldfastmode;
     scpu64_clock_write_stretch_io_start();
     if (scpu64_version_v2) mem_sram[0x10000 + addr] = value;
     if ((addr >= 0xd071 && addr < 0xd080) || (addr >= 0xd0b0 && addr < 0xd0c0)) {
-        oldfastmode = scpu64_fastmode; 
+        oldfastmode = scpu64_fastmode;
         scpu64_hardware_store(addr, value);
         if (!oldfastmode && scpu64_fastmode) {
             return; /* stretch already handled */
@@ -807,13 +821,13 @@ void scpu64io_d000_store(WORD addr, BYTE value)
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64io_d100_read(WORD addr)
+uint8_t scpu64io_d100_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return c64io_d100_read(addr); /* i/o read */
 }
 
-void scpu64io_d100_store(WORD addr, BYTE value)
+void scpu64io_d100_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     if (scpu64_version_v2) mem_sram[0x10000 + addr] = value;
@@ -821,7 +835,7 @@ void scpu64io_d100_store(WORD addr, BYTE value)
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64io_d200_read(WORD addr)
+uint8_t scpu64io_d200_read(uint16_t addr)
 {
     check_ba_read();
     if (!scpu64_version_v2) {
@@ -830,13 +844,13 @@ BYTE scpu64io_d200_read(WORD addr)
     return scpu64_d200_read(addr); /* not an i/o read! */
 }
 
-void scpu64io_d200_store(WORD addr, BYTE value)
+void scpu64io_d200_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch();
     scpu64_d200_store(addr, value);
 }
 
-BYTE scpu64io_d300_read(WORD addr)
+uint8_t scpu64io_d300_read(uint16_t addr)
 {
     check_ba_read();
     if (!scpu64_version_v2) {
@@ -845,19 +859,19 @@ BYTE scpu64io_d300_read(WORD addr)
     return scpu64_d300_read(addr); /* not an i/o read! */
 }
 
-void scpu64io_d300_store(WORD addr, BYTE value)
+void scpu64io_d300_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch();
     scpu64_d300_store(addr, value);
 }
 
-BYTE scpu64io_d400_read(WORD addr)
+uint8_t scpu64io_d400_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return c64io_d400_read(addr); /* i/o read */
 }
 
-void scpu64io_d400_store(WORD addr, BYTE value)
+void scpu64io_d400_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     if (scpu64_version_v2) mem_sram[0x10000 + addr] = value;
@@ -865,13 +879,13 @@ void scpu64io_d400_store(WORD addr, BYTE value)
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64io_d500_read(WORD addr)
+uint8_t scpu64io_d500_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return c64io_d500_read(addr); /* i/o read */
 }
 
-void scpu64io_d500_store(WORD addr, BYTE value)
+void scpu64io_d500_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     if (scpu64_version_v2) mem_sram[0x10000 + addr] = value;
@@ -879,32 +893,32 @@ void scpu64io_d500_store(WORD addr, BYTE value)
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64io_d600_read(WORD addr)
+uint8_t scpu64io_d600_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return c64io_d600_read(addr); /* i/o read */
 }
 
-void scpu64io_d600_store(WORD addr, BYTE value)
+void scpu64io_d600_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch(); /* strange, but not i/o ! */
     c64io_d600_store(addr, value);
 }
 
-BYTE scpu64io_d700_read(WORD addr)
+uint8_t scpu64io_d700_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return c64io_d700_read(addr); /* i/o read */
 }
 
-void scpu64io_d700_store(WORD addr, BYTE value)
+void scpu64io_d700_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     c64io_d700_store(addr, value);
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64io_colorram_read(WORD addr)
+uint8_t scpu64io_colorram_read(uint16_t addr)
 {
     if (scpu64_version_v2) {
         check_ba_read();
@@ -914,31 +928,31 @@ BYTE scpu64io_colorram_read(WORD addr)
     return mem_color_ram[addr & 0x3ff] | (vicii_read_phi1() & 0xf0); /* i/o read */
 }
 
-void scpu64io_colorram_store(WORD addr, BYTE value)
+void scpu64io_colorram_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch();
     colorram_store(addr, value);
 }
 
-BYTE scpu64io_colorram_read_int(WORD addr)
+uint8_t scpu64io_colorram_read_int(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return vicii_read_phi1();
 }
 
-void scpu64io_colorram_store_int(WORD addr, BYTE value)
+void scpu64io_colorram_store_int(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch();
     mem_color_ram[addr & 0x3ff] = value & 0xf;
 }
 
-BYTE scpu64_cia1_read(WORD addr)
+uint8_t scpu64_cia1_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return cia1_read(addr); /* i/o read */
 }
 
-void scpu64_cia1_store(WORD addr, BYTE value)
+void scpu64_cia1_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start_cia();
     if (scpu64_version_v2) mem_sram[0x10000 + addr] = value;
@@ -946,13 +960,13 @@ void scpu64_cia1_store(WORD addr, BYTE value)
     scpu64_clock_write_stretch_io_cia();
 }
 
-BYTE scpu64_cia2_read(WORD addr)
+uint8_t scpu64_cia2_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return cia2_read(addr); /* i/o read */
 }
 
-void scpu64_cia2_store(WORD addr, BYTE value)
+void scpu64_cia2_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start_cia();
     if (scpu64_version_v2) mem_sram[0x10000 + addr] = value;
@@ -960,26 +974,26 @@ void scpu64_cia2_store(WORD addr, BYTE value)
     scpu64_clock_write_stretch_io_cia();
 }
 
-BYTE scpu64io_de00_read(WORD addr)
+uint8_t scpu64io_de00_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return c64io_de00_read(addr); /* i/o read */
 }
 
-void scpu64io_de00_store(WORD addr, BYTE value)
+void scpu64io_de00_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     c64io_de00_store(addr, value);
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64io_df00_read(WORD addr)
+uint8_t scpu64io_df00_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return c64io_df00_read(addr); /* i/o read */
 }
 
-void scpu64io_df00_store(WORD addr, BYTE value)
+void scpu64io_df00_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     c64io_df00_store(addr, value);
@@ -1002,65 +1016,65 @@ void scpu64io_df00_store(WORD addr, BYTE value)
     }
 }
 
-BYTE scpu64_roml_read(WORD addr)
+uint8_t scpu64_roml_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return roml_read(addr); /* i/o read */
 }
 
-void scpu64_roml_store(WORD addr, BYTE value)
+void scpu64_roml_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     roml_store(addr, value); /* i/o write */
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64_romh_read(WORD addr)
+uint8_t scpu64_romh_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return romh_read(addr); /* i/o read */
 }
 
-void scpu64_romh_store(WORD addr, BYTE value)
+void scpu64_romh_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     romh_store(addr, value); /* i/o write */
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64_ultimax_1000_7fff_read(WORD addr)
+uint8_t scpu64_ultimax_1000_7fff_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return ultimax_1000_7fff_read(addr); /* i/o read */
 }
 
-void scpu64_ultimax_1000_7fff_store(WORD addr, BYTE value)
+void scpu64_ultimax_1000_7fff_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     ultimax_1000_7fff_store(addr, value); /* i/o write */
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64_ultimax_a000_bfff_read(WORD addr)
+uint8_t scpu64_ultimax_a000_bfff_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return ultimax_a000_bfff_read(addr); /* i/o read */
 }
 
-void scpu64_ultimax_a000_bfff_store(WORD addr, BYTE value)
+void scpu64_ultimax_a000_bfff_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     ultimax_a000_bfff_store(addr, value); /* i/o write */
     scpu64_clock_write_stretch_io();
 }
 
-BYTE scpu64_ultimax_c000_cfff_read(WORD addr)
+uint8_t scpu64_ultimax_c000_cfff_read(uint16_t addr)
 {
     scpu64_clock_read_stretch_io();
     return ultimax_c000_cfff_read(addr); /* i/o read */
 }
 
-void scpu64_ultimax_c000_cfff_store(WORD addr, BYTE value)
+void scpu64_ultimax_c000_cfff_store(uint16_t addr, uint8_t value)
 {
     scpu64_clock_write_stretch_io_start();
     ultimax_c000_cfff_store(addr, value); /* i/o write */
@@ -1083,7 +1097,7 @@ void mem_read_tab_set(unsigned int base, unsigned int index, read_func_ptr_t rea
     mem_read_tab[base][index] = read_func;
 }
 
-void mem_read_base_set(unsigned int base, unsigned int index, BYTE *mem_ptr)
+void mem_read_base_set(unsigned int base, unsigned int index, uint8_t *mem_ptr)
 {
     mem_read_base_tab[base][index] = mem_ptr;
 }
@@ -1162,9 +1176,9 @@ void mem_initialize_memory(void)
     /* A fully automatic limit filler ;) */
     for (i = 0; i < NUM_CONFIGS; i++) {
         for (j = 0, l = 1; j <= 0xff; l++) {
-            BYTE *p = mem_read_base_tab[i][j];
+            uint8_t *p = mem_read_base_tab[i][j];
             read_func_ptr_t f = mem_read_tab[i][j];
-            DWORD range;
+            uint32_t range;
 
             while (l <= 0xff && p == mem_read_base_tab[i][l]) {
                 l++;
@@ -1191,10 +1205,10 @@ void mem_initialize_memory(void)
     cartridge_init_config();
 }
 
-void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void mem_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
-    BYTE *p;
-    DWORD limits;
+    uint8_t *p;
+    uint32_t limits;
 
     if (addr >= 0x10000) {
         if (addr < 0x20000) {
@@ -1253,7 +1267,6 @@ void mem_powerup(void)
     ram_init(mem_ram, SCPU64_RAM_SIZE);
     ram_init(mem_sram, SCPU64_SRAM_SIZE);
     ram_init(mem_trap_ram, SCPU64_KERNAL_ROM_SIZE);
-    cartridge_ram_init();  /* Clean cartridge ram too */
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1309,10 +1322,10 @@ void scpu64_hardware_reset(void)
     mem_reg_soft_1mhz = 0;
     mem_reg_sys_1mhz = 0;
     mem_reg_hwenable = 0;
-    mem_reg_dosext = 0; 
-    mem_reg_ramlink = 0; 
+    mem_reg_dosext = 0;
+    mem_reg_ramlink = 0;
     mem_reg_bootmap = 1;
-    mem_reg_simm = 4; 
+    mem_reg_simm = 4;
     mem_pport = 7;
     mem_set_mirroring(mem_reg_optim);
     mem_set_simm(mem_reg_simm);
@@ -1328,7 +1341,7 @@ void mem_set_tape_sense(int sense)
 
 /* FIXME: this part needs to be checked.  */
 
-void mem_get_basic_text(WORD *start, WORD *end)
+void mem_get_basic_text(uint16_t *start, uint16_t *end)
 {
     if (start != NULL) {
         *start = mem_sram[0x2b] | (mem_sram[0x2c] << 8);
@@ -1338,7 +1351,7 @@ void mem_get_basic_text(WORD *start, WORD *end)
     }
 }
 
-void mem_set_basic_text(WORD start, WORD end)
+void mem_set_basic_text(uint16_t start, uint16_t end)
 {
     mem_sram[0x2b] = mem_sram[0xac] = start & 0xff;
     mem_sram[0x2c] = mem_sram[0xad] = start >> 8;
@@ -1346,15 +1359,36 @@ void mem_set_basic_text(WORD start, WORD end)
     mem_sram[0x2e] = mem_sram[0x30] = mem_sram[0x32] = mem_sram[0xaf] = end >> 8;
 }
 
-void mem_inject(DWORD addr, BYTE value)
+/* this function should always read from the screen currently used by the kernal
+   for output, normally this does just return system ram - except when the
+   videoram is not memory mapped.
+   used by autostart to "read" the kernal messages
+*/
+uint8_t mem_read_screen(uint16_t addr)
+{
+    return ram_read(addr);
+}
+
+void mem_inject(uint32_t addr, uint8_t value)
 {
     /* could be made to handle various internal expansions in some sane way */
     mem_ram[addr & 0xffff] = mem_sram[addr & 0xffff] = value;
 }
 
+/* In banked memory architectures this will always write to the bank that
+   contains the keyboard buffer and "number of keys in buffer", regardless of
+   what the CPU "sees" currently.
+   In all other cases this just writes to the first 64kb block, usually by
+   wrapping to mem_inject().
+*/
+void mem_inject_key(uint16_t addr, uint8_t value)
+{
+    mem_inject(addr, value);
+}
+
 /* ------------------------------------------------------------------------- */
 
-int mem_rom_trap_allowed(WORD addr)
+int mem_rom_trap_allowed(uint16_t addr)
 {
     if (addr >= 0xe000) {
         switch (mem_config) {
@@ -1383,7 +1417,7 @@ int mem_rom_trap_allowed(WORD addr)
 
 /* Banked memory access functions for the monitor.  */
 
-void store_bank_io(WORD addr, BYTE byte)
+void store_bank_io(uint16_t addr, uint8_t byte)
 {
     switch (addr & 0xff00) {
         case 0xd000:
@@ -1436,7 +1470,7 @@ void store_bank_io(WORD addr, BYTE byte)
     return;
 }
 
-BYTE read_bank_io(WORD addr)
+uint8_t read_bank_io(uint16_t addr)
 {
     switch (addr & 0xff00) {
         case 0xd000:
@@ -1475,7 +1509,7 @@ BYTE read_bank_io(WORD addr)
     return 0xff;
 }
 
-static BYTE peek_bank_io(WORD addr)
+static uint8_t peek_bank_io(uint16_t addr)
 {
     switch (addr & 0xff00) {
         case 0xd000:
@@ -1521,14 +1555,16 @@ int scpu64_interrupt_reroute(void)
 /* ------------------------------------------------------------------------- */
 
 /* Exported banked memory access functions for the monitor.  */
+#define MAXBANKS (6 + 0x100)
 
-static const char *banknames[] = {
+static const char *banknames[MAXBANKS + 1] = {
     "default",
     "cpu",
     "ram",
     "rom",
     "io",
     "cart",
+    /* by convention, a "bank array" has a 2-hex-digit bank index appended */
     "ram00", "ram01", "ram02", "ram03", "ram04", "ram05", "ram06", "ram07",
     "ram08", "ram09", "ram0a", "ram0b", "ram0c", "ram0d", "ram0e", "ram0f",
     "ram10", "ram11", "ram12", "ram13", "ram14", "ram15", "ram16", "ram17",
@@ -1564,9 +1600,15 @@ static const char *banknames[] = {
     NULL
 };
 
-static const int banknums[] = 
-{ 
-    1, 0, 1, 2, 3, 4,
+static const int banknums[MAXBANKS + 1] =
+{
+    0,
+    0,
+    1,
+    2,
+    3,
+    4,
+
     5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
     21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
     37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
@@ -1582,7 +1624,67 @@ static const int banknums[] =
     197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212,
     213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228,
     229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244,
-    245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260
+    245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260,
+
+    -1
+};
+
+static const int bankindex[MAXBANKS + 1] =
+{
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+    -1,
+
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+    0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,
+    0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,
+    0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+    0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
+    0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f,
+    0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f,
+    0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
+    0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
+    0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf,
+    0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf,
+    0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
+    0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
+
+    -2
+};
+
+static const int bankflags[MAXBANKS + 1] =
+{
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+
+    MEM_BANK_ISARRAY | MEM_BANK_ISARRAYFIRST , MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYLAST, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYFIRST, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYLAST,
+
+    -2
 };
 
 const char **mem_bank_list(void)
@@ -1590,6 +1692,21 @@ const char **mem_bank_list(void)
     return banknames;
 }
 
+const int *mem_bank_list_nos(void) {
+    return banknums;
+}
+
+#if 0
+const int *mem_bank_list_index(void) {
+    return bankindex;
+}
+
+const int *mem_bank_list_flags(void) {
+    return bankindex;
+}
+#endif
+
+/* return bank number for a given literal bank name */
 int mem_bank_from_name(const char *name)
 {
     int i = 0;
@@ -1603,8 +1720,35 @@ int mem_bank_from_name(const char *name)
     return -1;
 }
 
+/* return current index for a given bank */
+int mem_bank_index_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankindex[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+int mem_bank_flags_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankflags[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
 /* read memory with side-effects */
-BYTE mem_bank_read(int bank, WORD addr, void *context)
+uint8_t mem_bank_read(int bank, uint16_t addr, void *context)
 {
     if ((bank >= 5) && (bank <= 6)) {
         return mem_sram[((bank - 5) << 16) + addr]; /* ram00..01 */
@@ -1634,6 +1778,7 @@ BYTE mem_bank_read(int bank, WORD addr, void *context)
             if (addr >= 0xd000 && addr < 0xe000) {
                 return read_bank_io(addr);
             }
+            /* FALL THROUGH */
         case 4:                   /* cart */
             return cartridge_peek_mem(addr);
         case 2:                   /* rom */
@@ -1647,6 +1792,7 @@ BYTE mem_bank_read(int bank, WORD addr, void *context)
 
                 return mem_reg_hwenable ? scpu64_kernalshadow_read(addr) : ram1_read(addr);
             }
+            /* FALL THROUGH */
         case 1:                   /* ram */
             break;
     }
@@ -1654,7 +1800,7 @@ BYTE mem_bank_read(int bank, WORD addr, void *context)
 }
 
 /* read memory without side-effects */
-BYTE mem_bank_peek(int bank, WORD addr, void *context)
+uint8_t mem_bank_peek(int bank, uint16_t addr, void *context)
 {
     if ((bank >= 5) && (bank <= 260)) {
         return mem_bank_read(bank, addr, context); /* ram00..ff */
@@ -1685,7 +1831,7 @@ BYTE mem_bank_peek(int bank, WORD addr, void *context)
     return mem_bank_read(bank, addr, context);
 }
 
-void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
+void mem_bank_write(int bank, uint16_t addr, uint8_t byte, void *context)
 {
     if ((bank >= 5) && (bank <= 6)) {
         mem_sram[((bank - 5) << 16) + addr] = byte; /* ram00..01 */
@@ -1719,6 +1865,7 @@ void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
                 store_bank_io(addr, byte);
                 return;
             }
+            /* FALL THROUGH */
         case 2:                   /* rom */
             if (addr >= 0xa000 && addr <= 0xbfff) {
                 return;
@@ -1729,13 +1876,20 @@ void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
             if (addr >= 0xe000) {
                 return;
             }
+            /* FALL THROUGH */
         case 1:                   /* ram */
             break;
     }
     mem_sram[addr] = byte;
 }
 
-static int mem_dump_io(void *context, WORD addr)
+/* used by monitor if sfx off */
+void mem_bank_poke(int bank, uint16_t addr, uint8_t byte, void *context)
+{
+    mem_bank_write(bank, addr, byte, context);
+}
+
+static int mem_dump_io(void *context, uint16_t addr)
 {
     if ((addr >= 0xdc00) && (addr <= 0xdc3f)) {
         return ciacore_dump(machine_context.cia1);
@@ -1749,15 +1903,15 @@ mem_ioreg_list_t *mem_ioreg_list_get(void *context)
 {
     mem_ioreg_list_t *mem_ioreg_list = NULL;
 
-    mon_ioreg_add_list(&mem_ioreg_list, "CIA1", 0xdc00, 0xdc0f, mem_dump_io, NULL);
-    mon_ioreg_add_list(&mem_ioreg_list, "CIA2", 0xdd00, 0xdd0f, mem_dump_io, NULL);
+    io_source_ioreg_add_list(&mem_ioreg_list);  /* VIC-II, SID first so it's in address order */
 
-    io_source_ioreg_add_list(&mem_ioreg_list);
+    mon_ioreg_add_list(&mem_ioreg_list, "CIA1", 0xdc00, 0xdc0f, mem_dump_io, NULL, IO_MIRROR_NONE);
+    mon_ioreg_add_list(&mem_ioreg_list, "CIA2", 0xdd00, 0xdd0f, mem_dump_io, NULL, IO_MIRROR_NONE);
 
     return mem_ioreg_list;
 }
 
-void mem_get_screen_parameter(WORD *base, BYTE *rows, BYTE *columns, int *bank)
+void mem_get_screen_parameter(uint16_t *base, uint8_t *rows, uint8_t *columns, int *bank)
 {
     *base = ((vicii_peek(0xd018) & 0xf0) << 6) | ((~cia2_peek(0xdd00) & 0x03) << 14);
     *rows = 25;
@@ -1765,26 +1919,43 @@ void mem_get_screen_parameter(WORD *base, BYTE *rows, BYTE *columns, int *bank)
     *bank = 0;
 }
 
+/* used by autostart to locate and "read" kernal output on the current screen
+ * this function should return whatever the kernal currently uses, regardless
+ * what is currently visible/active in the UI
+ */
+void mem_get_cursor_parameter(uint16_t *screen_addr, uint8_t *cursor_column, uint8_t *line_length, int *blinking)
+{
+    /* Cursor Blink enable: 1 = Flash Cursor, 0 = Cursor disabled, -1 = n/a */
+    *blinking = mem_sram[0xcc] ? 0 : 1;
+    *screen_addr = mem_sram[0xd1] + mem_sram[0xd2] * 256; /* Cursor Blink enable: 0 = Flash Cursor */
+    *cursor_column = mem_sram[0xd3];    /* Cursor Column on Current Line */
+    *line_length = mem_sram[0xd5] + 1;  /* Physical Screen Line Length */
+}
+
 /* ------------------------------------------------------------------------- */
 
 void mem_set_simm_size(int val)
 {
-    size_t size = val << 20;
-    if (!size) size = 1;
+    unsigned int size = val << 20;
+
+    if (size == 0) {
+        size = 1;
+    }
     mem_simm_ram_mask = size - 1;
     mem_simm_ram = lib_realloc(mem_simm_ram, size);
     ram_init(mem_simm_ram, size);
+
     switch (val) {
-    case 1:
-        mem_simm_page_size = 9 + 2; /* 0 */
-        break;
-    case 4:                             /* 1 */
-    case 8:                             /* 2 */
-        mem_simm_page_size = 10 + 2;  /* 3 */
-        break;
-    default:
-        mem_simm_page_size = 11 + 2;  /* 4,3 */
-        break;
+        case 1:
+            mem_simm_page_size = 9 + 2; /* 0 */
+            break;
+        case 4:                             /* 1 */
+        case 8:                             /* 2 */
+            mem_simm_page_size = 10 + 2;  /* 3 */
+            break;
+        default:
+            mem_simm_page_size = 11 + 2;  /* 4,3 */
+            break;
     }
     maincpu_resync_limits();
 }
@@ -1804,22 +1975,22 @@ void mem_set_speed_switch(int val)
 
 /* ------------------------------------------------------------------------- */
 
-BYTE scpu64_trap_read(WORD addr)
+uint8_t scpu64_trap_read(uint16_t addr)
 {
     return mem_trap_ram[addr & 0x1fff];
 }
 
-void scpu64_trap_store(WORD addr, BYTE value)
+void scpu64_trap_store(uint16_t addr, uint8_t value)
 {
     mem_trap_ram[addr & 0x1fff] = value;
 }
 
-void mem_color_ram_to_snapshot(BYTE *color_ram)
+void mem_color_ram_to_snapshot(uint8_t *color_ram)
 {
     memcpy(color_ram, mem_color_ram, 0x400);
 }
 
-void mem_color_ram_from_snapshot(BYTE *color_ram)
+void mem_color_ram_from_snapshot(uint8_t *color_ram)
 {
     memcpy(mem_color_ram, color_ram, 0x400);
 }

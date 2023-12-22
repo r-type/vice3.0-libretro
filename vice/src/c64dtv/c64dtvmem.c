@@ -37,6 +37,7 @@
 #include "c64dtvcpu.h"
 #include "c64dtvdma.h"
 #include "c64dtvflash.h"
+#include "cartio.h"
 #include "cia.h"
 #include "cmdline.h"
 #include "debugcart.h"
@@ -101,32 +102,34 @@
 #define NUM_VBANKS      4
 
 /* The C64 memory, see ../mem.h.  */
-BYTE mem_ram[C64_RAM_SIZE];
+uint8_t mem_ram[C64_RAM_SIZE];
 
 #ifdef USE_EMBEDDED
 #include "c64chargen.h"
 #else
-BYTE mem_chargen_rom[C64_CHARGEN_ROM_SIZE];
+uint8_t mem_chargen_rom[C64_CHARGEN_ROM_SIZE];
 #endif
 
 /* Internal color memory.  */
-BYTE *mem_color_ram_cpu;
-BYTE *mem_color_ram_vicii; /* unused; needed by vicii-fetch.c */
+uint8_t *mem_color_ram_cpu;
+uint8_t *mem_color_ram_vicii; /* unused; needed by vicii-fetch.c */
 
 /* Pointer to the chargen ROM.  */
-BYTE *mem_chargen_rom_ptr;
+uint8_t *mem_chargen_rom_ptr;
 
 /* Pointers to the currently used memory read and write tables.  */
 read_func_ptr_t *_mem_read_tab_ptr;
 store_func_ptr_t *_mem_write_tab_ptr;
-static BYTE **_mem_read_base_tab_ptr;
-static DWORD *mem_read_limit_tab_ptr;
+read_func_ptr_t *_mem_read_tab_ptr_dummy;
+store_func_ptr_t *_mem_write_tab_ptr_dummy;
+static uint8_t **_mem_read_base_tab_ptr;
+static uint32_t *mem_read_limit_tab_ptr;
 
 /* Memory read and write tables.  */
 static store_func_ptr_t mem_write_tab[NUM_VBANKS][NUM_CONFIGS][0x101];
 static read_func_ptr_t mem_read_tab[NUM_CONFIGS][0x101];
-static BYTE *mem_read_base_tab[NUM_CONFIGS][0x101];
-static DWORD mem_read_limit_tab[NUM_CONFIGS][0x101];
+static uint8_t *mem_read_base_tab[NUM_CONFIGS][0x101];
+static uint32_t mem_read_limit_tab[NUM_CONFIGS][0x101];
 
 static store_func_ptr_t mem_write_tab_watch[0x101];
 static read_func_ptr_t mem_read_tab_watch[0x101];
@@ -137,49 +140,69 @@ static int vbank;
 /* Current memory configuration.  */
 static int mem_config;
 
-/* Current watchpoint state. 1 = watchpoints active, 0 = no watchpoints */
+/* Current watchpoint state.
+          0 = no watchpoints
+    bit0; 1 = watchpoints active
+    bit1; 2 = watchpoints trigger on dummy accesses
+*/
 static int watchpoints_active;
 
 /* ------------------------------------------------------------------------- */
 
-static BYTE zero_read_watch(WORD addr)
+static uint8_t zero_read_watch(uint16_t addr)
 {
     addr &= 0xff;
     monitor_watch_push_load_addr(addr, e_comp_space);
     return mem_read_tab[mem_config][0](addr);
 }
 
-static void zero_store_watch(WORD addr, BYTE value)
+static void zero_store_watch(uint16_t addr, uint8_t value)
 {
     addr &= 0xff;
     monitor_watch_push_store_addr(addr, e_comp_space);
     mem_write_tab[vbank][mem_config][0](addr, value);
 }
 
-static BYTE read_watch(WORD addr)
+static uint8_t read_watch(uint16_t addr)
 {
     monitor_watch_push_load_addr(addr, e_comp_space);
     return mem_read_tab[mem_config][addr >> 8](addr);
 }
 
-static void store_watch(WORD addr, BYTE value)
+static void store_watch(uint16_t addr, uint8_t value)
 {
     monitor_watch_push_store_addr(addr, e_comp_space);
     mem_write_tab[vbank][mem_config][addr >> 8](addr, value);
 }
 
-void mem_toggle_watchpoints(int flag, void *context)
+/* called by mem_pla_config_changed(), mem_toggle_watchpoints() */
+static void mem_update_tab_ptrs(int flag)
 {
     if (flag) {
         _mem_read_tab_ptr = mem_read_tab_watch;
         _mem_write_tab_ptr = mem_write_tab_watch;
+        if (flag > 1) {
+            /* enable watchpoints on dummy accesses */
+            _mem_read_tab_ptr_dummy = mem_read_tab_watch;
+            _mem_write_tab_ptr_dummy = mem_write_tab_watch;
+        } else {
+            _mem_read_tab_ptr_dummy = mem_read_tab[mem_config];
+            _mem_write_tab_ptr_dummy = mem_write_tab[vbank][mem_config];
+        }
     } else {
+        /* all watchpoints disabled */
         _mem_read_tab_ptr = mem_read_tab[mem_config];
         _mem_write_tab_ptr = mem_write_tab[vbank][mem_config];
+        _mem_read_tab_ptr_dummy = mem_read_tab[mem_config];
+        _mem_write_tab_ptr_dummy = mem_write_tab[vbank][mem_config];
     }
-    watchpoints_active = flag;
 }
 
+void mem_toggle_watchpoints(int flag, void *context)
+{
+    mem_update_tab_ptrs(flag);
+    watchpoints_active = flag;
+}
 /* ------------------------------------------------------------------------- */
 
 void mem_pla_config_changed(void)
@@ -188,13 +211,7 @@ void mem_pla_config_changed(void)
 
     c64pla_config_changed(0, 0, 0, 1, 0x17);
 
-    if (watchpoints_active) {
-        _mem_read_tab_ptr = mem_read_tab_watch;
-        _mem_write_tab_ptr = mem_write_tab_watch;
-    } else {
-        _mem_read_tab_ptr = mem_read_tab[mem_config];
-        _mem_write_tab_ptr = mem_write_tab[vbank][mem_config];
-    }
+    mem_update_tab_ptrs(watchpoints_active);
 
     _mem_read_base_tab_ptr = mem_read_base_tab[mem_config];
     mem_read_limit_tab_ptr = mem_read_limit_tab[mem_config];
@@ -202,11 +219,11 @@ void mem_pla_config_changed(void)
     maincpu_resync_limits();
 }
 
-BYTE zero_read(WORD addr)
+uint8_t zero_read(uint16_t addr)
 {
     addr &= 0xff;
 
-    switch ((BYTE)addr) {
+    switch ((uint8_t)addr) {
         case 0:
             return pport.dir_read;
         case 1:
@@ -216,14 +233,14 @@ BYTE zero_read(WORD addr)
     return mem_ram[addr & 0xff];
 }
 
-void zero_store(WORD addr, BYTE value)
+void zero_store(uint16_t addr, uint8_t value)
 {
     addr &= 0xff;
 
-    switch ((BYTE)addr) {
+    switch ((uint8_t)addr) {
         case 0:
             if (vbank == 0) {
-                vicii_mem_vbank_store((WORD)0, vicii_read_phi1_lowlevel());
+                vicii_mem_vbank_store((uint16_t)0, vicii_read_phi1_lowlevel());
             } else {
                 mem_ram[0] = vicii_read_phi1_lowlevel();
                 machine_handle_pending_alarms(maincpu_rmw_flag + 1);
@@ -235,7 +252,7 @@ void zero_store(WORD addr, BYTE value)
             break;
         case 1:
             if (vbank == 0) {
-                vicii_mem_vbank_store((WORD)1, vicii_read_phi1_lowlevel());
+                vicii_mem_vbank_store((uint16_t)1, vicii_read_phi1_lowlevel());
             } else {
                 mem_ram[1] = vicii_read_phi1_lowlevel();
                 machine_handle_pending_alarms(maincpu_rmw_flag + 1);
@@ -256,27 +273,27 @@ void zero_store(WORD addr, BYTE value)
 
 /* ------------------------------------------------------------------------- */
 
-BYTE chargen_read(WORD addr)
+uint8_t chargen_read(uint16_t addr)
 {
     return c64dtvflash_read(addr);
 }
 
-/*void chargen_store(WORD addr, BYTE value)
+/*void chargen_store(uint16_t addr, uint8_t value)
 {
     return;
 }*/
 
-BYTE ram_read(WORD addr)
+uint8_t ram_read(uint16_t addr)
 {
     return mem_ram[addr];
 }
 
-void ram_store(WORD addr, BYTE value)
+void ram_store(uint16_t addr, uint8_t value)
 {
     mem_ram[addr] = value;
 }
 
-void ram_hi_store(WORD addr, BYTE value)
+void ram_hi_store(uint16_t addr, uint8_t value)
 {
     if (vbank == 3) {
         vicii_mem_vbank_3fxx_store(addr, value);
@@ -302,7 +319,7 @@ void mem_read_tab_set(unsigned int base, unsigned int index,
     mem_read_tab[base][index] = read_func;
 }
 
-void mem_read_base_set(unsigned int base, unsigned int index, BYTE *mem_ptr)
+void mem_read_base_set(unsigned int base, unsigned int index, uint8_t *mem_ptr)
 {
     mem_read_base_tab[base][index] = mem_ptr;
 }
@@ -391,7 +408,7 @@ void mem_initialize_memory(void)
     c64dtvmem_init_config();
 }
 
-void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
+void mem_mmu_translate(unsigned int addr, uint8_t **base, int *start, int *limit)
 {
 #ifdef FEATURE_CPUMEMHISTORY
     *base = NULL;
@@ -400,8 +417,8 @@ void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
 #else
     int bank = addr >> 14;
     int paddr;
-    BYTE *p;
-    DWORD limits;
+    uint8_t *p;
+    uint32_t limits;
 
     if ((((dtv_registers[8] >> (bank * 2)) & 0x03) == 0x00)) {
         if (c64dtvflash_state) {
@@ -434,8 +451,8 @@ void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
             return;
         } else {
             if (!c64dtvflash_state) {
-                read_func_ptr_t p = _mem_read_tab_ptr[paddr >> 8];
-                if (p == c64memrom_kernal64_read) {
+                read_func_ptr_t ptr = _mem_read_tab_ptr[paddr >> 8];
+                if (ptr == c64memrom_kernal64_read) {
                     int mapping = c64dtvmem_memmapper[0];
                     paddr = ((mapping & 0x1f) << 16) + (paddr & ~0x3fff) - (addr & 0xc000);
                     *base = ((mapping & 0xc0) ? mem_ram : c64dtvflash_mem) + paddr;
@@ -443,7 +460,7 @@ void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
                     *start = addr & 0xe000;
                     return;
                 }
-                if (p == c64memrom_basic64_read) {
+                if (ptr == c64memrom_basic64_read) {
                     int mapping = c64dtvmem_memmapper[1];
                     paddr = ((mapping & 0x1f) << 16) + (paddr & ~0x3fff) - (addr & 0xc000);
                     *base = ((mapping & 0xc0) ? mem_ram : c64dtvflash_mem) + paddr;
@@ -451,7 +468,7 @@ void mem_mmu_translate(unsigned int addr, BYTE **base, int *start, int *limit)
                     *start = addr & 0xe000;
                     return;
                 }
-                if (p == chargen_read) { /* not likely but anyway */
+                if (ptr == chargen_read) { /* not likely but anyway */
                     *base = c64dtvflash_mem + (paddr & ~0x3fff) - (addr & 0xc000);
                     *limit = (addr & 0xf000) | 0x0ffd;
                     *start = addr & 0xf000;
@@ -493,7 +510,7 @@ void mem_set_vbank(int new_vbank)
 
 /* FIXME: this part needs to be checked.  */
 
-void mem_get_basic_text(WORD *start, WORD *end)
+void mem_get_basic_text(uint16_t *start, uint16_t *end)
 {
     if (start != NULL) {
         *start = mem_ram[0x2b] | (mem_ram[0x2c] << 8);
@@ -503,7 +520,7 @@ void mem_get_basic_text(WORD *start, WORD *end)
     }
 }
 
-void mem_set_basic_text(WORD start, WORD end)
+void mem_set_basic_text(uint16_t start, uint16_t end)
 {
     mem_ram[0x2b] = mem_ram[0xac] = start & 0xff;
     mem_ram[0x2c] = mem_ram[0xad] = start >> 8;
@@ -511,14 +528,35 @@ void mem_set_basic_text(WORD start, WORD end)
     mem_ram[0x2e] = mem_ram[0x30] = mem_ram[0x32] = mem_ram[0xaf] = end >> 8;
 }
 
-void mem_inject(DWORD addr, BYTE value)
+/* this function should always read from the screen currently used by the kernal
+   for output, normally this does just return system ram - except when the
+   videoram is not memory mapped.
+   used by autostart to "read" the kernal messages
+*/
+uint8_t mem_read_screen(uint16_t addr)
+{
+    return ram_read(addr);
+}
+
+void mem_inject(uint32_t addr, uint8_t value)
 {
     mem_ram[addr & 0x1fffff] = value;
 }
 
+/* In banked memory architectures this will always write to the bank that
+   contains the keyboard buffer and "number of keys in buffer", regardless of
+   what the CPU "sees" currently.
+   In all other cases this just writes to the first 64kb block, usually by
+   wrapping to mem_inject().
+*/
+void mem_inject_key(uint16_t addr, uint8_t value)
+{
+    mem_inject(addr, value);
+}
+
 /* ------------------------------------------------------------------------- */
 
-int mem_rom_trap_allowed(WORD addr)
+int mem_rom_trap_allowed(uint16_t addr)
 {
     if (addr >= 0xe000) {
         switch (mem_config) {
@@ -541,7 +579,7 @@ int mem_rom_trap_allowed(WORD addr)
 
 /* FIXME: peek, cartridge support */
 
-void store_bank_io(WORD addr, BYTE byte)
+void store_bank_io(uint16_t addr, uint8_t byte)
 {
     switch (addr & 0xff00) {
         case 0xd000:
@@ -579,7 +617,7 @@ void store_bank_io(WORD addr, BYTE byte)
     return;
 }
 
-BYTE read_bank_io(WORD addr)
+uint8_t read_bank_io(uint16_t addr)
 {
     switch (addr & 0xff00) {
         case 0xd000:
@@ -609,7 +647,7 @@ BYTE read_bank_io(WORD addr)
     return 0xff;
 }
 
-static BYTE peek_bank_io(WORD addr)
+static uint8_t peek_bank_io(uint16_t addr)
 {
     switch (addr & 0xff00) {
         case 0xd000:
@@ -643,7 +681,7 @@ static BYTE peek_bank_io(WORD addr)
 
 /* Exported banked memory access functions for the monitor.  */
 
-static int mem_dump_io(void *context, WORD addr)
+static int mem_dump_io(void *context, uint16_t addr)
 {
     if ((addr >= 0xd000) && (addr <= 0xd04f)) {
         return vicii_dump();
@@ -661,16 +699,16 @@ mem_ioreg_list_t *mem_ioreg_list_get(void *context)
 {
     mem_ioreg_list_t *mem_ioreg_list = NULL;
 
-    mon_ioreg_add_list(&mem_ioreg_list, "VIC-II", 0xd000, 0xd04f, mem_dump_io, NULL);
+    mon_ioreg_add_list(&mem_ioreg_list, "VIC-II", 0xd000, 0xd04f, mem_dump_io, NULL, IO_MIRROR_NONE);
     /* TODO blitter, DMA... */
-    mon_ioreg_add_list(&mem_ioreg_list, "SID", 0xd400, 0xd41f, mem_dump_io, NULL);
-    mon_ioreg_add_list(&mem_ioreg_list, "CIA1", 0xdc00, 0xdc0f, mem_dump_io, NULL);
-    mon_ioreg_add_list(&mem_ioreg_list, "CIA2", 0xdd00, 0xdd0f, mem_dump_io, NULL);
+    mon_ioreg_add_list(&mem_ioreg_list, "SID", 0xd400, 0xd41f, mem_dump_io, NULL, IO_MIRROR_NONE);
+    mon_ioreg_add_list(&mem_ioreg_list, "CIA1", 0xdc00, 0xdc0f, mem_dump_io, NULL, IO_MIRROR_NONE);
+    mon_ioreg_add_list(&mem_ioreg_list, "CIA2", 0xdd00, 0xdd0f, mem_dump_io, NULL, IO_MIRROR_NONE);
 
     return mem_ioreg_list;
 }
 
-void mem_get_screen_parameter(WORD *base, BYTE *rows, BYTE *columns, int *bank)
+void mem_get_screen_parameter(uint16_t *base, uint8_t *rows, uint8_t *columns, int *bank)
 {
     *base = ((vicii_peek(0xd018) & 0xf0) << 6)
             | ((~cia2_peek(0xdd00) & 0x03) << 14);
@@ -679,12 +717,25 @@ void mem_get_screen_parameter(WORD *base, BYTE *rows, BYTE *columns, int *bank)
     *bank = 0;
 }
 
+/* used by autostart to locate and "read" kernal output on the current screen
+ * this function should return whatever the kernal currently uses, regardless
+ * what is currently visible/active in the UI
+ */
+void mem_get_cursor_parameter(uint16_t *screen_addr, uint8_t *cursor_column, uint8_t *line_length, int *blinking)
+{
+    /* Cursor Blink enable: 1 = Flash Cursor, 0 = Cursor disabled, -1 = n/a */
+    *blinking = mem_ram[0xcc] ? 0 : 1;
+    *screen_addr = mem_ram[0xd1] + mem_ram[0xd2] * 256; /* Current Screen Line Address */
+    *cursor_column = mem_ram[0xd3];    /* Cursor Column on Current Line */
+    *line_length = mem_ram[0xd5] + 1;  /* Physical Screen Line Length */
+}
+
 /* end of c64dtvmem_main.c */
 
 static log_t c64dtvmem_log = LOG_ERR;
 
 /* I/O of the memory mapper ($D100/$D101) */
-BYTE c64dtvmem_memmapper[0x2];
+uint8_t c64dtvmem_memmapper[0x2];
 
 /* The memory banking mechanism/virtual memory is visible to the CPU only. */
 /* VICII, DMA Engine, Blitter have access to physical memory. */
@@ -693,14 +744,14 @@ BYTE c64dtvmem_memmapper[0x2];
 /* Note that zeropage/stack mapping (reg10/11) is done before this - */
 /* see c64dtvcpu. */
 
-static inline int addr_to_paddr(WORD addr)
+static inline int addr_to_paddr(uint16_t addr)
 {
     int bank = addr >> 14;
     /* DTV register 12-15 - Remap 16k memory banks */
     return ((((int) dtv_registers[12 + bank]) << 14) + (addr & 0x3fff)) & (C64_RAM_SIZE - 1);
 }
 
-static inline int access_rom(WORD addr)
+static inline int access_rom(uint16_t addr)
 {
     int bank = addr >> 14;
     return(((dtv_registers[8] >> (bank * 2)) & 0x03) == 0x00);
@@ -710,7 +761,7 @@ static inline int access_rom(WORD addr)
 /* ------------------------------------------------------------------------- */
 /* Replacements for c64mem.c code */
 
-void mem_store(WORD addr, BYTE value)
+void mem_store(uint16_t addr, uint8_t value)
 {
 #ifdef FEATURE_CPUMEMHISTORY
     store_func_ptr_t rptr;
@@ -741,7 +792,7 @@ void mem_store(WORD addr, BYTE value)
         if (dtv_registers[9] & 1) {
             maincpu_rmw_flag = 0;
         }
-        _mem_write_tab_ptr[paddr >> 8]((WORD)paddr, value);
+        _mem_write_tab_ptr[paddr >> 8]((uint16_t)paddr, value);
     } else {
 #ifdef FEATURE_CPUMEMHISTORY
         monitor_memmap_store(paddr, MEMMAP_RAM_W);
@@ -750,7 +801,7 @@ void mem_store(WORD addr, BYTE value)
     }
 }
 
-BYTE mem_read(WORD addr)
+uint8_t mem_read(uint16_t addr)
 {
 #ifdef FEATURE_CPUMEMHISTORY
     read_func_ptr_t rptr;
@@ -779,7 +830,7 @@ BYTE mem_read(WORD addr)
         }
         memmap_state &= ~(MEMMAP_STATE_OPCODE);
 #endif
-        return _mem_read_tab_ptr[paddr >> 8]((WORD)paddr);
+        return _mem_read_tab_ptr[paddr >> 8]((uint16_t)paddr);
     } else {
 #ifdef FEATURE_CPUMEMHISTORY
         monitor_memmap_store(paddr, (memmap_state & MEMMAP_STATE_OPCODE) ? MEMMAP_RAM_X : (memmap_state & MEMMAP_STATE_INSTR) ? 0 : MEMMAP_RAM_R);
@@ -789,12 +840,12 @@ BYTE mem_read(WORD addr)
     }
 }
 
-void colorram_store(WORD addr, BYTE value)
+void colorram_store(uint16_t addr, uint8_t value)
 {
     mem_color_ram_cpu[addr & 0x3ff] = value;
 }
 
-BYTE colorram_read(WORD addr)
+uint8_t colorram_read(uint16_t addr)
 {
     return mem_color_ram_cpu[addr & 0x3ff];
 }
@@ -802,9 +853,38 @@ BYTE colorram_read(WORD addr)
 
 /* ------------------------------------------------------------------------- */
 
+#define NUM_TRAP_DEVICES 9  /* FIXME: is there a better constant ? */
+static int trapfl[NUM_TRAP_DEVICES];
+static int trapdevices[NUM_TRAP_DEVICES + 1] = { 1, 4, 5, 6, 7, 8, 9, 10, 11, -1 };
+
+static void get_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_get_int_sprintf("VirtualDevice%d", &trapfl[i], trapdevices[i]);
+    }
+}
+
+static void clear_trapflags(void)
+{
+    int i;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("VirtualDevice%d", 0, trapdevices[i]);
+    }
+}
+
+static int restore_trapflags(void)
+{
+    int i, flags = 0;
+    for(i = 0; trapdevices[i] != -1; i++) {
+        resources_set_int_sprintf("VirtualDevice%d", trapfl[i], trapdevices[i]);
+        flags |= trapfl[i];
+    }
+    return flags;
+}
+
 void c64dtv_init(void)
 {
-    int trapfl;
     if (c64dtvmem_log == LOG_ERR) {
         c64dtvmem_log = log_open("C64DTVMEM");
     }
@@ -816,9 +896,9 @@ void c64dtv_init(void)
     DBG("installing floppy traps");
     /* TODO disable copying by command line parameter */
     /* Make sure serial code traps are in place.  */
-    resources_get_int("VirtualDevices", &trapfl);
-    resources_set_int("VirtualDevices", 0);
-    resources_set_int("VirtualDevices", trapfl);
+    get_trapflags();
+    clear_trapflags();
+    restore_trapflags();
     /* TODO chargen ROM support */
 
     DBG("END init");
@@ -864,33 +944,30 @@ void c64dtvmem_init_config(void)
 
 void c64dtvmem_shutdown(void)
 {
-    int trapfl;
-
     hummeradc_shutdown();
     c64dtvblitter_shutdown();
     c64dtvdma_shutdown();
     /* work around for non transparent kernal traps.
        Disable serial traps when shutting down c64dtvflash, which
        saves the contents if enabled */
-    resources_get_int("VirtualDevices", &trapfl);
-    resources_set_int("VirtualDevices", 0);
+    get_trapflags();
+    clear_trapflags();
     c64dtvflash_shutdown();
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     DBG("END shutdown");
 }
 
 void c64dtvmem_reset(void)
 {
-    int trapfl;
     DBG("reset");
 
     /* Disable serial traps when resetting mem mapper */
-    resources_get_int("VirtualDevices", &trapfl);
-    resources_set_int("VirtualDevices", 0);
+    get_trapflags();
+    clear_trapflags();
     c64dtvmem_memmapper[0x00] = 0; /* KERNAL ROM segment (0x10000 byte segments) */
     c64dtvmem_memmapper[0x01] = 0; /* BASIC ROM segment (0x10000 byte segments) */
-    resources_set_int("VirtualDevices", trapfl);
+    restore_trapflags();
 
     /* TODO move register file initialization somewhere else? */
     dtv_registers[8] = 0x55; /* RAM/ROM access mode */
@@ -912,7 +989,7 @@ void c64dtvmem_reset(void)
 
 /* These are the $D100/$D101 memory mapper register handlers */
 
-BYTE c64dtv_mapper_read(WORD addr)
+uint8_t c64dtv_mapper_read(uint16_t addr)
 {
     if (!vicii_extended_regs()) {
         return vicii_read(addr);
@@ -921,9 +998,8 @@ BYTE c64dtv_mapper_read(WORD addr)
     return mem_ram[addr];
 }
 
-void c64dtv_mapper_store(WORD addr, BYTE value)
+void c64dtv_mapper_store(uint16_t addr, uint8_t value)
 {
-    int trapfl;
     if (!vicii_extended_regs()) {
         vicii_store(addr, value);
         return;
@@ -940,12 +1016,11 @@ void c64dtv_mapper_store(WORD addr, BYTE value)
     switch (addr) {
         case 0x00:
             /* Deinstall serial traps, change KERNAL segment, reinstall traps */
-            resources_get_int("VirtualDevices", &trapfl);
-            resources_set_int("VirtualDevices", 0);
+            get_trapflags();
+            clear_trapflags();
             c64dtvmem_memmapper[0] = value;
             maincpu_resync_limits();
-            resources_set_int("VirtualDevices", trapfl);
-            if (trapfl) {
+            if (restore_trapflags()) {
                 log_message(c64dtvmem_log, "Changed KERNAL segment - disable VirtualDevices if you encounter problems");
             }
             break;
@@ -959,28 +1034,29 @@ void c64dtv_mapper_store(WORD addr, BYTE value)
 }
 
 
-BYTE c64io1_read(WORD addr)
+uint8_t c64io1_read(uint16_t addr)
 {
     return 0x00;
 }
-void c64io1_store(WORD addr, BYTE value)
+
+void c64io1_store(uint16_t addr, uint8_t value)
 {
 }
 
-BYTE c64io2_read(WORD addr)
+uint8_t c64io2_read(uint16_t addr)
 {
     return 0x00;
 }
-void c64io2_store(WORD addr, BYTE value)
+
+void c64io2_store(uint16_t addr, uint8_t value)
 {
 }
-
 
 /* ------------------------------------------------------------------------- */
 
 /* These are the $D200 palette register handlers */
 
-BYTE c64dtv_palette_read(WORD addr)
+uint8_t c64dtv_palette_read(uint16_t addr)
 {
     if (!vicii_extended_regs()) {
         return vicii_read(addr);
@@ -989,7 +1065,7 @@ BYTE c64dtv_palette_read(WORD addr)
     return vicii_palette_read(addr);
 }
 
-void c64dtv_palette_store(WORD addr, BYTE value)
+void c64dtv_palette_store(uint16_t addr, uint8_t value)
 {
     if (!vicii_extended_regs()) {
         vicii_store(addr, value);
@@ -1005,7 +1081,7 @@ void c64dtv_palette_store(WORD addr, BYTE value)
 
 /* These are the $D300 DMA and blitter register handlers */
 
-BYTE c64dtv_dmablit_read(WORD addr)
+uint8_t c64dtv_dmablit_read(uint16_t addr)
 {
     if (!vicii_extended_regs()) {
         return vicii_read(addr);
@@ -1014,14 +1090,13 @@ BYTE c64dtv_dmablit_read(WORD addr)
     addr &= 0x3f;
 
     if (addr & 0x20) {
-        return c64dtv_blitter_read((WORD)(addr & 0x1f));
+        return c64dtv_blitter_read((uint16_t)(addr & 0x1f));
     } else {
         return c64dtv_dma_read(addr);
     }
 }
 
-
-void c64dtv_dmablit_store(WORD addr, BYTE value)
+void c64dtv_dmablit_store(uint16_t addr, uint8_t value)
 {
     if (!vicii_extended_regs()) {
         vicii_store(addr, value);
@@ -1031,7 +1106,7 @@ void c64dtv_dmablit_store(WORD addr, BYTE value)
     addr &= 0x3f;
 
     if (addr & 0x20) {
-        c64dtv_blitter_store((WORD)(addr & 0x1f), value);
+        c64dtv_blitter_store((uint16_t)(addr & 0x1f), value);
     } else {
         c64dtv_dma_store(addr, value);
     }
@@ -1042,10 +1117,12 @@ void c64dtv_dmablit_store(WORD addr, BYTE value)
 /* ------------------------------------------------------------------------- */
 
 /* Exported banked memory access functions for the monitor.  */
+#define MAXBANKS (6 + 0x20 + 0x20)
 
-static const char *banknames[] =
+static const char *banknames[MAXBANKS + 1] =
 {
     "default", "cpu", "ram", "rom", "io", "cart",
+    /* by convention, a "bank array" has a 2-hex-digit bank index appended */
     "ram00", "ram01", "ram02", "ram03", "ram04", "ram05", "ram06", "ram07",
     "ram08", "ram09", "ram0a", "ram0b", "ram0c", "ram0d", "ram0e", "ram0f",
     "ram10", "ram11", "ram12", "ram13", "ram14", "ram15", "ram16", "ram17",
@@ -1057,9 +1134,9 @@ static const char *banknames[] =
     NULL
 };
 
-static const int banknums[] =
+static const int banknums[MAXBANKS + 1] =
 {
-    1, 0, 1, 2, 3, 4,
+    0, 0, 1, 2, 3, 4,
     5, 6, 7, 8, 9, 10, 11, 12,
     13, 14, 15, 16, 17, 18, 19, 20,
     21, 22, 23, 24, 25, 26, 27, 28,
@@ -1067,7 +1144,36 @@ static const int banknums[] =
     37, 38, 39, 40, 41, 42, 43, 44,
     45, 46, 47, 48, 49, 50, 51, 52,
     53, 54, 55, 56, 57, 58, 59, 60,
-    61, 62, 63, 64, 65, 66, 67, 68
+    61, 62, 63, 64, 65, 66, 67, 68,
+    -1
+};
+
+static const int bankindex[MAXBANKS + 1] =
+{
+    -1, -1, -1, -1, -1, -1,
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    -1
+};
+
+static const int bankflags[MAXBANKS + 1] =
+{
+    0, 0, 0, 0, 0, 0,
+    MEM_BANK_ISARRAY | MEM_BANK_ISARRAYFIRST, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYLAST,
+    MEM_BANK_ISARRAY | MEM_BANK_ISARRAYFIRST, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY,
+    MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY, MEM_BANK_ISARRAY | MEM_BANK_ISARRAYLAST,
+    -1
 };
 
 const char **mem_bank_list(void)
@@ -1075,6 +1181,11 @@ const char **mem_bank_list(void)
     return banknames;
 }
 
+const int *mem_bank_list_nos(void) {
+    return banknums;
+}
+
+/* return bank number for a given literal bank name */
 int mem_bank_from_name(const char *name)
 {
     int i = 0;
@@ -1088,7 +1199,34 @@ int mem_bank_from_name(const char *name)
     return -1;
 }
 
-BYTE mem_bank_read(int bank, WORD addr, void *context)
+/* return current index for a given bank */
+int mem_bank_index_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankindex[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+int mem_bank_flags_from_bank(int bank)
+{
+    int i = 0;
+
+    while (banknums[i] > -1) {
+        if (banknums[i] == bank) {
+            return bankflags[i];
+        }
+        i++;
+    }
+    return -1;
+}
+
+uint8_t mem_bank_read(int bank, uint16_t addr, void *context)
 {
     int paddr;
 
@@ -1114,19 +1252,19 @@ BYTE mem_bank_read(int bank, WORD addr, void *context)
             return mem_read(addr);
         case 3:                 /* io */
             if (paddr >= 0xd000 && paddr < 0xe000) {
-                return read_bank_io((WORD)paddr);
+                return read_bank_io((uint16_t)paddr);
             }
         case 4:                 /* cart */
             break;
         case 2:                 /* rom */
             if (paddr >= 0xa000 && paddr <= 0xbfff) {
-                return c64memrom_basic64_read((WORD)paddr);
+                return c64memrom_basic64_read((uint16_t)paddr);
             }
             if (paddr >= 0xd000 && paddr <= 0xdfff) {
-                return chargen_read((WORD)paddr);
+                return chargen_read((uint16_t)paddr);
             }
             if (paddr >= 0xe000) {
-                return c64memrom_kernal64_read((WORD)paddr);
+                return c64memrom_kernal64_read((uint16_t)paddr);
             }
         case 1:                 /* ram */
             break; /* yes, this could be flash as well */
@@ -1134,14 +1272,17 @@ BYTE mem_bank_read(int bank, WORD addr, void *context)
     return access_rom(addr) ? c64dtvflash_read(paddr) : mem_ram[paddr];
 }
 
-
-BYTE mem_bank_peek(int bank, WORD addr, void *context)
+/* used by monitor if sfx off */
+uint8_t mem_bank_peek(int bank, uint16_t addr, void *context)
 {
     int paddr;
     if (bank >= 5) {
         return mem_bank_read(bank, addr, context);
     }
-
+    /* Commented out to see if that fixes bug #1266. Any memory peek code
+     * should not alter the state of the machine.  -- compyx
+     */
+#if 0
     /* TODO: is restoring r8, r10..15 needed? */
     dtv_registers[8] = MOS6510DTV_REGS_GET_R8(&maincpu_regs);
     dtv_registers[10] = MOS6510DTV_REGS_GET_R10(&maincpu_regs);
@@ -1150,7 +1291,7 @@ BYTE mem_bank_peek(int bank, WORD addr, void *context)
     dtv_registers[13] = MOS6510DTV_REGS_GET_R13(&maincpu_regs);
     dtv_registers[14] = MOS6510DTV_REGS_GET_R14(&maincpu_regs);
     dtv_registers[15] = MOS6510DTV_REGS_GET_R15(&maincpu_regs);
-
+#endif
     paddr = addr_to_paddr(addr);
     switch (bank) {
         case 0:                 /* current */
@@ -1160,7 +1301,7 @@ BYTE mem_bank_peek(int bank, WORD addr, void *context)
             if (paddr <= 0xffff) {
                 if (c64dtvmeminit_io_config[mem_config]) {
                     if ((paddr >= 0xd000) && (paddr < 0xe000)) {
-                        return peek_bank_io((WORD)paddr);
+                        return peek_bank_io((uint16_t)paddr);
                     }
                 }
                 if (_mem_read_tab_ptr[paddr >> 8] == c64memrom_basic64_read) {
@@ -1176,12 +1317,12 @@ BYTE mem_bank_peek(int bank, WORD addr, void *context)
                     paddr |= (mapping & 0x1f) << 16;
                     return (mapping & 0xc0) ? mem_ram[paddr] : c64dtvflash_mem[paddr];
                 } /* no side effects on the rest */
-                return _mem_read_tab_ptr[paddr >> 8]((WORD)paddr);
+                return _mem_read_tab_ptr[paddr >> 8]((uint16_t)paddr);
             }
             return mem_ram[paddr];
         case 3:                 /* io */
             if (paddr >= 0xd000 && paddr < 0xe000) {
-                return peek_bank_io((WORD)paddr);
+                return peek_bank_io((uint16_t)paddr);
             }
         case 4:                 /* cart */
             break;
@@ -1205,9 +1346,10 @@ BYTE mem_bank_peek(int bank, WORD addr, void *context)
     return access_rom(addr) ? c64dtvflash_mem[paddr] : mem_ram[paddr];
 }
 
-void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
+void mem_bank_write(int bank, uint16_t addr, uint8_t byte, void *context)
 {
     int paddr;
+
     if ((bank >= 5) && (bank <= 36)) { /* ram00..1f */
         mem_ram[((bank - 5) << 16) + addr] = byte;
         return;
@@ -1234,7 +1376,7 @@ void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
             return;
         case 3:                 /* io */
             if (paddr >= 0xd000 && paddr < 0xe000) {
-                store_bank_io((WORD)paddr, byte);
+                store_bank_io((uint16_t)paddr, byte);
                 return;
             }
         case 4:                 /* cart */
@@ -1257,6 +1399,12 @@ void mem_bank_write(int bank, WORD addr, BYTE byte, void *context)
     } else {
         mem_ram[paddr] = byte;
     }
+}
+
+/* used by monitor if sfx off */
+void mem_bank_poke(int bank, uint16_t addr, uint8_t byte, void *context)
+{
+    mem_bank_write(bank, addr, byte, context);
 }
 
 /* ------------------------------------------------------------------------- */

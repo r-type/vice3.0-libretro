@@ -31,7 +31,7 @@
 
 #include "bittrain.h"
 
-namespace reSID
+namespace reSID_dtv
 {
 
 // ----------------------------------------------------------------------------
@@ -112,7 +112,7 @@ void EnvelopeGenerator::clock()
     return;
   }
   rate_counter = rate_period;
-  
+
   /* Envelope skips this wait during ATTACK.
    * This is handled during control register write: switching to attack
    * sets counter=0, period=1. Envelope uses this during decay and release,
@@ -170,6 +170,6 @@ unsigned int EnvelopeGenerator::output()
 
 #endif // RESID_INLINING || defined(__ENVELOPE_CC__)
 
-} // namespace reSID
+} // namespace reSID_dtv
 
 #endif // not __ENVELOPE_H__

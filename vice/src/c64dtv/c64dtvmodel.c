@@ -35,6 +35,7 @@
 #include "c64dtvmodel.h"
 #include "machine.h"
 #include "resources.h"
+#include "sid.h"
 #include "types.h"
 
 struct model_s {
@@ -76,7 +77,7 @@ Rev 3: (used in Hummer and the next productions runs of PAL C64 DTV's)
   Same features of Rev 2 with blitter bug fixed.
 */
 
-static struct model_s dtvmodels[] = {
+static const struct model_s dtvmodels[] = {
     { MACHINE_SYNC_PAL,  REV_2, IS_DTV    }, /* DTV v2 (pal) */
     { MACHINE_SYNC_NTSC, REV_2, IS_DTV    }, /* DTV v2 (ntsc) */
     { MACHINE_SYNC_PAL,  REV_3, IS_DTV    }, /* DTV v3 (pal) */
@@ -85,14 +86,15 @@ static struct model_s dtvmodels[] = {
 };
 
 /* ------------------------------------------------------------------------- */
-static int dtvmodel_get_temp(int video, int asic, int hummeradc)
+static int dtvmodel_get_temp(int video, int asic, int hummeradc, int sid)
 {
     int i;
 
     for (i = 0; i < DTVMODEL_NUM; ++i) {
         if ((dtvmodels[i].video == video)
-            && (dtvmodels[i].asic == asic)
-            && (dtvmodels[i].hummeradc == hummeradc)) {
+                && (dtvmodels[i].asic == asic)
+                && (dtvmodels[i].hummeradc == hummeradc)
+                && (sid == SID_MODEL_DTVSID)) {
             return i;
         }
     }
@@ -102,15 +104,19 @@ static int dtvmodel_get_temp(int video, int asic, int hummeradc)
 
 int dtvmodel_get(void)
 {
-    int video, asic, hummeradc;
+    int video;
+    int asic;
+    int hummeradc;
+    int sid;
 
     if ((resources_get_int("MachineVideoStandard", &video) < 0)
         || (resources_get_int("DtvRevision", &asic) < 0)
-        || (resources_get_int("HummerADC", &hummeradc) < 0)) {
+        || (resources_get_int("HummerADC", &hummeradc) < 0)
+        || (resources_get_int("SidModel", &sid) < 0)) {
         return -1;
     }
 
-    return dtvmodel_get_temp(video, asic, hummeradc);
+    return dtvmodel_get_temp(video, asic, hummeradc, sid);
 }
 
 #if 0

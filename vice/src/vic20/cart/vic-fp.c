@@ -27,6 +27,8 @@
  *
  */
 
+/* #define DEBUGCART */
+
 #include "vice.h"
 
 #include <stdio.h>
@@ -37,6 +39,7 @@
 #include "cartio.h"
 #include "cartridge.h"
 #include "cmdline.h"
+#include "crt.h"
 #include "export.h"
 #include "flash040.h"
 #include "lib.h"
@@ -45,9 +48,9 @@
 #include "maincpu.h"
 #include "mem.h"
 #include "monitor.h"
+#include "ram.h"
 #include "resources.h"
 #include "snapshot.h"
-#include "translate.h"
 #include "types.h"
 #include "util.h"
 #include "vic-fp.h"
@@ -55,6 +58,12 @@
 #include "vic20cartmem.h"
 #include "vic20mem.h"
 #include "zfile.h"
+
+#ifdef DEBUGCART
+#define DBG(x) printf x
+#else
+#define DBG(x)
+#endif
 
 /* ------------------------------------------------------------------------- */
 /*
@@ -67,13 +76,13 @@
  *   0x2000 - 0x7fff  ->  0x2000 - 0x7fff
  */
 #define CART_RAM_SIZE 0x8000
-static BYTE *cart_ram = NULL;
+static uint8_t *cart_ram = NULL;
 
 /*
  * Cartridge ROM (4 MiB)
  */
 #define CART_ROM_SIZE 0x400000
-static BYTE *cart_rom = NULL;
+static uint8_t *cart_rom = NULL;
 
 #define CART_CFG_ENABLE (!(cart_cfg_reg & 0x80)) /* cart_cfg_reg enable */
 #define CART_CFG_BLK5_WP (cart_cfg_reg & 0x40) /* BLK5 write protect */
@@ -87,7 +96,7 @@ static BYTE *cart_rom = NULL;
 #define CART_CFG_DEFAULT 0x40
 
 /** ROM bank switching register (A20..A13), mapped at $9800..$9bfe (even) */
-static BYTE cart_bank_reg;
+static uint8_t cart_bank_reg;
 /** configuration register, mapped at $9801..$9bff (odd)
  * b7 == 1 => I/O2 disabled until RESET
  * b6 == 1 => ROM write protect (set by default)
@@ -97,7 +106,7 @@ static BYTE cart_bank_reg;
  * b2, b1=unused (always 0)
  * b0 => A21
  */
-static BYTE cart_cfg_reg;
+static uint8_t cart_cfg_reg;
 
 /* Cartridge States */
 /** Flash state */
@@ -140,24 +149,25 @@ static log_t fp_log = LOG_ERR;
 /* ------------------------------------------------------------------------- */
 
 /* Some prototypes are needed */
-static BYTE vic_fp_io2_read(WORD addr);
-static BYTE vic_fp_io2_peek(WORD addr);
-static void vic_fp_io2_store(WORD addr, BYTE value);
+static uint8_t vic_fp_io2_read(uint16_t addr);
+static uint8_t vic_fp_io2_peek(uint16_t addr);
+static void vic_fp_io2_store(uint16_t addr, uint8_t value);
 static int vic_fp_mon_dump(void);
 
 static io_source_t vfp_device = {
-    CARTRIDGE_VIC20_NAME_FP,
-    IO_DETACH_CART,
-    NULL,
-    0x9800, 0x9bff, 0x3ff,
-    0,
-    vic_fp_io2_store,
-    vic_fp_io2_read,
-    vic_fp_io2_peek,
-    vic_fp_mon_dump,
-    CARTRIDGE_VIC20_FP,
-    0,
-    0
+    CARTRIDGE_VIC20_NAME_FP, /* name of the device */
+    IO_DETACH_CART,          /* use cartridge ID to detach the device when involved in a read-collision */
+    IO_DETACH_NO_RESOURCE,   /* does not use a resource for detach */
+    0x9800, 0x9bff, 0x01,    /* range for the device, regs:$9800-$9801, mirrors:$9802-$9bff */
+    0,                       /* read validity determined by the device upon a read */
+    vic_fp_io2_store,        /* store function */
+    NULL,                    /* NO poke function */
+    vic_fp_io2_read,         /* read function */
+    vic_fp_io2_peek,         /* peek function */
+    vic_fp_mon_dump,         /* device state information dump function */
+    CARTRIDGE_VIC20_FP,      /* cartridge ID */
+    IO_PRIO_NORMAL,          /* normal priority, device read needs to be checked for collisions */
+    0                        /* insertion order, gets filled in by the registration function */
 };
 
 static io_source_list_t *vfp_list_item = NULL;
@@ -169,7 +179,7 @@ static const export_resource_t export_res = {
 /* ------------------------------------------------------------------------- */
 
 /* read 0x0400-0x0fff */
-BYTE vic_fp_ram123_read(WORD addr)
+uint8_t vic_fp_ram123_read(uint16_t addr)
 {
     if (ram123_en_flop) {
         return cart_ram[(addr & 0x1fff) + 0x2000];
@@ -179,7 +189,7 @@ BYTE vic_fp_ram123_read(WORD addr)
 }
 
 /* store 0x0400-0x0fff */
-void vic_fp_ram123_store(WORD addr, BYTE value)
+void vic_fp_ram123_store(uint16_t addr, uint8_t value)
 {
     if (ram123_en_flop) {
         cart_ram[(addr & 0x1fff) + 0x2000] = value;
@@ -187,7 +197,7 @@ void vic_fp_ram123_store(WORD addr, BYTE value)
 }
 
 /* read 0x2000-0x3fff */
-BYTE vic_fp_blk1_read(WORD addr)
+uint8_t vic_fp_blk1_read(uint16_t addr)
 {
     if (blk1_en_flop) {
         return cart_ram[addr];
@@ -197,7 +207,7 @@ BYTE vic_fp_blk1_read(WORD addr)
 }
 
 /* store 0x2000-0x3fff */
-void vic_fp_blk1_store(WORD addr, BYTE value)
+void vic_fp_blk1_store(uint16_t addr, uint8_t value)
 {
     if (blk1_en_flop) {
         cart_ram[addr] = value;
@@ -205,19 +215,19 @@ void vic_fp_blk1_store(WORD addr, BYTE value)
 }
 
 /* read 0x4000-0x7fff */
-BYTE vic_fp_blk23_read(WORD addr)
+uint8_t vic_fp_blk23_read(uint16_t addr)
 {
     return cart_ram[addr];
 }
 
 /* store 0x4000-0x7fff */
-void vic_fp_blk23_store(WORD addr, BYTE value)
+void vic_fp_blk23_store(uint16_t addr, uint8_t value)
 {
     cart_ram[addr] = value;
 }
 
 /* read 0xa000-0xbfff */
-BYTE vic_fp_blk5_read(WORD addr)
+uint8_t vic_fp_blk5_read(uint16_t addr)
 {
     if (ram5_flop) {
         return cart_ram[addr & 0x1fff];
@@ -227,7 +237,7 @@ BYTE vic_fp_blk5_read(WORD addr)
 }
 
 /* store 0xa000-0xbfff */
-void vic_fp_blk5_store(WORD addr, BYTE value)
+void vic_fp_blk5_store(uint16_t addr, uint8_t value)
 {
     if (CART_CFG_BLK5_WP) {
     } else if (ram5_flop) {
@@ -238,9 +248,9 @@ void vic_fp_blk5_store(WORD addr, BYTE value)
 }
 
 /* read 0x9800-0x9bff */
-BYTE vic_fp_io2_read(WORD addr)
+uint8_t vic_fp_io2_read(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
 
     vfp_device.io_source_valid = 0;
 
@@ -257,9 +267,9 @@ BYTE vic_fp_io2_read(WORD addr)
     return value;
 }
 
-BYTE vic_fp_io2_peek(WORD addr)
+uint8_t vic_fp_io2_peek(uint16_t addr)
 {
-    BYTE value;
+    uint8_t value;
 
     if (addr & 1) {
         value = cart_cfg_reg;
@@ -271,7 +281,7 @@ BYTE vic_fp_io2_peek(WORD addr)
 }
 
 /* store 0x9800-0x9bff */
-void vic_fp_io2_store(WORD addr, BYTE value)
+void vic_fp_io2_store(uint16_t addr, uint8_t value)
 {
     if (!cfg_en_flop) {
         /* ignore */
@@ -284,6 +294,27 @@ void vic_fp_io2_store(WORD addr, BYTE value)
 }
 
 /* ------------------------------------------------------------------------- */
+
+/* FIXME: this still needs to be tweaked to match the hardware */
+static RAMINITPARAM ramparam = {
+    .start_value = 255,
+    .value_invert = 2,
+    .value_offset = 1,
+
+    .pattern_invert = 0x100,
+    .pattern_invert_value = 255,
+
+    .random_start = 0,
+    .random_repeat = 0,
+    .random_chance = 0,
+};
+
+void vic_fp_powerup(void)
+{
+    if (cart_ram) {
+        ram_init_with_pattern(cart_ram, CART_RAM_SIZE, &ramparam);
+    }
+}
 
 void vic_fp_init(void)
 {
@@ -299,20 +330,21 @@ void vic_fp_reset(void)
     CART_CFG_INIT(CART_CFG_DEFAULT);
 }
 
-void vic_fp_config_setup(BYTE *rawcart)
+void vic_fp_config_setup(uint8_t *rawcart)
 {
 }
 
-
-static int zfile_load(const char *filename, BYTE *dest, size_t size)
+static int zfile_load(const char *filename, uint8_t *dest, size_t size)
 {
     FILE *fd;
+    off_t len;
 
     fd = zfile_fopen(filename, MODE_READ);
     if (!fd) {
         return -1;
     }
-    if (util_file_length(fd) != size) {
+    len = archdep_file_size(fd);
+    if (len < 0 || (size_t)len != size) {
         zfile_fclose(fd);
         return -1;
     }
@@ -322,6 +354,54 @@ static int zfile_load(const char *filename, BYTE *dest, size_t size)
     }
     zfile_fclose(fd);
     return 0;
+}
+
+int vic_fp_crt_attach(FILE *fd, uint8_t *rawcart)
+{
+    crt_chip_header_t chip;
+    int idx = 0;
+
+    if (!cart_ram) {
+        cart_ram = lib_malloc(CART_RAM_SIZE);
+    }
+    if (!cart_rom) {
+        cart_rom = lib_malloc(CART_ROM_SIZE);
+    }
+
+    /* util_string_set(&cartfile, filename); */ /* FIXME */
+
+    for (idx = 0; idx < 512; idx++) {
+        if (crt_read_chip_header(&chip, fd)) {
+            goto exiterror;
+        }
+
+        DBG(("chip %d at %02x len %02x\n", idx, chip.start, chip.size));
+        if (chip.size != 0x2000) {
+            goto exiterror;
+        }
+
+        if (crt_read_chip(&cart_rom[0x2000 * idx], 0, &chip, fd)) {
+            goto exiterror;
+        }
+    }
+
+    if (export_add(&export_res) < 0) {
+        goto exiterror;
+    }
+
+    flash040core_init(&flash_state, maincpu_alarm_context, FLASH040_TYPE_032B_A0_1_SWAP, cart_rom);
+
+    mem_cart_blocks = VIC_CART_RAM123 |
+                      VIC_CART_BLK1 | VIC_CART_BLK2 | VIC_CART_BLK3 | VIC_CART_BLK5 |
+                      VIC_CART_IO2;
+    mem_initialize_memory();
+
+    vfp_list_item = io_source_register(&vfp_device);
+
+    return CARTRIDGE_VIC20_FP;
+exiterror:
+    vic_fp_detach();
+    return -1;
 }
 
 int vic_fp_bin_attach(const char *filename)
@@ -361,7 +441,7 @@ void vic_fp_detach(void)
        and cartridge wasn't from a snapshot */
     if (vic_fp_writeback && !cartridge_is_from_snapshot) {
         if (flash_state.flash_dirty) {
-            int n;
+            long n;
             FILE *fd;
 
             n = 0;
@@ -425,16 +505,12 @@ void vic_fp_resources_shutdown(void)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-fpwriteback", SET_RESOURCE, 0,
+    { "-fpwriteback", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "VicFlashPluginWriteBack", (resource_value_t)1,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_ENABLE_VICFP_ROM_WRITE,
-      NULL, NULL },
-    { "+fpwriteback", SET_RESOURCE, 0,
+      NULL, "Enable Vic Flash Plugin write back to ROM file" },
+    { "+fpwriteback", SET_RESOURCE, CMDLINE_ATTRIB_NONE,
       NULL, NULL, "VicFlashPluginWriteBack", (resource_value_t)0,
-      USE_PARAM_STRING, USE_DESCRIPTION_ID,
-      IDCLS_UNUSED, IDCLS_DISABLE_VICFP_ROM_WRITE,
-      NULL, NULL },
+      NULL, "Disable Vic Flash Plugin write back to ROM file" },
     CMDLINE_LIST_END
 };
 
@@ -481,7 +557,7 @@ int vic_fp_snapshot_write_module(snapshot_t *s)
 
 int vic_fp_snapshot_read_module(snapshot_t *s)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, SNAP_MODULE_NAME, &vmajor, &vminor);

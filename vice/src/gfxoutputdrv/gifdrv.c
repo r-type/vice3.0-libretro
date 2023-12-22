@@ -42,6 +42,8 @@
 #include "types.h"
 #include "util.h"
 
+#include "gifdrv.h"
+
 #if GIFLIB_MAJOR >= 5
 #  define VICE_EGifOpenFileName(x, y, z) EGifOpenFileName(x, y, z)
 #  define VICE_MakeMapObject GifMakeMapObject
@@ -61,11 +63,11 @@
 typedef struct gfxoutputdrv_data_s {
     GifFileType *fd;
     char *ext_filename;
-    BYTE *data;
+    uint8_t *data;
     unsigned int line;
 } gfxoutputdrv_data_t;
 
-STATIC_PROTOTYPE gfxoutputdrv_t gif_drv;
+static gfxoutputdrv_t gif_drv;
 
 static ColorMapObject *gif_colors = NULL;
 
@@ -111,6 +113,11 @@ static int gifdrv_open(screenshot_t *screenshot, const char *filename)
 
 #if GIFLIB_MAJOR < 5
     EGifSetGifVersion("87a");
+#else
+   /* for some reason giflib 5.0.0 does not have this function at all */
+#  if GIFLIB_MINOR >= 1
+    EGifSetGifVersion(sdata->fd, 1 /* for 89 */);
+#  endif
 #endif
 
     if (EGifPutScreenDesc(sdata->fd, screenshot->width, screenshot->height, 8, 0, gif_colors) == GIF_ERROR ||
@@ -152,7 +159,11 @@ static int gifdrv_close(screenshot_t *screenshot)
 
     /* for some reason giflib will create a file with unexpected
        permissions. for this reason we alter them according to
-       the current umask. */
+       the current umask.
+
+       Carefull: oddly enough still true as of 2017-07-18, so do not remove the
+       following function call without doing research/testing first (compyx)
+    */
     archdep_fix_permissions(sdata->ext_filename);
 
     lib_free(sdata->data);
@@ -194,7 +205,7 @@ static int gifdrv_close_memmap(void)
     return 0;
 }
 
-static int gifdrv_write_memmap(int line, int x_size, BYTE *gfx)
+static int gifdrv_write_memmap(int line, int x_size, uint8_t *gfx)
 {
     if (EGifPutLine(gifdrv_memmap_fd, gfx + (line * x_size), x_size) == GIF_ERROR) {
         return -1;
@@ -203,7 +214,7 @@ static int gifdrv_write_memmap(int line, int x_size, BYTE *gfx)
     return 0;
 }
 
-static int gifdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE *palette)
+static int gifdrv_open_memmap(const char *filename, int x_size, int y_size, uint8_t *palette)
 {
     unsigned int i;
     GifColorType ColorMap256[256];
@@ -230,6 +241,8 @@ static int gifdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE
 
 #if GIFLIB_MAJOR < 5
     EGifSetGifVersion("87a");
+#else
+    EGifSetGifVersion(gifdrv_memmap_fd, 1 /* for 89 */);
 #endif
 
     if (EGifPutScreenDesc(gifdrv_memmap_fd, x_size, y_size, 8, 0, gif_colors) == GIF_ERROR ||
@@ -243,7 +256,7 @@ static int gifdrv_open_memmap(const char *filename, int x_size, int y_size, BYTE
     return 0;
 }
 
-static int gifdrv_save_memmap(const char *filename, int x_size, int y_size, BYTE *gfx, BYTE *palette)
+static int gifdrv_save_memmap(const char *filename, int x_size, int y_size, uint8_t *gfx, uint8_t *palette)
 {
     int line;
 

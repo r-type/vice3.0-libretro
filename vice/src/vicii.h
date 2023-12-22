@@ -81,12 +81,12 @@ extern void vicii_set_light_pen(CLOCK mclk, int state);
 extern void vicii_trigger_light_pen(CLOCK mclk);
 extern CLOCK vicii_lightpen_timing(int x, int y);
 extern void vicii_set_vbank(int new_vbank);
-extern void vicii_set_ram_base(BYTE *base);
+extern void vicii_set_ram_base(uint8_t *base);
 extern void vicii_powerup(void);
 extern void vicii_set_canvas_refresh(int enable);
 extern void vicii_reset_registers(void);
 extern void vicii_update_memory_ptrs_external(void);
-extern void vicii_handle_pending_alarms_external(int num_write_cycles);
+extern void vicii_handle_pending_alarms_external(CLOCK num_write_cycles);
 extern void vicii_handle_pending_alarms_external_write(void);
 
 extern void vicii_screenshot(struct screenshot_s *screenshot);
@@ -103,16 +103,16 @@ extern void vicii_async_refresh(struct canvas_refresh_s *r);
 
 extern void vicii_set_phi1_vbank(int num_vbank);
 extern void vicii_set_phi2_vbank(int num_vbank);
-extern void vicii_set_phi1_ram_base(BYTE *base);
-extern void vicii_set_phi2_ram_base(BYTE *base);
-extern void vicii_set_phi1_addr_options(WORD mask, WORD offset);
-extern void vicii_set_phi2_addr_options(WORD mask, WORD offset);
-extern void vicii_set_chargen_addr_options(WORD mask, WORD value);
-extern void vicii_set_phi1_chargen_addr_options(WORD mask, WORD value);
-extern void vicii_set_phi2_chargen_addr_options(WORD mask, WORD value);
+extern void vicii_set_phi1_ram_base(uint8_t *base);
+extern void vicii_set_phi2_ram_base(uint8_t *base);
+extern void vicii_set_phi1_addr_options(uint16_t mask, uint16_t offset);
+extern void vicii_set_phi2_addr_options(uint16_t mask, uint16_t offset);
+extern void vicii_set_chargen_addr_options(uint16_t mask, uint16_t value);
+extern void vicii_set_phi1_chargen_addr_options(uint16_t mask, uint16_t value);
+extern void vicii_set_phi2_chargen_addr_options(uint16_t mask, uint16_t value);
 
 /* 8502 specific functions */
-extern CLOCK vicii_clock_add(CLOCK clock, int amount);
+extern CLOCK vicii_clock_add(CLOCK clock, int64_t amount);
 extern void vicii_clock_read_stretch(void);
 extern void vicii_clock_write_stretch(void);
 extern int vicii_get_half_cycle(void);

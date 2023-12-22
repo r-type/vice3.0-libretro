@@ -26,14 +26,17 @@
 
 #include "vice.h"
 
+#include <stddef.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <errno.h>
 
 #include "archdep.h"
 #include "fileio.h"
-#include "ioutil.h"
 #include "lib.h"
-#include "rawfile.h"
 #include "util.h"
+
+#include "rawfile.h"
 
 
 struct rawfile_info_s {
@@ -52,12 +55,13 @@ rawfile_info_t *rawfile_open(const char *file_name, const char *path,
     char *complete;
     FILE *fd;
     const char *mode = NULL;
-    unsigned int isdir, len;
+    unsigned int isdir;
+    size_t len;
 
     if (path == NULL) {
-        complete = lib_stralloc(file_name);
+        complete = lib_strdup(file_name);
     } else {
-        complete = util_concat(path, FSDEV_DIR_SEP_STR, file_name, NULL);
+        complete = util_concat(path, ARCHDEP_DIR_SEP_STR, file_name, NULL);
     }
 
     switch (command) {
@@ -65,7 +69,11 @@ rawfile_info_t *rawfile_open(const char *file_name, const char *path,
         case FILEIO_COMMAND_READ:
             mode = MODE_READ;
             break;
+        case FILEIO_COMMAND_READ_WRITE:
+            mode = MODE_READ_WRITE;
+            break;
         case FILEIO_COMMAND_WRITE:
+        case FILEIO_COMMAND_OVERWRITE:
             mode = MODE_WRITE;
             break;
         case FILEIO_COMMAND_APPEND:
@@ -78,10 +86,20 @@ rawfile_info_t *rawfile_open(const char *file_name, const char *path,
             return NULL;
     }
 
-    if (ioutil_stat(complete, &len, &isdir) != 0) {
+    if (archdep_stat(complete, &len, &isdir) != 0) {
         /* if stat failed exit early, except in write mode
            (since opening a non existing file creates a new file) */
-        if (command != FILEIO_COMMAND_WRITE) {
+        if (command != FILEIO_COMMAND_WRITE &&
+            command != FILEIO_COMMAND_OVERWRITE) {
+            lib_free(complete);
+            return NULL;
+        }
+    } else {
+        if (command == FILEIO_COMMAND_WRITE) {
+        /* A real drive doesn't overwrite an existing file,
+           so we should not either.
+            Use FILEIO_COMMAND_OVERWRITE to go ahead and
+            overwrite the file anyway. */
             lib_free(complete);
             return NULL;
         }
@@ -121,7 +139,7 @@ void rawfile_destroy(rawfile_info_t *info)
     }
 }
 
-unsigned int rawfile_read(rawfile_info_t *info, BYTE *buf, unsigned int len)
+unsigned int rawfile_read(rawfile_info_t *info, uint8_t *buf, unsigned int len)
 {
     if (info->fd) {
         return (unsigned int)fread(buf, 1, len, info->fd);
@@ -129,7 +147,7 @@ unsigned int rawfile_read(rawfile_info_t *info, BYTE *buf, unsigned int len)
     return -1;
 }
 
-unsigned int rawfile_write(rawfile_info_t *info, BYTE *buf, unsigned int len)
+unsigned int rawfile_write(rawfile_info_t *info, uint8_t *buf, unsigned int len)
 {
     if (info->fd) {
         return (unsigned int)fwrite(buf, 1, len, info->fd);
@@ -137,19 +155,25 @@ unsigned int rawfile_write(rawfile_info_t *info, BYTE *buf, unsigned int len)
     return -1;
 }
 
-int rawfile_seek_set(rawfile_info_t *info, int offset)
-{
-    return fseek(info->fd, offset, SEEK_SET);
-}
-
 unsigned int rawfile_get_bytes_left(struct rawfile_info_s *info)
 {
-    unsigned int old_pos = ftell(info->fd);
-    unsigned int size;
+    /* this is fucked */
+    long old_pos = ftell(info->fd);
+    size_t size;
     fseek(info->fd, 0, SEEK_END);
     size = ftell(info->fd);
     fseek(info->fd, old_pos, SEEK_SET);
-    return size - old_pos;
+    return (unsigned int)(size - old_pos);
+}
+
+unsigned int rawfile_seek(struct rawfile_info_s *info, off_t offset, int whence)
+{
+    return fseek(info->fd, offset, whence);
+}
+
+unsigned int rawfile_tell(struct rawfile_info_s *info)
+{
+    return (unsigned int)ftell(info->fd);
 }
 
 unsigned int rawfile_ferror(rawfile_info_t *info)
@@ -164,21 +188,21 @@ unsigned int rawfile_rename(const char *src_name, const char *dst_name,
     int rc;
 
     if (path == NULL) {
-        complete_src = lib_stralloc(src_name);
-        complete_dst = lib_stralloc(dst_name);
+        complete_src = lib_strdup(src_name);
+        complete_dst = lib_strdup(dst_name);
     } else {
-        complete_src = util_concat(path, FSDEV_DIR_SEP_STR, src_name, NULL);
-        complete_dst = util_concat(path, FSDEV_DIR_SEP_STR, dst_name, NULL);
+        complete_src = util_concat(path, ARCHDEP_DIR_SEP_STR, src_name, NULL);
+        complete_dst = util_concat(path, ARCHDEP_DIR_SEP_STR, dst_name, NULL);
     }
 
-    /*ioutil_remove(dst_name);*/
-    rc = ioutil_rename(complete_src, complete_dst);
+    /*archdep_remove(dst_name);*/
+    rc = archdep_rename(complete_src, complete_dst);
 
     lib_free(complete_src);
     lib_free(complete_dst);
 
     if (rc < 0) {
-        if (ioutil_errno(IOUTIL_ERRNO_EPERM)) {
+        if (errno == EPERM) {
             return FILEIO_FILE_PERMISSION;
         }
         return FILEIO_FILE_NOT_FOUND;
@@ -193,12 +217,12 @@ unsigned int rawfile_remove(const char *src_name, const char *path)
     int rc;
 
     if (path == NULL) {
-        complete_src = lib_stralloc(src_name);
+        complete_src = lib_strdup(src_name);
     } else {
-        complete_src = util_concat(path, FSDEV_DIR_SEP_STR, src_name, NULL);
+        complete_src = util_concat(path, ARCHDEP_DIR_SEP_STR, src_name, NULL);
     }
 
-    rc = ioutil_remove(complete_src);
+    rc = archdep_remove(complete_src);
 
     lib_free(complete_src);
 

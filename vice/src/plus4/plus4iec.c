@@ -37,7 +37,7 @@
 #include "types.h"
 
 
-void iec_update_cpu_bus(BYTE data)
+void iec_update_cpu_bus(uint8_t data)
 {
     iecbus.cpu_bus = (((data << 7) & 0x80) | ((data << 5) & 0x40) | ((data << 2) & 0x10));
 }
@@ -47,7 +47,7 @@ void iec_update_ports(void)
     unsigned int unit;
 
     iecbus.cpu_port = iecbus.cpu_bus;
-    for (unit = 4; unit < 8 + DRIVE_NUM; unit++) {
+    for (unit = 4; unit < 8 + NUM_DISK_UNITS; unit++) {
         iecbus.cpu_port &= iecbus.drv_bus[unit];
     }
 
@@ -59,7 +59,7 @@ void iec_update_ports_embedded(void)
     iec_update_ports();
 }
 
-void iec_drive_write(BYTE data, unsigned int dnr)
+void iec_drive_write(uint8_t data, unsigned int dnr)
 {
     iecbus.drv_bus[dnr + 8] = (((data << 3) & 0x40)
                                | ((data << 6) & ((~data ^ iecbus.cpu_bus) << 3)
@@ -68,7 +68,7 @@ void iec_drive_write(BYTE data, unsigned int dnr)
     iec_update_ports();
 }
 
-BYTE iec_drive_read(unsigned int dnr)
+uint8_t iec_drive_read(unsigned int dnr)
 {
     return iecbus.drv_port;
 }
@@ -78,13 +78,16 @@ iecbus_t *iecbus_drive_port(void)
     return &iecbus;
 }
 
-/* This function is called from ui_update_menus() */
+/* This function is called from ui_update_menus()
+ *
+ * Not anymore
+ */
 int iec_available_busses(void)
 {
     return IEC_BUS_IEC | IEC_BUS_TCBM;
 }
 
-void iec_fast_drive_write(BYTE data, unsigned int dnr)
+void iec_fast_drive_write(uint8_t data, unsigned int dnr)
 {
 /* The Plus4 does not use fast IEC.  */
 }

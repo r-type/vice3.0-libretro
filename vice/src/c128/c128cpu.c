@@ -28,12 +28,12 @@
 
 #include "vice.h"
 
-#include "clkguard.h"
 #include "maincpu.h"
 #include "mem.h"
 #include "vicii.h"
 #include "viciitypes.h"
 #include "z80.h"
+#include "c128mmu.h"
 
 #ifdef FEATURE_CPUMEMHISTORY
 #include "monitor.h"
@@ -102,11 +102,6 @@ inline static void c128cpu_memory_refresh_alarm_handler(void)
     }
 }
 
-static void clk_overflow_callback(CLOCK sub, void *unused_data)
-{
-    c128cpu_memory_refresh_clk -= sub;
-}
-
 #define CLK_ADD(clock, amount) c128cpu_clock_add(&clock, amount)
 
 #define REWIND_FETCH_OPCODE(clock) vicii_clock_add(clock, -(2 + opcode_cycle[0] + opcode_cycle[1]))
@@ -117,26 +112,35 @@ static void clk_overflow_callback(CLOCK sub, void *unused_data)
 
 #define CPU_ADDITIONAL_RESET() c128cpu_memory_refresh_clk = 11
 
-#define CPU_ADDITIONAL_INIT() clk_guard_add_callback(maincpu_clk_guard, clk_overflow_callback, NULL)
-
 #ifdef FEATURE_CPUMEMHISTORY
-#warning "CPUMEMHISTORY implementation for x128 is incomplete"
-void memmap_mem_store(unsigned int addr, unsigned int value)
+static void memmap_mem_store(unsigned int addr, unsigned int value)
 {
     monitor_memmap_store(addr, MEMMAP_RAM_W);
-    (*_mem_write_tab_ptr[(addr) >> 8])((WORD)(addr), (BYTE)(value));
+    (*_mem_write_tab_ptr[(addr) >> 8])((uint16_t)(addr), (uint8_t)(value));
 }
 
-void memmap_mark_read(unsigned int addr)
+static void memmap_mark_read(unsigned int addr)
 {
     monitor_memmap_store(addr, (memmap_state & MEMMAP_STATE_OPCODE) ? MEMMAP_RAM_X : (memmap_state & MEMMAP_STATE_INSTR) ? 0 : MEMMAP_RAM_R);
     memmap_state &= ~(MEMMAP_STATE_OPCODE);
 }
 
-BYTE memmap_mem_read(unsigned int addr)
+static uint8_t memmap_mem_read(unsigned int addr)
 {
     memmap_mark_read(addr);
-    return (*_mem_read_tab_ptr[(addr) >> 8])((WORD)(addr));
+    return (*_mem_read_tab_ptr[(addr) >> 8])((uint16_t)(addr));
+}
+
+static uint8_t memmap_mem_read_dummy(unsigned int addr)
+{
+    memmap_mark_read(addr);
+    return (*_mem_read_tab_ptr_dummy[(addr) >> 8])((uint16_t)(addr));
+}
+
+static void memmap_mem_store_dummy(unsigned int addr, unsigned int value)
+{
+    monitor_memmap_store(addr, MEMMAP_RAM_W);
+    (*_mem_write_tab_ptr_dummy[(addr) >> 8])((uint16_t)(addr), (uint8_t)(value));
 }
 #endif
 
@@ -144,11 +148,11 @@ BYTE memmap_mem_read(unsigned int addr)
 /* 8502 in fast mode always uses 0xee */
 #define ANE(value, pc_inc)                                              \
     do {                                                                \
-        BYTE tmp;                                                       \
+        uint8_t tmp;                                                       \
         if (vicii.fastmode != 0) {                                      \
-            tmp = ((reg_a_read | 0xee) & reg_x_read & ((BYTE)(value))); \
+            tmp = ((reg_a_read | 0xee) & reg_x_read & ((uint8_t)(value))); \
         } else {                                                        \
-            tmp = ((reg_a_read | 0xff) & reg_x_read & ((BYTE)(value))); \
+            tmp = ((reg_a_read | 0xff) & reg_x_read & ((uint8_t)(value))); \
         }                                                               \
         reg_a_write(tmp);                                               \
         LOCAL_SET_NZ(tmp);                                              \
@@ -158,7 +162,7 @@ BYTE memmap_mem_read(unsigned int addr)
 /* No OR takes place on 8502 */
 #define LXA(value, pc_inc)                           \
     do {                                             \
-        BYTE tmp = ((reg_a_read) & ((BYTE)(value))); \
+        uint8_t tmp = ((reg_a_read) & ((uint8_t)(value))); \
         reg_x_write(tmp);                            \
         reg_a_write(tmp);                            \
         LOCAL_SET_NZ(tmp);                           \

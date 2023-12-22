@@ -39,12 +39,9 @@ extern int autostart_resources_init(void);
 extern void autostart_resources_shutdown(void);
 extern int autostart_cmdline_options_init(void);
 
-extern int autostart_init(CLOCK min_cycles, int handle_drive_true_emulation,
-                          int blnsw, int pnt, int pntr, int lnmx);
+extern int autostart_init(int default_seconds, int handle_drive_true_emulation);
 extern void autostart_shutdown(void);
-extern void autostart_reinit(CLOCK _min_cycles,
-                             int _handle_drive_true_emulation, int _blnsw,
-                             int _pnt, int _pntr, int _lnmx);
+/* extern void autostart_reinit(int default_seconds, int handle_drive_true_emulation); */
 
 extern int autostart_autodetect(const char *file_name,
                                 const char *program_name,
@@ -55,17 +52,19 @@ extern int autostart_autodetect_opt_prgname(const char *file_prog_name,
                                             unsigned int alt_prg_number,
                                             unsigned int runmode);
 
-extern int autostart_disk(const char *file_name, const char *program_name,
+extern int autostart_disk(int unit, int drive, const char *file_name, const char *program_name,
                           unsigned int program_number, unsigned int runmode);
 extern int autostart_tape(const char *file_name, const char *program_name,
-                          unsigned int program_number, unsigned int runmode);
+                          unsigned int program_number, unsigned int runmode,
+                          unsigned int tapeport);
 extern int autostart_prg(const char *file_name, unsigned int runmode);
 extern int autostart_snapshot(const char *file_name, const char *program_name);
+extern int autostart_tapecart(const char *file_name, void *unused);
 
 extern void autostart_disable(void);
 extern void autostart_advance(void);
 
-extern int autostart_device(int num);
+/* extern int autostart_device(int unit); */
 extern void autostart_reset(void);
 
 extern int autostart_ignore_reset;
@@ -73,5 +72,7 @@ extern int autostart_ignore_reset;
 extern int autostart_in_progress(void);
 
 extern void autostart_trigger_monitor(int enable);
+
+extern int autostart_set_initial_tap_offset(unsigned long offset);
 
 #endif

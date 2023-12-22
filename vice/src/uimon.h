@@ -27,10 +27,13 @@
 #ifndef VICE_UIMON_H
 #define VICE_UIMON_H
 
+#include <stdbool.h>
+
 struct console_s;
+struct console_private_s;
 struct monitor_interface_s;
 
-extern struct console_s *uimon_window_open(void);
+extern struct console_s *uimon_window_open(bool display_now);
 extern void uimon_window_suspend(void);
 extern struct console_s *uimon_window_resume(void);
 extern void uimon_window_close(void);
@@ -42,5 +45,15 @@ extern char *uimon_in(const char *prompt);
 extern void uimon_notify_change(void);
 extern void uimon_set_interface(struct monitor_interface_s **, int);
 extern char *uimon_get_in(char **, const char *);
+
+extern int uimon_get_columns(struct console_private_s *t);
+extern void uimon_write_to_terminal(struct console_private_s *t, const char *data, long length);
+extern int uimon_get_string(struct console_private_s *t, char* string, int string_len);
+
+/* Gtk3-specific, so far */
+extern bool uimon_set_font(void);
+extern bool uimon_set_foreground_color(const char *color);
+extern bool uimon_set_background_color(const char *color);
+
 
 #endif

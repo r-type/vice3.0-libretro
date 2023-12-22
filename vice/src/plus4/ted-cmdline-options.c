@@ -37,25 +37,18 @@
 #include "ted-resources.h"
 #include "ted.h"
 #include "tedtypes.h"
-#include "translate.h"
 
-int border_set_func(const char *value, void *extra_param)
+static int border_set_func(const char *value, void *extra_param)
 {
-    int video;
-
-    resources_get_int("MachineVideoStandard", &video);
-
     if (strcmp(value, "1") == 0 || strcmp(value, "full") == 0) {
-        ted_resources.border_mode = TED_FULL_BORDERS;
+        resources_set_int("TEDBorderMode", 1);
     } else if (strcmp(value, "2") == 0 || strcmp(value, "debug") == 0) {
-        ted_resources.border_mode = TED_DEBUG_BORDERS;
+        resources_set_int("TEDBorderMode", 2);
     } else if (strcmp(value, "3") == 0 || strcmp(value, "none") == 0) {
-        ted_resources.border_mode = TED_NO_BORDERS;
+        resources_set_int("TEDBorderMode", 3);
     } else {
-        ted_resources.border_mode = TED_NORMAL_BORDERS;
+        resources_set_int("TEDBorderMode", 0);
     }
-
-    machine_change_timing(video, ted_resources.border_mode);
 
     return 0;
 }
@@ -63,10 +56,9 @@ int border_set_func(const char *value, void *extra_param)
 /* TED command-line options.  */
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-TEDborders", CALL_FUNCTION, 1,
-      border_set_func, NULL, "TEDBorderMode", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_MODE, IDCLS_SET_BORDER_MODE },
+    { "-TEDborders", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
+      border_set_func, NULL, NULL, NULL,
+      "<Mode>", "Set border display mode (0: normal, 1: full, 2: debug, 3: none)" },
     CMDLINE_LIST_END
 };
 

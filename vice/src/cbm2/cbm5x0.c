@@ -48,8 +48,6 @@
 #include "cbm2tpi.h"
 #include "cbm2ui.h"
 #include "cia.h"
-#include "clkguard.h"
-#include "cmdline.h"
 #include "datasette.h"
 #include "debug.h"
 #include "debugcart.h"
@@ -62,8 +60,10 @@
 #include "fsdevice.h"
 #include "gfxoutput.h"
 #include "iecdrive.h"
+#include "inception.h"
 #include "init.h"
 #include "joyport.h"
+#include "joyport_io_sim.h"
 #include "joystick.h"
 #include "kbdbuf.h"
 #include "keyboard.h"
@@ -75,10 +75,12 @@
 #include "maincpu.h"
 #include "mem.h"
 #include "monitor.h"
+#include "multijoy.h"
 #include "network.h"
-#include "paperclip64.h"
+#include "ninja_snespad.h"
 #include "parallel.h"
 #include "printer.h"
+#include "protopad.h"
 #include "resources.h"
 #include "rs232drv.h"
 #include "sampler.h"
@@ -94,9 +96,10 @@
 #include "tape.h"
 #include "tapeport.h"
 #include "tpi.h"
-#include "translate.h"
 #include "traps.h"
+#include "trapthem_snespad.h"
 #include "types.h"
+#include "userport.h"
 #include "vice-event.h"
 #include "vicii.h"
 #include "vicii-resources.h"
@@ -107,6 +110,11 @@
 #ifdef HAVE_MOUSE
 #include "mouse.h"
 #endif
+
+/** \brief  Delay in seconds before pasting -keybuf argument into the buffer
+ */
+#define KBDBUF_ALARM_DELAY   8
+
 
 machine_context_t machine_context;
 
@@ -152,23 +160,105 @@ kbdtype_info_t *machine_get_keyboard_info_list(void)
 
 /* ------------------------------------------------------------------------- */
 
-static joyport_port_props_t control_port_1 = 
+static joyport_port_props_t control_port_1 =
 {
     "Control port 1",
-    IDGS_CONTROL_PORT_1,
-    1,				/* has a potentiometer connected to this port */
-    0,				/* officially has lightpen support on this port,
-					   but no lightpen support is in the cbm5x0 code */
-    1					/* port is always active */
+    1,                      /* has a potentiometer connected to this port */
+    0,                      /* officially has lightpen support on this port,
+                               but no lightpen support is in the cbm5x0 code */
+    1,                      /* has joystick adapter on this port */
+    1,                      /* has output support on this port */
+    1                       /* port is always active */
 };
 
-static joyport_port_props_t control_port_2 = 
+static joyport_port_props_t control_port_2 =
 {
     "Control port 2",
-    IDGS_CONTROL_PORT_2,
-    1,				/* has a potentiometer connected to this port */
-    0,				/* has NO lightpen support on this port */
-    1					/* port is always active */
+    1,                      /* has a potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    1,                      /* has joystick adapter on this port */
+    1,                      /* has output support on this port */
+    1                       /* port is always active */
+};
+
+static joyport_port_props_t joy_adapter_control_port_1 =
+{
+    "Joystick adapter port 1",
+    0,                      /* has NO potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    0,                      /* has NO joystick adapter on this port */
+    1,                      /* has output support on this port */
+    0                       /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_2 =
+{
+    "Joystick adapter port 2",
+    0,                      /* has NO potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    0,                      /* has NO joystick adapter on this port */
+    1,                      /* has output support on this port */
+    0                       /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_3 =
+{
+    "Joystick adapter port 3",
+    0,                      /* has NO potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    0,                      /* has NO joystick adapter on this port */
+    1,                      /* has output support on this port */
+    0                       /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_4 =
+{
+    "Joystick adapter port 4",
+    0,                      /* has NO potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    0,                      /* has NO joystick adapter on this port */
+    1,                      /* has output support on this port */
+    0                       /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_5 =
+{
+    "Joystick adapter port 5",
+    0,                      /* has NO potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    0,                      /* has NO joystick adapter on this port */
+    1,                      /* has output support on this port */
+    0                       /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_6 =
+{
+    "Joystick adapter port 6",
+    0,                      /* has NO potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    0,                      /* has NO joystick adapter on this port */
+    1,                      /* has output support on this port */
+    0                       /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_7 =
+{
+    "Joystick adapter port 7",
+    0,                      /* has NO potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    0,                      /* has NO joystick adapter on this port */
+    1,                      /* has output support on this port */
+    0                       /* port can be switched on/off */
+};
+
+static joyport_port_props_t joy_adapter_control_port_8 =
+{
+    "Joystick adapter port 8",
+    0,                      /* has NO potentiometer connected to this port */
+    0,                      /* has NO lightpen support on this port */
+    0,                      /* has NO joystick adapter on this port */
+    1,                      /* has output support on this port */
+    0                       /* port can be switched on/off */
 };
 
 static int init_joyport_ports(void)
@@ -176,7 +266,31 @@ static int init_joyport_ports(void)
     if (joyport_port_register(JOYPORT_1, &control_port_1) < 0) {
         return -1;
     }
-    return joyport_port_register(JOYPORT_2, &control_port_2);
+    if (joyport_port_register(JOYPORT_2, &control_port_2) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_3, &joy_adapter_control_port_1) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_4, &joy_adapter_control_port_2) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_5, &joy_adapter_control_port_3) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_6, &joy_adapter_control_port_4) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_7, &joy_adapter_control_port_5) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_8, &joy_adapter_control_port_6) < 0) {
+        return -1;
+    }
+    if (joyport_port_register(JOYPORT_9, &joy_adapter_control_port_7) < 0) {
+        return -1;
+    }
+    return joyport_port_register(JOYPORT_10, &joy_adapter_control_port_8);
 }
 
 /* CBM-II-specific resource initialization.  This is called before initializing
@@ -207,16 +321,17 @@ int machine_resources_init(void)
         init_resource_fail("sid");
         return -1;
     }
+    /* Must be called after initializing cartridge resources. Some carts provide
+     * additional busses.  The drive resources check the validity of the drive
+     * type against the available busses on the system.  So if you had e.g. an
+     * IEEE cart enabled and an IEEE defined, on startup the drive code would
+     * reset the drive type to the default for the IEC bus. */
     if (drive_resources_init() < 0) {
         init_resource_fail("drive");
         return -1;
     }
-    if (tapeport_resources_init() < 0) {
+    if (tapeport_resources_init(1) < 0) {
         init_resource_fail("tapeport");
-        return -1;
-    }
-    if (datasette_resources_init() < 0) {
-        init_resource_fail("datasette");
         return -1;
     }
     if (acia1_resources_init() < 0) {
@@ -255,16 +370,32 @@ int machine_resources_init(void)
         init_resource_fail("joyport bbrtc");
         return -1;
     }
-    if (joyport_paperclip64_resources_init() < 0) {
-        init_resource_fail("joyport paperclip64 dongle");
+    if (joyport_trapthem_snespad_resources_init() < 0) {
+        init_resource_fail("joyport trapthem snespad");
+        return -1;
+    }
+    if (joyport_ninja_snespad_resources_init() < 0) {
+        init_resource_fail("joyport ninja snespad");
+        return -1;
+    }
+    if (joyport_protopad_resources_init() < 0) {
+        init_resource_fail("joyport protopad");
+        return -1;
+    }
+    if (joyport_inception_resources_init() < 0) {
+        init_resource_fail("joyport inception");
+        return -1;
+    }
+    if (joyport_multijoy_resources_init() < 0) {
+        init_resource_fail("joyport multijoy");
+        return -1;
+    }
+    if (joyport_io_sim_resources_init() < 0) {
+        init_resource_fail("joyport I/O simulation");
         return -1;
     }
     if (joystick_resources_init() < 0) {
         init_resource_fail("joystick");
-        return -1;
-    }
-    if (gfxoutput_resources_init() < 0) {
-        init_resource_fail("gfxoutput");
         return -1;
     }
     if (sampler_resources_init() < 0) {
@@ -325,12 +456,6 @@ int machine_resources_init(void)
     }
 #endif
 #endif
-#ifndef COMMON_KBD
-    if (pet_kbd_resources_init() < 0) {
-        init_resource_fail("pet kbd");
-        return -1;
-    }
-#endif
     if (debugcart_resources_init() < 0) {
         init_resource_fail("debug cart");
         return -1;
@@ -377,7 +502,7 @@ int machine_cmdline_options_init(void)
         init_cmdline_options_fail("vicii");
         return -1;
     }
-    if (sid_cmdline_options_init() < 0) {
+    if (sid_cmdline_options_init(SIDTYPE_SID) < 0) {
         init_cmdline_options_fail("sid");
         return -1;
     }
@@ -387,10 +512,6 @@ int machine_cmdline_options_init(void)
     }
     if (tapeport_cmdline_options_init() < 0) {
         init_cmdline_options_fail("tapeport");
-        return -1;
-    }
-    if (datasette_cmdline_options_init() < 0) {
-        init_cmdline_options_fail("datasette");
         return -1;
     }
     if (acia1_cmdline_options_init() < 0) {
@@ -419,10 +540,6 @@ int machine_cmdline_options_init(void)
     }
     if (joystick_cmdline_options_init() < 0) {
         init_cmdline_options_fail("joystick");
-        return -1;
-    }
-    if (gfxoutput_cmdline_options_init() < 0) {
-        init_cmdline_options_fail("gfxoutput");
         return -1;
     }
     if (sampler_cmdline_options_init() < 0) {
@@ -475,12 +592,6 @@ int machine_cmdline_options_init(void)
         return -1;
     }
 #endif
-#ifndef COMMON_KBD
-    if (pet_kbd_cmdline_options_init() < 0) {
-        init_cmdline_options_fail("pet kbd");
-        return -1;
-    }
-#endif
     if (debugcart_cmdline_options_init() < 0) {
         init_cmdline_options_fail("debug cart");
         return -1;
@@ -512,12 +623,6 @@ static void c500_powerline_clk_alarm_handler(CLOCK offset, void *data)
     SIGNAL_VERT_BLANK_ON
 }
 
-static void c500_powerline_clk_overflow_callback(CLOCK sub, void *data)
-{
-    c500_powerline_clk -= sub;
-}
-
-
 /*
  * C500 extra data (state of 50Hz clk)
  */
@@ -541,7 +646,7 @@ int cbm2_c500_snapshot_write_module(snapshot_t *p)
         return -1;
     }
 
-    SMW_DW(m, c500_powerline_clk - maincpu_clk);
+    SMW_CLOCK(m, c500_powerline_clk - maincpu_clk);
 
     snapshot_module_close(m);
 
@@ -550,9 +655,9 @@ int cbm2_c500_snapshot_write_module(snapshot_t *p)
 
 int cbm2_c500_snapshot_read_module(snapshot_t *p)
 {
-    BYTE vmajor, vminor;
+    uint8_t vmajor, vminor;
     snapshot_module_t *m;
-    DWORD dword;
+    CLOCK qword;
 
     m = snapshot_module_open(p, module_name, &vmajor, &vminor);
     if (m == NULL) {
@@ -564,8 +669,8 @@ int cbm2_c500_snapshot_read_module(snapshot_t *p)
         return -1;
     }
 
-    SMR_DW(m, &dword);
-    c500_powerline_clk = maincpu_clk + dword;
+    SMR_CLOCK(m, &qword);
+    c500_powerline_clk = maincpu_clk + qword;
     alarm_set(c500_powerline_clk_alarm, c500_powerline_clk);
 
     snapshot_module_close(m);
@@ -579,7 +684,7 @@ static void cbm2_monitor_init(void)
 {
     unsigned int dnr;
     monitor_cpu_type_t asm6502;
-    monitor_interface_t *drive_interface_init[DRIVE_NUM];
+    monitor_interface_t *drive_interface_init[NUM_DISK_UNITS];
     monitor_cpu_type_t *asmarray[2];
 
     asmarray[0] = &asm6502;
@@ -587,7 +692,7 @@ static void cbm2_monitor_init(void)
 
     asm6502_init(&asm6502);
 
-    for (dnr = 0; dnr < DRIVE_NUM; dnr++) {
+    for (dnr = 0; dnr < NUM_DISK_UNITS; dnr++) {
         drive_interface_init[dnr] = drive_cpu_monitor_interface_get(dnr);
     }
 
@@ -639,12 +744,11 @@ int machine_specific_init(void)
     /* initialize print devices */
     printer_init();
 
-#ifdef USE_BEOS_UI
     /* Pre-init CBM-II-specific parts of the menus before vicii_init()
-       creates a canvas window with a menubar at the top. This could
-       also be used by other ports, e.g. GTK+...  */
-    cbm5x0ui_init_early();
-#endif
+       creates a canvas window with a menubar at the top. */
+    if (!console_mode) {
+        cbm5x0ui_init_early();
+    }
 
     if (vicii_init(VICII_STANDARD) == NULL) {
         return -1;
@@ -658,8 +762,6 @@ int machine_specific_init(void)
                                          "C500PowerlineClk",
                                          c500_powerline_clk_alarm_handler,
                                          NULL);
-    clk_guard_add_callback(maincpu_clk_guard,
-                           c500_powerline_clk_overflow_callback, NULL);
     machine_timing.cycles_per_sec = C500_PAL_CYCLES_PER_SEC;
     machine_timing.rfsh_per_sec = C500_PAL_RFSH_PER_SEC;
     machine_timing.cycles_per_rfsh = C500_PAL_CYCLES_PER_RFSH;
@@ -668,13 +770,6 @@ int machine_specific_init(void)
     acia1_init();
     tpi1_init(machine_context.tpi1);
     tpi2_init(machine_context.tpi2);
-
-#ifndef COMMON_KBD
-    /* Initialize the keyboard.  */
-    if (cbm2_kbd_init() < 0) {
-        return -1;
-    }
-#endif
 
     /* Initialize the datasette emulation.  */
     datasette_init();
@@ -699,11 +794,8 @@ int machine_specific_init(void)
 
     /* Initialize sound.  Notice that this does not really open the audio
        device yet.  */
-    sound_init(machine_timing.cycles_per_sec, machine_timing.cycles_per_rfsh);
-
-    /* Initialize keyboard buffer.
-       This appears to work but doesn't account for banking. */
-    kbdbuf_init(939, 209, 10, (CLOCK)(machine_timing.rfsh_per_sec * machine_timing.cycles_per_rfsh));
+    sound_init((unsigned int)machine_timing.cycles_per_sec,
+               (unsigned int)machine_timing.cycles_per_rfsh);
 
     /* Initialize the CBM-II-specific part of the UI.  */
     if (!console_mode) {
@@ -721,22 +813,14 @@ int machine_specific_init(void)
     /* Initialize the CBM5x0-specific I/O */
     cbm5x0io_init();
 
-#if defined (USE_XF86_EXTENSIONS) && (defined(USE_XF86_VIDMODE_EXT) || defined (HAVE_XRANDR))
-    {
-        /* set fullscreen if user used `-fullscreen' on cmdline */
-        int fs;
-        resources_get_int("UseFullscreen", &fs);
-        if (fs) {
-            resources_set_int("VICIIFullscreen", 1);
-        }
-    }
-#endif
     return 0;
 }
 
 /* CBM-II-specific initialization.  */
 void machine_specific_reset(void)
 {
+    int delay;      /* delay in seconds for the kbduf_init() call */
+
     ciacore_reset(machine_context.cia1);
     tpicore_reset(machine_context.tpi1);
     tpicore_reset(machine_context.tpi2);
@@ -757,17 +841,48 @@ void machine_specific_reset(void)
 
     mem_reset();
 
+    /* Initialize keyboard buffer.
+       This appears to work but doesn't account for banking
+     */
+    switch (ramsize) {
+        case 64:
+            delay = 8;
+            break;
+        case 128:
+            delay = 12;
+            break;
+        case 256:
+            delay = 20;
+            break;
+        case 512:
+            delay = 31;
+            break;
+        case 1024:
+            delay = 58;
+            break;
+        default:
+            /* invalid ramsize */
+            delay = 1;
+            break;
+    }
+    kbdbuf_init(0x03ab, 0x00d1, 10,
+            (CLOCK)(machine_timing.rfsh_per_sec *
+                machine_timing.cycles_per_rfsh * delay));
+
+
     sampler_reset();
 }
 
 void machine_specific_powerup(void)
 {
+    tapeport_powerup();
+    joyport_powerup();
 }
 
 void machine_specific_shutdown(void)
 {
     /* and the tape */
-    tape_image_detach_internal(1);
+    tape_image_detach_internal(TAPEPORT_PORT_1 + 1);
 
     ciacore_shutdown(machine_context.cia1);
     tpicore_shutdown(machine_context.tpi1);
@@ -785,7 +900,7 @@ void machine_specific_shutdown(void)
     }
 }
 
-void machine_handle_pending_alarms(int num_write_cycles)
+void machine_handle_pending_alarms(CLOCK num_write_cycles)
 {
 }
 
@@ -794,19 +909,9 @@ void machine_handle_pending_alarms(int num_write_cycles)
 /* This hook is called at the end of every frame.  */
 static void machine_vsync_hook(void)
 {
-    CLOCK sub;
-
     drive_vsync_hook();
 
-    autostart_advance();
-
     screenshot_record();
-
-    sub = clk_guard_prevent_overflow(maincpu_clk_guard);
-
-    /* The drive has to deal both with our overflowing and its own one, so
-       it is called even when there is no overflowing in the main CPU.  */
-    drive_cpu_prevent_clk_overflow_all(sub);
 }
 
 /* Dummy - no restore key.  */
@@ -870,12 +975,13 @@ void machine_change_timing(int timeval, int border_mode)
                                 machine_timing.screen_lines);
     drive_set_machine_parameter(machine_timing.cycles_per_sec);
 #ifdef HAVE_MOUSE
-    neos_mouse_set_machine_parameter(machine_timing.cycles_per_sec);
+    mouse_set_machine_parameter(machine_timing.cycles_per_sec);
 #endif
-    clk_guard_set_clk_base(maincpu_clk_guard, machine_timing.cycles_per_rfsh);
 
     vicii_change_timing(&machine_timing, border_mode);
-    cia1_set_timing(machine_context.cia1, machine_timing.cycles_per_sec, machine_timing.power_freq);
+    cia1_set_timing(machine_context.cia1,
+                    (int)machine_timing.cycles_per_sec,
+                    machine_timing.power_freq);
 }
 
 /* Set the screen refresh rate, as this is variable in the CRTC */
@@ -900,12 +1006,20 @@ void machine_set_cycles_per_frame(long cpf)
 int machine_write_snapshot(const char *name, int save_roms, int save_disks,
                            int event_mode)
 {
-    return cbm2_snapshot_write(name, save_roms, save_disks, event_mode);
+    int err = cbm2_snapshot_write(name, save_roms, save_disks, event_mode);
+    if ((err < 0) && (snapshot_get_error() == SNAPSHOT_NO_ERROR)) {
+        snapshot_set_error(SNAPSHOT_CANNOT_WRITE_SNAPSHOT);
+    }
+    return err;
 }
 
 int machine_read_snapshot(const char *name, int event_mode)
 {
-    return cbm2_snapshot_read(name, event_mode);
+    int err = cbm2_snapshot_read(name, event_mode);
+    if ((err < 0) && (snapshot_get_error() == SNAPSHOT_NO_ERROR)) {
+        snapshot_set_error(SNAPSHOT_CANNOT_READ_SNAPSHOT);
+    }
+    return err;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -913,6 +1027,16 @@ int machine_read_snapshot(const char *name, int event_mode)
 int machine_autodetect_psid(const char *name)
 {
     return -1;
+}
+
+userport_desc_t *userport_get_valid_devices(int sort)
+{
+    return NULL;
+}
+
+const char *userport_get_device_type_desc(int type)
+{
+    return NULL;
 }
 
 int machine_screenshot(screenshot_t *screenshot, struct video_canvas_s *canvas)
@@ -941,20 +1065,34 @@ struct image_contents_s *machine_diskcontents_bus_read(unsigned int unit)
     return NULL;
 }
 
-BYTE machine_tape_type_default(void)
+uint8_t machine_tape_type_default(void)
 {
     return TAPE_CAS_TYPE_BAS;
 }
 
-BYTE machine_tape_behaviour(void)
+uint8_t machine_tape_behaviour(void)
 {
     return TAPE_BEHAVIOUR_NORMAL;
 }
 
 int machine_addr_in_ram(unsigned int addr)
 {
-    /* FIXME are these correct? */
-    return (addr < 0xe000 && !(addr >= 0xa000 && addr < 0xc000)) ? 1 : 0;
+    /* FIXME: handle the banking */
+
+    if (addr >= 0x25a && addr <= 0x25d) {
+        /* 'Pickup subroutine' */
+        return 0;
+    }
+
+    if (addr >= 0x8000 && addr < 0xc000) {
+        return 0;
+    }
+
+    if (addr > 0xe000) {
+        return 0;
+    }
+
+    return 1;
 }
 
 const char *machine_get_name(void)

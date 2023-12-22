@@ -36,11 +36,7 @@
 #include "menu_rs232.h"
 #include "resources.h"
 #include "uimenu.h"
-
-#define VICE_SDL_RS232_ARCHDEP_ITEMS /**/
-
-/* *nix extra RS232 settings */
-#ifdef UNIX_COMPILE
+#include "userport.h"
 
 UI_MENU_DEFINE_RADIO(RsDevice1Baud)
 UI_MENU_DEFINE_RADIO(RsDevice2Baud)
@@ -69,15 +65,15 @@ UI_MENU_DEFINE_RADIO(RsDevice4Baud)
           MENU_ENTRY_RESOURCE_RADIO,                    \
           radio_RsDevice##x##Baud_callback,             \
           (ui_callback_data_t)19200 },                  \
-        { "38400 (Swiftlink/Turbo232 only)",            \
+        { "38400",                                      \
           MENU_ENTRY_RESOURCE_RADIO,                    \
           radio_RsDevice##x##Baud_callback,             \
           (ui_callback_data_t)38400 },                  \
-        { "57600 (Turbo232 only)",                      \
+        { "57600",                                      \
           MENU_ENTRY_RESOURCE_RADIO,                    \
           radio_RsDevice##x##Baud_callback,             \
           (ui_callback_data_t)57600 },                  \
-        { "115200 (Turbo232 only)",                     \
+        { "115200",                                     \
           MENU_ENTRY_RESOURCE_RADIO,                    \
           radio_RsDevice##x##Baud_callback,             \
           (ui_callback_data_t)115200 },                 \
@@ -89,33 +85,17 @@ RS_BAUD_MENU(2)
 RS_BAUD_MENU(3)
 RS_BAUD_MENU(4)
 
-#undef VICE_SDL_RS232_ARCHDEP_ITEMS
-#define VICE_SDL_RS232_ARCHDEP_ITEMS      \
-    { "Device 1 baud rate",               \
-      MENU_ENTRY_SUBMENU,                 \
-      submenu_radio_callback,             \
-      (ui_callback_data_t)rs1baud_menu }, \
-    { "Device 2 baud rate",               \
-      MENU_ENTRY_SUBMENU,                 \
-      submenu_radio_callback,             \
-      (ui_callback_data_t)rs2baud_menu }, \
-    { "Device 3 baud rate",               \
-      MENU_ENTRY_SUBMENU,                 \
-      submenu_radio_callback,             \
-      (ui_callback_data_t)rs3baud_menu }, \
-    { "Device 4 baud rate",               \
-      MENU_ENTRY_SUBMENU,                 \
-      submenu_radio_callback,             \
-      (ui_callback_data_t)rs4baud_menu },
-
-#endif /* defined(UNIX_COMPILE) */
-
 /* Common menus */
 
 UI_MENU_DEFINE_STRING(RsDevice1)
 UI_MENU_DEFINE_STRING(RsDevice2)
 UI_MENU_DEFINE_STRING(RsDevice3)
 UI_MENU_DEFINE_STRING(RsDevice4)
+
+UI_MENU_DEFINE_TOGGLE(RsDevice1ip232)
+UI_MENU_DEFINE_TOGGLE(RsDevice2ip232)
+UI_MENU_DEFINE_TOGGLE(RsDevice3ip232)
+UI_MENU_DEFINE_TOGGLE(RsDevice4ip232)
 
 UI_MENU_DEFINE_TOGGLE(Acia1Enable)
 UI_MENU_DEFINE_RADIO(Acia1Dev)
@@ -147,11 +127,11 @@ static const ui_menu_entry_t acia1irq_menu[] = {
       MENU_ENTRY_RESOURCE_RADIO,
       radio_Acia1Irq_callback,
       (ui_callback_data_t)0 },
-    { "IRQ",
+    { "NMI",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_Acia1Irq_callback,
       (ui_callback_data_t)1 },
-    { "NMI",
+    { "IRQ",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_Acia1Irq_callback,
       (ui_callback_data_t)2 },
@@ -218,7 +198,28 @@ static const ui_menu_entry_t acia1base_vic20_menu[] = {
     SDL_MENU_LIST_END
 };
 
-UI_MENU_DEFINE_TOGGLE(RsUserEnable)
+static UI_MENU_CALLBACK(radio_UserportDevice_callback)
+{
+    int val = USERPORT_DEVICE_NONE;
+    resources_get_int("UserportDevice", &val);
+    if (activated) {
+        if (val == USERPORT_DEVICE_RS232_MODEM) {
+            resources_set_int("UserportDevice", USERPORT_DEVICE_NONE);
+        } else {
+            resources_set_int("UserportDevice", USERPORT_DEVICE_RS232_MODEM);
+        }
+        return NULL;
+    }
+    return (val == USERPORT_DEVICE_RS232_MODEM) ? sdl_menu_text_tick : NULL;
+}
+
+UI_MENU_DEFINE_TOGGLE(RsUserUP9600)
+UI_MENU_DEFINE_TOGGLE(RsUserRTSInv)
+UI_MENU_DEFINE_TOGGLE(RsUserCTSInv)
+UI_MENU_DEFINE_TOGGLE(RsUserDSRInv)
+UI_MENU_DEFINE_TOGGLE(RsUserDCDInv)
+UI_MENU_DEFINE_TOGGLE(RsUserDTRInv)
+
 UI_MENU_DEFINE_RADIO(RsUserBaud)
 
 static const ui_menu_entry_t rsuserbaud_menu[] = {
@@ -274,19 +275,51 @@ const ui_menu_entry_t rs232_nouser_menu[] = {
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice1_callback,
       (ui_callback_data_t)"RS232 host device 1" },
+    { "Device 1 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs1baud_menu },
+    { "Device 1 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice1ip232_callback,
+      NULL },
     { "Device 2",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice2_callback,
       (ui_callback_data_t)"RS232 host device 2" },
+    { "Device 2 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs2baud_menu },
+    { "Device 2 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice2ip232_callback,
+      NULL },
     { "Device 3",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice3_callback,
       (ui_callback_data_t)"RS232 host device 3" },
+    { "Device 3 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs3baud_menu },
+    { "Device 3 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice3ip232_callback,
+      NULL },
     { "Device 4",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice4_callback,
       (ui_callback_data_t)"RS232 host device 4" },
-    VICE_SDL_RS232_ARCHDEP_ITEMS
+    { "Device 4 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs4baud_menu },
+    { "Device 4 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice4ip232_callback,
+      NULL },
+
     SDL_MENU_LIST_END
 };
 
@@ -313,9 +346,9 @@ const ui_menu_entry_t rs232_c64_menu[] = {
       (ui_callback_data_t)acia1mode_menu },
     SDL_MENU_ITEM_SEPARATOR,
     { "Userport RS232 emulation",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_RsUserEnable_callback,
-      NULL },
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_UserportDevice_callback,
+      (ui_callback_data_t)USERPORT_DEVICE_RS232_MODEM },
     { "Userport RS232 host device",
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
@@ -324,25 +357,80 @@ const ui_menu_entry_t rs232_c64_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
       (ui_callback_data_t)rsuserbaud_menu },
+    { "use UP9600 interface emulation",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserUP9600_callback,
+      NULL },
+    { "invert RTS line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserRTSInv_callback,
+      NULL },
+    { "invert CTS line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserCTSInv_callback,
+      NULL },
+    { "invert DSR line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDSRInv_callback,
+      NULL },
+    { "invert DCD line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDCDInv_callback,
+      NULL },
+    { "invert DTR line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDTRInv_callback,
+      NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Host settings"),
     { "Device 1",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice1_callback,
       (ui_callback_data_t)"RS232 host device 1" },
+    { "Device 1 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs1baud_menu },
+    { "Device 1 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice1ip232_callback,
+      NULL },
     { "Device 2",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice2_callback,
       (ui_callback_data_t)"RS232 host device 2" },
+    { "Device 2 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs2baud_menu },
+    { "Device 2 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice2ip232_callback,
+      NULL },
     { "Device 3",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice3_callback,
       (ui_callback_data_t)"RS232 host device 3" },
+    { "Device 3 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs3baud_menu },
+    { "Device 3 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice3ip232_callback,
+      NULL },
     { "Device 4",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice4_callback,
       (ui_callback_data_t)"RS232 host device 4" },
-    VICE_SDL_RS232_ARCHDEP_ITEMS
+    { "Device 4 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs4baud_menu },
+    { "Device 4 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice4ip232_callback,
+      NULL },
     SDL_MENU_LIST_END
 };
 
@@ -369,9 +457,9 @@ const ui_menu_entry_t rs232_c128_menu[] = {
       (ui_callback_data_t)acia1mode_menu },
     SDL_MENU_ITEM_SEPARATOR,
     { "Userport RS232 emulation",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_RsUserEnable_callback,
-      NULL },
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_UserportDevice_callback,
+      (ui_callback_data_t)USERPORT_DEVICE_RS232_MODEM },
     { "Userport RS232 host device",
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
@@ -380,25 +468,80 @@ const ui_menu_entry_t rs232_c128_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
       (ui_callback_data_t)rsuserbaud_menu },
+    { "use UP9600 interface emulation",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserUP9600_callback,
+      NULL },
+    { "invert RTS line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserRTSInv_callback,
+      NULL },
+    { "invert CTS line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserCTSInv_callback,
+      NULL },
+    { "invert DSR line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDSRInv_callback,
+      NULL },
+    { "invert DCD line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDCDInv_callback,
+      NULL },
+    { "invert DTR line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDTRInv_callback,
+      NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Host settings"),
     { "Device 1",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice1_callback,
       (ui_callback_data_t)"RS232 host device 1" },
+    { "Device 1 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs1baud_menu },
+    { "Device 1 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice1ip232_callback,
+      NULL },
     { "Device 2",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice2_callback,
       (ui_callback_data_t)"RS232 host device 2" },
-    { "Device 3",
+    { "Device 2 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs2baud_menu },
+     { "Device 2 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice2ip232_callback,
+      NULL },
+   { "Device 3",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice3_callback,
       (ui_callback_data_t)"RS232 host device 3" },
+    { "Device 3 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs3baud_menu },
+    { "Device 3 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice3ip232_callback,
+      NULL },
     { "Device 4",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice4_callback,
       (ui_callback_data_t)"RS232 host device 4" },
-    VICE_SDL_RS232_ARCHDEP_ITEMS
+    { "Device 4 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs4baud_menu },
+    { "Device 4 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice4ip232_callback,
+      NULL },
     SDL_MENU_LIST_END
 };
 
@@ -425,9 +568,9 @@ const ui_menu_entry_t rs232_vic20_menu[] = {
       (ui_callback_data_t)acia1mode_menu },
     SDL_MENU_ITEM_SEPARATOR,
     { "Userport RS232 emulation",
-      MENU_ENTRY_RESOURCE_TOGGLE,
-      toggle_RsUserEnable_callback,
-      NULL },
+      MENU_ENTRY_RESOURCE_RADIO,
+      radio_UserportDevice_callback,
+      (ui_callback_data_t)USERPORT_DEVICE_RS232_MODEM },
     { "Userport RS232 host device",
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
@@ -436,25 +579,80 @@ const ui_menu_entry_t rs232_vic20_menu[] = {
       MENU_ENTRY_SUBMENU,
       submenu_radio_callback,
       (ui_callback_data_t)rsuserbaud_menu },
+    { "use UP9600 interface emulation",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserUP9600_callback,
+      NULL },
+    { "invert RTS line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserRTSInv_callback,
+      NULL },
+    { "invert CTS line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserCTSInv_callback,
+      NULL },
+    { "invert DSR line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDSRInv_callback,
+      NULL },
+    { "invert DCD line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDCDInv_callback,
+      NULL },
+    { "invert DTR line",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsUserDTRInv_callback,
+      NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Host settings"),
     { "Device 1",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice1_callback,
       (ui_callback_data_t)"RS232 host device 1" },
+    { "Device 1 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs1baud_menu },
+    { "Device 1 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice1ip232_callback,
+      NULL },
     { "Device 2",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice2_callback,
       (ui_callback_data_t)"RS232 host device 2" },
+    { "Device 2 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs2baud_menu },
+    { "Device 2 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice2ip232_callback,
+      NULL },
     { "Device 3",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice3_callback,
       (ui_callback_data_t)"RS232 host device 3" },
+    { "Device 3 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs3baud_menu },
+    { "Device 3 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice3ip232_callback,
+      NULL },
     { "Device 4",
       MENU_ENTRY_RESOURCE_STRING,
       string_RsDevice4_callback,
       (ui_callback_data_t)"RS232 host device 4" },
-    VICE_SDL_RS232_ARCHDEP_ITEMS
+    { "Device 4 baud rate",
+      MENU_ENTRY_SUBMENU,
+      submenu_radio_callback,
+      (ui_callback_data_t)rs4baud_menu },
+    { "Device 4 use IP232 protocol",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_RsDevice4ip232_callback,
+      NULL },
     SDL_MENU_LIST_END
 };
 #endif

@@ -43,6 +43,9 @@
 #include "raster.h"
 #include "viewport.h"
 
+#ifdef __LIBRETRO__
+#include "libretro-core.h"
+#endif
 
 unsigned int raster_line_get_real_mode(raster_t *raster)
 {
@@ -82,7 +85,7 @@ inline void raster_line_draw_blank(raster_t *raster, unsigned int start,
    collisions only, but we are lazy.  */
 inline static void update_sprite_collisions(raster_t *raster)
 {
-    BYTE *fake_draw_buffer_ptr;
+    uint8_t *fake_draw_buffer_ptr;
 
     if (raster->sprite_status == NULL || raster->sprite_status->draw_function == NULL) {
         return;
@@ -129,6 +132,9 @@ inline static void handle_blank_line_cached(raster_t *raster)
 
 static void handle_blank_line(raster_t *raster)
 {
+#ifdef __LIBRETRO__
+    vice_raster.blanked++;
+#endif
     if (raster->changes->have_on_this_line) {
         raster_changes_t *border_changes;
         unsigned int i, xs;
@@ -682,7 +688,7 @@ void raster_line_emulate(raster_t *raster)
         if (++raster->num_cached_lines == (1
                                            + raster->geometry->last_displayed_line
                                            - raster->geometry->first_displayed_line)) {
-            raster->dont_cache = 0;
+            raster->dont_cache = 1;
             raster->num_cached_lines = 0;
         }
 

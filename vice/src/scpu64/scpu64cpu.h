@@ -29,7 +29,7 @@
 
 struct snapshot_module_s;
 
-int scpu64_get_half_cycle(void);
+CLOCK scpu64_get_half_cycle(void);
 void scpu64_set_fastmode(int mode);
 void scpu64_set_fastmode_nosync(int mode);
 void scpu64_set_simm_row_size(int value);
@@ -42,13 +42,13 @@ void scpu64_clock_write_stretch_io_start_cia(void);
 void scpu64_clock_write_stretch_io(void);
 void scpu64_clock_write_stretch_io_long(void);
 void scpu64_clock_write_stretch_io_cia(void);
-void scpu64_clock_read_stretch_simm(DWORD addr);
-void scpu64_clock_write_stretch_simm(DWORD addr);
+void scpu64_clock_read_stretch_simm(uint32_t addr);
+void scpu64_clock_write_stretch_simm(uint32_t addr);
 void scpu64_clock_read_ioram(void);
 void maincpu_steal_cycles(void);
 int scpu64_snapshot_write_cpu_state(struct snapshot_module_s *m);
 int scpu64_snapshot_read_cpu_state(struct snapshot_module_s *m);
 extern int scpu64_emulation_mode;
-extern int scpu64_fastmode;
+extern uint8_t scpu64_fastmode;
 
 #endif

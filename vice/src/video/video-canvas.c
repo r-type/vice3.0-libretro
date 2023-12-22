@@ -34,6 +34,8 @@
 
 #include "vice.h"
 
+#include "videoarch.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -45,9 +47,16 @@
 #include "video-color.h"
 #include "video-render.h"
 #include "video.h"
-#include "videoarch.h"
 #include "viewport.h"
 
+#ifdef __LIBRETRO__
+extern int retroXS, retroYS, retrow, retroh;
+#endif
+
+#define TRACKED_CANVAS_MAX 2
+
+/** \brief Used to enable video_canvas_refresh_all_tracked() */
+static video_canvas_t *tracked_canvas[TRACKED_CANVAS_MAX];
 
 /* Temporary! */
 #ifndef MIN
@@ -57,6 +66,7 @@
 /* called from raster/raster-resources.c:raster_resources_chip_init */
 video_canvas_t *video_canvas_init(void)
 {
+    int i;
     video_canvas_t *canvas;
 
     canvas = lib_calloc(1, sizeof(video_canvas_t));
@@ -70,26 +80,45 @@ video_canvas_t *video_canvas_init(void)
 
     video_arch_canvas_init(canvas);
 
+    for (i = 0; i < TRACKED_CANVAS_MAX; i++) {
+        if (!tracked_canvas[i]) {
+            tracked_canvas[i] = canvas;
+            break;
+        }
+    }
+
+    if (i == TRACKED_CANVAS_MAX) {
+        log_error(LOG_ERR, "Creating more than expected video_canvas_t, monitor will not refresh this canvas after each command");
+    }
+
     return canvas;
 }
 
 void video_canvas_shutdown(video_canvas_t *canvas)
 {
+    int i;
+
     if (canvas != NULL) {
+        /* Remove canvas from tracking */
+        for (i = 0; i < TRACKED_CANVAS_MAX; i++) {
+            if (tracked_canvas[i] == canvas) {
+                tracked_canvas[i] = NULL;
+                break;
+            }
+        }
+
         lib_free(canvas->videoconfig);
         lib_free(canvas->draw_buffer);
-        video_viewport_title_free(canvas->viewport);
         lib_free(canvas->viewport);
         lib_free(canvas->geometry);
         lib_free(canvas);
     }
 }
 
-void video_canvas_render(video_canvas_t *canvas, BYTE *trg, int width,
+void video_canvas_render(video_canvas_t *canvas, uint8_t *trg, int width,
                          int height, int xs, int ys, int xt, int yt,
-                         int pitcht, int depth)
+                         int pitcht)
 {
-    static int lastmode = -1;
     viewport_t *viewport = canvas->viewport;
 #ifdef VIDEO_SCALE_SOURCE
     xs /= canvas->videoconfig->scalex;
@@ -97,9 +126,9 @@ void video_canvas_render(video_canvas_t *canvas, BYTE *trg, int width,
 #endif
 
     /* when the color encoding changed, the palette must be recalculated */
-    if (viewport->crt_type != lastmode) {
+    if (viewport->crt_type != canvas->crt_type) {
         canvas->videoconfig->color_tables.updated = 0;
-        lastmode = viewport->crt_type;
+        canvas->crt_type = viewport->crt_type;
     }
 
     if (!canvas->videoconfig->color_tables.updated) { /* update colors as necessary */
@@ -107,11 +136,25 @@ void video_canvas_render(video_canvas_t *canvas, BYTE *trg, int width,
     }
     video_render_main(canvas->videoconfig, canvas->draw_buffer->draw_buffer,
                       trg, width, height, xs, ys, xt, yt,
-                      canvas->draw_buffer->draw_buffer_width, pitcht, depth,
+                      canvas->draw_buffer->draw_buffer_width, pitcht,
                       viewport);
 }
 
-extern int retroXS,retroYS,retroH,retroW;
+/** \brief Force refresh all tracked canvases.
+ *
+ * Added to enable visible updates each time the monitor
+ * prompts for input.
+ */
+void video_canvas_refresh_all_tracked(void)
+{
+    int i;
+
+    for (i = 0; i < TRACKED_CANVAS_MAX; i++) {
+        if (tracked_canvas[i]) {
+            video_canvas_refresh_all(tracked_canvas[i]);
+        }
+    }
+}
 
 void video_canvas_refresh_all(video_canvas_t *canvas)
 {
@@ -138,14 +181,11 @@ void video_canvas_refresh_all(video_canvas_t *canvas)
                          MIN(canvas->draw_buffer->canvas_height,
                              viewport->last_line - viewport->first_line + 1));
 #endif
-	retroXS=viewport->first_x
-                         + geometry->extra_offscreen_border_left;
-	retroYS= viewport->first_line;
-	retroH=MIN(canvas->draw_buffer->canvas_height,
-                             viewport->last_line - viewport->first_line + 1);
-	retroW=MIN(canvas->draw_buffer->canvas_width,
-                             geometry->screen_size.width - viewport->first_x);
-#endif
+	retroXS = viewport->first_x + geometry->extra_offscreen_border_left;
+	retroYS = viewport->first_line;
+	retrow = MIN(canvas->draw_buffer->canvas_width, geometry->screen_size.width - viewport->first_x);
+	retroh = MIN(canvas->draw_buffer->canvas_height, viewport->last_line - viewport->first_line + 1);
+#endif /* __LIBRETRO__ */
     video_canvas_refresh(canvas,
                          viewport->first_x
                          + geometry->extra_offscreen_border_left,
@@ -181,9 +221,11 @@ int video_canvas_palette_set(struct video_canvas_s *canvas,
         video_color_palette_free(old_palette);
     }
 
-    if (canvas->created) {
-        video_canvas_refresh_all(canvas);
-    }
+#if 0 /* WTF this was causing each frame to be rendered twice */
+   if (canvas->created) {
+       video_canvas_refresh_all(canvas);
+   }
+#endif
 
     return 0;
 }

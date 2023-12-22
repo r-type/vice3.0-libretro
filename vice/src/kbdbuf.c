@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "alarm.h"
@@ -44,7 +45,6 @@
 #include "maincpu.h"
 #include "mem.h"
 #include "resources.h"
-#include "translate.h"
 #include "types.h"
 
 
@@ -65,7 +65,7 @@ static int buffer_size;
 static CLOCK kernal_init_cycles;
 
 /* Characters in the queue.  */
-static BYTE queue[QUEUE_SIZE];
+static uint8_t queue[QUEUE_SIZE];
 
 /* Next element in `queue' we must push into the kernal's queue.  */
 static int head_idx = 0;
@@ -84,6 +84,9 @@ static int KbdbufDelay = 0;
 static int use_kbdbuf_flush_alarm = 0;
 
 static alarm_t *kbdbuf_flush_alarm = NULL;
+
+/* Only feed the cmdline -kbdbuf argument to the buffer once */
+static bool kbdbuf_init_cmdline_fed = false;
 
 CLOCK kbdbuf_flush_alarm_time = 0;
 
@@ -161,7 +164,7 @@ static void kbd_buf_parse_string(const char *string)
             }
         } else {
             /* printf("chr:%s\n", &string[i]); */
-            /* regular character, translate to petscii */
+            /* regular character, convert to petscii */
             kbd_buf_string[j] = charset_p_topetcii(string[i]);
             j++;
         }
@@ -184,16 +187,12 @@ static int kdb_buf_feed_cmdline(const char *param, void *extra_param)
 
 static const cmdline_option_t cmdline_options[] =
 {
-    { "-keybuf", CALL_FUNCTION, 1,
+    { "-keybuf", CALL_FUNCTION, CMDLINE_ATTRIB_NEED_ARGS,
       kdb_buf_feed_cmdline, NULL, NULL, NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_STRING, IDCLS_PUT_STRING_INTO_KEYBUF,
-      NULL, NULL },
-    { "-keybuf-delay", SET_RESOURCE, 1,
+      "<string>", "Put the specified string into the keyboard buffer." },
+    { "-keybuf-delay", SET_RESOURCE, CMDLINE_ATTRIB_NEED_ARGS,
       NULL, NULL, "KbdbufDelay", NULL,
-      USE_PARAM_ID, USE_DESCRIPTION_ID,
-      IDCLS_P_VALUE, IDCLS_SET_KEYBUF_DELAY,
-      NULL, NULL },
+      "<value>", "Set additional keyboard buffer delay (0: use default)" },
     CMDLINE_LIST_END
 };
 
@@ -207,16 +206,22 @@ int kbdbuf_cmdline_options_init(void)
 /* put character into the keyboard queue inside the emulation */
 static void tokbdbuffer(int c)
 {
-    int num = mem_read((WORD)(num_pending_location));
+    int num = mem_read((uint16_t)(num_pending_location));
     /* printf("tokbdbuffer c:%d num:%d\n", c, num); */
-    mem_inject((WORD)(buffer_location + num), (BYTE)c);
-    mem_inject((WORD)(num_pending_location), (BYTE)(num + 1));
+    mem_inject_key((uint16_t)(buffer_location + num), (uint8_t)c);
+    mem_inject_key((uint16_t)(num_pending_location), (uint8_t)(num + 1));
 }
 
 /* Return nonzero if the keyboard buffer is empty.  */
 int kbdbuf_is_empty(void)
 {
-    return (int)(mem_read((WORD)(num_pending_location)) == 0);
+    return (int)(mem_read((uint16_t)(num_pending_location)) == 0);
+}
+
+/* Return nonzero if there are keys in the buffer queue */
+int kbdbuf_queue_is_empty(void)
+{
+    return num_pending > 0 ? 0 : 1;
 }
 
 /* Feed `string' into the incoming queue.  */
@@ -299,7 +304,16 @@ void kbdbuf_init(int location, int plocation, int size, CLOCK mincycles)
     /* inject string given to -keybuf option on commandline into keyboard buffer,
        except autoload/start was used, then it is postponed to after the loading */
     if (!isautoload) {
-        kbdbuf_feed_cmdline();
+        /* only feed command line argument when the buffer can be fed */
+        if (size > 0) {
+            /* only feed the command line argument once, see src/pet/petrom.c:
+             * petrom_checksum() calls kbdbuf_init() for $reason and that
+             * function is called twice */
+            if (!kbdbuf_init_cmdline_fed) {
+                kbdbuf_feed_cmdline();
+                kbdbuf_init_cmdline_fed = true; /* trigger diet */
+            }
+        }
     }
 }
 
@@ -324,13 +338,22 @@ int kbdbuf_feed_runcmd(const char *string)
    This is (at least) called once per frame in vsync handler */
 void kbdbuf_flush(void)
 {
+    static bool prevent_recursion = false;
+
     unsigned int i, n;
+
+    /* memory write side effects can end up calling draw handler -> vsync end of line -> kbdbuf_flush infinitely */
+    if (prevent_recursion) {
+        return;
+    }
+    prevent_recursion = true;
 
     if ((!kbd_buf_enabled)
         || (num_pending == 0)
         || !kbdbuf_is_empty()
         || (maincpu_clk < kernal_init_cycles)
         || (kbdbuf_flush_alarm_time != 0)) {
+        prevent_recursion = false;
         return;
     }
     n = num_pending > buffer_size ? buffer_size : num_pending;
@@ -340,12 +363,16 @@ void kbdbuf_flush(void)
         /* use an alarm to randomly delay RETURN for up to one frame */
         if ((queue[head_idx] == 13) && (use_kbdbuf_flush_alarm == 1)) {
             /* we actually need to wait _at least_ one frame to not overrun the buffer */
-            kbdbuf_flush_alarm_time = maincpu_clk + machine_get_cycles_per_frame();
-            kbdbuf_flush_alarm_time += lib_unsigned_rand(1, machine_get_cycles_per_frame());
+            kbdbuf_flush_alarm_time = maincpu_clk + (CLOCK)machine_get_cycles_per_frame();
+            kbdbuf_flush_alarm_time += lib_unsigned_rand(1, (unsigned int)machine_get_cycles_per_frame());
             alarm_set(kbdbuf_flush_alarm, kbdbuf_flush_alarm_time);
+
+            prevent_recursion = false;
             return;
         }
         tokbdbuffer(queue[head_idx]);
         removefromqueue();
     }
+
+    prevent_recursion = false;
 }

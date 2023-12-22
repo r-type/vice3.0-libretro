@@ -22,7 +22,7 @@
 
 #include "residdtv-config.h"
 
-namespace reSID
+namespace reSID_dtv
 {
 
 class Filter
@@ -67,15 +67,15 @@ friend class SID;
 // ----------------------------------------------------------------------------
 RESID_INLINE
 void Filter::clock(sound_sample voice1,
-		   sound_sample voice2,
-		   sound_sample voice3)
+                    sound_sample voice2,
+                    sound_sample voice3)
 {
   /* Voice3off always disables the voice, even when the filter routing bits are
      set. (We don't track routing bits at all.) */
   if (voice3off) {
     voice3 = 0;
   }
-  
+
   Vnf = (voice1 + voice2 + voice3) << 9;
 }
 
@@ -90,6 +90,6 @@ sound_sample Filter::output()
 
 #endif // RESID_INLINING || defined(__FILTER_CC__)
 
-} // namespace reSID
+} // namespace reSID_dtv
 
 #endif // not __FILTER_H__

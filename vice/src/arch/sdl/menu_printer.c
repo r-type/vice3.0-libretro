@@ -34,6 +34,9 @@
 #include "printer.h"
 #include "resources.h"
 #include "uimenu.h"
+#include "userport.h"
+
+UI_MENU_DEFINE_RADIO(UserportDevice)
 
 #define VICE_SDL_PRINTER_DRIVER_MENU(prn)                             \
     UI_MENU_DEFINE_RADIO(Printer##prn##Driver)                        \
@@ -135,7 +138,7 @@ VICE_SDL_PRINTER_OUTPUT_MENU(5)
 VICE_SDL_PRINTER_OUTPUT_MENU(6)
 VICE_SDL_PRINTER_OUTPUT_MENU(Userport)
 
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
 
 #define VICE_SDL_PRINTER_TYPE_MENU(prn)                             \
     UI_MENU_DEFINE_RADIO(Printer##prn)                              \
@@ -169,7 +172,7 @@ VICE_SDL_PRINTER_OUTPUT_MENU(Userport)
         SDL_MENU_LIST_END                                           \
     };
 
-#else   /* !HAVE_OPENCBM */
+#else   /* !HAVE_REALDEVICE */
 
 #define VICE_SDL_PRINTER_TYPE_MENU(prn)                             \
     UI_MENU_DEFINE_RADIO(Printer##prn)                              \
@@ -193,15 +196,18 @@ VICE_SDL_PRINTER_TYPE_MENU(4)
 VICE_SDL_PRINTER_TYPE_MENU(5)
 VICE_SDL_PRINTER_TYPE_MENU(6)
 
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
 VICE_SDL_DEVICE_TYPE_MENU(7)
+UI_MENU_DEFINE_TOGGLE(VirtualDevice7)
 UI_MENU_DEFINE_TOGGLE(IECDevice7)
 #endif
 
+UI_MENU_DEFINE_TOGGLE(VirtualDevice4)
+UI_MENU_DEFINE_TOGGLE(VirtualDevice5)
+UI_MENU_DEFINE_TOGGLE(VirtualDevice6)
 UI_MENU_DEFINE_TOGGLE(IECDevice4)
 UI_MENU_DEFINE_TOGGLE(IECDevice5)
 UI_MENU_DEFINE_TOGGLE(IECDevice6)
-UI_MENU_DEFINE_TOGGLE(PrinterUserport)
 
 static UI_MENU_CALLBACK(uiprinter_formfeed_callback)
 {
@@ -276,7 +282,7 @@ static UI_MENU_CALLBACK(uiprinter_formfeed_callback)
       uiprinter_formfeed_callback,                    \
       (ui_callback_data_t)2 },
 
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
 #define VICE_SDL_DEVICE_COMMON_7_MENU_ITEMS \
     { "Device #7 emulation",                \
       MENU_ENTRY_SUBMENU,                   \
@@ -286,9 +292,9 @@ static UI_MENU_CALLBACK(uiprinter_formfeed_callback)
 
 #define VICE_SDL_PRINTER_USERPORT_MENU_ITEMS                 \
     { "Userport printer emulation",                          \
-      MENU_ENTRY_RESOURCE_TOGGLE,                            \
-      toggle_PrinterUserport_callback,                       \
-      NULL },                                                \
+      MENU_ENTRY_RESOURCE_RADIO,                             \
+      radio_UserportDevice_callback,                         \
+      (ui_callback_data_t)USERPORT_DEVICE_PRINTER },         \
     { "Userport printer driver",                             \
       MENU_ENTRY_SUBMENU,                                    \
       submenu_radio_callback,                                \
@@ -326,25 +332,41 @@ UI_MENU_DEFINE_STRING(PrinterTextDevice3)
 
 const ui_menu_entry_t printer_iec_menu[] = {
     VICE_SDL_PRINTER_COMMON_4_MENU_ITEMS
+    { "Printer #4 enable virtual device",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_VirtualDevice4_callback,
+      NULL },
     { "Printer #4 enable IEC device",
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_IECDevice4_callback,
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
     VICE_SDL_PRINTER_COMMON_5_MENU_ITEMS
+    { "Printer #5 enable virtual device",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_VirtualDevice5_callback,
+      NULL },
     { "Printer #5 enable IEC device",
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_IECDevice5_callback,
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
     VICE_SDL_PRINTER_COMMON_6_MENU_ITEMS
+    { "Printer #6 enable virtual device",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_VirtualDevice6_callback,
+      NULL },
     { "Printer #6 enable IEC device",
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_IECDevice6_callback,
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
     VICE_SDL_DEVICE_COMMON_7_MENU_ITEMS
+    { "Device #7 enable virtual device",
+      MENU_ENTRY_RESOURCE_TOGGLE,
+      toggle_VirtualDevice7_callback,
+      NULL },
     { "Device #7 enable IEC device",
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_IECDevice7_callback,
@@ -377,7 +399,7 @@ const ui_menu_entry_t printer_iec_nouserport_menu[] = {
     SDL_MENU_ITEM_SEPARATOR,
     VICE_SDL_PRINTER_COMMON_6_MENU_ITEMS
     SDL_MENU_ITEM_SEPARATOR,
-#ifdef HAVE_OPENCBM
+#ifdef HAVE_REALDEVICE
     VICE_SDL_DEVICE_COMMON_7_MENU_ITEMS
     SDL_MENU_ITEM_SEPARATOR,
 #endif

@@ -70,14 +70,14 @@ static UI_MENU_CALLBACK(attach_cart_callback)
             case CARTRIDGE_VIC20_16KB_2000:
             case CARTRIDGE_VIC20_16KB_4000:
             case CARTRIDGE_VIC20_16KB_6000:
-                title = "Select 4/8/16kB image";
+                title = "Select 4/8/16KiB image";
                 break;
             case CARTRIDGE_VIC20_8KB_A000:
-                title = "Select 4/8kB image";
+                title = "Select 4/8KiB image";
                 break;
             case CARTRIDGE_VIC20_4KB_B000:
             default:
-                title = "Select 4kB image";
+                title = "Select 4KiB image";
                 break;
         }
         name = sdl_ui_file_selection_dialog(title, FILEREQ_MODE_CHOOSE_FILE);
@@ -96,23 +96,23 @@ static const ui_menu_entry_t add_to_generic_cart_submenu[] = {
       MENU_ENTRY_DIALOG,
       attach_cart_callback,
       (ui_callback_data_t)CARTRIDGE_VIC20_DETECT },
-    { "Attach 4/8/16kB image at $2000",
+    { "Attach 4/8/16KiB image at $2000",
       MENU_ENTRY_DIALOG,
       attach_cart_callback,
       (ui_callback_data_t)CARTRIDGE_VIC20_16KB_2000 },
-    { "Attach 4/8/16kB image at $4000",
+    { "Attach 4/8/16KiB image at $4000",
       MENU_ENTRY_DIALOG,
       attach_cart_callback,
       (ui_callback_data_t)CARTRIDGE_VIC20_16KB_4000 },
-    { "Attach 4/8/16kB image at $6000",
+    { "Attach 4/8/16KiB image at $6000",
       MENU_ENTRY_DIALOG,
       attach_cart_callback,
       (ui_callback_data_t)CARTRIDGE_VIC20_16KB_6000 },
-    { "Attach 4/8kB image at $A000",
+    { "Attach 4/8KiB image at $A000",
       MENU_ENTRY_DIALOG,
       attach_cart_callback,
       (ui_callback_data_t)CARTRIDGE_VIC20_8KB_A000 },
-    { "Attach 4kB image at $B000",
+    { "Attach 4KiB image at $B000",
       MENU_ENTRY_DIALOG,
       attach_cart_callback,
       (ui_callback_data_t)CARTRIDGE_VIC20_4KB_B000 },
@@ -135,6 +135,50 @@ static UI_MENU_CALLBACK(set_cart_default_callback)
     return NULL;
 }
 
+static UI_MENU_CALLBACK(unset_cart_default_callback)
+{
+    if (activated) {
+        cartridge_unset_default();
+    }
+    return NULL;
+}
+
+static void cartmenu_update_flush(void);
+static void cartmenu_update_save(void);
+
+static UI_MENU_CALLBACK(vic20_cart_flush_callback)
+{
+    printf("\nvic20_cart_flush_callback\n");
+    if (activated) {
+        int cartid = vice_ptr_to_int(param);
+        if (cartridge_flush_image(cartid) < 0) {
+        }
+    } else {
+        cartmenu_update_flush();
+    }
+    return NULL;
+}
+
+static UI_MENU_CALLBACK(vic20_cart_save_callback)
+{
+    if (activated) {
+        int cartid = vice_ptr_to_int(param);
+        char *name = NULL;
+
+        name = sdl_ui_file_selection_dialog("Choose cartridge file", FILEREQ_MODE_SAVE_FILE);
+
+        if (name != NULL) {
+            if (cartridge_save_image(cartid, name) < 0) {
+                ui_error("Cannot save cartridge image.");
+            }
+            lib_free(name);
+        }
+    } else {
+        cartmenu_update_save();
+    }
+    return NULL;
+}
+
 /* GEORAM */
 
 UI_MENU_DEFINE_TOGGLE(GEORAM)
@@ -143,7 +187,7 @@ UI_MENU_DEFINE_RADIO(GEORAMsize)
 UI_MENU_DEFINE_FILE_STRING(GEORAMfilename)
 UI_MENU_DEFINE_TOGGLE(GEORAMImageWrite)
 
-static const ui_menu_entry_t georam_menu[] = {
+static ui_menu_entry_t georam_menu[] = {
     { "Enable " CARTRIDGE_NAME_GEORAM,
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_GEORAM_callback,
@@ -154,31 +198,19 @@ static const ui_menu_entry_t georam_menu[] = {
       NULL },
     SDL_MENU_ITEM_SEPARATOR,
     SDL_MENU_ITEM_TITLE("Memory size"),
-    { "64kB",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_GEORAMsize_callback,
-      (ui_callback_data_t)64 },
-    { "128kB",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_GEORAMsize_callback,
-      (ui_callback_data_t)128 },
-    { "256kB",
-      MENU_ENTRY_RESOURCE_RADIO,
-      radio_GEORAMsize_callback,
-      (ui_callback_data_t)256 },
-    { "512kB",
+    { "512KiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)512 },
-    { "1024kB",
+    { "1MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)1024 },
-    { "2048kB",
+    { "2MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)2048 },
-    { "4096kB",
+    { "4MiB",
       MENU_ENTRY_RESOURCE_RADIO,
       radio_GEORAMsize_callback,
       (ui_callback_data_t)4096 },
@@ -192,6 +224,14 @@ static const ui_menu_entry_t georam_menu[] = {
       MENU_ENTRY_RESOURCE_TOGGLE,
       toggle_GEORAMImageWrite_callback,
       NULL },
+    { "Save image now",
+      MENU_ENTRY_OTHER,
+      vic20_cart_flush_callback,
+      (ui_callback_data_t)CARTRIDGE_VIC20_GEORAM },
+    { "Save image as",
+      MENU_ENTRY_OTHER,
+      vic20_cart_save_callback,
+      (ui_callback_data_t)CARTRIDGE_VIC20_GEORAM },
     SDL_MENU_LIST_END
 };
 
@@ -381,17 +421,29 @@ static UI_MENU_CALLBACK(iocollision_show_type_callback)
     resources_get_int("IOCollisionHandling", &type);
     switch (type) {
         case IO_COLLISION_METHOD_DETACH_ALL:
-            return "-> detach all";
+            return MENU_SUBMENU_STRING " detach all";
             break;
         case IO_COLLISION_METHOD_DETACH_LAST:
-            return "-> detach last";
+            return MENU_SUBMENU_STRING " detach last";
             break;
         case IO_COLLISION_METHOD_AND_WIRES:
-            return "-> AND values";
+            return MENU_SUBMENU_STRING " AND values";
             break;
     }
     return "n/a";
 }
+
+static void cartmenu_update_flush(void)
+{
+    georam_menu[12].status = cartridge_can_flush_image(CARTRIDGE_VIC20_GEORAM) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+}
+
+static void cartmenu_update_save(void)
+{
+    georam_menu[13].status = cartridge_can_save_image(CARTRIDGE_VIC20_GEORAM) ? MENU_STATUS_ACTIVE : MENU_STATUS_INACTIVE;
+}
+
+/* Cartridge menu */
 
 UI_MENU_DEFINE_TOGGLE(CartridgeReset)
 UI_MENU_DEFINE_TOGGLE(FinalExpansionWriteBack)
@@ -442,7 +494,11 @@ const ui_menu_entry_t vic20cart_menu[] = {
       MENU_ENTRY_OTHER,
       set_cart_default_callback,
       NULL },
-    { "I/O collision handling ($9000-$93FF / $9800-$9FFF)",
+    { "Unset default cartridge",
+      MENU_ENTRY_OTHER,
+      unset_cart_default_callback,
+      NULL },
+    { "I/O collision handling ($9000-$93FF/$9800-$9FFF)",
       MENU_ENTRY_SUBMENU,
       iocollision_show_type_callback,
       (ui_callback_data_t)iocollision_menu },

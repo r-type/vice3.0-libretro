@@ -43,28 +43,57 @@
 
 static int is_paused = 0;
 
-static void pause_trap(WORD addr, void *data)
+bool ui_pause_loop_iteration(void)
+{
+    ui_dispatch_events();
+    SDL_Delay(10);
+
+    return is_paused;
+}
+
+static void pause_trap(uint16_t addr, void *data)
 {
     vsync_suspend_speed_eval();
-    while (is_paused) {
-        ui_dispatch_events();
-        SDL_Delay(10);
-    }
+    sound_suspend();
+
+    while (ui_pause_loop_iteration());
 }
 
-void ui_pause_emulation(int flag)
-{
-    if (flag) {
-        ui_display_paused(1);
-        is_paused = 1;
-        interrupt_maincpu_trigger_trap(pause_trap, 0);
-    } else {
-        ui_display_paused(0);
-        is_paused = 0;
-    }
-}
 
-int ui_emulation_is_paused(void)
+/** \brief  Get current pause state
+ *
+ * \return  boolean
+ */
+int ui_pause_active(void)
 {
     return is_paused;
+}
+
+
+/** \brief  Enable pause
+ */
+void ui_pause_enable(void)
+{
+    is_paused = 1;
+    interrupt_maincpu_trigger_trap(pause_trap, 0);
+}
+
+
+/** \brief  Disable pause
+ */
+void ui_pause_disable(void)
+{
+    is_paused = 0;
+}
+
+
+/** \brief  Toggle pause
+ */
+void ui_pause_toggle(void)
+{
+    if (ui_pause_active()) {
+        ui_pause_disable();
+    } else {
+        ui_pause_enable();
+    }
 }

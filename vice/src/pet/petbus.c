@@ -24,28 +24,36 @@
  *
  */
 
+/* #define DEBUG_PET_BUS */
+
 #include "vice.h"
 
+#include "log.h"
 #include "machine-bus.h"
 #include "serial.h"
 #include "parallel.h"
 #include "types.h"
 
+#ifdef DEBUG_PET_BUS
+#define DBG(x)  log_debug x
+#else
+#define DBG(x)
+#endif
 
 int machine_bus_lib_directory(unsigned int unit, const char *pattern,
-                              BYTE **buf)
+                              uint8_t **buf)
 {
     return -1;
 }
 
 int machine_bus_lib_read_sector(unsigned int unit, unsigned int track,
-                                unsigned int sector, BYTE *buf)
+                                unsigned int sector, uint8_t *buf)
 {
     return -1;
 }
 
 int machine_bus_lib_write_sector(unsigned int unit, unsigned int track,
-                                 unsigned int sector, BYTE *buf)
+                                 unsigned int sector, uint8_t *buf)
 {
     return -1;
 }
@@ -55,17 +63,20 @@ unsigned int machine_bus_device_type_get(unsigned int unit)
     return SERIAL_DEVICE_VIRT;
 }
 
-void machine_bus_status_truedrive_set(unsigned int enable)
+void machine_bus_status_truedrive_set(unsigned int unit, unsigned int enable)
 {
+    DBG(("machine_bus_status_truedrive_set unit:%u enable:%u", unit, enable));
 }
 
 void machine_bus_status_drivetype_set(unsigned int unit, unsigned int enable)
 {
+    DBG(("machine_bus_status_drivetype_set unit:%u enable:%u", unit, enable));
 }
 
-void machine_bus_status_virtualdevices_set(unsigned int enable)
+void machine_bus_status_virtualdevices_set(unsigned int unit, unsigned int enable)
 {
-    parallel_bus_enable(enable);
+    DBG(("machine_bus_status_virtualdevices_set unit:%u enable:%u", unit, enable));
+    parallel_bus_enable(unit, enable);
 }
 
 void machine_bus_eof_callback_set(void (*func)(void))

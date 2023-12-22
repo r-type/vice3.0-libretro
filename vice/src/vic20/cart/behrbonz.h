@@ -31,14 +31,16 @@
 
 #include "types.h"
 
-extern BYTE behrbonz_blk13_read(WORD addr);
-extern BYTE behrbonz_blk25_read(WORD addr);
+extern uint8_t behrbonz_blk13_read(uint16_t addr);
+extern uint8_t behrbonz_blk25_read(uint16_t addr);
 
 extern void behrbonz_init(void);
 extern void behrbonz_reset(void);
 
-extern void behrbonz_config_setup(BYTE *rawcart);
+extern void behrbonz_config_setup(uint8_t *rawcart);
 extern int behrbonz_bin_attach(const char *filename);
+/* extern int behrbonz_bin_attach(const char *filename, uint8_t *rawcart); */
+extern int behrbonz_crt_attach(FILE *fd, uint8_t *rawcart);
 extern void behrbonz_detach(void);
 
 struct snapshot_s;

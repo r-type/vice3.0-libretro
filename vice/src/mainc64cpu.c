@@ -32,17 +32,19 @@
 
 #include "6510core.h"
 #include "alarm.h"
+#include "archdep.h"
+#include "autostart.h"
 
 #ifdef FEATURE_CPUMEMHISTORY
 #include "c64pla.h"
 #endif
 
-#include "clkguard.h"
 #include "debug.h"
 #include "interrupt.h"
 #include "machine.h"
 #include "mainc64cpu.h"
 #include "maincpu.h"
+#include "mainlock.h"
 #include "mem.h"
 #include "monitor.h"
 #include "mos6510.h"
@@ -63,9 +65,11 @@
 */
 
 /* ------------------------------------------------------------------------- */
-#ifdef DEBUG
+#if defined (DEBUG) || defined (FEATURE_CPUMEMHISTORY)
 CLOCK debug_clk;
 #endif
+
+static int reu_dma_triggered = 0;
 
 #define NEED_REG_PC
 
@@ -102,7 +106,7 @@ inline static void interrupt_delay(void)
 static void maincpu_steal_cycles(void)
 {
     interrupt_cpu_status_t *cs = maincpu_int_status;
-    BYTE opcode;
+    uint8_t opcode;
 
     if (maincpu_ba_low_flags & MAINCPU_BA_LOW_VICII) {
         vicii_steal_cycles();
@@ -152,6 +156,12 @@ static void maincpu_steal_cycles(void)
            cycles were stolen after the first fetch */
         /* (fall through) */
 
+        /* LXA */
+        case 0xab:
+        /* this is a hacky way of signaling LXA() that
+           cycles were stolen after the first fetch */
+        /* (fall through) */
+
         /* CLI */
         case 0x58:
             /* this is a hacky way of signaling CLI() that it
@@ -178,11 +188,11 @@ static void maincpu_steal_cycles(void)
 inline static void check_ba(void)
 {
     if (maincpu_ba_low_flags) {
-#ifdef DEBUG
+#if defined (DEBUG) || defined (FEATURE_CPUMEMHISTORY)
         CLOCK old_maincpu_clk = maincpu_clk;
 #endif
         maincpu_steal_cycles();
-#ifdef DEBUG
+#if defined (DEBUG) || defined (FEATURE_CPUMEMHISTORY)
         if (debug_clk == old_maincpu_clk) {
             debug_clk = maincpu_clk;
         }
@@ -235,23 +245,50 @@ inline static void memmap_mem_update(unsigned int addr, int write)
     monitor_memmap_store(addr, type);
 }
 
-void memmap_mem_store(unsigned int addr, unsigned int value)
+static void memmap_mem_store(unsigned int addr, unsigned int value)
 {
     memmap_mem_update(addr, 1);
-    (*_mem_write_tab_ptr[(addr) >> 8])((WORD)(addr), (BYTE)(value));
+    (*_mem_write_tab_ptr[(addr) >> 8])((uint16_t)(addr), (uint8_t)(value));
+}
+
+static void memmap_mem_store_dummy(unsigned int addr, unsigned int value)
+{
+    memmap_mem_update(addr, 1);
+    (*_mem_write_tab_ptr_dummy[(addr) >> 8])((uint16_t)(addr), (uint8_t)(value));
 }
 
 /* read byte, check BA and mark as read */
-BYTE memmap_mem_read(unsigned int addr)
+static uint8_t memmap_mem_read(unsigned int addr)
 {
     check_ba();
     memmap_mem_update(addr, 0);
-    return (*_mem_read_tab_ptr[(addr) >> 8])((WORD)(addr));
+    return (*_mem_read_tab_ptr[(addr) >> 8])((uint16_t)(addr));
+}
+
+static uint8_t memmap_mem_read_dummy(unsigned int addr)
+{
+    check_ba();
+    memmap_mem_update(addr, 0);
+    return (*(_mem_read_tab_ptr_dummy[(addr) >> 8]))((uint16_t)(addr));
 }
 
 #ifndef STORE
 #define STORE(addr, value) \
-    memmap_mem_store(addr, value)
+    if (reu_dma_triggered == 0) { \
+        memmap_mem_store(addr, value); \
+        if (addr == 0xff00) { \
+            reu_dma(-1); \
+        } \
+    } \
+    reu_dma_triggered = 0
+#endif
+
+#ifndef STORE_DUMMY
+#define STORE_DUMMY(addr, value) \
+    memmap_mem_store_dummy(addr, value); \
+    if (addr == 0xff00) { \
+        reu_dma_triggered = reu_dma(-1); \
+    }
 #endif
 
 #ifndef LOAD
@@ -259,10 +296,22 @@ BYTE memmap_mem_read(unsigned int addr)
     memmap_mem_read(addr)
 #endif
 
+#ifndef LOAD_DUMMY
+#define LOAD_DUMMY(addr) \
+    memmap_mem_read_dummy(addr)
+#endif
+
 #ifndef LOAD_CHECK_BA_LOW
 #define LOAD_CHECK_BA_LOW(addr) \
     check_ba_low = 1;           \
-    memmap_mem_read(addr);      \
+    memmap_mem_read(addr);\
+    check_ba_low = 0
+#endif
+
+#ifndef LOAD_CHECK_BA_LOW_DUMMY
+#define LOAD_CHECK_BA_LOW_DUMMY(addr) \
+    check_ba_low = 1;           \
+    memmap_mem_read_dummy(addr);\
     check_ba_low = 0
 #endif
 
@@ -271,33 +320,68 @@ BYTE memmap_mem_read(unsigned int addr)
     memmap_mem_store((addr) & 0xff, value)
 #endif
 
+#ifndef STORE_ZERO_DUMMY
+#define STORE_ZERO_DUMMY(addr, value) \
+    memmap_mem_store_dummy((addr) & 0xff, value)
+#endif
+
 #ifndef LOAD_ZERO
 #define LOAD_ZERO(addr) \
     memmap_mem_read((addr) & 0xff)
 #endif
 
+#ifndef LOAD_ZERO_DUMMY
+#define LOAD_ZERO_DUMMY(addr) \
+    memmap_mem_read_dummy((addr) & 0xff)
+#endif
+
 /* Route stack operations through memmap */
 
-#define PUSH(val) memmap_mem_store((0x100 + (reg_sp--)), (BYTE)(val))
+#define PUSH(val) memmap_mem_store((0x100 + (reg_sp--)), (uint8_t)(val))
 #define PULL()    memmap_mem_read(0x100 + (++reg_sp))
-#define STACK_PEEK()  memmap_mem_read(0x100 + reg_sp)
+#define STACK_PEEK()  memmap_mem_read_dummy(0x100 + reg_sp)
 
 #endif /* FEATURE_CPUMEMHISTORY */
 
-inline static BYTE mem_read_check_ba(unsigned int addr)
+inline static uint8_t mem_read_check_ba(unsigned int addr)
 {
     check_ba();
-    return (*_mem_read_tab_ptr[(addr) >> 8])((WORD)(addr));
+    return (*_mem_read_tab_ptr[(addr) >> 8])((uint16_t)(addr));
+}
+
+inline static uint8_t mem_read_check_ba_dummy(unsigned int addr)
+{
+    check_ba();
+    return (*(_mem_read_tab_ptr_dummy[(addr) >> 8]))((uint16_t)(addr));
 }
 
 #ifndef STORE
 #define STORE(addr, value) \
-    (*_mem_write_tab_ptr[(addr) >> 8])((WORD)(addr), (BYTE)(value))
+    if (reu_dma_triggered == 0) { \
+        (*_mem_write_tab_ptr[(addr) >> 8])((uint16_t)(addr), (uint8_t)(value)); \
+        if (addr == 0xff00) { \
+            reu_dma(-1); \
+        } \
+    } \
+    reu_dma_triggered = 0
+#endif
+
+#ifndef STORE_DUMMY
+#define STORE_DUMMY(addr, value) \
+    (*_mem_write_tab_ptr_dummy[(addr) >> 8])((uint16_t)(addr), (uint8_t)(value)); \
+    if (addr == 0xff00) { \
+        reu_dma_triggered = reu_dma(-1); \
+    }
 #endif
 
 #ifndef LOAD
 #define LOAD(addr) \
     mem_read_check_ba(addr)
+#endif
+
+#ifndef LOAD_DUMMY
+#define LOAD_DUMMY(addr) \
+    mem_read_check_ba_dummy(addr)
 #endif
 
 #ifndef LOAD_CHECK_BA_LOW
@@ -307,9 +391,21 @@ inline static BYTE mem_read_check_ba(unsigned int addr)
     check_ba_low = 0
 #endif
 
+#ifndef LOAD_CHECK_BA_LOW_DUMMY
+#define LOAD_CHECK_BA_LOW_DUMMY(addr) \
+    check_ba_low = 1;                 \
+    mem_read_check_ba_dummy(addr);    \
+    check_ba_low = 0
+#endif
+
 #ifndef STORE_ZERO
 #define STORE_ZERO(addr, value) \
-    (*_mem_write_tab_ptr[0])((WORD)(addr), (BYTE)(value))
+    (*_mem_write_tab_ptr[0])((uint16_t)(addr), (uint8_t)(value))
+#endif
+
+#ifndef STORE_ZERO_DUMMY
+#define STORE_ZERO_DUMMY(addr, value) \
+    (*_mem_write_tab_ptr_dummy[0])((uint16_t)(addr), (uint8_t)(value))
 #endif
 
 #ifndef LOAD_ZERO
@@ -317,10 +413,15 @@ inline static BYTE mem_read_check_ba(unsigned int addr)
     mem_read_check_ba((addr) & 0xff)
 #endif
 
+#ifndef LOAD_ZERO_DUMMY
+#define LOAD_ZERO_DUMMY(addr) \
+    mem_read_check_ba_dummy((addr) & 0xff)
+#endif
+
 /* Route stack operations through read/write handlers */
 
 #ifndef PUSH
-#define PUSH(val) (*_mem_write_tab_ptr[0x01])((WORD)(0x100 + (reg_sp--)), (BYTE)(val))
+#define PUSH(val) (*_mem_write_tab_ptr[0x01])((uint16_t)(0x100 + (reg_sp--)), (uint8_t)(val))
 #endif
 
 #ifndef PULL
@@ -328,7 +429,7 @@ inline static BYTE mem_read_check_ba(unsigned int addr)
 #endif
 
 #ifndef STACK_PEEK
-#define STACK_PEEK()  mem_read_check_ba(0x100 + reg_sp)
+#define STACK_PEEK()  mem_read_check_ba_dummy(0x100 + reg_sp)
 #endif
 
 #ifndef DMA_FUNC
@@ -356,7 +457,6 @@ static void maincpu_generic_dma(void)
 
 struct interrupt_cpu_status_s *maincpu_int_status = NULL;
 alarm_context_t *maincpu_alarm_context = NULL;
-clk_guard_t *maincpu_clk_guard = NULL;
 monitor_interface_t *maincpu_monitor_interface = NULL;
 
 /* This flag is an obsolete optimization. It's always 0 for the x64sc CPU,
@@ -414,11 +514,19 @@ monitor_interface_t *maincpu_monitor_interface_get(void)
     maincpu_monitor_interface->clk = &maincpu_clk;
 
     maincpu_monitor_interface->current_bank = 0;
+    maincpu_monitor_interface->current_bank_index = 0;
+
     maincpu_monitor_interface->mem_bank_list = mem_bank_list;
+    maincpu_monitor_interface->mem_bank_list_nos = mem_bank_list_nos;
+
     maincpu_monitor_interface->mem_bank_from_name = mem_bank_from_name;
+    maincpu_monitor_interface->mem_bank_index_from_bank = mem_bank_index_from_bank;
+    maincpu_monitor_interface->mem_bank_flags_from_bank = mem_bank_flags_from_bank;
+
     maincpu_monitor_interface->mem_bank_read = mem_bank_read;
     maincpu_monitor_interface->mem_bank_peek = mem_bank_peek;
     maincpu_monitor_interface->mem_bank_write = mem_bank_write;
+    maincpu_monitor_interface->mem_bank_poke = mem_bank_poke;
 
     maincpu_monitor_interface->mem_ioreg_list_get = mem_ioreg_list_get;
 
@@ -534,50 +642,54 @@ inline static int interrupt_check_irq_delay(interrupt_cpu_status_t *cs,
 /* ------------------------------------------------------------------------- */
 
 #ifdef NEED_REG_PC
+/* FIXME: this should really be uint16_t, but it breaks things (eg trap17.prg) */
 unsigned int reg_pc;
 #endif
 
-static BYTE **o_bank_base;
-static int *o_bank_start;
-static int *o_bank_limit;
+static bool bank_base_ready = false;
+static uint8_t *bank_base = NULL;
+static int bank_start = 0;
+static int bank_limit = 0;
 
 void maincpu_resync_limits(void)
 {
-    if (o_bank_base) {
-        mem_mmu_translate(reg_pc, o_bank_base, o_bank_start, o_bank_limit);
+    if (bank_base_ready) {
+        mem_mmu_translate(reg_pc, &bank_base, &bank_start, &bank_limit);
     }
 }
 
 #ifdef __LIBRETRO__
-void maincpu_mainloop_retro(void)
+void maincpu_mainloop(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at
        least, on gcc 2.7.2.x).  */
-static    BYTE reg_a = 0;
-static    BYTE reg_x = 0;
-static    BYTE reg_y = 0;
-static    BYTE reg_p = 0;
-static    BYTE reg_sp = 0;
-static    BYTE flag_n = 0;
-static    BYTE flag_z = 0;
+    static uint8_t reg_a = 0;
+    static uint8_t reg_x = 0;
+    static uint8_t reg_y = 0;
+    static uint8_t reg_p = 0;
+    static uint8_t reg_sp = 0;
+    static uint8_t flag_n = 0;
+    static uint8_t flag_z = 0;
 #ifndef NEED_REG_PC
-static    unsigned int reg_pc;
+    /* FIXME: this should really be uint16_t, but it breaks things (eg trap17.prg) */
+    static unsigned int reg_pc;
 #endif
-static    BYTE *bank_base;
-static    int bank_start = 0;
-static    int bank_limit = 0;
 
-static int first1=0;
-if(first1==0){
-first1++;
-    o_bank_base = &bank_base;
-    o_bank_start = &bank_start;
-    o_bank_limit = &bank_limit;
+static unsigned retro_mainloop = 0;
+if (!retro_mainloop)
+{
+    retro_mainloop = 1;
+
+    /*
+     * Enable maincpu_resync_limits functionality .. in the old code
+     * this is where the local stack var had its address copied to
+     * the global.
+     */
+    bank_base_ready = true;
 
     machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
 }
-
-  /*  while (1)*/ {
+    /*while (1)*/ {
 #define CLK maincpu_clk
 #define RMW_FLAG maincpu_rmw_flag
 #define LAST_OPCODE_INFO last_opcode_info
@@ -621,7 +733,7 @@ first1++;
 
 #define CALLER e_comp_space
 
-#define ROM_TRAP_ALLOWED() mem_rom_trap_allowed((WORD)reg_pc)
+#define ROM_TRAP_ALLOWED() mem_rom_trap_allowed((uint16_t)reg_pc)
 
 #define GLOBAL_REGS maincpu_regs
 
@@ -631,8 +743,10 @@ first1++;
 
         if (maincpu_clk_limit && (maincpu_clk > maincpu_clk_limit)) {
             log_error(LOG_DEFAULT, "cycle limit reached.");
-            exit(EXIT_FAILURE);
+            archdep_vice_exit(EXIT_FAILURE);
         }
+
+        autostart_advance();
 #if 0
         if (CLK > 246171754) {
             debug.maincpu_traceflg = 1;
@@ -640,29 +754,31 @@ first1++;
 #endif
     }
 }
-#endif
+
+#else /* __LIBRETRO__ */
 
 void maincpu_mainloop(void)
 {
     /* Notice that using a struct for these would make it a lot slower (at
        least, on gcc 2.7.2.x).  */
-    BYTE reg_a = 0;
-    BYTE reg_x = 0;
-    BYTE reg_y = 0;
-    BYTE reg_p = 0;
-    BYTE reg_sp = 0;
-    BYTE flag_n = 0;
-    BYTE flag_z = 0;
+    uint8_t reg_a = 0;
+    uint8_t reg_x = 0;
+    uint8_t reg_y = 0;
+    uint8_t reg_p = 0;
+    uint8_t reg_sp = 0;
+    uint8_t flag_n = 0;
+    uint8_t flag_z = 0;
 #ifndef NEED_REG_PC
+    /* FIXME: this should really be uint16_t, but it breaks things (eg trap17.prg) */
     unsigned int reg_pc;
 #endif
-    BYTE *bank_base;
-    int bank_start = 0;
-    int bank_limit = 0;
 
-    o_bank_base = &bank_base;
-    o_bank_start = &bank_start;
-    o_bank_limit = &bank_limit;
+    /*
+     * Enable maincpu_resync_limits functionality .. in the old code
+     * this is where the local stack var had its address copied to
+     * the global.
+     */
+    bank_base_ready = true;
 
     machine_trigger_reset(MACHINE_RESET_MODE_SOFT);
 
@@ -710,7 +826,7 @@ void maincpu_mainloop(void)
 
 #define CALLER e_comp_space
 
-#define ROM_TRAP_ALLOWED() mem_rom_trap_allowed((WORD)reg_pc)
+#define ROM_TRAP_ALLOWED() mem_rom_trap_allowed((uint16_t)reg_pc)
 
 #define GLOBAL_REGS maincpu_regs
 
@@ -720,8 +836,10 @@ void maincpu_mainloop(void)
 
         if (maincpu_clk_limit && (maincpu_clk > maincpu_clk_limit)) {
             log_error(LOG_DEFAULT, "cycle limit reached.");
-            exit(EXIT_FAILURE);
+            archdep_vice_exit(EXIT_FAILURE);
         }
+
+        autostart_advance();
 #if 0
         if (CLK > 246171754) {
             debug.maincpu_traceflg = 1;
@@ -729,6 +847,7 @@ void maincpu_mainloop(void)
 #endif
     }
 }
+#endif /* __LIBRETRO__ */
 
 /* ------------------------------------------------------------------------- */
 
@@ -788,28 +907,28 @@ unsigned int maincpu_get_sp(void) {
 
 static char snap_module_name[] = "MAINCPU";
 #define SNAP_MAJOR 1
-#define SNAP_MINOR 1
+#define SNAP_MINOR 2
 
 int maincpu_snapshot_write_module(snapshot_t *s)
 {
     snapshot_module_t *m;
 
-    m = snapshot_module_create(s, snap_module_name, ((BYTE)SNAP_MAJOR),
-                               ((BYTE)SNAP_MINOR));
+    m = snapshot_module_create(s, snap_module_name, ((uint8_t)SNAP_MAJOR),
+                               ((uint8_t)SNAP_MINOR));
     if (m == NULL) {
         return -1;
     }
 
     if (0
-        || SMW_DW(m, maincpu_clk) < 0
+        || SMW_CLOCK(m, maincpu_clk) < 0
         || SMW_B(m, MOS6510_REGS_GET_A(&maincpu_regs)) < 0
         || SMW_B(m, MOS6510_REGS_GET_X(&maincpu_regs)) < 0
         || SMW_B(m, MOS6510_REGS_GET_Y(&maincpu_regs)) < 0
         || SMW_B(m, MOS6510_REGS_GET_SP(&maincpu_regs)) < 0
-        || SMW_W(m, (WORD)MOS6510_REGS_GET_PC(&maincpu_regs)) < 0
-        || SMW_B(m, (BYTE)MOS6510_REGS_GET_STATUS(&maincpu_regs)) < 0
-        || SMW_DW(m, (DWORD)last_opcode_info) < 0
-        || SMW_DW(m, (DWORD)maincpu_ba_low_flags) < 0) {
+        || SMW_W(m, (uint16_t)MOS6510_REGS_GET_PC(&maincpu_regs)) < 0
+        || SMW_B(m, (uint8_t)MOS6510_REGS_GET_STATUS(&maincpu_regs)) < 0
+        || SMW_DW(m, (uint32_t)last_opcode_info) < 0
+        || SMW_DW(m, (uint32_t)maincpu_ba_low_flags) < 0) {
         goto fail;
     }
 
@@ -836,9 +955,9 @@ fail:
 
 int maincpu_snapshot_read_module(snapshot_t *s)
 {
-    BYTE a, x, y, sp, status;
-    WORD pc;
-    BYTE major, minor;
+    uint8_t a, x, y, sp, status;
+    uint16_t pc;
+    uint8_t major, minor;
     snapshot_module_t *m;
 
     m = snapshot_module_open(s, snap_module_name, &major, &minor);
@@ -846,9 +965,8 @@ int maincpu_snapshot_read_module(snapshot_t *s)
         return -1;
     }
 
-    /* XXX: Assumes `CLOCK' is the same size as a `DWORD'.  */
     if (0
-        || SMR_DW(m, &maincpu_clk) < 0
+        || SMR_CLOCK(m, &maincpu_clk) < 0
         || SMR_B(m, &a) < 0
         || SMR_B(m, &x) < 0
         || SMR_B(m, &y) < 0

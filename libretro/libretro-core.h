@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <dirent.h>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #ifdef USE_LIBRETRO_VFS

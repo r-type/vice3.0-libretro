@@ -73,7 +73,7 @@ int retro_rmdir(const char *path)
 
    return RemoveDirectory(path);
 #else
-   return rmdir(path);
+   return archdep_rmdir(path);
 #endif
 }
 

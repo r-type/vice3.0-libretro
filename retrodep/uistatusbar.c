@@ -807,8 +807,7 @@ void uistatusbar_draw(void)
     /* Statusbar background */
     int bkg_x      = retroXS_offset;
     int bkg_y      = y - (led_padding * 2);
-    int max_width  = retrow_crop;
-    int bkg_width  = max_width;
+    int bkg_width  = retrow_crop;
     int bkg_height = 9 + (led_padding * 2);
 
     /* Right alignment offset */
@@ -834,7 +833,7 @@ void uistatusbar_draw(void)
         led_width += LED_WIDTH(4) - char_scale_x;
 
     /* LED horizontal start */
-    led_x = retroXS_offset + x + max_width - led_width + char_scale_x - 1;
+    led_x = retrow_crop - led_width + char_scale_x - 1;
 
     /* Basic mode statusbar background */
     if (opt_statusbar & STATUSBAR_BASIC && !statusbar_message_timer)
@@ -860,20 +859,24 @@ void uistatusbar_draw(void)
     }
     else if (!(opt_statusbar & STATUSBAR_BASIC))
     {
-        uint8_t memory_pos = 30;
-        uint8_t model_pos  = 60;
+        int8_t resolution_pos = -20;
+        uint8_t memory_pos    = 30;
+        uint8_t model_pos     = 60;
+        uint16_t max_pos      = bkg_x + (retrow_crop / 2) + (model_pos * char_scale_x);
 
         /* Sacrifice memory slot if there is not enough width */
-        if (max_width - led_width + char_width < led_x)
+        if (led_x < max_pos)
         {
             memory_pos = 0;
             model_pos  = 34;
         }
 
-        draw_text(bkg_x + (max_width / 2) - (20 * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_resolution);
+        if (resolution_pos)
+            draw_text(bkg_x + (retrow_crop / 2) + (resolution_pos * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_resolution);
         if (memory_pos)
-            draw_text(bkg_x + (max_width / 2) + (memory_pos * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_memory);
-        draw_text(bkg_x + (max_width / 2) + (model_pos * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_model);
+            draw_text(bkg_x + (retrow_crop / 2) + (memory_pos * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_memory);
+        if (model_pos)
+            draw_text(bkg_x + (retrow_crop / 2) + (model_pos * char_scale_x), y, color_f, color_b, GRAPH_ALPHA_100, GRAPH_BG_ALL, char_scale_x, 1, 10, statusbar_model);
     }
 
     /* Tape indicator + drive & power LEDs */

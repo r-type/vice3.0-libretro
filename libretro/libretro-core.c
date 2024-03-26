@@ -163,6 +163,7 @@ int set_vdc(int enabled)
 {
    log_resources_set_int("C128ColumnKey", !enabled);
    c128_vdc = enabled;
+   crop_id_prev = -1;
 }
 #endif
 

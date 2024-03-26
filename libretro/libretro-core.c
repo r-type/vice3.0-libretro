@@ -1301,10 +1301,12 @@ static int process_cmdline(const char* argv)
 
 void autodetect_drivetype(int unit)
 {
+   int ret = 0;
    int drive_type = 0;
    int set_drive_type = 0;
    char drive_type_resource_var[20] = {0};
-   const char* attached_image = NULL;
+   char attached_image_safe[RETRO_PATH_MAX] = {0};
+   const char *attached_image = NULL;
 
    /* Autodetect drive type */
    const vdrive_t *vdrive;
@@ -1313,6 +1315,7 @@ void autodetect_drivetype(int unit)
    snprintf(drive_type_resource_var, sizeof(drive_type_resource_var), "Drive%dType", unit);
    resources_get_int(drive_type_resource_var, &drive_type);
    attached_image = file_system_get_disk_name(unit, 0);
+   strlcpy(attached_image_safe, attached_image, sizeof(attached_image_safe));
 
    vdrive = file_system_get_vdrive(unit);
    if (vdrive == NULL)
@@ -1344,7 +1347,9 @@ void autodetect_drivetype(int unit)
 
          /* Change from 1581 to 1541 will not detect disk properly without reattaching (?!) */
          file_system_detach_disk(unit, 0);
-         file_system_attach_disk(unit, 0, attached_image);
+         ret = file_system_attach_disk(unit, 0, attached_image);
+         if (ret < 0)
+            file_system_attach_disk(unit, 0, attached_image_safe);
 
          /* Don't bother with drive sound muting when autoloadwarp is on */
          if (opt_autoloadwarp & AUTOLOADWARP_DISK)
@@ -1686,7 +1691,6 @@ void update_from_vice()
                   log_cb(RETRO_LOG_INFO, "Attaching disk '%s' to drive #%d\n", dc->files[i], dc->unit + i);
                   file_system_attach_disk(dc->unit + i, 0, dc->files[i]);
                   autodetect_drivetype(dc->unit + i);
-                  tick_sleep(5);
                }
                else
                {

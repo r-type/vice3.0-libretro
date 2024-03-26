@@ -659,6 +659,25 @@ static void display_joyport(void)
         case C64MODEL_ULTIMAX:
             strcpy(tmpstr, "  MAX"); break;
     }
+#elif defined(__X128__)
+    /* Model */
+    unsigned model = vice_opt.Model;
+    if (request_model_set > -1 && request_model_set != model)
+        model = request_model_set;
+
+    switch (model)
+    {
+        default:
+        case C128MODEL_C128_PAL:
+        case C128MODEL_C128_NTSC:
+            strcpy(tmpstr, " C128"); break;
+        case C128MODEL_C128D_PAL:
+        case C128MODEL_C128D_NTSC:
+            strcpy(tmpstr, "C128D"); break;
+        case C128MODEL_C128DCR_PAL:
+        case C128MODEL_C128DCR_NTSC:
+            strcpy(tmpstr, "CDCR"); break;
+    }
 #endif
 
     /* Memory */

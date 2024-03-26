@@ -61,7 +61,7 @@ BYTE c64memrom_kernal64_rom_original[C64_KERNAL_ROM_SIZE] = {0};
 extern unsigned int opt_jiffydos_kernal_skip;
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__) || defined(__XVIC__)
 extern int request_model_auto_set;
 extern bool opt_model_auto;
 #endif
@@ -293,7 +293,7 @@ int ui_init_finalize(void)
 #elif defined(__XPLUS4__)
    plus4model_set(vice_opt.Model);
 #elif defined(__X128__)
-   c128model_set(vice_opt.Model);
+   c128model_set(opt_model_auto && request_model_auto_set > -1 ? request_model_auto_set : vice_opt.Model);
 #elif defined(__X64DTV__)
    dtvmodel_set(vice_opt.Model);
 #else

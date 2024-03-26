@@ -181,7 +181,7 @@ unsigned int opt_read_vicerc = 0;
 unsigned int opt_work_disk_type = 0;
 unsigned int opt_work_disk_unit = 8;
 bool opt_floppy_multidrive = false;
-#if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__)
 static unsigned int opt_jiffydos_allow = 1;
 unsigned int opt_jiffydos = 0;
 unsigned int opt_jiffydos_kernal_skip = 0;
@@ -1935,7 +1935,7 @@ void reload_restart(void)
    }
 #endif
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__) || defined(__XVIC__)
    /* Automatic model detection */
    if (!opt_model_auto_locked && !string_is_empty(full_path))
    {
@@ -1946,6 +1946,8 @@ void reload_restart(void)
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
          request_model_auto_set = C64MODEL_C64_NTSC;
+#elif defined(__X128__)
+         request_model_auto_set = C128MODEL_C128_NTSC;
 #elif defined(__XVIC__)
          request_model_auto_set = VIC20MODEL_VIC20_NTSC;
 #endif
@@ -1961,6 +1963,8 @@ void reload_restart(void)
       {
 #if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__)
          request_model_auto_set = C64MODEL_C64_PAL;
+#elif defined(__X128__)
+         request_model_auto_set = C128MODEL_C128_PAL;
 #elif defined(__XVIC__)
          request_model_auto_set = VIC20MODEL_VIC20_PAL;
 #endif
@@ -2005,6 +2009,44 @@ void reload_restart(void)
          log_cb(RETRO_LOG_INFO, "Requesting C64GS mode\n");
       else if (request_model_auto_set == C64MODEL_ULTIMAX)
          log_cb(RETRO_LOG_INFO, "Requesting ULTIMAX mode\n");
+#elif defined(__X128__)
+      /* Respect the revision */
+      switch (request_model_auto_set)
+      {
+         case C128MODEL_C128_PAL:
+         case C128MODEL_C128D_PAL:
+         case C128MODEL_C128DCR_PAL:
+            if (vice_opt.Model == C128MODEL_C128_NTSC || vice_opt.Model == C128MODEL_C128_PAL)
+               request_model_auto_set = C128MODEL_C128_PAL;
+            else if (vice_opt.Model == C128MODEL_C128D_NTSC || vice_opt.Model == C128MODEL_C128D_PAL)
+               request_model_auto_set = C128MODEL_C128D_PAL;
+            else if (vice_opt.Model == C128MODEL_C128DCR_NTSC || vice_opt.Model == C128MODEL_C128DCR_PAL)
+               request_model_auto_set = C128MODEL_C128DCR_PAL;
+            break;
+         case C128MODEL_C128_NTSC:
+         case C128MODEL_C128D_NTSC:
+         case C128MODEL_C128DCR_NTSC:
+            if (vice_opt.Model == C128MODEL_C128_NTSC || vice_opt.Model == C128MODEL_C128_PAL)
+               request_model_auto_set = C128MODEL_C128_NTSC;
+            else if (vice_opt.Model == C128MODEL_C128D_NTSC || vice_opt.Model == C128MODEL_C128D_PAL)
+               request_model_auto_set = C128MODEL_C128D_NTSC;
+            else if (vice_opt.Model == C128MODEL_C128DCR_NTSC || vice_opt.Model == C128MODEL_C128DCR_PAL)
+               request_model_auto_set = C128MODEL_C128DCR_NTSC;
+            break;
+      }
+
+      if (request_model_auto_set == C128MODEL_C128_NTSC)
+         log_cb(RETRO_LOG_INFO, "Requesting C128 NTSC mode\n");
+      else if (request_model_auto_set == C128MODEL_C128D_NTSC)
+         log_cb(RETRO_LOG_INFO, "Requesting C128D NTSC mode\n");
+      else if (request_model_auto_set == C128MODEL_C128DCR_NTSC)
+         log_cb(RETRO_LOG_INFO, "Requesting C128DCR NTSC mode\n");
+      else if (request_model_auto_set == C128MODEL_C128_PAL)
+         log_cb(RETRO_LOG_INFO, "Requesting C128 PAL mode\n");
+      else if (request_model_auto_set == C128MODEL_C128D_PAL)
+         log_cb(RETRO_LOG_INFO, "Requesting C128D PAL mode\n");
+      else if (request_model_auto_set == C128MODEL_C128DCR_PAL)
+         log_cb(RETRO_LOG_INFO, "Requesting C128DCR PAL mode\n");
 #elif defined(__XVIC__)
       if (request_model_auto_set == VIC20MODEL_VIC20_NTSC)
          log_cb(RETRO_LOG_INFO, "Requesting NTSC mode\n");
@@ -2413,19 +2455,25 @@ static void retro_set_core_options()
          "vice_c128_model",
          "System > Model",
          "Model",
-         "Changing while running resets the system!",
+         "'Automatic' switches region per file path tags.\nChanging while running resets the system!",
          NULL,
          "system",
          {
+            { "C128 PAL auto", "C128 PAL Automatic" },
+            { "C128 NTSC auto", "C128 NTSC Automatic" },
+            { "C128 D PAL auto", "C128D PAL Automatic" },
+            { "C128 D NTSC auto", "C128D NTSC Automatic" },
+            { "C128 DCR PAL auto", "C128DCR PAL Automatic" },
+            { "C128 DCR NTSC auto", "C128DCR NTSC Automatic" },
             { "C128 PAL", "C128 PAL" },
             { "C128 NTSC", "C128 NTSC" },
-            { "C128 D PAL", "C128 D PAL" },
-            { "C128 D NTSC", "C128 D NTSC" },
-            { "C128 DCR PAL", "C128 DCR PAL" },
-            { "C128 DCR NTSC", "C128 DCR NTSC" },
+            { "C128 D PAL", "C128D PAL" },
+            { "C128 D NTSC", "C128D NTSC" },
+            { "C128 DCR PAL", "C128DCR PAL" },
+            { "C128 DCR NTSC", "C128DCR NTSC" },
             { NULL, NULL },
          },
-         "C128 PAL"
+         "C128 PAL auto"
       },
       {
          "vice_c128_ram_expansion_unit",
@@ -5968,15 +6016,25 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
       int model = 0;
+      bool opt_model_auto_prev = opt_model_auto;
 
-      if      (!strcmp(var.value, "C128 PAL"))      model = C128MODEL_C128_PAL;
-      else if (!strcmp(var.value, "C128 NTSC"))     model = C128MODEL_C128_NTSC;
-      else if (!strcmp(var.value, "C128 D PAL"))    model = C128MODEL_C128D_PAL;
-      else if (!strcmp(var.value, "C128 D NTSC"))   model = C128MODEL_C128D_NTSC;
-      else if (!strcmp(var.value, "C128 DCR PAL"))  model = C128MODEL_C128DCR_PAL;
-      else if (!strcmp(var.value, "C128 DCR NTSC")) model = C128MODEL_C128DCR_NTSC;
+      if (strstr(var.value, "auto")) opt_model_auto = true;
+      else                           opt_model_auto = false;
 
-      if (retro_ui_finalized && vice_opt.Model != model)
+      if      (!strcmp(var.value, "C128 PAL auto"))      model = C128MODEL_C128_PAL;
+      else if (!strcmp(var.value, "C128 NTSC auto"))     model = C128MODEL_C128_NTSC;
+      else if (!strcmp(var.value, "C128 D PAL auto"))    model = C128MODEL_C128D_PAL;
+      else if (!strcmp(var.value, "C128 D NTSC auto"))   model = C128MODEL_C128D_NTSC;
+      else if (!strcmp(var.value, "C128 DCR PAL auto"))  model = C128MODEL_C128DCR_PAL;
+      else if (!strcmp(var.value, "C128 DCR NTSC auto")) model = C128MODEL_C128DCR_NTSC;
+      else if (!strcmp(var.value, "C128 PAL"))           model = C128MODEL_C128_PAL;
+      else if (!strcmp(var.value, "C128 NTSC"))          model = C128MODEL_C128_NTSC;
+      else if (!strcmp(var.value, "C128 D PAL"))         model = C128MODEL_C128D_PAL;
+      else if (!strcmp(var.value, "C128 D NTSC"))        model = C128MODEL_C128D_NTSC;
+      else if (!strcmp(var.value, "C128 DCR PAL"))       model = C128MODEL_C128DCR_PAL;
+      else if (!strcmp(var.value, "C128 DCR NTSC"))      model = C128MODEL_C128DCR_NTSC;
+
+      if (retro_ui_finalized && vice_opt.Model != model || opt_model_auto != opt_model_auto_prev)
       {
          request_model_set = model;
          request_restart = true;
@@ -8420,7 +8478,7 @@ void retro_audio_queue(const int16_t *data, int32_t samples)
 void emu_model_set(int model)
 {
    request_model_set = -1;
-#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__XVIC__)
+#if defined(__X64__) || defined(__X64SC__) || defined(__XSCPU64__) || defined(__X128__) || defined(__XVIC__)
    if (opt_model_auto && opt_model_auto_locked)
       model = request_model_auto_set;
 #endif

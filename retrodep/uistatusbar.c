@@ -1008,6 +1008,9 @@ void uistatusbar_draw(void)
                 c = ' ';
         }
 
+        /* Character background mode */
+        int graph_bg = (i >= STATUSBAR_TAPE_POS) ? GRAPH_BG_OUTLINE : (c & 0x80) ? GRAPH_BG_ALL : GRAPH_BG_NONE;
+
         /* Right alignment for tape/drive/power */
         int x_align = retroXS_offset;
 #ifdef __XVIC__
@@ -1115,6 +1118,6 @@ void uistatusbar_draw(void)
             draw_fbox(x_char - box_start, y - 1, char_width + char_scale_x + box_start + box_end, char_width / char_scale_x + 3, color_b, GRAPH_ALPHA_100);
         }
 
-        draw_text(x_char, y, color_f, color_black+1, GRAPH_ALPHA_100, (i >= STATUSBAR_TAPE_POS) ? GRAPH_BG_OUTLINE : GRAPH_BG_NONE, char_scale_x, 1, 10, s);
+        draw_text(x_char, y, color_f, color_black + 1, GRAPH_ALPHA_100, graph_bg, char_scale_x, 1, 10, s);
     }
 }

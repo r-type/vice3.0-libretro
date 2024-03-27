@@ -402,7 +402,7 @@ static const retro_vkeys vkeys[VKBDX * VKBDY * 2] =
 
 static int BKG_PADDING(const char* str)
 {
-   unsigned font_width_default = (retrow > 704) ? 12 : 6;
+   unsigned font_width_default = (retrow >= 704) ? 12 : 6;
    unsigned len = strlen(str);
    unsigned padding = 0;
    unsigned i = 0;
@@ -597,6 +597,14 @@ void print_vkbd(void)
       YOFFSET  = -1;
       XPADDING = 68;
    }
+#elif defined(__XCBM2__) || defined(__XPET__)
+   /* CRTC */
+   XOFFSET  = 0;
+   YOFFSET  = 1;
+   XPADDING = 74;
+
+   if (retrow >= 704)
+      FONT_WIDTH *= 2;
 #elif defined(__XPLUS4__)
    /* TED */
    XOFFSET  = 0;
@@ -612,7 +620,7 @@ void print_vkbd(void)
       YOFFSET  = 2;
 
    /* VDC */
-   if (retrow > 704)
+   if (retrow >= 704)
    {
       XOFFSET     = 2;
       XPADDING    = 120;

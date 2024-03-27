@@ -788,7 +788,7 @@ void uistatusbar_draw(void)
     color_f      = color_white;
     color_b      = color_black;
 
-    if (retrow > 704)
+    if (retrow >= 704)
        char_scale_x = 2;
 
     char_width  *= char_scale_x;

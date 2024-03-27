@@ -8257,6 +8257,9 @@ void update_geometry(int mode)
 #if defined(__X128__)
          if (c128_vdc)
             crop_width_max         *= 2;
+#elif defined(__XCBM2__)
+         if (retrow > 384)
+            crop_width_max         *= 2;
 #elif defined(__XPET__)
          if (retrow > 384)
          {

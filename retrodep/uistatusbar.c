@@ -718,14 +718,14 @@ static void display_joyport(void)
 
     /* Memory */
     unsigned memory = 0;
-    const char *memory_unit = "kB";
+    const char *memory_unit = "K";
     memory = (vic20mem_forced > -1) ? vic20mem_forced : vice_opt.VIC20Memory;
     if (!memory && vice_opt.Model == VIC20MODEL_VIC21)
         memory = 3;
 
     int vic20mems[6] = {0, 3, 8, 16, 24, 35};
 
-    snprintf(statusbar_memory, sizeof(statusbar_memory), "%3d%s", vic20mems[memory], memory_unit);
+    snprintf(statusbar_memory, sizeof(statusbar_memory), "%2d%s", vic20mems[memory], memory_unit);
     snprintf(statusbar_model, sizeof(statusbar_model), "%-5s", tmpstr);
 #endif
 
@@ -1037,10 +1037,10 @@ void uistatusbar_draw(void)
 
         /* Right alignment for tape/drive/power */
         int x_align = retroXS_offset;
-#ifdef __XVIC__
+#if defined(__XVIC__)
         /* VIC-20 crop horizontal centering shenanigans */
         if (i >= STATUSBAR_TAPE_POS && retroXS_offset && retro_region != RETRO_REGION_PAL)
-            x_align -= 8;
+            x_align -= retroXS_crop_offset;
 #endif
         if (i >= STATUSBAR_TAPE_POS)
             x_align += x_align_offset + retrow_crop - (MAX_STATUSBAR_LEN * char_width);

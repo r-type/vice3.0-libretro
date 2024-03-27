@@ -142,6 +142,12 @@ static void video_canvas_crop(struct video_canvas_s *canvas)
 #elif defined(__XPET__)
    if (retrow > 384)
       crop_top_border -= 13;
+#elif defined(__XCBM2__)
+   if (retroh == 366)
+   {
+      crop_top_border -= 25;
+      crop_height_max += 150;
+   }
 #elif defined(__XPLUS4__)
    if (retroh == 242)
       crop_top_border = CROP_TOP_BORDER_NTSC;

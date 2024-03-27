@@ -53,7 +53,7 @@ typedef uint8_t uint8;
 #define WINDOW_HEIGHT 288
 #elif defined(__XCBM2__)
 #define WINDOW_WIDTH  704
-#define WINDOW_HEIGHT 266
+#define WINDOW_HEIGHT 366
 #elif defined(__XVIC__)
 #define WINDOW_WIDTH  448
 #define WINDOW_HEIGHT 288

@@ -5512,7 +5512,7 @@ void retro_set_options_display(void)
 }
 
 static bool updating_variables = false;
-bool retro_update_display(void)
+static bool retro_update_display(void)
 {
    if (updating_variables)
       return false;
@@ -7580,7 +7580,6 @@ static void update_variables(void)
 
    retro_set_options_display();
 
-#if defined(__X64__) || defined(__X64SC__) || defined(__X64DTV__) || defined(__X128__) || defined(__XSCPU64__) || defined(__XCBM5x0__) || defined(__XVIC__) || defined(__XPLUS4__)
    /* Handle migration compatibility with old "zoom" */
    bool request_update_variables      = false;
    int legacy_zoom                    = -1;
@@ -7661,7 +7660,6 @@ static void update_variables(void)
    updating_variables = false;
    if (request_update_variables)
       update_variables();
-#endif
 }
 
 void emu_reset(int type)

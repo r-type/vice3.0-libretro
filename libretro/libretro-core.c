@@ -2729,6 +2729,7 @@ static void retro_set_core_options()
          "0"
       },
 #endif
+#if !defined(__X64DTV__)
       {
          "vice_printer",
          "System > Printer",
@@ -2743,6 +2744,7 @@ static void retro_set_core_options()
          },
          "disabled"
       },
+#endif
 #if defined(__X64__) || defined(__X64SC__) || defined(__X128__) || defined(__XSCPU64__)
       {
          "vice_jiffydos",
@@ -3613,6 +3615,7 @@ static void retro_set_core_options()
          },
          "disabled"
       },
+#if !defined(__X64DTV__)
       {
          "vice_drive_sound_emulation",
          "Audio > Drive Sound Emulation",
@@ -3646,6 +3649,7 @@ static void retro_set_core_options()
          },
          "20%"
       },
+#endif
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
       {
          "vice_datasette_sound",
@@ -5349,8 +5353,10 @@ void retro_set_options_display(void)
    /* Audio options */
    option_display.visible = opt_audio_options_display;
 
+#if !defined(__X64DTV__)
    option_display.key = "vice_drive_sound_emulation";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
+#endif
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
    option_display.key = "vice_datasette_sound";
    environ_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &option_display);
@@ -5791,6 +5797,7 @@ static void update_variables(void)
    }
 #endif
 
+#if !defined(__X64DTV__)
    var.key = "vice_drive_true_emulation";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -5823,7 +5830,9 @@ static void update_variables(void)
       if (retro_ui_finalized && vice_opt.DriveSoundEmulation && vice_opt.DriveTrueEmulation)
          resources_set_int("DriveSoundEmulationVolume", vice_opt.DriveSoundEmulation);
    }
+#endif
 
+#if !defined(__X64DTV__)
    var.key = "vice_drive_sound_emulation";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -5854,6 +5863,7 @@ static void update_variables(void)
             (opt_autoloadwarp & AUTOLOADWARP_DISK && !(opt_autoloadwarp & AUTOLOADWARP_MUTE))))
          resources_set_int("DriveSoundEmulationVolume", 0);
    }
+#endif
 
 #if !defined(__XSCPU64__) && !defined(__X64DTV__)
    var.key = "vice_datasette_sound";
@@ -7268,6 +7278,7 @@ static void update_variables(void)
    }
 #endif
 
+#if !defined(__X64DTV__)
    var.key = "vice_printer";
    var.value = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
@@ -7275,6 +7286,7 @@ static void update_variables(void)
       if (!strcmp(var.value, "disabled")) vice_opt.Printer = 0;
       else                                vice_opt.Printer = 1;
    }
+#endif
 
    /* Mapper */
    /* RetroPad */

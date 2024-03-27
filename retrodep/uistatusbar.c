@@ -306,8 +306,10 @@ void ui_enable_drive_status(ui_drive_enable_t state, int *drive_led_color)
         drive_state >>= 1;
     }
 
+#if !defined(__X64DTV__)
     /* Never disable #8 */
     drive_enabled[0] = 1;
+#endif
 
     if (uistatusbar_state & UISTATUSBAR_ACTIVE) {
         uistatusbar_state |= UISTATUSBAR_REPAINT;
